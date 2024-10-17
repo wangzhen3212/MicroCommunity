@@ -125,6 +125,7 @@ public class OweFeePaymentBusiness implements IPaymentBusiness {
                 //todo  考虑 负数金额 可能用于红冲
                 if (tmpFeeDto.getFeeTotalPrice() != 0 && "Y".equals(tmpFeeDto.getPayOnline())) {
                     tmpFeeDtos.add(tmpFeeDto);
+                    tmpFeeDto.setFeeTotalPrice(MoneyUtil.computePriceScale(tmpFeeDto.getFeeTotalPrice(), tmpFeeDto.getScale(), Integer.parseInt(tmpFeeDto.getDecimalPlace())));
                     feeTotalPrice = new BigDecimal(tmpFeeDto.getFeeTotalPrice());
                     tmpMoney = tmpMoney.add(feeTotalPrice);
                 }
