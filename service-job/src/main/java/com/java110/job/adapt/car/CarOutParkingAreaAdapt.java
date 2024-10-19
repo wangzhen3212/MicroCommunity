@@ -36,8 +36,6 @@ public class CarOutParkingAreaAdapt extends DatabusAdaptImpl {
 
     private static Logger logger = LoggerFactory.getLogger(CarOutParkingAreaAdapt.class);
 
-    // test
-
     @Autowired
     private IOwnerCarV1InnerServiceSMO ownerCarV1InnerServiceSMOImpl;
 
