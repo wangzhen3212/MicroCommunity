@@ -122,6 +122,15 @@ public class UpdateAdvertCmd extends Cmd {
         if(flag < 1){
             throw new CmdException("保存失败");
         }
+         if(reqJson.containsKey("photos")){
+            return;
+        }
+
+        JSONArray photos = reqJson.getJSONArray("photos");
+
+        if(ListUtil.isNull(photos)){
+            return;
+        }
         AdvertItemDto advertItemDto = new AdvertItemDto();
         advertItemDto.setAdvertId(reqJson.getString("advertId"));
         advertItemDto.setItemTypeCds(new String[]{"8888", "9999"});
