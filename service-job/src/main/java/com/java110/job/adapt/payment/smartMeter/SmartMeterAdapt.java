@@ -16,7 +16,7 @@ import com.java110.intf.fee.IFeeConfigInnerServiceSMO;
 import com.java110.intf.fee.IFeeDetailInnerServiceSMO;
 import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.job.adapt.DatabusAdaptImpl;
-import com.java110.job.adapt.hcIot.http.ISendIot;
+import com.java110.job.adapt.hcIotNew.http.ISendIot;
 import com.java110.po.fee.PayFeeDetailPo;
 import com.java110.po.log.LogSystemErrorPo;
 import com.java110.service.smo.ISaveSystemErrorSMO;
