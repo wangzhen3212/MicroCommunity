@@ -227,6 +227,10 @@ public class MachinePaymentNoticeAdapt extends DatabusAdaptImpl {
         paramIn.put("num", num);
         paramIn.put("spaceNum", spaceNum);
         paramIn.put("state", state);
+         //todo 退费单，退费没必要发因为 微信会发送退费 通知的，所以我们就没有必要发了
+        if ("1300".equals(state)) {
+            return;
+        }
         //给业主推送消息
         sendMessage(paramIn, communityDtos.get(0), payFeeDetailPo);
         if (!StringUtil.isEmpty(state) && !state.equals("1300") && feeTypeCd.equals("888800010012")) {
