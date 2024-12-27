@@ -126,7 +126,6 @@ public class SaveOwnerMemberCmd extends Cmd {
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
         Assert.jsonObjectHaveKey(reqJson, "name", "请求报文中未包含name");
         Assert.jsonObjectHaveKey(reqJson, "userId", "请求报文中未包含userId");
-        Assert.jsonObjectHaveKey(reqJson, "age", "请求报文中未包含age");
         Assert.jsonObjectHaveKey(reqJson, "link", "请求报文中未包含link");
         Assert.jsonObjectHaveKey(reqJson, "sex", "请求报文中未包含sex");
         Assert.jsonObjectHaveKey(reqJson, "ownerId", "请求报文中未包含业主");
