@@ -55,6 +55,7 @@ public class InspectionTaskDetailTemplate extends TaskSystemQuartz {
     private void generatorTask(TaskDto taskDto, CommunityDto communityDto) {
         //取出今天的日期
         Calendar cal = Calendar.getInstance(Locale.CHINA);
+         cal.add(Calendar.DAY_OF_MONTH,-3);
         String today = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
         String nowTime = today + " 00:00:00";
         InspectionTaskDetailDto inspectionTaskDetailDto = new InspectionTaskDetailDto();
