@@ -35,4 +35,5 @@ public interface IInitializeOwneServiceDao {
      * @param communityId
      */
     int deleteOwnerAppUser(Map communityId);
+    int deleteOwnerAccount(Map communityId);
 }

@@ -62,6 +62,8 @@ public class InitializeOwnerInnerServiceSMOImpl extends BaseServiceSMO implement
 
         }
         initializeOwnerServiceDaoImpl.deleteOwnerAppUser(communityId);
+        initializeOwnerServiceDaoImpl.deleteOwnerAccount(communityId);
+
         return deleteFast;
     }
 
