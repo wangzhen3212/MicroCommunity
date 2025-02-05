@@ -160,7 +160,7 @@ public class ImportRoomFeeQueueDataAdapt extends DefaultImportData implements II
 
         List<ImportRoomFee> importRoomFees = ownerCarInnerServiceSMOImpl.freshCarIds(cars);
         for (ImportRoomFee tmpImportRoomFee : importRoomFees) {
-            if (StringUtil.isEmpty(tmpImportRoomFee.getRoomId())) {
+            if (StringUtil.isEmpty(tmpImportRoomFee.getCarId())) {
                 throw new IllegalArgumentException(tmpImportRoomFee.getCarNum() + "不存在");
             }
         }
