@@ -304,16 +304,34 @@ public class ImportRoomFeeQueueDataAdapt extends DefaultImportData implements II
         importFeeDetailPo.setEndTime(importRoomFee.getEndTime());
         importFeeDetailPo.setFeeId(payFeePo.getFeeId());
         importFeeDetailPo.setFeeName(importRoomFee.getFeeName());
-        importFeeDetailPo.setFloorNum(importRoomFee.getFloorNum());
-        importFeeDetailPo.setUnitNum(importRoomFee.getUnitNum());
-        importFeeDetailPo.setRoomNum(importRoomFee.getRoomNum());
-        importFeeDetailPo.setRoomId(importRoomFee.getRoomId());
-        importFeeDetailPo.setObjId(importRoomFee.getRoomId());
+       
         importFeeDetailPo.setObjType(FeeDto.PAYER_OBJ_TYPE_ROOM);
-        importFeeDetailPo.setObjName(!"0".equals(importRoomFee.getUnitNum())
-                ? importRoomFee.getFloorNum() + "栋" + importRoomFee.getUnitNum() + "单元" + importRoomFee.getRoomNum() + "室" :
-                importRoomFee.getFloorNum() + "栋" + importRoomFee.getRoomNum() + "室"
-        );
+        if (FeeDto.PAYER_OBJ_TYPE_CONTRACT.equals(importRoomFee.getObjType())) {
+            importFeeDetailPo.setFloorNum("无");
+            importFeeDetailPo.setUnitNum("无");
+            importFeeDetailPo.setRoomNum(importRoomFee.getContractId());
+            importFeeDetailPo.setRoomId(importRoomFee.getContractId());
+            importFeeDetailPo.setObjId(importRoomFee.getContractId());
+            importFeeDetailPo.setObjName(importRoomFee.getContractId());
+        } else if (FeeDto.PAYER_OBJ_TYPE_CAR.equals(importRoomFee.getObjType())) {
+            importFeeDetailPo.setFloorNum("无");
+            importFeeDetailPo.setUnitNum("无");
+            importFeeDetailPo.setRoomNum(importRoomFee.getCarNum());
+            importFeeDetailPo.setRoomId(importRoomFee.getCarId());
+            importFeeDetailPo.setObjId(importRoomFee.getCarId());
+            importFeeDetailPo.setObjName(importRoomFee.getCarNum());
+        } else {
+            importFeeDetailPo.setFloorNum(importRoomFee.getFloorNum());
+            importFeeDetailPo.setUnitNum(importRoomFee.getUnitNum());
+            importFeeDetailPo.setRoomNum(importRoomFee.getRoomNum());
+            importFeeDetailPo.setRoomId(importRoomFee.getRoomId());
+            importFeeDetailPo.setObjId(importRoomFee.getRoomId());
+            importFeeDetailPo.setObjName(!"0".equals(importRoomFee.getUnitNum())
+                    ? importRoomFee.getFloorNum() + "栋" + importRoomFee.getUnitNum() + "单元" + importRoomFee.getRoomNum() + "室" :
+                    importRoomFee.getFloorNum() + "栋" + importRoomFee.getRoomNum() + "室"
+            );
+        }
+
         importFeeDetailPo.setStartTime(importRoomFee.getStartTime());
         importFeeDetailPo.setIfdId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_IfdId, true));
         importFeeDetailPo.setState("1000");
