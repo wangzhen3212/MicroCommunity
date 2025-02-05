@@ -228,7 +228,13 @@ public class ImportRoomFeeQueueDataAdapt extends DefaultImportData implements II
         feeAttrPo.setCommunityId(importRoomFee.getCommunityId());
         feeAttrPo.setAttrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_attrId, true));
         feeAttrPo.setSpecCd(FeeAttrDto.SPEC_CD_PAY_OBJECT_NAME);
-        feeAttrPo.setValue(importRoomFee.getRoomName());
+        if (FeeDto.PAYER_OBJ_TYPE_CONTRACT.equals(importRoomFee.getObjType())) {
+            feeAttrPo.setValue(importRoomFee.getContractId());
+        } else if (FeeDto.PAYER_OBJ_TYPE_CAR.equals(importRoomFee.getObjType())) {
+            feeAttrPo.setValue(importRoomFee.getCarNum());
+        } else {
+            feeAttrPo.setValue(importRoomFee.getRoomName());
+        }
         feeAttrPo.setFeeId(payFeePo.getFeeId());
         feeAttrPos.add(feeAttrPo);
 
