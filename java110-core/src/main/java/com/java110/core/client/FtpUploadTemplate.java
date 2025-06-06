@@ -155,7 +155,8 @@ public class FtpUploadTemplate {
             throw new IllegalArgumentException("上传文件失败");
         } finally {
             try {
-                ftpClient.disconnect();
+                // 先判空再调用
+                if (ftpClient != null) ftpClient.disconnect();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -210,7 +211,8 @@ public class FtpUploadTemplate {
             throw new IllegalArgumentException("上传文件失败");
         } finally {
             try {
-                ftpClient.disconnect();
+                // 先判空再调用
+                if (ftpClient != null) ftpClient.disconnect();
             } catch (IOException e) {
                 e.printStackTrace();
             }

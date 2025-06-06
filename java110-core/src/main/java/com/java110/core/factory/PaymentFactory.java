@@ -49,7 +49,7 @@ public class PaymentFactory {
         InetAddress ia = null;
         String localip = null;
         try {
-            ia = ia.getLocalHost();
+            ia = InetAddress.getLocalHost();
             localip = ia.getHostAddress();
         } catch (Exception e) {
             e.printStackTrace();

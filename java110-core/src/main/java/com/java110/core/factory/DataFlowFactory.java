@@ -287,7 +287,11 @@ public class DataFlowFactory {
             business.setbId(GenerateCodeFactory.getBId());
             busiMap = new HashMap();
             busiMap.put("oId",dataFlow.getoId());
-            busiMap.put("businessTypeCd",getService(dataFlow,business.getServiceCode()).getBusinessTypeCd());
+            AppService service = getService(dataFlow, business.getServiceCode());
+            if (service == null) {
+                throw new NullPointerException("getService() returned null, unable to getBusinessTypeCd");
+            }
+            busiMap.put("businessTypeCd", service.getBusinessTypeCd());
             busiMap.put("remark",business.getRemark());
             busiMap.put("statusCd",StatusConstant.STATUS_CD_SAVE);
             busiMap.put("bId",business.getbId());
