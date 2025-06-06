@@ -139,7 +139,11 @@ public class CosUploadTemplate {
         ByteArrayInputStream fis = null;
         try {
             ossClient = COSUtil.getCOSClient();
-            COSUtil.getInputStreamByCOS(ossClient, remotePath + fileName);
+            ins = COSUtil.getInputStreamByCOS(ossClient, remotePath + fileName);
+            if (ins == null) {
+                // 处理流为null的异常情况（如抛自定义异常、打日志等）
+                throw new RuntimeException("Failed to get input stream from COS");
+            }
             byteOut = new ByteArrayOutputStream();
             byte[] buf = new byte[2048];
             int bufsize = 0;
