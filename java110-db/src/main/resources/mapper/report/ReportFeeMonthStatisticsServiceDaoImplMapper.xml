@@ -1440,41 +1440,26 @@
     <select id="queryOweFeeDetailCount" parameterType="Map" resultType="Map">
         select count(1) count
         from (
-        select t.obj_name objName,t.fee_name feeName,t.owner_name ownerName,t.link ownerTel,br.built_up_area builtUpArea,
-        MIN(t.cur_month_time) startTime,MAX(t.cur_month_time) endTime,max(t.deadline_time) deadlineTime,SUM(t.receivable_amount) oweAmount
-        from pay_fee_detail_month t
-        left join building_room br on t.obj_id = br.room_id and br.status_cd = '0'
+        select t.payer_obj_name objName,t.fee_name feeName,pf.end_time feeCreateTime,t.create_time
+        createTime,SUM(t.amount_owed) oweAmount,max(t.deadline_time) deadlineTime
+        from report_owe_fee t
+        inner join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
+        left join building_room br on t.payer_obj_id = br.room_id and t.payer_obj_type = '3333' and br.status_cd = '0'
+        left join building_unit bu on br.unit_id = bu.unit_id and bu.status_cd = '0'
+        left join f_floor f on bu.floor_id = f.floor_id and f.status_cd = '0'
+        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.community_id = t.community_id and pf.status_cd = '0'
         where 1=1
-        and t.detail_id = '-1'
-        <if test="communityId !=null and communityId != ''">
-            and t.community_id= #{communityId}
+        <if test="roomNum !=null and roomNum != ''">
+            and br.room_num= #{roomNum}
         </if>
-        <if test="communityIds !=null">
-            and t.community_id in
-            <foreach collection="communityIds" item="item" open="(" close=")" separator=",">
-                #{item}
-            </foreach>
-        </if>
-        <if test="startTime !=null and startTime != ''">
-            and t.cur_month_time &gt;= #{startTime}
-        </if>
-        <if test="endTime !=null and endTime != ''">
-            and t.cur_month_time &lt; #{endTime}
-        </if>
-        <if test="objName !=null and objName != ''">
-            and t.obj_name= #{objName}
-        </if>
-        <if test="objNameLike !=null and objNameLike != ''">
-            and t.obj_name like concat('%', #{objNameLike},'%')
-        </if>
-        <if test="ownerName !=null and ownerName != ''">
-            and t.owner_name = #{ownerName}
-        </if>
-        <if test="ownerNameLike !=null and ownerNameLike != ''">
-            and t.owner_name like concat('%', #{ownerNameLike},'%')
+        <if test="unitId !=null and unitId != ''">
+            and bu.unit_id= #{unitId}
         </if>
         <if test="floorId !=null and floorId != ''">
-            and t.obj_fpc_id = #{floorId}
+            and f.floor_id = #{floorId}
+        </if>
+        <if test="objName !=null and objName != ''">
+            and t.payer_obj_name= #{objName}
         </if>
         <if test="feeId !=null and feeId != ''">
             and t.fee_id= #{feeId}
@@ -1483,56 +1468,56 @@
             and t.config_id= #{configId}
         </if>
         <if test="objId !=null and objId != ''">
-            and t.obj_id= #{objId}
+            and t.payer_obj_id= #{objId}
         </if>
-
         <if test="feeName !=null and feeName != ''">
             and t.fee_name= #{feeName}
         </if>
-        <if test="feeTypeCd != null and feeTypeCd != ''">
-            and t.fee_type_cd = #{feeTypeCd}
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
-        group by t.obj_name ,t.fee_name ,t.owner_name ,t.link ,br.built_up_area
+        <if test="startTime !=null and startTime != ''">
+            and t.create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime !=null and endTime != ''">
+            and t.create_time &lt;= #{endTime}
+        </if>
+        and t.amount_owed != 0 and pf.end_time &lt; now()
+        group by t.payer_obj_name ,t.fee_name ,pf.end_time ,t.create_time
+        HAVING oweAmount != 0
         ) t
     </select>
 
     <!-- 查询费用月统计信息 add by wuxw 2018-07-03 -->
     <select id="queryOweFeeDetail" parameterType="Map" resultType="Map">
-        select t.obj_name objName,t.fee_name feeName,t.owner_name ownerName,t.link ownerTel,br.built_up_area builtUpArea,t.community_id communityId,
-        MIN(t.cur_month_time) startTime,MAX(t.cur_month_time) endTime,max(t.deadline_time) deadlineTime,SUM(t.receivable_amount) oweAmount
-        from pay_fee_detail_month t
-        left join building_room br on t.obj_id = br.room_id and br.status_cd = '0'
+        select t.payer_obj_name objName,t.fee_name feeName,pf.end_time feeCreateTime,t.update_time updateTime,
+        t.owner_name ownerName,t.owner_tel ownerTel,br.built_up_area builtUpArea ,SUM(t.amount_owed) oweAmount,max(t.deadline_time)
+        deadlineTime
+        from report_owe_fee t
+        inner join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
+        left join building_room br on t.payer_obj_id = br.room_id and t.payer_obj_type = '3333' and br.status_cd = '0'
+        left join building_unit bu on br.unit_id = bu.unit_id and bu.status_cd = '0'
+        left join f_floor f on bu.floor_id = f.floor_id and f.status_cd = '0'
+        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.community_id = t.community_id and pf.status_cd = '0'
+        left join pay_fee_attrs pfa on pf.fee_id = pfa.fee_id and pfa.spec_cd = '390008' and pfa.status_cd ='0'
         where 1=1
-        and t.detail_id = '-1'
-        <if test="communityId !=null and communityId != ''">
-            and t.community_id= #{communityId}
+        <if test="roomNum !=null and roomNum != ''">
+            and br.room_num= #{roomNum}
         </if>
-        <if test="communityIds !=null">
-            and t.community_id in
-            <foreach collection="communityIds" item="item" open="(" close=")" separator=",">
-                #{item}
-            </foreach>
+        <if test="unitId !=null and unitId != ''">
+            and bu.unit_id= #{unitId}
         </if>
-        <if test="startTime !=null and startTime != ''">
-            and t.cur_month_time &gt;= #{startTime}
-        </if>
-        <if test="endTime !=null and endTime != ''">
-            and t.cur_month_time &lt; #{endTime}
-        </if>
-        <if test="objName !=null and objName != ''">
-            and t.obj_name= #{objName}
-        </if>
-        <if test="objNameLike !=null and objNameLike != ''">
-            and t.obj_name like concat('%', #{objNameLike},'%')
-        </if>
-        <if test="ownerName !=null and ownerName != ''">
-            and t.owner_name = #{ownerName}
-        </if>
-        <if test="ownerNameLike !=null and ownerNameLike != ''">
-            and t.owner_name like concat('%', #{ownerNameLike},'%')
+        <if test="unitNum !=null and unitNum != ''">
+            and bu.unit_num= #{unitNum}
         </if>
         <if test="floorId !=null and floorId != ''">
-            and t.obj_fpc_id = #{floorId}
+            and f.floor_id = #{floorId}
+        </if>
+        <if test="floorNum !=null and floorNum != ''">
+            and f.floor_num = #{floorNum}
+        </if>
+        <if test="objName !=null and objName != ''">
+            and t.payer_obj_name= #{objName}
         </if>
         <if test="feeId !=null and feeId != ''">
             and t.fee_id= #{feeId}
@@ -1541,16 +1526,24 @@
             and t.config_id= #{configId}
         </if>
         <if test="objId !=null and objId != ''">
-            and t.obj_id= #{objId}
+            and t.payer_obj_id= #{objId}
         </if>
         <if test="feeName !=null and feeName != ''">
             and t.fee_name= #{feeName}
         </if>
-        <if test="feeTypeCd != null and feeTypeCd != ''">
-            and t.fee_type_cd = #{feeTypeCd}
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
-        group by t.obj_name ,t.fee_name ,t.owner_name ,t.link ,br.built_up_area,t.community_id
-        order by t.obj_name
+        <if test="startTime !=null and startTime != ''">
+            and t.create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime !=null and endTime != ''">
+            and t.create_time &lt;= #{endTime}
+        </if>
+        and t.amount_owed != 0 and pf.end_time &lt; now()
+        group by t.payer_obj_name ,t.fee_name ,pf.end_time ,t.update_time, t.owner_name ,t.owner_tel ,br.built_up_area
+        HAVING oweAmount != 0
+        order by t.payer_obj_name
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
         </if>
@@ -1558,25 +1551,25 @@
 
     <!-- 查询费用月统计信息 add by wuxw 2018-07-03 -->
     <select id="queryOweFeeDetailMajor" parameterType="Map" resultType="Map">
-        select SUM(t.receivable_amount) oweAmount
-        from pay_fee_detail_month t
-        left join building_room br on t.obj_id = br.room_id and br.status_cd = '0'
+        select SUM(t.amount_owed) oweAmount
+        from report_owe_fee t
+        inner join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
+        left join building_room br on t.payer_obj_id = br.room_id and t.payer_obj_type = '3333' and br.status_cd = '0'
+        left join building_unit bu on br.unit_id = bu.unit_id and bu.status_cd = '0'
+        left join f_floor f on bu.floor_id = f.floor_id and f.status_cd = '0'
+        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.community_id = t.community_id and pf.status_cd = '0'
         where 1=1
-        and t.detail_id = '-1'
-        <if test="communityId !=null and communityId != ''">
-            and t.community_id= #{communityId}
+        <if test="roomNum !=null and roomNum != ''">
+            and br.room_num= #{roomNum}
         </if>
-        <if test="startTime !=null and startTime != ''">
-            and t.cur_month_time &gt;= #{startTime}
-        </if>
-        <if test="endTime !=null and endTime != ''">
-            and t.cur_month_time &lt; #{endTime}
-        </if>
-        <if test="objName !=null and objName != ''">
-            and t.obj_name= #{objName}
+        <if test="unitId !=null and unitId != ''">
+            and bu.unit_id= #{unitId}
         </if>
         <if test="floorId !=null and floorId != ''">
-            and t.obj_fpc_id = #{floorId}
+            and f.floor_id = #{floorId}
+        </if>
+        <if test="objName !=null and objName != ''">
+            and t.payer_obj_name= #{objName}
         </if>
         <if test="feeId !=null and feeId != ''">
             and t.fee_id= #{feeId}
@@ -1585,13 +1578,19 @@
             and t.config_id= #{configId}
         </if>
         <if test="objId !=null and objId != ''">
-            and t.obj_id= #{objId}
+            and t.payer_obj_id= #{objId}
         </if>
         <if test="feeName !=null and feeName != ''">
             and t.fee_name= #{feeName}
         </if>
-        <if test="feeTypeCd != null and feeTypeCd != ''">
-            and t.fee_type_cd = #{feeTypeCd}
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
+        <if test="startTime !=null and startTime != ''">
+            and t.create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime !=null and endTime != ''">
+            and t.create_time &lt;= #{endTime}
         </if>
     </select>
 
@@ -1602,20 +1601,16 @@
         from pay_fee_detail t
         left JOIN pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
         left join pay_fee_config pfc on pf.config_id = pfc.config_id and pfc.status_cd = '0'
-        <if test="ownerId != null and ownerId != ''">
-            left join pay_fee_attrs pfa1 on t.fee_id = pfa1.fee_id and pfa1.spec_cd = '390007'
-        </if>
-        left join pay_fee_attrs pfa3 on t.fee_id = pfa3.fee_id and pfa3.spec_cd = '390012'
         where t.status_cd = '0'
         and pf.status_cd = '0' and t.state != '1500'
         <if test="detailId !=null and detailId != ''">
             and t.detail_id= #{detailId}
         </if>
         <if test="payerObjName !=null and payerObjName != ''">
-            and pfa3.value = #{payerObjName}
+            and pf.payer_obj_name = #{payerObjName}
         </if>
         <if test="ownerId !=null and ownerId != ''">
-            and pfa1.value = #{ownerId}
+            and pf.owner_id = #{ownerId}
         </if>
         <if test="feeId !=null and feeId != ''">
             and pf.fee_id= #{feeId}
@@ -1632,13 +1627,6 @@
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
         </if>
-        <if test="communityIds !=null">
-            and t.community_id in
-            <foreach collection="communityIds" item="item" open="(" close=")" separator=",">
-                #{item}
-            </foreach>
-        </if>
-
         <if test="primeRate != null and primeRate != ''">
             and t.prime_rate = #{primeRate}
         </if>
@@ -1672,19 +1660,14 @@
     <select id="queryPayFeeDetail" parameterType="Map" resultType="Map">
         select pfc.fee_name feeName,pf.payer_obj_type payerObjType,t.start_time startTime,t.end_time
         endTime,t.create_time createTime,t.receivable_amount receivableAmount,t.received_amount receivedAmount,
-        t.prime_rate,d.name primeRate,pfa2.`value` ownerName,pfa3.`value` payerObjName,t.pay_order_id oId,d2.name feeTypeCdName,pfc.fee_type_cd feeTypeCd,
+        t.prime_rate,d.name primeRate,pf.`owner_name` ownerName,pf.payer_obj_name payerObjName,t.pay_order_id oId,d2.name feeTypeCdName,pfc.fee_type_cd feeTypeCd,
         t.state,d3.name stateName,t.fee_id feeId,t.detail_id detailId,pf.payer_obj_id payerObjId,
         t.cashier_id cashierId,t.cashier_name cashierName,t.payable_amount payableAmount,pfc.fee_flag feeFlag,
         t.acct_amount acctAmount, t.discount_amount discountAmount, t.deduction_amount deductionAmount, t.late_amount lateAmount,
-        t.gift_amount giftAmount,t.remark,t.community_id communityId
+        t.gift_amount giftAmount,t.remark
         from pay_fee_detail t
         left JOIN pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
         left join pay_fee_config pfc on pf.config_id = pfc.config_id and pfc.status_cd = '0'
-        <if test="ownerId != null and ownerId != ''">
-            left join pay_fee_attrs pfa1 on t.fee_id = pfa1.fee_id and pfa1.spec_cd = '390007'
-        </if>
-        left join pay_fee_attrs pfa2 on t.fee_id = pfa2.fee_id and pfa2.spec_cd = '390008'
-        left join pay_fee_attrs pfa3 on t.fee_id = pfa3.fee_id and pfa3.spec_cd = '390012'
         left join t_dict d on t.prime_rate = d.status_cd and d.table_name='pay_fee_detail' and
         d.table_columns='prime_rate'
         left join t_dict d2 on pfc.fee_type_cd = d2.status_cd and d2.table_name = 'pay_fee_config' and d2.table_columns
@@ -1697,10 +1680,10 @@
             and t.detail_id= #{detailId}
         </if>
         <if test="payerObjName !=null and payerObjName != ''">
-            and pfa3.value = #{payerObjName}
+            and pf.payer_obj_name = #{payerObjName}
         </if>
         <if test="ownerId !=null and ownerId != ''">
-            and pfa1.value = #{ownerId}
+            and pf.owner_id = #{ownerId}
         </if>
         <if test="feeId !=null and feeId != ''">
             and pf.fee_id= #{feeId}
@@ -1717,13 +1700,6 @@
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
         </if>
-        <if test="communityIds !=null">
-            and t.community_id in
-            <foreach collection="communityIds" item="item" open="(" close=")" separator=",">
-                #{item}
-            </foreach>
-        </if>
-
         <if test="primeRate != null and primeRate != ''">
             and t.prime_rate = #{primeRate}
         </if>
@@ -3361,7 +3337,7 @@
         and t.fee_id = rof.fee_id
         and t.community_id = f.community_id
         and t.detail_id = '-1'
-        and t.cur_month_time &lt;= #{startTime}
+        and t.cur_month_time &lt;= #{endTime}
         ) oweAmount,
         (
         select ifnull(SUM(t.receivable_amount),0)
@@ -3370,8 +3346,8 @@
         and t.fee_id = rof.fee_id
         and t.community_id = f.community_id
         and t.detail_id = '-1'
-        and t.cur_month_time &lt;= #{startTime}
-        and t.cur_month_time &gt;= #{endTime}
+        and t.cur_month_time &lt;= #{endTime}
+        and t.cur_month_time &gt;= #{startTime}
         ) curOweAmount,
         (
         select ifnull(SUM(t.receivable_amount),0)
