@@ -71,7 +71,7 @@ public class AppEventPublishing extends LoggerEngine{
      */
     public static List<AppListener<?>> getListeners(String interfaceClassName){
 
-        Assert.isNull(interfaceClassName,"获取需要发布的事件处理侦听时，传递事件为空，请检查");
+        Assert.notNull(interfaceClassName, "获取需要发布的事件处理侦听时，传递事件为空，请检查");
 
         //先从缓存中获取，为了提升效率
         if(cacheListenersMap.containsKey(interfaceClassName)){
