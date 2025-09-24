@@ -3,6 +3,7 @@ package com.java110.community.cmd.community;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.annotation.Java110Cmd;
+import com.java110.core.context.Environment;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
@@ -26,6 +27,7 @@ public class SaveCommunitySettingCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+        Environment.isDevEnv();
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区");
         Assert.hasKeyAndValue(reqJson, "settingType", "未包含类型");
 
