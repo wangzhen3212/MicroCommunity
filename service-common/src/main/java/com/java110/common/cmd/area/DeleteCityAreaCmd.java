@@ -18,6 +18,7 @@ package com.java110.common.cmd.area;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.annotation.Java110Cmd;
 import com.java110.core.annotation.Java110Transactional;
+import com.java110.core.context.Environment;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
@@ -54,6 +55,7 @@ public class DeleteCityAreaCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        Environment.isDevEnv();
         Assert.hasKeyAndValue(reqJson, "id", "id不能为空");
 
         CityAreaDto cityAreaDto = new CityAreaDto();
