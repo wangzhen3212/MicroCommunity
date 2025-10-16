@@ -157,12 +157,12 @@ public class FeieManufactor implements IPrinter {
             startTime = DateUtil.getDateFromStringB(tmpFeeReceiptDetailDto.getStartTime());
             endTime = DateUtil.getDateFromStringB(tmpFeeReceiptDetailDto.getEndTime());
             //周期性和间接性
-            if (!FeeDto.FEE_FLAG_ONCE.equals(tmpFeeReceiptDetailDto.getFeeFlag())) {
-                endTimeCal = Calendar.getInstance();
-                endTimeCal.setTime(endTime);
-                endTimeCal.add(Calendar.DAY_OF_MONTH, -1);
-                endTime = endTimeCal.getTime();
-            }
+//            if (!FeeDto.FEE_FLAG_ONCE.equals(tmpFeeReceiptDetailDto.getFeeFlag())) {
+//                endTimeCal = Calendar.getInstance();
+//                endTimeCal.setTime(endTime);
+//                endTimeCal.add(Calendar.DAY_OF_MONTH, -1);
+//                endTime = endTimeCal.getTime();
+//            }
             feieLines.add(new FeieLine("收费范围", DateUtil.getFormatTimeString(startTime, DateUtil.DATE_FORMATE_STRING_B) + "至" + DateUtil.getFormatTimeString(endTime, DateUtil.DATE_FORMATE_STRING_B)));
             feieLines.add(new FeieLine("单价/固定费", tmpFeeReceiptDetailDto.getSquarePrice()));
             feieLines.add(new FeieLine("面积/用量", tmpFeeReceiptDetailDto.getArea()));
