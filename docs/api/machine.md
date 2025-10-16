@@ -2,7 +2,7 @@
 
 ## 说明
 
-文档说明设备相关接口协议
+文档说明设备相关接口协议1
 
 HC小区管理系统源码获取 https://gitee.com/wuxw7/MicroCommunity
 
