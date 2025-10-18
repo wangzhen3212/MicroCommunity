@@ -407,6 +407,7 @@ public class PayFeeCmd extends Cmd {
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(endTime);
                 cal.add(Calendar.MONTH, Integer.parseInt(specValue));
+                cal.add(Calendar.SECOND,1);
                 payFeeDetailPo.setEndTime(df.format(cal.getTime()));
                 payFeePo.setEndTime(df.format(cal.getTime()));
 
