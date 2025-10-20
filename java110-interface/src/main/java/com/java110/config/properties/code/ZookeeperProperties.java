@@ -7,9 +7,9 @@ import org.springframework.stereotype.Component;
 /**
  * Created by wuxw on 2018/6/6.
  */
-@Component
-@ConfigurationProperties(prefix = "java110.code.zookeeper")
-@PropertySource("classpath:config/code/zookeeper.properties")
+//@Component
+//@ConfigurationProperties(prefix = "java110.code.zookeeper")
+//@PropertySource("classpath:config/code/zookeeper.properties")
 public class ZookeeperProperties {
 
     private String url;

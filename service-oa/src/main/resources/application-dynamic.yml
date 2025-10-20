@@ -55,12 +55,8 @@ feign:
         connect-timeout: 10000
         read-timeout: 10000
 
-#============== kafka ===================
-kafka:
   consumer:
-    zookeeper:
       connect: dev.zk.java110.com:2181
-    servers: dev.kafka.java110.com:9092
     enable:
       auto:
         commit: true
@@ -77,9 +73,7 @@ kafka:
     concurrency: 10
 
   producer:
-    zookeeper:
       connect: dev.zk.java110.com:2181
-    servers: dev.kafka.java110.com:9092
     retries: 0
     batch:
       size: 4096

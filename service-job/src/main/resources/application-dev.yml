@@ -65,12 +65,8 @@ feign:
 #      prefix: classpath:/templates/
 #      suffix: .html
 
-#============== kafka ===================
-kafka:
   consumer:
-    zookeeper:
       connect: dev.zk.java110.com:2181
-    servers: dev.kafka.java110.com:9092
     enable:
       auto:
         commit: true
@@ -88,9 +84,7 @@ kafka:
   hcGovTopic: csxq
 
   producer:
-    zookeeper:
       connect: dev.zk.java110.com:2181
-    servers: dev.kafka.java110.com:9092
     retries: 0
     batch:
       size: 4096

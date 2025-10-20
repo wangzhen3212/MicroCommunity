@@ -2,6 +2,9 @@
 ## Introduction
  HC community management system is a set of saas property management system, including real estate, owners, fees (payment can be made online), repair application (repair can be reported online), complaints and suggestions, procurement, inspection, parking, gates, gates, monitoring , workflow, questionnaires, and announcements.
  
+## Important Note
+**The system no longer requires Zookeeper and Kafka installation. Previous configurations for these components have been removed as they are no longer used by the system.**
+ 
  Related code：<br/><br/>
  1、[Front end of property system](https://gitee.com/java110/MicroCommunityWeb) : Property staff using computer terminal<br/>
  2、[Property system backend](https://gitee.com/wuxw7/MicroCommunity): core business processing<br/>
@@ -55,7 +58,3 @@ dev account：dev/Change the password yourself [How to modify](http://bbs.homeco
 ## Participate and contribute
 
 You can fork the code and pull request to merge the code after commit
-
-
-
-

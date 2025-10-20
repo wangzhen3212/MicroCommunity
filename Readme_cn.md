@@ -3,6 +3,9 @@
  HC小区管理系统是一套saas物业管理的系统，包括 房产、业主、 费用 （可以线上缴费）、报修（可以线上报修）、投诉建议、采购、巡检、停车、门径、道闸、监控、工作流、问卷和公告等功能。
 
 目前很多地方商用超过四年半时间 欢迎直接使用或者推广使用
+
+## 重要说明
+**系统不再需要安装Zookeeper和Kafka。这些组件的配置已被移除，系统不再使用这些组件。**
  
  相关代码：<br/><br/>
  1、[物业系统前端](https://gitee.com/java110/MicroCommunityWeb) : 物业员工使用电脑端<br/>
@@ -12,7 +15,7 @@
 
 ## 如何安装
 
-1、[开发环境安装](docs/installHcDev.md) <br/>
+1、[开发环境安装](docs/installHcDev_en.md) <br/>
 2、[生产环境安装](docs/installHcProd.md)<br/>
 3、[springboot方式启动](docs/installSpringboot.md)<br/>
 
@@ -69,6 +72,3 @@
 联系作者：17797173942（微信号）
 
 QQ交流群5：857791253
-
-
-
