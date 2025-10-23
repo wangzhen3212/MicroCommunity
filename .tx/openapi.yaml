@@ -1,0 +1,296 @@
+openapi: 3.0.3
+info:
+  title: MicroCommunity API
+  description: 微社区系统API接口文档
+  version: 1.0.0
+  contact:
+    name: MicroCommunity Team
+    url: https://github.com/java110/MicroCommunity
+
+servers:
+  - url: http://localhost:8008
+    description: 开发环境
+  - url: https://api.microcommunity.com
+    description: 生产环境
+
+paths:
+  /app/{service}:
+    parameters:
+      - name: service
+        in: path
+        required: true
+        schema:
+          type: string
+        description: 服务编码
+    post:
+      summary: 资源POST请求
+      description: 统一资源POST请求入口
+      operationId: servicePost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultVo'
+        '500':
+          description: 服务器错误
+    get:
+      summary: 资源GET请求
+      description: 统一资源GET请求入口
+      operationId: serviceGet
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultVo'
+    put:
+      summary: 资源PUT请求
+      description: 统一资源PUT请求入口
+      operationId: servicePut
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+    delete:
+      summary: 资源DELETE请求
+      description: 统一资源DELETE请求入口
+      operationId: serviceDelete
+      responses:
+        '200':
+          description: 成功
+
+  /app/{resource}/{action}:
+    parameters:
+      - name: resource
+        in: path
+        required: true
+        schema:
+          type: string
+        description: 资源类型
+      - name: action
+        in: path
+        required: true
+        schema:
+          type: string
+        description: 操作类型
+    get:
+      summary: 子资源GET请求
+      description: 子资源GET请求入口
+      operationId: subServiceGet
+      responses:
+        '200':
+          description: 成功
+    post:
+      summary: 子资源POST请求
+      description: 子资源POST请求入口
+      operationId: subServicePost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+
+  /app/loginOwner:
+    post:
+      summary: 业主登录
+      description: 业主账号密码登录
+      operationId: loginOwner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+
+  /app/loginOwnerByKey:
+    post:
+      summary: 业主密钥登录
+      description: 使用密钥登录系统
+      operationId: loginOwnerByKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 登录成功
+
+  /app/loginWx:
+    post:
+      summary: 微信登录
+      description: 微信小程序登录
+      operationId: loginWx
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                userInfo:
+                  type: object
+      responses:
+        '200':
+          description: 登录成功
+
+  /app/loginOwnerWechatAuth:
+    get:
+      summary: 微信授权登录
+      description: 微信公众号授权登录
+      operationId: loginOwnerWechatAuth
+      parameters:
+        - name: appId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 授权成功
+
+  /app/loginStaffWechatAuth:
+    get:
+      summary: 员工微信授权
+      description: 员工微信授权登录
+      operationId: loginStaffWechatAuth
+      parameters:
+        - name: appId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 授权成功
+
+  /app/staffAuth:
+    get:
+      summary: 员工鉴权
+      description: 员工权限验证
+      operationId: staffAuth
+      parameters:
+        - name: communityId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: staffId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: storeId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: appId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 鉴权成功
+
+  /app/getWxPhoto:
+    post:
+      summary: 获取微信照片
+      description: 获取微信用户照片信息
+      operationId: getWxPhoto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                decryptData:
+                  type: string
+                key:
+                  type: string
+                iv:
+                  type: string
+      responses:
+        '200':
+          description: 成功获取
+
+components:
+  schemas:
+    ResultVo:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 返回码
+        msg:
+          type: string
+          description: 返回消息
+        data:
+          type: object
+          description: 返回数据
+
+    LoginResult:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "0"
+        msg:
+          type: string
+          example: "成功"
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              description: 认证令牌
+            userId:
+              type: string
+              description: 用户ID
+            userName:
+              type: string
+              description: 用户名
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
