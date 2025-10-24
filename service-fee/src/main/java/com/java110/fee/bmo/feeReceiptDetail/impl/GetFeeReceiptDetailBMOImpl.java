@@ -200,6 +200,14 @@ public class GetFeeReceiptDetailBMOImpl implements IGetFeeReceiptDetailBMO {
         BigDecimal acctAmount = new BigDecimal(nOnceFeeReceiptDetailDto.getAcctAmount());
         acctAmount = acctAmount.add(new BigDecimal(feeReceiptDetailDto.getAcctAmount()));
         nOnceFeeReceiptDetailDto.setAcctAmount(acctAmount.doubleValue() + "");
+
+        try {
+            if (!StringUtil.isEmpty(feeReceiptDetailDto.getCurDegrees())) {
+                BigDecimal areaAmount = new BigDecimal(nOnceFeeReceiptDetailDto.getArea());
+                areaAmount = areaAmount.add(new BigDecimal(feeReceiptDetailDto.getArea()));
+                nOnceFeeReceiptDetailDto.setArea(areaAmount.doubleValue() + "");
+            }
+        }catch (Exception e){}
     }
 
 }
