@@ -62,6 +62,14 @@ import java.util.List;
         resBody = "{'code':0,'msg':'成功'}"
 )
 @Java110Cmd(serviceCode = "account.customSendAcct")
+/**
+ * 自定义账户赠送命令类
+ * 处理第三方平台向用户账户赠送积分、现金等操作
+ * 支持多种账户类型：现金账户、积分账户、金币账户
+ * 
+ * @author 吴学文
+ * @version 1.0
+ */
 public class CustomSendAcctCmd extends Cmd {
 
     @Autowired
@@ -82,64 +90,101 @@ public class CustomSendAcctCmd extends Cmd {
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令异常
+     * @throws ParseException 解析异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
-
+        // 验证必填参数是否存在
         Assert.hasKeyAndValue(reqJson, "link", "未包含手机号");
         Assert.hasKeyAndValue(reqJson, "acctType", "未包含账户类型");
         Assert.hasKeyAndValue(reqJson, "quantity", "未包含赠送数量");
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区");
-
     }
 
+    /**
+     * 执行账户赠送命令
+     * 主要逻辑：查询账户、创建账户（如不存在）、预存金额、处理积分赠送
+     *
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令异常
+     * @throws ParseException 解析异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
-
+        // 获取操作用户ID
         String createUserId = context.getReqHeaders().get("user-id");
 
-        //向积分账户中充值积分
+        // 构建账户查询条件
         AccountDto accountDto = new AccountDto();
         accountDto.setLink(reqJson.getString("link"));
         accountDto.setAcctType(reqJson.getString("acctType"));
         accountDto.setPartId(reqJson.getString("communityId"));
+        
+        // 查询账户信息
         List<AccountDto> accountDtos = accountInnerServiceSMOImpl.queryAccounts(accountDto);
 
+        // 如果账户不存在，则创建新账户
         if (accountDtos == null || accountDtos.size() < 1) {
             accountDtos = addAccountDto(accountDto, reqJson);
         }
 
+        // 创建账户明细对象并设置参数
         AccountDetailPo accountDetailPo = new AccountDetailPo();
         accountDetailPo.setAcctId(accountDtos.get(0).getAcctId());
         accountDetailPo.setObjId(accountDtos.get(0).getObjId());
         accountDetailPo.setObjType(accountDtos.get(0).getObjType());
         accountDetailPo.setAmount(reqJson.getString("quantity"));
         accountDetailPo.setRemark("三方平台通过手工赠送");
+        
+        // 执行预存操作
         int flag = accountInnerServiceSMOImpl.prestoreAccount(accountDetailPo);
 
+        // 检查预存操作是否成功
         if (flag < 1) {
             throw new CmdException("扣款失败");
         }
 
-        //todo 积分 需要补充一下数据
+        // 如果是积分账户类型，则额外处理积分赠送逻辑
         if("2004".equals(reqJson.getString("acctType"))) {
             doGiftIntegral(accountDtos.get(0), reqJson, createUserId);
         }
-
     }
 
+    /**
+     * 添加账户DTO对象
+     * 当用户账户不存在时，创建新的账户记录
+     *
+     * @param accountDto 账户数据传输对象
+     * @param reqJson 请求参数JSON对象
+     * @return 账户DTO列表
+     */
     private List<AccountDto> addAccountDto(AccountDto accountDto, JSONObject reqJson) {
-        // todo  查询账户名称 这里如果存在业主则业主名称 不是业主 则 填写用户名称，如果用户都没有 则返回空
+        // 获取账户名称：优先使用业主名称，其次使用用户名称
         String acctName = getAccountName(reqJson);
 
+        // 如果账户名称为空，返回空列表
         if (StringUtil.isEmpty(acctName)) {
             return new ArrayList<>();
         }
-        //开始锁代码
+        
+        // 使用分布式锁确保账户创建的原子性
         String requestId = DistributedLock.getLockUUID();
         String key = this.getClass().getSimpleName() + "AddCountDto" + reqJson.getString("link");
         try {
+            // 获取分布式锁
             DistributedLock.waitGetDistributedLock(key, requestId);
 
+            // 创建账户PO对象并设置参数
             AccountPo accountPo = new AccountPo();
             accountPo.setAmount("0");
             accountPo.setAcctId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_acctId));
@@ -149,59 +194,85 @@ public class CustomSendAcctCmd extends Cmd {
             accountPo.setAcctName(acctName);
             accountPo.setPartId(reqJson.getString("communityId"));
             accountPo.setLink(reqJson.getString("link"));
+            
+            // 保存账户信息
             accountInnerServiceSMOImpl.saveAccount(accountPo);
+            
+            // 重新查询账户信息并返回
             List<AccountDto> accountDtos = accountInnerServiceSMOImpl.queryAccounts(accountDto);
             return accountDtos;
         } finally {
+            // 释放分布式锁
             DistributedLock.releaseDistributedLock(requestId, key);
         }
     }
 
+    /**
+     * 获取账户名称
+     * 根据手机号查询业主或用户信息，获取账户显示名称
+     *
+     * @param reqJson 请求参数JSON对象
+     * @return 账户名称
+     */
     private String getAccountName(JSONObject reqJson) {
-
-        // todo 业主用 手机号查询
+        // 优先查询业主信息
         OwnerDto tmpOwnerDto = new OwnerDto();
         tmpOwnerDto.setLink(reqJson.getString("link"));
         tmpOwnerDto.setCommunityId(reqJson.getString("communityId"));
         List<OwnerDto> ownerDtos = ownerInnerServiceSMOImpl.queryOwners(tmpOwnerDto);
+        
+        // 如果找到业主，使用业主信息
         if (!ListUtil.isNull(ownerDtos)) {
             reqJson.put("objId", ownerDtos.get(0).getMemberId());
             return ownerDtos.get(0).getName();
         }
 
-        //todo 非业主是游客
+        // 如果业主不存在，查询用户信息（游客）
         UserDto userDto = new UserDto();
         userDto.setTel(reqJson.getString("link"));
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
+        
+        // 如果找到用户，使用用户信息
         if (userDtos != null && userDtos.size() > 0) {
             reqJson.put("objId", "-1");
             return userDtos.get(0).getName();
         }
+        
+        // 既不是业主也不是用户，抛出异常
         throw new CmdException("业主不存在");
     }
 
+    /**
+     * 处理积分赠送逻辑
+     * 为积分账户创建积分赠送明细记录
+     *
+     * @param accountDto 账户数据传输对象
+     * @param reqJson 请求参数JSON对象
+     * @param createUserId 创建用户ID
+     */
     private void doGiftIntegral(AccountDto accountDto, JSONObject reqJson,String createUserId) {
-
+        // 查询积分配置信息
         IntegralConfigDto integralConfigDto = new IntegralConfigDto();
         integralConfigDto.setCommunityId(reqJson.getString("communityId"));
         List<IntegralConfigDto> integralConfigDtos = integralConfigV1InnerServiceSMOImpl.queryIntegralConfigs(integralConfigDto);
+        
+        // 验证积分规则是否存在
         if(integralConfigDtos == null || integralConfigDtos.size()< 1){
             throw new CmdException("积分规则不存在，请添加");
         }
 
-//        UserDto userDto = new UserDto();
-//        userDto.setTel(reqJson.getString("link"));
-//        List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
-//        Assert.listOnlyOne(userDtos, "用户不存在");
-
+        // 查询业主信息，确保业主存在
         OwnerDto tmpOwnerDto = new OwnerDto();
         tmpOwnerDto.setLink(reqJson.getString("link"));
         tmpOwnerDto.setCommunityId(reqJson.getString("communityId"));
         List<OwnerDto> ownerDtos = ownerInnerServiceSMOImpl.queryOwners(tmpOwnerDto);
+        
+        // 如果业主不存在，直接返回
         if (ownerDtos != null && ownerDtos.size() > 0) {
             return;
         }
-        //先加明细
+        
+        // 创建积分赠送明细记录
         IntegralGiftDetailPo integralGiftDetailPo = new IntegralGiftDetailPo();
         integralGiftDetailPo.setCommunityId(reqJson.getString("communityId"));
         integralGiftDetailPo.setDetailId(GenerateCodeFactory.getGeneratorId("11"));
@@ -213,7 +284,8 @@ public class CustomSendAcctCmd extends Cmd {
         integralGiftDetailPo.setCreateUserId(createUserId);
         integralGiftDetailPo.setUserName(ownerDtos.get(0).getName());
         integralGiftDetailPo.setTel(ownerDtos.get(0).getLink());
+        
+        // 保存积分赠送明细
         integralGiftDetailV1InnerServiceSMOImpl.saveIntegralGiftDetail(integralGiftDetailPo);
-
     }
 }
