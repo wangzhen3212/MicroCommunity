@@ -117,11 +117,23 @@ public class FeieManufactor implements IPrinter {
     public ResultVo printPayFeeDetail(String[] detailIds, String communityId, int quantity, MachinePrinterDto machinePrinterDto, String staffName) {
 
         String printStr = "";
+
+        // 修改：不再只取第一个detailId，而是使用所有detailIds查询
         FeeDetailDto feeDetailDto = new FeeDetailDto();
-        feeDetailDto.setDetailId(detailIds[0]);
         feeDetailDto.setCommunityId(communityId);
-        List<FeeDetailDto> feeDetailDtos = feeDetailInnerServiceSMOImpl.queryFeeDetails(feeDetailDto);
-        Assert.listOnlyOne(feeDetailDtos, "交费明细不存在");
+        // 使用detailIds参数一次性查询所有费用明细
+        List<FeeDetailDto> feeDetailDtos = new ArrayList<>();
+        for (String detailId : detailIds) {
+            feeDetailDto.setDetailId(detailId);
+            List<FeeDetailDto> tempFeeDetailDtos = feeDetailInnerServiceSMOImpl.queryFeeDetails(feeDetailDto);
+            if (tempFeeDetailDtos != null && !tempFeeDetailDtos.isEmpty()) {
+                feeDetailDtos.add(tempFeeDetailDtos.get(0));
+            }
+        }
+
+        if (feeDetailDtos.isEmpty()) {
+            throw new CmdException("交费明细不存在");
+        }
 
         FeeReceiptDetailDto feeReceiptDetailDto = new FeeReceiptDetailDto();
         feeReceiptDetailDto.setDetailIds(detailIds);
@@ -131,6 +143,7 @@ public class FeieManufactor implements IPrinter {
             throw new CmdException("未生成收据");
         }
 
+        // 修改：使用第一个收据ID获取收据信息
         FeeReceiptDto feeReceiptDto = new FeeReceiptDto();
         feeReceiptDto.setReceiptId(feeReceiptDetailDtos.get(0).getReceiptId());
         feeReceiptDto.setCommunityId(communityId);
@@ -152,7 +165,10 @@ public class FeieManufactor implements IPrinter {
         Date endTime = null;
         Calendar endTimeCal = null;
         BigDecimal totalDecimal = new BigDecimal(0);
+
+        // 修改：确保一次性处理所有收据明细，而不是逐条累积
         for (FeeReceiptDetailDto tmpFeeReceiptDetailDto : feeReceiptDetailDtos) {
+            feieLines.clear(); // 每次循环前清空列表，避免累积
             feieLines.add(new FeieLine("收费项目", tmpFeeReceiptDetailDto.getFeeName()));
             startTime = DateUtil.getDateFromStringB(tmpFeeReceiptDetailDto.getStartTime());
             endTime = DateUtil.getDateFromStringB(tmpFeeReceiptDetailDto.getEndTime());
@@ -172,6 +188,8 @@ public class FeieManufactor implements IPrinter {
             }
             feieLines.add(new FeieLine("金额", tmpFeeReceiptDetailDto.getAmount()));
             feieLines.add(new FeieLine("备注", tmpFeeReceiptDetailDto.getRemark()));
+
+            // 修改：将每个收据明细添加到打印内容中，但保持为单个打印任务
             printStr += FeieGetPayFeeDetail.getPrintPayFeeDetailBodyContent(feieLines);
             totalDecimal = totalDecimal.add(new BigDecimal(Double.parseDouble(tmpFeeReceiptDetailDto.getAmount())));
         }
