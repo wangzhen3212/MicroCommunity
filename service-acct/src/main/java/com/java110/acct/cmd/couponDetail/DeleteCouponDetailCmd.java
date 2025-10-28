@@ -32,39 +32,72 @@ import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 
 /**
- * 类表述：删除
- * 服务编码：couponDetail.deleteCouponDetail
- * 请求路劲：/app/couponDetail.DeleteCouponDetail
- * add by 吴学文 at 2021-11-24 00:02:31 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 优惠券详情删除命令类
+ * 
+ * 该类负责处理优惠券详情的删除操作，实现了删除优惠券详情的业务逻辑。
+ * 通过注解标识服务编码，与前端请求路径对应，提供参数验证和删除执行功能。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2021-11-24
  */
 @Java110Cmd(serviceCode = "couponDetail.deleteCouponDetail")
 public class DeleteCouponDetailCmd extends Cmd {
+    
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(DeleteCouponDetailCmd.class);
 
+    /**
+     * 优惠券详情服务接口
+     * 用于调用优惠券详情的数据库操作
+     */
     @Autowired
     private ICouponDetailV1InnerServiceSMO couponDetailV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的detailId字段，确保删除操作有明确的标识。
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含detailId字段，确保删除操作有明确的标识
         Assert.hasKeyAndValue(reqJson, "detailId", "detailId不能为空");
-
     }
 
+    /**
+     * 执行删除命令方法
+     * 
+     * 将请求参数转换为优惠券详情PO对象，调用服务层执行删除操作，
+     * 并根据删除结果设置响应信息。
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将JSON请求参数转换为优惠券详情PO对象，便于后续数据库操作
         CouponDetailPo couponDetailPo = BeanConvertUtil.covertBean(reqJson, CouponDetailPo.class);
+        
+        // 调用服务层执行删除操作，返回影响的行数
         int flag = couponDetailV1InnerServiceSMOImpl.deleteCouponDetail(couponDetailPo);
 
+        // 检查删除操作是否成功，如果影响行数小于1则认为删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置成功的响应结果，返回操作成功信息
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

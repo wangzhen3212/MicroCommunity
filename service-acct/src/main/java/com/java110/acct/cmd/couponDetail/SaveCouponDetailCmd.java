@@ -33,51 +33,97 @@ import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 优惠券详情保存命令类
+ * 
+ * 该类负责处理优惠券详情的保存操作，包括参数验证和业务逻辑处理。
  * 服务编码：couponDetail.saveCouponDetail
- * 请求路劲：/app/couponDetail.SaveCouponDetail
- * add by 吴学文 at 2021-11-24 00:02:31 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
+ * 请求路径：/app/couponDetail.SaveCouponDetail
+ * 
+ * @author 吴学文 at 2021-11-24 00:02:31 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * @温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "couponDetail.saveCouponDetail")
 public class SaveCouponDetailCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveCouponDetailCmd.class);
 
+    /**
+     * 优惠券详情ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 优惠券详情服务接口
+     */
     @Autowired
     private ICouponDetailV1InnerServiceSMO couponDetailV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否完整，确保必要的字段都存在
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
 
+        // 验证请求报文中必须包含poolId字段
         Assert.hasKeyAndValue(reqJson, "poolId", "请求报文中未包含poolId");
+        // 验证请求报文中必须包含shopId字段
         Assert.hasKeyAndValue(reqJson, "shopId", "请求报文中未包含shopId");
+        // 验证请求报文中必须包含couponName字段
         Assert.hasKeyAndValue(reqJson, "couponName", "请求报文中未包含couponName");
+        // 验证请求报文中必须包含actualPrice字段
         Assert.hasKeyAndValue(reqJson, "actualPrice", "请求报文中未包含actualPrice");
+        // 验证请求报文中必须包含buyPrice字段
         Assert.hasKeyAndValue(reqJson, "buyPrice", "请求报文中未包含buyPrice");
+        // 验证请求报文中必须包含amount字段
         Assert.hasKeyAndValue(reqJson, "amount", "请求报文中未包含amount");
+        // 验证请求报文中必须包含buyCount字段
         Assert.hasKeyAndValue(reqJson, "buyCount", "请求报文中未包含buyCount");
+        // 验证请求报文中必须包含validityDay字段
         Assert.hasKeyAndValue(reqJson, "validityDay", "请求报文中未包含validityDay");
 
     }
 
+    /**
+     * 执行保存优惠券详情命令
+     * 
+     * 将请求参数转换为优惠券详情对象，生成唯一ID，并保存到数据库
+     * 使用事务注解确保数据一致性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        // 将JSON请求参数转换为优惠券详情POJO对象
         CouponDetailPo couponDetailPo = BeanConvertUtil.covertBean(reqJson, CouponDetailPo.class);
+        // 生成优惠券详情唯一ID，使用前缀+序列号的方式
         couponDetailPo.setDetailId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        // 调用服务层保存优惠券详情数据
         int flag = couponDetailV1InnerServiceSMOImpl.saveCouponDetail(couponDetailPo);
 
+        // 检查保存操作是否成功，flag小于1表示保存失败
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }
