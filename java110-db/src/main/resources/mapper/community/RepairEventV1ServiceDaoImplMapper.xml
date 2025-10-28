@@ -20,7 +20,7 @@
         select t.event_id eventId,t.staff_name staffName,t.repair_id repairId,t.remark,t.status_cd statusCd,t.event_type
         eventType,t.community_id communityId,t.staff_id staffId,t.create_time createTime,td.name eventTypeName
         from r_repair_event t
-        LEFT JOIN t_dict td on t.acct_type = td.status_cd and td.table_name = 'r_repair_event' and td.table_columns = 'event_type'
+        LEFT JOIN t_dict td on t.event_type = td.status_cd and td.table_name = 'r_repair_event' and td.table_columns = 'event_type'
         where 1 =1
         <if test="eventId !=null and eventId != ''">
             and t.event_id= #{eventId}
