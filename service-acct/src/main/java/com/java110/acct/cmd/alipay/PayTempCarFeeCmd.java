@@ -37,6 +37,14 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 支付宝临时停车费支付命令类
+ * 处理临时车辆停车费的支付宝支付流程，包括订单创建、支付处理、回调通知等
+ * 
+ * @author Java110
+ * @version 1.0
+ * @since 2023
+ */
 @Java110Cmd(serviceCode = "alipay.payTempCarFee")
 public class PayTempCarFeeCmd extends Cmd {
 
@@ -52,9 +60,18 @@ public class PayTempCarFeeCmd extends Cmd {
     @Autowired
     private ITempCarFeeCreateOrderV1InnerServiceSMO tempCarFeeCreateOrderV1InnerServiceSMOImpl;
 
-
+    /**
+     * 验证请求参数
+     * 检查请求报文中是否包含必要的参数信息
+     *
+     * @param event   命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        // 验证请求报文中必须包含的关键参数
         Assert.jsonObjectHaveKey(reqJson, "carNum", "请求报文中未包含房屋信息节点");
         Assert.jsonObjectHaveKey(reqJson, "appId", "请求报文中未包含appId节点");
         Assert.jsonObjectHaveKey(reqJson, "openId", "请求报文中未包含openId节点");
@@ -63,18 +80,30 @@ public class PayTempCarFeeCmd extends Cmd {
         Assert.jsonObjectHaveKey(reqJson, "couponList", "请求报文中未包含couponList节点");
     }
 
+    /**
+     * 执行临时停车费支付命令
+     * 处理停车费订单创建、支付流程、结果回调等完整业务流程
+     *
+     * @param event   命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException    命令执行异常
+     * @throws ParseException  数据解析异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
         ResponseEntity responseEntity = null;
 
-        //根据paId 查询communityId
+        // 根据停车场ID查询小区ID
         ParkingAreaDto parkingAreaDto = new ParkingAreaDto();
         parkingAreaDto.setPaId(reqJson.getString("paId"));
         List<ParkingAreaDto> parkingAreaDtos = parkingAreaV1InnerServiceSMOImpl.queryParkingAreas(parkingAreaDto);
 
+        // 验证停车场存在且唯一
         Assert.listOnlyOne(parkingAreaDtos, "停车场不存在");
         reqJson.put("communityId", parkingAreaDtos.get(0).getCommunityId());
 
+        // 处理优惠券列表
         JSONArray couponList = reqJson.getJSONArray("couponList");
         List<String> couponIds = new ArrayList<String>();
         if (couponList != null && couponList.size() > 0) {
@@ -83,30 +112,37 @@ public class PayTempCarFeeCmd extends Cmd {
             }
         }
 
-        //查询用户ID
+        // 设置默认用户ID
         reqJson.put("userId", "-1");
 
+        // 构建订单创建参数
         JSONObject paramIn = new JSONObject();
         paramIn.put("paId", reqJson.getString("paId"));
         paramIn.put("carNum", reqJson.getString("carNum"));
         paramIn.put("machineId", reqJson.getString("machineId"));
         paramIn.put("couponIds", StringUtils.join(couponIds, ","));
+        
+        // 调用订单创建服务
         responseEntity = tempCarFeeCreateOrderV1InnerServiceSMOImpl.createOrder(paramIn);
 
+        // 检查订单创建结果
         if (responseEntity.getStatusCode() != HttpStatus.OK) {
             context.setResponseEntity(responseEntity);
             return;
         }
+        
+        // 解析订单信息
         JSONObject orderInfo = JSONObject.parseObject(responseEntity.getBody().toString());
         if (orderInfo.getIntValue("code") != 0) {
             throw new IllegalArgumentException("缴费失败");
         }
         JSONObject fee = orderInfo.getJSONObject("data");
 
+        // 获取实际支付金额
         double money = fee.getDouble("receivedAmount");
-
         String orderId = fee.getString("oId");
-        //需要判断金额是否 == 0 等于0 直接掉缴费通知接口
+        
+        // 处理金额为0的情况（免费订单）
         if (money <= 0) {
             JSONObject paramOut = new JSONObject();
             paramOut.put("oId", orderId);
@@ -123,6 +159,8 @@ public class PayTempCarFeeCmd extends Cmd {
             context.setResponseEntity(new ResponseEntity(JSONObject.toJSONString(param), HttpStatus.OK));
             return;
         }
+        
+        // 调用支付宝支付
         String openId = reqJson.getString("openId");
         ResultVo result = doAlipay(reqJson, paramIn.getString("feeName"), orderId, money, openId);
 
@@ -131,16 +169,19 @@ public class PayTempCarFeeCmd extends Cmd {
         if (!"0".equals(result.getCode())) {
             return;
         }
+        
+        // 保存支付信息到缓存
         JSONObject saveFees = new JSONObject();
         saveFees.put("orderId", paramIn.getString("inoutId"));
         saveFees.put("carNum", paramIn.getString("carNum"));
         saveFees.put("amount", money);
         saveFees.put("paId", paramIn.getString("paId"));
         saveFees.put("payTime", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
-        saveFees.put("payType", "2");
+        saveFees.put("payType", "2"); // 支付类型：2表示支付宝支付
         CommonCache.setValue(FeeDto.REDIS_PAY_TEMP_CAR_FEE + orderId, saveFees.toJSONString(), CommonCache.PAY_DEFAULT_EXPIRE_TIME);
         CommonCache.setValue(FeeDto.REDIS_PAY_TEMP_CAR_FEE_COMMUNITY + orderId, reqJson.getString("communityId"), CommonCache.PAY_DEFAULT_EXPIRE_TIME);
-        //记录openId 和车辆关系 以免每次 输入 车牌号麻烦
+        
+        // 记录用户与车辆的关联关系，方便下次使用
         OwnerCarOpenUserPo ownerCarOpenUserPo = new OwnerCarOpenUserPo();
         ownerCarOpenUserPo.setCarNum(reqJson.getString("carNum"));
         ownerCarOpenUserPo.setNickname("未获取");
@@ -151,7 +192,19 @@ public class PayTempCarFeeCmd extends Cmd {
         ownerCarOpenUserV1InnerServiceSMOImpl.saveOwnerCarOpenUser(ownerCarOpenUserPo);
     }
 
+    /**
+     * 执行支付宝支付流程
+     * 创建支付宝交易订单并调用支付宝API进行支付
+     *
+     * @param reqJson  请求JSON对象
+     * @param feeName  费用名称
+     * @param orderId  订单ID
+     * @param money    支付金额
+     * @param openId   用户支付宝openId
+     * @return ResultVo 支付结果对象
+     */
     private ResultVo doAlipay(JSONObject reqJson, String feeName, String orderId, double money, String openId) {
+        // 初始化支付宝客户端
         AlipayClient alipayClient = new DefaultAlipayClient("https://openapi.alipay.com/gateway.do",
                 CommunitySettingFactory.getValue(reqJson.getString("communityId"), "APP_ID"),
                 CommunitySettingFactory.getRemark(reqJson.getString("communityId"), "APP_PRIVATE_KEY"),
@@ -159,20 +212,26 @@ public class PayTempCarFeeCmd extends Cmd {
                 "UTF-8",
                 CommunitySettingFactory.getRemark(reqJson.getString("communityId"), "ALIPAY_PUBLIC_KEY"),
                 "RSA2");
+        
+        // 创建支付宝交易请求
         AlipayTradeCreateRequest request = new AlipayTradeCreateRequest();
         request.setNotifyUrl(MappingCache.getValue("ALIPAY", "temp"));
+        
+        // 构建业务参数
         JSONObject bizContent = new JSONObject();
-        bizContent.put("out_trade_no", orderId);
-        bizContent.put("total_amount", money);
-        bizContent.put("subject", feeName);
-        bizContent.put("buyer_id", openId);
-        bizContent.put("timeout_express", "10m");
+        bizContent.put("out_trade_no", orderId);      // 商户订单号
+        bizContent.put("total_amount", money);        // 订单总金额
+        bizContent.put("subject", feeName);           // 订单标题
+        bizContent.put("buyer_id", openId);           // 买家支付宝用户ID
+        bizContent.put("timeout_express", "10m");     // 订单超时时间
         request.setBizContent(bizContent.toString());
+        
         AlipayTradeCreateResponse response = null;
         try {
+            // 执行支付宝API调用
             response = alipayClient.execute(request);
             if (response.isSuccess()) {
-                return new ResultVo(ResultVo.CODE_OK, ResultVo.MSG_OK,orderId);
+                return new ResultVo(ResultVo.CODE_OK, ResultVo.MSG_OK, orderId);
             } else {
                 return new ResultVo(ResultVo.CODE_ERROR, response.getMsg());
             }
@@ -181,15 +240,22 @@ public class PayTempCarFeeCmd extends Cmd {
         }
     }
 
+    /**
+     * 获取小程序微信配置信息
+     * 根据小区ID和应用ID查询对应的微信小程序配置
+     *
+     * @param paramIn 输入参数对象
+     * @return SmallWeChatDto 微信小程序配置信息，未找到时返回null
+     */
     private SmallWeChatDto getSmallWechat(JSONObject paramIn) {
-
         SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
         smallWeChatDto.setAppId(paramIn.getString("appId"));
         smallWeChatDto.setObjId(paramIn.getString("communityId"));
         smallWeChatDto.setRow(1);
         smallWeChatDto.setPage(1);
+        
+        // 查询微信小程序配置
         List<SmallWeChatDto> smallWeChatDtos = smallWechatV1InnerServiceSMOImpl.querySmallWechats(smallWeChatDto);
-
 
         if (smallWeChatDtos == null || smallWeChatDtos.size() < 1) {
             return null;
