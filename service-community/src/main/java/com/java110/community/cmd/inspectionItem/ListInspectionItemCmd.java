@@ -44,37 +44,87 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 巡检项查询命令类
+ * 
+ * 该类负责处理巡检项列表查询请求，实现分页查询巡检项信息的功能
+ * 通过调用巡检项服务接口获取数据，并返回标准格式的响应结果
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-03-15
+ */
 @Java110Cmd(serviceCode = "inspectionItem.listInspectionItem")
 public class ListInspectionItemCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListInspectionItemCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(ListInspectionItemCmd.class);
+    
+    /**
+     * 巡检项服务接口
+     * 用于调用巡检项相关的业务方法
+     */
     @Autowired
     private IInspectionItemV1InnerServiceSMO inspectionItemV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，主要进行分页参数的校验
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求/响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法，确保分页参数正确
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 命令执行方法
+     * 
+     * 处理巡检项列表查询请求，包括数据查询、结果封装和响应设置
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
-           InspectionItemDto inspectionItemDto = BeanConvertUtil.covertBean(reqJson, InspectionItemDto.class);
+        // 将请求JSON对象转换为巡检项DTO对象
+        InspectionItemDto inspectionItemDto = BeanConvertUtil.covertBean(reqJson, InspectionItemDto.class);
 
-           int count = inspectionItemV1InnerServiceSMOImpl.queryInspectionItemsCount(inspectionItemDto);
+        // 查询巡检项总记录数，用于分页计算
+        int count = inspectionItemV1InnerServiceSMOImpl.queryInspectionItemsCount(inspectionItemDto);
 
-           List<InspectionItemDto> inspectionItemDtos = null;
+        // 声明巡检项数据列表
+        List<InspectionItemDto> inspectionItemDtos = null;
 
-           if (count > 0) {
-               inspectionItemDtos = inspectionItemV1InnerServiceSMOImpl.queryInspectionItems(inspectionItemDto);
-           } else {
-               inspectionItemDtos = new ArrayList<>();
-           }
+        // 根据查询结果数量决定如何处理数据
+        if (count > 0) {
+            // 如果存在数据，则查询具体的巡检项列表
+            inspectionItemDtos = inspectionItemV1InnerServiceSMOImpl.queryInspectionItems(inspectionItemDto);
+        } else {
+            // 如果没有数据，返回空列表
+            inspectionItemDtos = new ArrayList<>();
+        }
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, inspectionItemDtos);
+        // 计算总页数：总记录数 / 每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 封装返回结果对象，包含总页数、总记录数和数据列表
+        ResultVo resultVo = new ResultVo(totalPage, count, inspectionItemDtos);
 
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
+        // 创建HTTP响应实体，设置状态码为200 OK
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 将响应实体设置到数据流上下文中，供后续处理使用
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

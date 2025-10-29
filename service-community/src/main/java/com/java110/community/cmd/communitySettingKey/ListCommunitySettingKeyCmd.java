@@ -39,7 +39,7 @@ import java.util.List;
 
 
 /**
- * 类表述：查询
+ * 类表述：查询小区设置键列表的命令类
  * 服务编码：communitySettingKey.listCommunitySettingKey
  * 请求路劲：/app/communitySettingKey.ListCommunitySettingKey
  * add by 吴学文 at 2021-10-10 10:56:18 mail: 928255095@qq.com
@@ -52,69 +52,118 @@ import java.util.List;
 public class ListCommunitySettingKeyCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListCommunitySettingKeyCmd.class);
+    
+    /**
+     * 小区设置键服务接口
+     */
     @Autowired
     private ICommunitySettingKeyV1InnerServiceSMO communitySettingKeyV1InnerServiceSMOImpl;
 
+    /**
+     * 小区设置服务接口
+     */
     @Autowired
     private ICommunitySettingInnerServiceSMO communitySettingInnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页参数（当前注释掉）
         //super.validatePageInfo(reqJson);
+        
+        // 验证必须包含小区ID
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区");
+        // 验证必须包含设置类型
         Assert.hasKeyAndValue(reqJson, "settingType", "未包含类型");
     }
 
+    /**
+     * 执行查询小区设置键列表命令
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON转换为CommunitySettingKeyDto对象
         CommunitySettingKeyDto communitySettingKeyDto = BeanConvertUtil.covertBean(reqJson, CommunitySettingKeyDto.class);
 
+        // 查询小区设置键总数
         int count = communitySettingKeyV1InnerServiceSMOImpl.queryCommunitySettingKeysCount(communitySettingKeyDto);
 
         List<CommunitySettingKeyDto> communitySettingKeyDtos = null;
 
         if (count > 0) {
+            // 如果存在数据，查询小区设置键列表
             communitySettingKeyDtos = communitySettingKeyV1InnerServiceSMOImpl.queryCommunitySettingKeys(communitySettingKeyDto);
         } else {
+            // 如果没有数据，返回空列表
             communitySettingKeyDtos = new ArrayList<>();
         }
 
-        // todo 刷入 小区值
+        // 计算并设置每个设置键的值
         computeKeyValue(communitySettingKeyDtos, reqJson.getString("communityId"), reqJson.getString("settingType"));
 
+        // 设置默认分页行数
         if (!reqJson.containsKey("row")) {
             reqJson.put("row", 10);
         }
 
+        // 计算总页数并创建结果对象
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, communitySettingKeyDtos);
 
+        // 创建响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 设置响应实体到上下文
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 
+    /**
+     * 计算并设置小区设置键的值
+     * 根据小区ID和设置类型，从小区设置表中获取对应的值并设置到设置键对象中
+     * 
+     * @param communitySettingKeyDtos 小区设置键列表
+     * @param communityId 小区ID
+     * @param settingType 设置类型
+     */
     private void computeKeyValue(List<CommunitySettingKeyDto> communitySettingKeyDtos, String communityId, String settingType) {
+        // 如果设置键列表为空，直接返回
         if (communitySettingKeyDtos == null || communitySettingKeyDtos.size() < 1) {
             return;
         }
 
+        // 构建查询条件
         CommunitySettingDto communitySettingDto = new CommunitySettingDto();
         communitySettingDto.setSettingType(settingType);
         communitySettingDto.setCommunityId(communityId);
+        
+        // 查询小区设置信息
         List<CommunitySettingDto> communitySettingDtos = communitySettingInnerServiceSMOImpl.queryCommunitySettings(communitySettingDto);
+        
+        // 如果没有小区设置信息，直接返回
         if (communitySettingDtos == null || communitySettingDtos.size() < 1) {
             return;
         }
 
+        // 遍历所有设置键，匹配对应的设置值
         for (CommunitySettingKeyDto communitySettingKeyDto : communitySettingKeyDtos) {
             for (CommunitySettingDto tmpCommunitySettingDto : communitySettingDtos) {
+                // 如果设置键不匹配，继续查找
                 if (!communitySettingKeyDto.getSettingKey().equals(tmpCommunitySettingDto.getSettingKey())) {
                     continue;
                 }
+                // 设置对应的值
                 communitySettingKeyDto.setSettingValue(tmpCommunitySettingDto.getSettingValue());
             }
-
         }
     }
 }

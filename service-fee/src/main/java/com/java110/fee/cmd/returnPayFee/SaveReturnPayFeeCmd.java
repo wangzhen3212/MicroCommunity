@@ -44,7 +44,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 类表述：保存退费申请信息
  * 服务编码：returnPayFee.saveReturnPayFee
  * 请求路劲：/app/returnPayFee.SaveReturnPayFee
  * add by 吴学文 at 2022-02-21 12:20:03 mail: 928255095@qq.com
@@ -58,89 +58,129 @@ public class SaveReturnPayFeeCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveReturnPayFeeCmd.class);
 
+    /**
+     * 退费ID前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 退费服务接口
+     */
     @Autowired
     private IReturnPayFeeV1InnerServiceSMO returnPayFeeV1InnerServiceSMOImpl;
 
+    /**
+     * 费用服务接口
+     */
     @Autowired
     private IFeeInnerServiceSMO feeInnerServiceSMOImpl;
 
+    /**
+     * 缴费明细服务接口
+     */
     @Autowired
     private IPayFeeDetailV1InnerServiceSMO payFeeDetailNewV1InnerServiceSMOImpl;
 
-
+    /**
+     * 费用明细服务接口
+     */
     @Autowired
     private IFeeDetailInnerServiceSMO feeDetailInnerServiceSMOImpl;
 
+    /**
+     * 用户服务接口
+     */
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event              命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson            请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
-        //Assert.hasKeyAndValue(reqJson, "configId", "请求报文中未包含configId");
+        // 验证必要参数是否存在
         Assert.hasKeyAndValue(reqJson, "feeId", "请求报文中未包含feeId");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
         Assert.hasKeyAndValue(reqJson, "detailId", "请求报文中未包含detailId");
         Assert.hasKeyAndValue(reqJson, "reason", "请求报文中未包含reason");
 
+        // 验证缴费记录是否存在
         FeeDetailDto feeDetailDto = new FeeDetailDto();
         feeDetailDto.setCommunityId(reqJson.getString("communityId"));
         feeDetailDto.setDetailId(reqJson.getString("detailId"));
         feeDetailDto.setFeeId(reqJson.getString("feeId"));
         List<FeeDetailDto> feeDetailDtos = feeDetailInnerServiceSMOImpl.queryFeeDetails(feeDetailDto);
 
+        // 确保只存在一条匹配的缴费记录
         Assert.listOnlyOne(feeDetailDtos, "不存在该缴费记录");
     }
 
+    /**
+     * 执行退费申请保存操作
+     * 处理退费申请的业务逻辑，包括数据验证、退费记录创建和缴费明细更新
+     *
+     * @param event              命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson            请求参数JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        // 获取当前操作用户ID
         String userId = cmdDataFlowContext.getReqHeaders().get("user-id");
 
+        // 验证用户是否存在
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
-
         Assert.listOnlyOne(userDtos, "用户不存在");
 
+        // 验证费用信息是否存在
         FeeDto feeDto = new FeeDto();
         feeDto.setCommunityId(reqJson.getString("communityId"));
         feeDto.setFeeId(reqJson.getString("feeId"));
-
         List<FeeDto> feeDtos = feeInnerServiceSMOImpl.queryFees(feeDto);
-
         Assert.listOnlyOne(feeDtos, "不存在该费用");
 
+        // 验证费用明细信息
         FeeDetailDto feeDetailDto = new FeeDetailDto();
         feeDetailDto.setDetailId(reqJson.getString("detailId"));
         List<FeeDetailDto> feeDetailDtos = feeDetailInnerServiceSMOImpl.queryFeeDetails(feeDetailDto);
         Assert.listOnlyOne(feeDetailDtos, "未找到需要修改的活动 或多条数据");
 
+        // 设置退费申请相关参数
         reqJson.put("configId", feeDtos.get(0).getConfigId());
         reqJson.put("feeTypeCd", feeDtos.get(0).getFeeTypeCd());
 
+        // 创建退费申请对象并设置属性
         ReturnPayFeePo returnPayFeePo = BeanConvertUtil.covertBean(reqJson, ReturnPayFeePo.class);
-        returnPayFeePo.setReturnFeeId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
-        returnPayFeePo.setState(ReturnPayFeeDto.STATE_WAIT);
-        returnPayFeePo.setCycles((reqJson.getDouble("cycles") * -1) + "");
-        returnPayFeePo.setReceivableAmount((reqJson.getDouble("receivableAmount") * -1) + "");
-        returnPayFeePo.setReceivedAmount((reqJson.getDouble("receivedAmount") * -1) + "");
-        //todo 这里不知道为啥写死为 转账，物业交费是现金 退费为转账时 物业误解，所以暂时屏蔽,如果退款也需要 支付方式 建议退款页面补充
-        //returnPayFeePo.setPrimeRate("7"); //退费默认方式为转账
+        returnPayFeePo.setReturnFeeId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID)); // 生成退费ID
+        returnPayFeePo.setState(ReturnPayFeeDto.STATE_WAIT); // 设置状态为待处理
+        returnPayFeePo.setCycles((reqJson.getDouble("cycles") * -1) + ""); // 周期数取负值
+        returnPayFeePo.setReceivableAmount((reqJson.getDouble("receivableAmount") * -1) + ""); // 应收金额取负值
+        returnPayFeePo.setReceivedAmount((reqJson.getDouble("receivedAmount") * -1) + ""); // 实收金额取负值
+        // 设置支付方式，使用原缴费记录的支付方式
         returnPayFeePo.setPrimeRate(feeDetailDtos.get(0).getPrimeRate());
-        returnPayFeePo.setApplyPersonId(userId);
-        returnPayFeePo.setApplyPersonName(userDtos.get(0).getName());
-        int flag = returnPayFeeV1InnerServiceSMOImpl.saveReturnPayFee(returnPayFeePo);
+        returnPayFeePo.setApplyPersonId(userId); // 设置申请人ID
+        returnPayFeePo.setApplyPersonName(userDtos.get(0).getName()); // 设置申请人姓名
 
+        // 保存退费申请记录
+        int flag = returnPayFeeV1InnerServiceSMOImpl.saveReturnPayFee(returnPayFeePo);
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
+
+        // 设置缴费明细状态为已完成
         reqJson.put("state", "1000");
 
-
-
+        // 更新缴费明细信息
         JSONObject businessReturnPayFee = new JSONObject();
         businessReturnPayFee.putAll(BeanConvertUtil.beanCovertMap(feeDetailDtos.get(0)));
         businessReturnPayFee.putAll(reqJson);
@@ -151,6 +191,7 @@ public class SaveReturnPayFeeCmd extends Cmd {
             throw new CmdException("保存数据失败");
         }
 
+        // 返回成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

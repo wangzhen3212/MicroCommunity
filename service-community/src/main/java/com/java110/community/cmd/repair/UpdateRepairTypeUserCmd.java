@@ -42,36 +42,82 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 维修类型用户关系更新命令类
+ * 
+ * 该类负责处理维修类型用户关系信息的更新操作，包括参数验证和业务逻辑处理
+ * 通过注解标识服务编码，接收前端请求并更新对应的维修类型用户关系数据
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-08-06
+ */
 @Java110Cmd(serviceCode = "repair.updateRepairTypeUser")
 public class UpdateRepairTypeUserCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(UpdateRepairTypeUserCmd.class);
 
-
+    /**
+     * 维修类型用户关系服务接口
+     * 用于调用维修类型用户关系的数据库操作
+     */
     @Autowired
     private IRepairTypeUserV1InnerServiceSMO repairTypeUserV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证前端传入的JSON请求参数是否包含必要的字段
+     * 确保更新操作所需的关键字段不为空
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 前端请求的JSON数据对象
+     * @throws IllegalArgumentException 当必要参数缺失时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
-
+        // 验证typeUserId字段是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "typeUserId", "typeUserId不能为空");
+        // 验证state字段是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "state", "请求报文中未包含状态");
+        // 验证repairType字段是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "repairType", "请求报文中未包含repairType");
+        // 验证communityId字段是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
-
     }
 
+    /**
+     * 执行维修类型用户关系更新命令
+     * 
+     * 将前端请求数据转换为实体对象，调用服务层进行数据更新
+     * 处理更新结果并设置响应信息
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 前端请求的JSON数据对象
+     * @throws CmdException 当数据更新失败时抛出业务异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将JSON请求数据转换为维修类型用户关系实体对象
         RepairTypeUserPo repairTypeUserPo = BeanConvertUtil.covertBean(reqJson, RepairTypeUserPo.class);
+        
+        // 调用服务层接口更新维修类型用户关系数据
         int flag = repairTypeUserV1InnerServiceSMOImpl.updateRepairTypeUser(repairTypeUserPo);
 
+        // 检查更新操作是否成功，flag小于1表示更新失败
         if (flag < 1) {
+            // 抛出业务异常，提示数据更新失败
             throw new CmdException("更新数据失败");
         }
 
+        // 设置成功的响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

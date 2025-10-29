@@ -36,9 +36,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 类表述：查询
+ * 类表述：查询报修设置信息命令类
  * 服务编码：repairSetting.listRepairSetting
  * 请求路劲：/app/repairSetting.ListRepairSetting
+ * 功能描述：该类用于处理报修设置信息的查询请求，包括参数验证和数据查询
  * add by 吴学文 at 2022-08-06 12:43:34 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -50,34 +51,63 @@ public class ListRepairSettingsCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListRepairSettingsCmd.class);
 
+    /**
+     * 报修设置服务接口
+     */
     @Autowired
     private IRepairSettingV1InnerServiceSMO repairSettingV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 功能描述：验证请求参数的有效性，包括分页参数和必要字段的检查
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页参数
         super.validatePageInfo(reqJson);
+        // 验证小区ID参数是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区信息");
     }
 
+    /**
+     * 命令执行方法
+     * 功能描述：执行报修设置信息的查询逻辑，包括数据查询、结果封装和响应设置
+     * @param event 命令事件对象
+     * @param context 数据流上下文对象
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON转换为RepairSettingDto对象
         RepairSettingDto repairSettingDto = BeanConvertUtil.covertBean(reqJson, RepairSettingDto.class);
 
+        // 查询报修设置记录总数
         int count = repairSettingV1InnerServiceSMOImpl.queryRepairSettingsCount(repairSettingDto);
 
         List<RepairSettingDto> repairSettingDtos = null;
 
+        // 根据查询结果数量决定返回数据
         if (count > 0) {
+            // 查询报修设置详情列表
             repairSettingDtos = repairSettingV1InnerServiceSMOImpl.queryRepairSettings(repairSettingDto);
         } else {
+            // 如果没有数据，返回空列表
             repairSettingDtos = new ArrayList<>();
         }
 
-        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, repairSettingDtos);
+        // 计算总页数：总记录数除以每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 封装返回结果
+        ResultVo resultVo = new ResultVo(totalPage, count, repairSettingDtos);
 
+        // 创建HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 设置响应结果到上下文
         context.setResponseEntity(responseEntity);
     }
 }

@@ -78,69 +78,98 @@ import java.util.List;
 )
 
 /**
- * 类表述：保存
- * 服务编码：communitySpaceConfirmOrder.saveCommunitySpaceConfirmOrder
- * 请求路劲：/app/communitySpaceConfirmOrder.SaveCommunitySpaceConfirmOrder
- * add by 吴学文 at 2022-10-14 15:27:08 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 场地预约核销命令类
+ * 负责处理社区场地预约的核销操作，包括验证预约记录、更新预约状态和生成核销订单
+ * 通过扫码枪扫描用户生成的二维码来完成核销流程
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-10-14
  */
 @Java110Cmd(serviceCode = "communitySpace.saveCommunitySpaceConfirmOrder")
 public class SaveCommunitySpaceConfirmOrderCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveCommunitySpaceConfirmOrderCmd.class);
 
+    /** 订单ID前缀 */
     public static final String CODE_PREFIX_ID = "10";
 
+    /** 社区场地核销订单服务接口 */
     @Autowired
     private ICommunitySpaceConfirmOrderV1InnerServiceSMO communitySpaceConfirmOrderV1InnerServiceSMOImpl;
 
+    /** 社区场地人员时间服务接口 */
     @Autowired
     private ICommunitySpacePersonTimeV1InnerServiceSMO communitySpacePersonTimeV1InnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数
+     * 检查请求报文中是否包含必要的参数
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含timeId参数
         Assert.hasKeyAndValue(reqJson, "timeId", "请求报文中未包含timeId");
+        // 验证请求报文中必须包含communityId参数
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
     }
 
+    /**
+     * 执行场地预约核销命令
+     * 主要流程：查询预约记录 -> 更新预约状态 -> 生成核销订单 -> 返回核销结果
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求的JSON对象
+     * @throws CmdException 当核销过程中出现错误时抛出
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        // 构建查询条件，查找待核销的预约记录
         CommunitySpacePersonTimeDto communitySpacePersonTimeDto = new CommunitySpacePersonTimeDto();
-        communitySpacePersonTimeDto.setTimeId(reqJson.getString("timeId"));
-        communitySpacePersonTimeDto.setCommunityId(reqJson.getString("communityId"));
-        communitySpacePersonTimeDto.setState(CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM);
+        communitySpacePersonTimeDto.setTimeId(reqJson.getString("timeId")); // 设置预约时间ID
+        communitySpacePersonTimeDto.setCommunityId(reqJson.getString("communityId")); // 设置小区ID
+        communitySpacePersonTimeDto.setState(CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM); // 设置状态为待核销
+        // 查询符合条件的预约记录
         List<CommunitySpacePersonTimeDto> communitySpacePersonTimeDtos = communitySpacePersonTimeV1InnerServiceSMOImpl.queryCommunitySpacePersonTimes(communitySpacePersonTimeDto);
 
+        // 验证查询结果，确保有且只有一条预约记录
         Assert.listOnlyOne(communitySpacePersonTimeDtos, "未包含预约记录");
 
-        //将 时间修改 核销中
+        // 将预约时间状态更新为已完成（核销中）
         CommunitySpacePersonTimePo communitySpacePersonTimePo = new CommunitySpacePersonTimePo();
-        communitySpacePersonTimePo.setTimeId(communitySpacePersonTimeDtos.get(0).getTimeId());
-        communitySpacePersonTimePo.setState(CommunitySpacePersonTimeDto.STATE_FINISH);
+        communitySpacePersonTimePo.setTimeId(communitySpacePersonTimeDtos.get(0).getTimeId()); // 设置要更新的时间ID
+        communitySpacePersonTimePo.setState(CommunitySpacePersonTimeDto.STATE_FINISH); // 设置状态为已完成
+        // 执行更新操作
         int flag = communitySpacePersonTimeV1InnerServiceSMOImpl.updateCommunitySpacePersonTime(communitySpacePersonTimePo);
         if (flag < 1) {
-            throw new CmdException("核销预约失败");
+            throw new CmdException("核销预约失败"); // 更新失败时抛出异常
         }
 
+        // 创建核销订单记录
         CommunitySpaceConfirmOrderPo communitySpaceConfirmOrderPo = BeanConvertUtil.covertBean(reqJson, CommunitySpaceConfirmOrderPo.class);
-        communitySpaceConfirmOrderPo.setOrderId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
-        communitySpaceConfirmOrderPo.setSpaceId(communitySpacePersonTimeDtos.get(0).getSpaceId());
-        communitySpaceConfirmOrderPo.setCspId(communitySpacePersonTimeDtos.get(0).getCspId());
+        communitySpaceConfirmOrderPo.setOrderId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID)); // 生成订单ID
+        communitySpaceConfirmOrderPo.setSpaceId(communitySpacePersonTimeDtos.get(0).getSpaceId()); // 设置场地ID
+        communitySpaceConfirmOrderPo.setCspId(communitySpacePersonTimeDtos.get(0).getCspId()); // 设置社区场地人员ID
 
+        // 保存核销订单
         flag = communitySpaceConfirmOrderV1InnerServiceSMOImpl.saveCommunitySpaceConfirmOrder(communitySpaceConfirmOrderPo);
         if (flag < 1) {
-            throw new CmdException("核销数据失败");
+            throw new CmdException("核销数据失败"); // 保存失败时抛出异常
         }
+        
+        // 查询刚创建的核销订单详情
         CommunitySpaceConfirmOrderDto communitySpaceConfirmOrderDto = new CommunitySpaceConfirmOrderDto();
-        communitySpaceConfirmOrderDto.setOrderId(communitySpaceConfirmOrderPo.getOrderId());
+        communitySpaceConfirmOrderDto.setOrderId(communitySpaceConfirmOrderPo.getOrderId()); // 设置订单ID作为查询条件
         List<CommunitySpaceConfirmOrderDto> communitySpaceConfirmOrderDtos = communitySpaceConfirmOrderV1InnerServiceSMOImpl.queryCommunitySpaceConfirmOrders(communitySpaceConfirmOrderDto);
 
-
+        // 设置响应结果，返回核销订单详情
         cmdDataFlowContext.setResponseEntity(ResultVo.createResponseEntity(communitySpaceConfirmOrderDtos));
     }
 }

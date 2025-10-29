@@ -1,3 +1,13 @@
+/**
+ * 楼栋信息保存命令类
+ * 
+ * 该命令类用于处理添加楼栋信息的业务逻辑，包括参数验证、数据保存等功能。
+ * 通过注解配置了API文档信息，支持事务处理，确保数据一致性。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023
+ */
 package com.java110.community.cmd.floor;
 
 import com.alibaba.fastjson.JSONObject;
@@ -54,29 +64,50 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @Java110Cmd(serviceCode = "floor.saveFloor")
 public class SaveFloorCmd extends Cmd {
+    
+    /**
+     * 楼栋信息服务接口
+     */
     @Autowired
     private IFloorInnerServiceSMO floorInnerServiceSMOImpl;
 
+    /**
+     * 楼栋V1版本服务接口
+     */
     @Autowired
     private IFloorV1InnerServiceSMO floorV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括必填字段检查和业务规则验证
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws ListenerExecuteException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填字段是否存在
         Assert.jsonObjectHaveKey(reqJson, "name", "请求报文中未包含name");
         Assert.jsonObjectHaveKey(reqJson, "userId", "请求报文中未包含userId");
         Assert.jsonObjectHaveKey(reqJson, "floorNum", "请求报文中未包含floorNum");
         Assert.jsonObjectHaveKey(reqJson, "communityId", "请求报文中未包含communityId");
+        
+        // 创建楼栋数据传输对象
         FloorDto floorDto = new FloorDto();
         floorDto.setFloorNum(reqJson.getString("floorNum"));
         floorDto.setCommunityId(reqJson.getString("communityId"));
 
-
+        // 检查楼栋编号是否已存在
         int floorCount = floorInnerServiceSMOImpl.queryFloorsCount(floorDto);
 
         if (floorCount > 0) {
             throw new ListenerExecuteException(ResponseConstant.RESULT_CODE_ERROR, "楼栋编号已经存在");
         }
 
+        // 重置楼栋数据传输对象，检查楼栋名称是否已存在
         floorDto = new FloorDto();
         floorDto.setFloorName(reqJson.getString("name"));
         floorDto.setCommunityId(reqJson.getString("communityId"));
@@ -88,10 +119,24 @@ public class SaveFloorCmd extends Cmd {
         }
     }
 
+    /**
+     * 执行保存楼栋命令
+     * 
+     * 处理楼栋信息的保存逻辑，包括生成楼栋ID、组装业务数据、调用服务保存数据
+     * 该方法使用事务注解确保数据操作的原子性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当保存操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 生成楼栋ID
         String floorId = GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_floorId);
+        
+        // 组装业务数据
         JSONObject businessFloor = new JSONObject();
         businessFloor.put("floorId", floorId);
         businessFloor.put("name", reqJson.getString("name"));
@@ -101,13 +146,19 @@ public class SaveFloorCmd extends Cmd {
         businessFloor.put("communityId", reqJson.getString("communityId"));
         businessFloor.put("floorArea", reqJson.getString("floorArea"));
         businessFloor.put("seq", reqJson.getString("seq"));
+        
+        // 将JSON对象转换为持久化对象
         FloorPo floorPo = BeanConvertUtil.covertBean(businessFloor, FloorPo.class);
+        
+        // 调用服务保存楼栋信息
         int flag = floorV1InnerServiceSMOImpl.saveFloor(floorPo);
 
+        // 检查保存结果
         if (flag < 1) {
             throw new CmdException("保存楼栋失败");
         }
 
+        // 设置响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

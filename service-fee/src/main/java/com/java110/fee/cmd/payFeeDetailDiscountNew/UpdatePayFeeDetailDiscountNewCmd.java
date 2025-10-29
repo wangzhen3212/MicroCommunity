@@ -42,33 +42,77 @@ import com.java110.core.log.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 支付费用明细折扣更新命令类
+ * 
+ * 该类负责处理支付费用明细折扣信息的更新操作，是收费模块中的一个命令处理器。
+ * 通过注解标识服务编码，接收前端请求并调用相应的服务进行数据更新。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2021-12-06
+ */
 @Java110Cmd(serviceCode = "payFeeDetailDiscountNew.updatePayFeeDetailDiscountNew")
 public class UpdatePayFeeDetailDiscountNewCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(UpdatePayFeeDetailDiscountNewCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(UpdatePayFeeDetailDiscountNewCmd.class);
 
-
+    /**
+     * 支付费用明细折扣服务接口
+     * 用于调用底层的支付费用明细折扣数据操作
+     */
     @Autowired
     private IPayFeeDetailDiscountNewV1InnerServiceSMO payFeeDetailDiscountNewV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保更新操作的数据完整性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含detailDiscountId字段
         Assert.hasKeyAndValue(reqJson, "detailDiscountId", "detailDiscountId不能为空");
-Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
+        // 验证请求参数中必须包含communityId字段
+        Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
     }
 
+    /**
+     * 执行更新支付费用明细折扣命令
+     * 
+     * 将请求参数转换为实体对象，调用服务层进行数据更新操作，
+     * 并根据更新结果设置响应信息
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当数据更新失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       PayFeeDetailDiscountPo payFeeDetailDiscountNewPo = BeanConvertUtil.covertBean(reqJson, PayFeeDetailDiscountPo.class);
+        // 将JSON请求参数转换为支付费用明细折扣实体对象
+        PayFeeDetailDiscountPo payFeeDetailDiscountNewPo = BeanConvertUtil.covertBean(reqJson, PayFeeDetailDiscountPo.class);
+        
+        // 调用服务层接口更新支付费用明细折扣信息
         int flag = payFeeDetailDiscountNewV1InnerServiceSMOImpl.updatePayFeeDetailDiscountNew(payFeeDetailDiscountNewPo);
 
+        // 检查更新操作是否成功，flag表示受影响的行数
         if (flag < 1) {
+            // 如果更新失败，抛出命令异常
             throw new CmdException("更新数据失败");
         }
 
+        // 设置成功的响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -44,6 +44,11 @@ import com.java110.core.log.LoggerFactory;
 import java.util.List;
 
 /**
+ * 停车位申请保存命令类
+ * 
+ * 该类负责处理停车位申请的保存操作，包括参数验证、业务逻辑处理和数据库保存。
+ * 主要功能包括：验证申请参数、检查申请人身份、检查车辆状态、保存申请信息等。
+ * 
  * 类表述：保存
  * 服务编码：parkingSpaceApply.saveParkingSpaceApply
  * 请求路劲：/app/parkingSpaceApply.SaveParkingSpaceApply
@@ -58,19 +63,38 @@ public class SaveParkingSpaceApplyCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveParkingSpaceApplyCmd.class);
 
+    /** ID生成前缀 */
     public static final String CODE_PREFIX_ID = "10";
 
+    /** 停车位申请服务接口 */
     @Autowired
     private IParkingSpaceApplyV1InnerServiceSMO parkingSpaceApplyV1InnerServiceSMOImpl;
+    
+    /** 业主车辆服务接口 */
     @Autowired
     private IOwnerCarV1InnerServiceSMO ownerCarV1InnerServiceSMOImpl;
+    
+    /** 费用服务接口 */
     @Autowired
     private IPayFeeV1InnerServiceSMO payFeeV1InnerServiceSMOImpl;
+    
+    /** 业主服务接口 */
     @Autowired
     private IBuildingOwnerV1InnerServiceSMO buildingOwnerV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否完整，确保必要的字段都存在
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求的JSON数据
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填字段是否存在
         Assert.hasKeyAndValue(reqJson, "carNum", "请求报文中未包含carNum");
         Assert.hasKeyAndValue(reqJson, "carType", "请求报文中未包含carType");
         Assert.hasKeyAndValue(reqJson, "state", "请求报文中未包含state");
@@ -78,40 +102,59 @@ public class SaveParkingSpaceApplyCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "applyPersonLink", "请求报文中未包含applyPersonLink");
         Assert.hasKeyAndValue(reqJson, "applyPersonId", "请求报文中未包含applyPersonId");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
-
     }
 
+    /**
+     * 执行停车位申请保存命令
+     * 
+     * 处理停车位申请的核心业务逻辑，包括：
+     * 1. 验证申请人身份
+     * 2. 检查车辆状态
+     * 3. 保存申请信息
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求的JSON数据
+     * @throws CmdException 当业务逻辑处理失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将请求JSON转换为停车位申请PO对象
         ParkingSpaceApplyPo parkingSpaceApplyPo = BeanConvertUtil.covertBean(reqJson, ParkingSpaceApplyPo.class);
+        
         /**
-         * 1、車位申請判斷車輛是否存在owner_car，如果存在判断是否有2008001的费用，
+         * 业务逻辑说明：
+         * 1、车位申请判断车辆是否存在owner_car，如果存在判断是否有2008001的费用，
          * car_id是费用表中的payer_obj_id。申请的时候判断下owner_id是否为-1，还需到owner表中校验在不在，
          * 2、审核的时，判断车辆是否在owner_car中有，有就跳过。  没有的话写入owner_car，--都要写入pay_fee。
          * 3、支付成功后，回调方法中刷新申请表状态。
          */
-        //申请的时候判断下owner_id是否为-1
+        
+        // 申请的时候判断下owner_id是否为-1，-1表示游客身份
         if ("-1".equals(parkingSpaceApplyPo.getApplyPersonId())) {
             throw new CmdException("游客身份不能申请车位！");
         }
-        //还需到owner表中校验在不在,不是业主则不能申请
+        
+        // 还需到owner表中校验申请人是否存在，不是业主则不能申请
         OwnerDto ownerDto = new OwnerDto();
         ownerDto.setMemberId(parkingSpaceApplyPo.getApplyPersonId());
         List<OwnerDto> ownerDtos = buildingOwnerV1InnerServiceSMOImpl.queryBuildingOwners(ownerDto);
         if (ListUtil.isNull(ownerDtos)) {
             throw new CmdException("不是本小区业主不能申请车位！");
         }
-        //判断车辆是否已经有申请单
+        
+        // 判断车辆是否已经有申请单处于审核中状态
         ParkingSpaceApplyDto parkingSpaceApplyDto = new ParkingSpaceApplyDto();
         parkingSpaceApplyDto.setCarNum(parkingSpaceApplyPo.getCarNum());
-        parkingSpaceApplyDto.setState("1001");//审核中
+        parkingSpaceApplyDto.setState("1001");// 1001表示审核中状态
         parkingSpaceApplyDto.setCommunityId(reqJson.getString("communityId"));
         int count = parkingSpaceApplyV1InnerServiceSMOImpl.queryParkingSpaceApplysCount(parkingSpaceApplyDto);
         if (count > 1) {
             throw new CmdException("当前车辆申请处理审核中，不能重复申请。");
         }
-        //車位申請判斷車輛是否存在owner_car，如果存在判断是否有2008001的费用
+        
+        // 车位申请判断车辆是否已存在owner_car表中，如果存在则不能重复申请
         OwnerCarDto ownerCarDto = new OwnerCarDto();
         ownerCarDto.setCarNum(parkingSpaceApplyPo.getCarNum());
         ownerCarDto.setCommunityId(parkingSpaceApplyPo.getCommunityId());
@@ -119,13 +162,19 @@ public class SaveParkingSpaceApplyCmd extends Cmd {
         if (!ListUtil.isNull(ownerCarDtos)) {
             throw new CmdException("该车辆已存在，购买月卡续费。或者联系管理员");
         }
+        
+        // 生成申请ID并设置申请时间
         parkingSpaceApplyPo.setApplyId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         parkingSpaceApplyPo.setStartTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
         parkingSpaceApplyPo.setEndTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+        
+        // 保存停车位申请信息
         int flag = parkingSpaceApplyV1InnerServiceSMOImpl.saveParkingSpaceApply(parkingSpaceApplyPo);
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
+        
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

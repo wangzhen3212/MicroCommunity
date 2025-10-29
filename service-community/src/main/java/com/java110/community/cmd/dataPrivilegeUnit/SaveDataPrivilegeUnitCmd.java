@@ -34,6 +34,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 数据权限单元保存命令类
+ * 
+ * 该类负责处理数据权限单元的保存操作，包括参数验证和批量保存数据权限单元信息。
+ * 通过注解标识服务编码，接收前端请求并处理数据权限单元的新增功能。
+ * 
  * 类表述：保存
  * 服务编码：dataPrivilegeUnit.saveDataPrivilegeUnit
  * 请求路劲：/app/dataPrivilegeUnit.SaveDataPrivilegeUnit
@@ -46,43 +51,85 @@ import org.slf4j.LoggerFactory;
 @Java110Cmd(serviceCode = "dataPrivilegeUnit.saveDataPrivilegeUnit")
 public class SaveDataPrivilegeUnitCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveDataPrivilegeUnitCmd.class);
 
+    /**
+     * ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 数据权限单元服务接口
+     */
     @Autowired
     private IDataPrivilegeUnitV1InnerServiceSMO dataPrivilegeUnitV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否完整，确保必要的参数都存在
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求的JSON对象，包含前端传递的参数
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含dpId参数
         Assert.hasKeyAndValue(reqJson, "dpId", "请求报文中未包含dpId");
+        // 验证请求报文中必须包含communityId参数
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
-
+        // 验证请求报文中必须包含units参数
         Assert.hasKey(reqJson,"units","不包含单元");
-
     }
 
+    /**
+     * 执行保存数据权限单元命令
+     * 
+     * 将请求参数转换为数据对象，并批量保存数据权限单元信息
+     * 使用事务保证数据一致性，如果保存失败则回滚事务
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为数据权限单元PO对象
         DataPrivilegeUnitPo dataPrivilegeUnitPo = BeanConvertUtil.covertBean(reqJson, DataPrivilegeUnitPo.class);
 
+        // 获取单元列表数组
         JSONArray units = reqJson.getJSONArray("units");
 
+        // 遍历所有单元，逐个保存数据权限单元信息
         for(int unitIndex = 0 ; unitIndex < units.size(); unitIndex++) {
+            // 生成数据权限单元ID
             dataPrivilegeUnitPo.setDpUnitId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+            // 设置单元ID
             dataPrivilegeUnitPo.setUnitId(units.getJSONObject(unitIndex).getString("unitId"));
+            // 设置单元编号
             dataPrivilegeUnitPo.setUnitNum(units.getJSONObject(unitIndex).getString("unitNum"));
+            // 设置楼层ID
             dataPrivilegeUnitPo.setFloorId(units.getJSONObject(unitIndex).getString("floorId"));
+            // 设置楼层编号
             dataPrivilegeUnitPo.setFloorNum(units.getJSONObject(unitIndex).getString("floorNum"));
+            
+            // 调用服务保存数据权限单元信息
             int flag = dataPrivilegeUnitV1InnerServiceSMOImpl.saveDataPrivilegeUnit(dataPrivilegeUnitPo);
 
+            // 检查保存结果，如果失败则抛出异常
             if (flag < 1) {
                 throw new CmdException("保存数据失败");
             }
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

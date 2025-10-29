@@ -55,90 +55,159 @@ import java.util.List;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 停车位申请更新命令类
+ * 
+ * 该类负责处理停车位申请信息的更新操作，包括更新申请信息、关联车辆信息和费用信息
+ * 主要用于审批停车位申请后的数据更新处理
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2021-10-18
+ */
 @Java110Cmd(serviceCode = "parkingSpaceApply.updateParkingSpaceApply")
 public class UpdateParkingSpaceApplyCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(UpdateParkingSpaceApplyCmd.class);
 
     public static final String CODE_PREFIX_ID = "10";
+    
     @Autowired
     private IParkingSpaceApplyV1InnerServiceSMO parkingSpaceApplyV1InnerServiceSMOImpl;
+    
     @Autowired
     private IOwnerCarV1InnerServiceSMO ownerCarV1InnerServiceSMOImpl;
+    
     @Autowired
     private IPayFeeV1InnerServiceSMO payFeeV1InnerServiceSMOImpl;
+    
     @Autowired
     private IFeeConfigInnerServiceSMO feeConfigInnerServiceSMOImpl;
+    
     @Autowired
     private ICommunityMemberV1InnerServiceSMO communityMemberV1InnerServiceSMOImpl;
 
     @Autowired
     private IParkingSpaceV1InnerServiceSMO parkingSpaceV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的applyId字段
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求的JSON数据对象
+     * @throws IllegalArgumentException 当applyId参数缺失时抛出
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含applyId字段
         Assert.hasKeyAndValue(reqJson, "applyId", "applyId不能为空");
-
     }
 
+    /**
+     * 执行停车位申请更新命令
+     * 
+     * 该方法主要完成以下功能：
+     * 1. 更新停车位申请信息
+     * 2. 更新关联的车辆信息
+     * 3. 更新相关的费用信息
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求的JSON数据对象
+     * @throws CmdException 当更新操作失败时抛出
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 获取当前操作用户ID
         String userId = cmdDataFlowContext.getReqHeaders().get(CommonConstant.USER_ID);
+        
+        // 将请求JSON数据转换为停车位申请PO对象
         ParkingSpaceApplyPo parkingSpaceApplyPo = BeanConvertUtil.covertBean(reqJson, ParkingSpaceApplyPo.class);
 
+        // 更新停车位申请信息
         int flag = parkingSpaceApplyV1InnerServiceSMOImpl.updateParkingSpaceApply(parkingSpaceApplyPo);
 
+        // 检查更新是否成功
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
+        // 查询更新后的停车位申请信息
         ParkingSpaceApplyDto parkingSpaceApplyDto = new ParkingSpaceApplyDto();
         parkingSpaceApplyDto.setApplyId(parkingSpaceApplyPo.getApplyId());
         List<ParkingSpaceApplyDto> parkingSpaceApplyDtos = parkingSpaceApplyV1InnerServiceSMOImpl.queryParkingSpaceApplys(parkingSpaceApplyDto);
 
+        // 验证查询结果
         if (parkingSpaceApplyDtos == null || parkingSpaceApplyDtos.size() < 1) {
             throw new CmdException("未查询到申请单，请联系管理员");
         }
+        
+        // 获取第一个申请记录
         ParkingSpaceApplyDto parkingSpaceApply = parkingSpaceApplyDtos.get(0);
 
-        //2、审核的时，判断车辆是否在owner_car中有，有就跳过。  没有的话写入owner_car，--都要写入pay_fee。
+        // 处理车辆信息更新逻辑
+        // 2、审核的时，判断车辆是否在owner_car中有，有就跳过。  没有的话写入owner_car，--都要写入pay_fee。
         OwnerCarDto ownerCarDto = new OwnerCarDto();
         ownerCarDto.setCarNum(parkingSpaceApplyPo.getCarNum());
         ownerCarDto.setCommunityId(parkingSpaceApplyPo.getCommunityId());
         ownerCarDto.setLeaseType(OwnerCarDto.LEASE_TYPE_MONTH);
+        
+        // 查询车辆信息
         List<OwnerCarDto> ownerCarDtos = ownerCarV1InnerServiceSMOImpl.queryOwnerCars(ownerCarDto);
         String catId = "";
+        
+        // 如果车辆存在，则更新车辆信息
         if (ownerCarDtos == null || ownerCarDtos.size() < 1) {
-            return;
+            return; // 车辆不存在，无需更新
         } else {
+            // 获取车辆ID
             catId = ownerCarDtos.get(0).getCarId();
             OwnerCarPo ownerCarPo = new OwnerCarPo();
             ownerCarPo.setCarId(catId);
+            // 设置车辆使用时间范围
             ownerCarPo.setStartTime(parkingSpaceApply.getStartTime());
             ownerCarPo.setEndTime(parkingSpaceApply.getEndTime());
+            
+            // 更新车辆信息
             flag = ownerCarV1InnerServiceSMOImpl.updateOwnerCar(ownerCarPo);
             if (flag < 1) {
                 throw new CmdException("更新数据失败");
             }
         }
+        
+        // 处理费用信息更新逻辑
         PayFeeDto feeDto = new PayFeeDto();
         feeDto.setFeeId(parkingSpaceApply.getFeeId());
         feeDto.setCommunityId(parkingSpaceApply.getCommunityId());
         feeDto.setConfigId(parkingSpaceApply.getConfigId());
+        
+        // 查询费用信息
         List<PayFeeDto> payFeeDtos =  payFeeV1InnerServiceSMOImpl.queryPayFees(feeDto);
+        
+        // 如果费用信息不存在，则直接返回
         if(payFeeDtos == null || payFeeDtos.size() <1){
             return ;
         }
+        
+        // 更新费用信息
         PayFeePo payFeePo = new PayFeePo();
         payFeePo.setCommunityId(payFeeDtos.get(0).getCommunityId());
         payFeePo.setFeeId(payFeeDtos.get(0).getFeeId());
+        // 设置费用结束时间
         payFeePo.setEndTime(parkingSpaceApply.getStartTime());
 
+        // 执行费用更新操作
         flag = payFeeV1InnerServiceSMOImpl.updatePayFee(payFeePo);
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
+        
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -73,47 +73,92 @@ import org.slf4j.LoggerFactory;
         reqBody = "http://{ip}:{port}/app/communitySpace.listCommunitySpaceConfirmOrder?communityId=2022081539020475&page=1&row=10",
         resBody = "{\"code\":0,\"data\":[{\"appointmentTime\":\"2022-10-04\",\"communityId\":\"2022081539020475\",\"createTime\":\"2022-10-14 17:34:47\",\"cspId\":\"102022100453340014\",\"hours\":\"10\",\"orderId\":\"102022101485880007\",\"page\":-1,\"personName\":\"王菲菲\",\"personTel\":\"18909761234\",\"records\":0,\"row\":0,\"spaceId\":\"102022100400450043\",\"spaceName\":\"2场地\",\"statusCd\":\"0\",\"timeId\":\"102022100475840016\",\"total\":0}],\"msg\":\"成功\",\"page\":0,\"records\":1,\"rows\":0,\"total\":1}"
 )
+
 /**
- * 类表述：查询
- * 服务编码：communitySpaceConfirmOrder.listCommunitySpaceConfirmOrder
- * 请求路劲：/app/communitySpaceConfirmOrder.ListCommunitySpaceConfirmOrder
- * add by 吴学文 at 2022-10-14 15:27:08 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 查询社区空间预约核销订单的命令类
+ * 
+ * 该类负责处理社区空间预约核销订单的查询请求，包括分页查询和结果返回。
+ * 通过调用社区空间确认订单服务接口，获取预约核销订单数据并返回给前端。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-10-14
+ * @see Cmd
+ * @see ICommunitySpaceConfirmOrderV1InnerServiceSMO
  */
 @Java110Cmd(serviceCode = "communitySpace.listCommunitySpaceConfirmOrder")
 public class ListCommunitySpaceConfirmOrderCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListCommunitySpaceConfirmOrderCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(ListCommunitySpaceConfirmOrderCmd.class);
+    
+    /**
+     * 社区空间确认订单服务接口
+     */
     @Autowired
     private ICommunitySpaceConfirmOrderV1InnerServiceSMO communitySpaceConfirmOrderV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，主要验证分页参数是否合法
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于处理请求和响应
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法，验证page和row参数
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 命令执行方法
+     * 
+     * 处理查询社区空间预约核销订单的核心业务逻辑，包括：
+     * 1. 参数转换
+     * 2. 查询数据总数
+     * 3. 查询数据列表
+     * 4. 构建返回结果
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
-           CommunitySpaceConfirmOrderDto communitySpaceConfirmOrderDto = BeanConvertUtil.covertBean(reqJson, CommunitySpaceConfirmOrderDto.class);
+        // 将请求JSON对象转换为CommunitySpaceConfirmOrderDto对象
+        CommunitySpaceConfirmOrderDto communitySpaceConfirmOrderDto = BeanConvertUtil.covertBean(reqJson, CommunitySpaceConfirmOrderDto.class);
 
-           int count = communitySpaceConfirmOrderV1InnerServiceSMOImpl.queryCommunitySpaceConfirmOrdersCount(communitySpaceConfirmOrderDto);
+        // 查询符合条件的预约核销订单总数
+        int count = communitySpaceConfirmOrderV1InnerServiceSMOImpl.queryCommunitySpaceConfirmOrdersCount(communitySpaceConfirmOrderDto);
 
-           List<CommunitySpaceConfirmOrderDto> communitySpaceConfirmOrderDtos = null;
+        // 声明预约核销订单数据列表
+        List<CommunitySpaceConfirmOrderDto> communitySpaceConfirmOrderDtos = null;
 
-           if (count > 0) {
-               communitySpaceConfirmOrderDtos = communitySpaceConfirmOrderV1InnerServiceSMOImpl.queryCommunitySpaceConfirmOrders(communitySpaceConfirmOrderDto);
-           } else {
-               communitySpaceConfirmOrderDtos = new ArrayList<>();
-           }
+        // 根据查询结果数量决定如何处理数据查询
+        if (count > 0) {
+            // 如果存在数据，则查询具体的预约核销订单列表
+            communitySpaceConfirmOrderDtos = communitySpaceConfirmOrderV1InnerServiceSMOImpl.queryCommunitySpaceConfirmOrders(communitySpaceConfirmOrderDto);
+        } else {
+            // 如果没有数据，返回空列表
+            communitySpaceConfirmOrderDtos = new ArrayList<>();
+        }
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, communitySpaceConfirmOrderDtos);
+        // 计算总页数：总记录数 / 每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 构建返回结果对象，包含分页信息和数据列表
+        ResultVo resultVo = new ResultVo(totalPage, count, communitySpaceConfirmOrderDtos);
 
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
+        // 创建HTTP响应实体，状态码为200 OK
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 将响应实体设置到数据流上下文中，返回给前端
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

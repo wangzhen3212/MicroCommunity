@@ -36,51 +36,102 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 费用套餐成员保存命令类
+ * 
+ * 该类用于处理费用套餐成员的保存操作，包括参数验证和业务逻辑处理。
  * 服务编码：feeComboMember.saveFeeComboMember
- * 请求路劲：/app/feeComboMember.SaveFeeComboMember
- * add by 吴学文 at 2022-05-07 15:37:34 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
+ * 请求路径：/app/feeComboMember.SaveFeeComboMember
+ * 
+ * @author 吴学文 at 2022-05-07 15:37:34 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * @温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "feeComboMember.saveFeeComboMember")
 public class SaveFeeComboMemberCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveFeeComboMemberCmd.class);
 
+    /**
+     * ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 费用套餐成员服务接口
+     */
     @Autowired
     private IFeeComboMemberV1InnerServiceSMO feeComboMemberV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段：comboId、configId、communityId
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中是否包含comboId字段
         Assert.hasKeyAndValue(reqJson, "comboId", "请求报文中未包含comboId");
+        // 验证请求报文中是否包含configId字段
         Assert.hasKeyAndValue(reqJson, "configId", "请求报文中未包含configId");
+        // 验证请求报文中是否包含communityId字段
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
     }
 
+    /**
+     * 执行保存费用套餐成员命令
+     * 
+     * 该方法执行具体的业务逻辑，包括：
+     * 1. 检查费用套餐成员是否已存在
+     * 2. 生成成员ID
+     * 3. 保存费用套餐成员信息
+     * 4. 设置响应结果
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 创建费用套餐成员DTO对象用于查询
         FeeComboMemberDto feeComboMemberDto = new FeeComboMemberDto();
         feeComboMemberDto.setConfigId(reqJson.getString("configId"));
         feeComboMemberDto.setComboId(reqJson.getString("comboId"));
         feeComboMemberDto.setCommunityId(reqJson.getString("communityId"));
+        
+        // 查询是否已存在相同的费用套餐成员
         List<FeeComboMemberDto> feeComboMemberDtos = feeComboMemberV1InnerServiceSMOImpl.queryFeeComboMembers(feeComboMemberDto);
+        
+        // 如果已存在相同的费用套餐成员，则抛出异常
         if (feeComboMemberDtos != null && feeComboMemberDtos.size() > 0) {
             throw new IllegalArgumentException("该费用套餐下已添加过该费用项！");
         }
+        
+        // 将请求JSON对象转换为费用套餐成员PO对象
         FeeComboMemberPo feeComboMemberPo = BeanConvertUtil.covertBean(reqJson, FeeComboMemberPo.class);
+        // 生成成员ID
         feeComboMemberPo.setMemberId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务保存费用套餐成员信息
         int flag = feeComboMemberV1InnerServiceSMOImpl.saveFeeComboMember(feeComboMemberPo);
 
+        // 检查保存操作是否成功
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置成功的响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

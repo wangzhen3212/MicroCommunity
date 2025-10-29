@@ -46,7 +46,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 类表述：保存产权登记信息的命令类
  * 服务编码：propertyRightRegistration.savePropertyRightRegistration
  * 请求路劲：/app/propertyRightRegistration.SavePropertyRightRegistration
  * add by 吴学文 at 2021-10-09 10:34:14 mail: 928255095@qq.com
@@ -60,8 +60,14 @@ public class SavePropertyRightRegistrationCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SavePropertyRightRegistrationCmd.class);
 
+    /**
+     * 产权登记ID前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 产权登记详情ID前缀
+     */
     public static final String CODE_PREFIX_DETAIL_ID = "11";
 
     @Autowired
@@ -73,8 +79,17 @@ public class SavePropertyRightRegistrationCmd extends Cmd {
     @Autowired
     private IFileRelInnerServiceSMO fileRelInnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填参数是否存在
         Assert.hasKeyAndValue(reqJson, "roomId", "请求报文中未包含roomId");
         Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含name");
         Assert.hasKeyAndValue(reqJson, "link", "请求报文中未包含link");
@@ -82,47 +97,67 @@ public class SavePropertyRightRegistrationCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "address", "请求报文中未包含address");
     }
 
+    /**
+     * 执行产权登记保存命令
+     * 处理产权登记信息的保存，包括验证图片信息、保存登记信息和详情信息
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当业务逻辑验证失败或数据保存失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-        //获取身份证照片信息
+        // 验证身份证照片信息
         if (reqJson.containsKey("idCardPhotos") && !StringUtil.isEmpty(reqJson.getString("idCardPhotos"))) {
             String idCardPhotos = reqJson.getString("idCardPhotos");
             JSONArray objects = JSONArray.parseArray(idCardPhotos);
+            // 身份证照片必须为两张（正反面）
             if (objects.size() != 2 || idCardPhotos.equals("[]")) {
                 throw new CmdException("请上传身份证正反两张图片！");
             }
         }
-        //获取购房合同图片信息
+        
+        // 验证购房合同图片信息
         if (reqJson.containsKey("housePurchasePhotos") && !StringUtil.isEmpty(reqJson.getString("housePurchasePhotos"))) {
             String housePurchasePhotos = reqJson.getString("housePurchasePhotos");
+            // 购房合同图片不能为空
             if (housePurchasePhotos.length() < 1 || housePurchasePhotos.equals("[]")) {
                 throw new CmdException("购房合同图片不能为空！");
             }
         }
-        //获取维修基金标识
+        
+        // 验证维修基金图片信息
         if (reqJson.containsKey("isTrue") && reqJson.getString("isTrue").equals("true")) {
             String repairPhotos = reqJson.getString("repairPhotos");
+            // 如果标识为已缴费，则维修基金图片不能为空
             if (repairPhotos.length() < 1 || repairPhotos.equals("[]")) {
                 throw new CmdException("维修基金图片不能为空！");
             }
         }
-        //获取契税标识
+        
+        // 验证契税证明图片信息
         if (reqJson.containsKey("flag") && reqJson.getString("flag").equals("0")) {
             String deedTaxPhotos = reqJson.getString("deedTaxPhotos");
+            // 如果标识为已缴费，则契税证明图片不能为空
             if (deedTaxPhotos.length() < 1 || deedTaxPhotos.equals("[]")) {
                 throw new CmdException("契税证明图片不能为空！");
             }
         }
+        
+        // 检查房屋是否已经申请过产权登记
         PropertyRightRegistrationDto propertyRightRegistrationDto = new PropertyRightRegistrationDto();
         propertyRightRegistrationDto.setRoomId(reqJson.getString("roomId"));
-        //根据房屋查询产权登记表
         List<PropertyRightRegistrationDto> propertyRightRegistrationDtos = propertyRightRegistrationV1InnerServiceSMOImpl.queryPropertyRightRegistrations(propertyRightRegistrationDto);
         if (propertyRightRegistrationDtos != null && propertyRightRegistrationDtos.size() > 0) {
+            // 如果房屋已存在产权登记，返回错误信息
             ResponseEntity<String> responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_BUSINESS_VERIFICATION, "该房屋已经申请过房屋产权！");
             cmdDataFlowContext.setResponseEntity(responseEntity);
             return;
         }
+        
+        // 保存产权登记主信息
         PropertyRightRegistrationPo propertyRightRegistrationPo = BeanConvertUtil.covertBean(reqJson, PropertyRightRegistrationPo.class);
         propertyRightRegistrationPo.setPrrId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         propertyRightRegistrationPo.setCreateUser("-1");
@@ -133,111 +168,124 @@ public class SavePropertyRightRegistrationCmd extends Cmd {
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
+        
+        // 初始化文件关联对象
         FileRelPo fileRelPo = new FileRelPo();
         fileRelPo.setObjId(propertyRightRegistrationPo.getPrrId());
-        //table表示表存储 ftp表示ftp文件存储
-        fileRelPo.setSaveWay("ftp");
+        fileRelPo.setSaveWay("ftp"); // 文件存储方式：ftp表示ftp文件存储
         fileRelPo.setCreateTime(new Date());
-        //身份证图片上传
+        
+        // 处理身份证图片上传和详情记录
         List<String> idCardPhotos = propertyRightRegistrationPo.getIdCardPhotos();
         if (idCardPhotos != null && idCardPhotos.size() > 0) {
-            //60000表示身份证图片
-            fileRelPo.setRelTypeCd("60000");
+            fileRelPo.setRelTypeCd("60000"); // 60000表示身份证图片类型
             for (String photo : idCardPhotos) {
                 fileRelPo.setFileRelId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId));
                 fileRelPo.setFileRealName(photo);
                 fileRelPo.setFileSaveName(photo);
                 fileRelInnerServiceSMOImpl.saveFileRel(fileRelPo);
             }
+            // 保存身份证详情记录
             PropertyRightRegistrationDetailPo propertyRightRegistrationDetailPo = new PropertyRightRegistrationDetailPo();
             propertyRightRegistrationDetailPo.setPrrdId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_DETAIL_ID));
             propertyRightRegistrationDetailPo.setPrrId(propertyRightRegistrationPo.getPrrId());
-            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.ID_CARD); //身份证
-            propertyRightRegistrationDetailPo.setIsTrue("-1"); //未缴费
+            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.ID_CARD); // 身份证类型
+            propertyRightRegistrationDetailPo.setIsTrue("-1"); // 未缴费状态
             propertyRightRegistrationDetailPo.setCreateTime(simpleDateFormat.format(new Date()));
             propertyRightRegistrationDetailPo.setCreateUser("-1");
             propertyRightRegistrationDetailV1InnerServiceSMOImpl.savePropertyRightRegistrationDetail(propertyRightRegistrationDetailPo);
         }
-        //购房合同照片上传
+        
+        // 处理购房合同照片上传和详情记录
         List<String> housePurchasePhotos = propertyRightRegistrationPo.getHousePurchasePhotos();
         if (housePurchasePhotos != null && housePurchasePhotos.size() > 0) {
-            //25000表示购房合同图片
-            fileRelPo.setRelTypeCd("25000");
+            fileRelPo.setRelTypeCd("25000"); // 25000表示购房合同图片类型
             for (String photo : housePurchasePhotos) {
                 fileRelPo.setFileRelId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId));
                 fileRelPo.setFileRealName(photo);
                 fileRelPo.setFileSaveName(photo);
                 fileRelInnerServiceSMOImpl.saveFileRel(fileRelPo);
             }
+            // 保存购房合同详情记录
             PropertyRightRegistrationDetailPo propertyRightRegistrationDetailPo = new PropertyRightRegistrationDetailPo();
             propertyRightRegistrationDetailPo.setPrrdId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_DETAIL_ID));
             propertyRightRegistrationDetailPo.setPrrId(propertyRightRegistrationPo.getPrrId());
-            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.HOUSE_PURCHASE); //购房合同
-            propertyRightRegistrationDetailPo.setIsTrue("-1"); //未缴费
+            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.HOUSE_PURCHASE); // 购房合同类型
+            propertyRightRegistrationDetailPo.setIsTrue("-1"); // 未缴费状态
             propertyRightRegistrationDetailPo.setCreateTime(simpleDateFormat.format(new Date()));
             propertyRightRegistrationDetailPo.setCreateUser("-1");
             propertyRightRegistrationDetailV1InnerServiceSMOImpl.savePropertyRightRegistrationDetail(propertyRightRegistrationDetailPo);
         }
-        //维修基金图片上传
+        
+        // 处理维修基金图片上传和详情记录
         List<String> repairPhotos = propertyRightRegistrationPo.getRepairPhotos();
         if (repairPhotos != null && repairPhotos.size() > 0) {
-            //26000表示维修基金图片
-            fileRelPo.setRelTypeCd("26000");
+            fileRelPo.setRelTypeCd("26000"); // 26000表示维修基金图片类型
             for (String photo : repairPhotos) {
                 fileRelPo.setFileRelId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId));
                 fileRelPo.setFileRealName(photo);
                 fileRelPo.setFileSaveName(photo);
                 fileRelInnerServiceSMOImpl.saveFileRel(fileRelPo);
             }
+            // 保存维修基金详情记录（已缴费状态）
             PropertyRightRegistrationDetailPo propertyRightRegistrationDetailPo = new PropertyRightRegistrationDetailPo();
             propertyRightRegistrationDetailPo.setPrrdId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_DETAIL_ID));
             propertyRightRegistrationDetailPo.setPrrId(propertyRightRegistrationPo.getPrrId());
-            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.REPAIR_MONEY); //维修基金
-            propertyRightRegistrationDetailPo.setIsTrue("true");
+            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.REPAIR_MONEY); // 维修基金类型
+            propertyRightRegistrationDetailPo.setIsTrue("true"); // 已缴费状态
             propertyRightRegistrationDetailPo.setCreateTime(simpleDateFormat.format(new Date()));
             propertyRightRegistrationDetailPo.setCreateUser("-1");
             propertyRightRegistrationDetailV1InnerServiceSMOImpl.savePropertyRightRegistrationDetail(propertyRightRegistrationDetailPo);
         }
-        //契税证明图片上传
+        
+        // 处理契税证明图片上传和详情记录
         List<String> deedTaxPhotos = propertyRightRegistrationPo.getDeedTaxPhotos();
         if (deedTaxPhotos != null && deedTaxPhotos.size() > 0) {
-            //27000表示契税图片
-            fileRelPo.setRelTypeCd("27000");
+            fileRelPo.setRelTypeCd("27000"); // 27000表示契税图片类型
             for (String photo : deedTaxPhotos) {
                 fileRelPo.setFileRelId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId));
                 fileRelPo.setFileRealName(photo);
                 fileRelPo.setFileSaveName(photo);
                 fileRelInnerServiceSMOImpl.saveFileRel(fileRelPo);
             }
+            // 保存契税详情记录（已缴费状态）
             PropertyRightRegistrationDetailPo propertyRightRegistrationDetailPo = new PropertyRightRegistrationDetailPo();
             propertyRightRegistrationDetailPo.setPrrdId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_DETAIL_ID));
             propertyRightRegistrationDetailPo.setPrrId(propertyRightRegistrationPo.getPrrId());
-            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.DEED_TAX); //契税
-            propertyRightRegistrationDetailPo.setIsTrue("true");
+            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.DEED_TAX); // 契税类型
+            propertyRightRegistrationDetailPo.setIsTrue("true"); // 已缴费状态
             propertyRightRegistrationDetailPo.setCreateTime(simpleDateFormat.format(new Date()));
             propertyRightRegistrationDetailPo.setCreateUser("-1");
             propertyRightRegistrationDetailV1InnerServiceSMOImpl.savePropertyRightRegistrationDetail(propertyRightRegistrationDetailPo);
         }
-        if (reqJson.containsKey("isTrue") && reqJson.getString("isTrue").equals("false")) { //维修基金未缴费，此时向产权详情表新增一条数据，缴费状态为否
+        
+        // 处理维修基金未缴费的情况
+        if (reqJson.containsKey("isTrue") && reqJson.getString("isTrue").equals("false")) {
+            // 维修基金未缴费，此时向产权详情表新增一条数据，缴费状态为否
             PropertyRightRegistrationDetailPo propertyRightRegistrationDetailPo = new PropertyRightRegistrationDetailPo();
             propertyRightRegistrationDetailPo.setPrrdId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_DETAIL_ID));
             propertyRightRegistrationDetailPo.setPrrId(propertyRightRegistrationPo.getPrrId());
-            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.REPAIR_MONEY); //维修基金
-            propertyRightRegistrationDetailPo.setIsTrue("false");
+            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.REPAIR_MONEY); // 维修基金类型
+            propertyRightRegistrationDetailPo.setIsTrue("false"); // 未缴费状态
             propertyRightRegistrationDetailPo.setCreateTime(simpleDateFormat.format(new Date()));
             propertyRightRegistrationDetailPo.setCreateUser("-1");
             propertyRightRegistrationDetailV1InnerServiceSMOImpl.savePropertyRightRegistrationDetail(propertyRightRegistrationDetailPo);
         }
-        if (reqJson.containsKey("flag") && reqJson.getString("flag").equals("1")) { //契税未缴费，此时向产权详情表新增一条数据，缴费状态为否
+        
+        // 处理契税未缴费的情况
+        if (reqJson.containsKey("flag") && reqJson.getString("flag").equals("1")) {
+            // 契税未缴费，此时向产权详情表新增一条数据，缴费状态为否
             PropertyRightRegistrationDetailPo propertyRightRegistrationDetailPo = new PropertyRightRegistrationDetailPo();
             propertyRightRegistrationDetailPo.setPrrdId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_DETAIL_ID));
             propertyRightRegistrationDetailPo.setPrrId(propertyRightRegistrationPo.getPrrId());
-            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.DEED_TAX); //契税
-            propertyRightRegistrationDetailPo.setIsTrue("false");
+            propertyRightRegistrationDetailPo.setSecurities(PropertyRightRegistrationDetailDto.DEED_TAX); // 契税类型
+            propertyRightRegistrationDetailPo.setIsTrue("false"); // 未缴费状态
             propertyRightRegistrationDetailPo.setCreateTime(simpleDateFormat.format(new Date()));
             propertyRightRegistrationDetailPo.setCreateUser("-1");
             propertyRightRegistrationDetailV1InnerServiceSMOImpl.savePropertyRightRegistrationDetail(propertyRightRegistrationDetailPo);
         }
+        
+        // 返回成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

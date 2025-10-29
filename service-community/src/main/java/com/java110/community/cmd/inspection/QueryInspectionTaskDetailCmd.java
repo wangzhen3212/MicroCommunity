@@ -23,38 +23,81 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 查询巡检明细
+ * 查询巡检任务明细命令类
+ * 负责处理巡检任务明细的查询请求，包括参数验证、数据查询和结果返回
+ * 通过服务码 inspection.queryInspectionTaskDetail 标识该命令处理器
  */
 @Java110Cmd(serviceCode = "inspection.queryInspectionTaskDetail")
 public class QueryInspectionTaskDetailCmd extends Cmd {
 
+    /**
+     * 巡检任务明细服务接口，用于查询巡检任务明细数据
+     */
     @Autowired
     private IInspectionTaskDetailV1InnerServiceSMO inspectionTaskDetailV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event   命令事件对象，包含请求相关信息
+     * @param context 命令数据流上下文，用于获取和设置请求/响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException   当命令执行出现异常时抛出
+     * @throws ParseException 当参数解析出现异常时抛出
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+        // 验证分页参数
         super.validatePageInfo(reqJson);
+        // 验证属性参数
         super.validateProperty(context);
+        // 验证必须包含小区ID
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区ID");
+        // 验证必须包含任务ID
         Assert.hasKeyAndValue(reqJson, "taskId", "未包含任务ID");
     }
 
+    /**
+     * 命令执行方法
+     * 处理巡检任务明细的查询业务逻辑，包括数据查询、结果封装和响应返回
+     *
+     * @param event   命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException   当命令执行出现异常时抛出
+     * @throws ParseException 当参数解析出现异常时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+        // 将请求JSON转换为巡检任务明细数据传输对象
         InspectionTaskDetailDto inspectionTaskDetailDto = BeanConvertUtil.covertBean(reqJson, InspectionTaskDetailDto.class);
+        
+        // 查询巡检任务明细总记录数
         int count = inspectionTaskDetailV1InnerServiceSMOImpl.queryInspectionTaskDetailsCount(inspectionTaskDetailDto);
+        
         List<InspectionTaskDetailDto> inspectionTaskDetails = null;
+        
+        // 根据查询结果数量决定是否查询详细数据
         if (count > 0) {
+            // 查询巡检任务明细列表数据
             inspectionTaskDetails = BeanConvertUtil.covertBeanList(
                     inspectionTaskDetailV1InnerServiceSMOImpl.queryInspectionTaskDetails(inspectionTaskDetailDto),
                     InspectionTaskDetailDto.class);
         } else {
+            // 如果没有数据，返回空列表
             inspectionTaskDetails = new ArrayList<>();
         }
-        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, inspectionTaskDetails);
+        
+        // 计算总页数：总记录数 / 每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 封装返回结果对象
+        ResultVo resultVo = new ResultVo(totalPage, count, inspectionTaskDetails);
 
+        // 创建HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 设置响应到上下文
         context.setResponseEntity(responseEntity);
     }
 }

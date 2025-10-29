@@ -40,7 +40,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 类表述：保存停车场区域与岗亭关联关系的命令类
  * 服务编码：parkingBoxArea.saveParkingBoxArea
  * 请求路劲：/app/parkingBoxArea.SaveParkingBoxArea
  * add by 吴学文 at 2021-10-18 00:15:30 mail: 928255095@qq.com
@@ -54,44 +54,82 @@ public class SaveParkingBoxAreaCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveParkingBoxAreaCmd.class);
 
+    /**
+     * ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 停车场区域与岗亭关联服务接口
+     */
     @Autowired
     private IParkingBoxAreaV1InnerServiceSMO parkingBoxAreaV1InnerServiceSMOImpl;
 
+    /**
+     * 岗亭服务接口
+     */
     @Autowired
     private IParkingBoxV1InnerServiceSMO parkingBoxV1InnerServiceSMOImpl;
 
+    /**
+     * 停车场区域服务接口
+     */
     @Autowired
     private IParkingAreaV1InnerServiceSMO parkingAreaV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填参数是否存在
         Assert.hasKeyAndValue(reqJson, "boxId", "请求报文中未包含boxId");
         Assert.hasKeyAndValue(reqJson, "paId", "请求报文中未包含paId");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
         Assert.hasKeyAndValue(reqJson, "defaultArea", "请求报文中未包含defaultArea");
+        
+        // 验证停车场区域是否存在
         ParkingAreaDto parkingAreaDto = new ParkingAreaDto();
         parkingAreaDto.setPaId(reqJson.getString("paId"));
         List<ParkingAreaDto> parkingAreaDtos = parkingAreaV1InnerServiceSMOImpl.queryParkingAreas(parkingAreaDto);
         Assert.listOnlyOne(parkingAreaDtos, "停车场不存在！");
     }
 
+    /**
+     * 执行保存停车场区域与岗亭关联关系的方法
+     * 主要逻辑包括：检查重复关联、处理默认区域设置、保存关联关系
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        // 检查是否已存在相同的停车场区域与岗亭关联
         ParkingBoxAreaDto parkingBoxAreaDto = new ParkingBoxAreaDto();
         parkingBoxAreaDto.setPaId(reqJson.getString("paId"));
         parkingBoxAreaDto.setBoxId(reqJson.getString("boxId"));
         List<ParkingBoxAreaDto> parkingBoxAreaDtos = parkingBoxAreaV1InnerServiceSMOImpl.queryParkingBoxAreas(parkingBoxAreaDto);
         Assert.listIsNull(parkingBoxAreaDtos, "停车场重复，请重新添加！");
+        
+        // 处理默认区域设置
         String defaultArea = reqJson.getString("defaultArea");
         if (ParkingBoxAreaDto.DEFAULT_AREA_TRUE.equals(defaultArea)) {
+            // 如果当前设置为默认区域，需要将其他关联的默认区域取消
             ParkingBoxAreaDto parkingBoxArea = new ParkingBoxAreaDto();
             parkingBoxArea.setBoxId(reqJson.getString("boxId"));
             parkingBoxArea.setDefaultArea(ParkingBoxAreaDto.DEFAULT_AREA_FALSE);
             List<ParkingBoxAreaDto> parkingBoxAreas = parkingBoxAreaV1InnerServiceSMOImpl.queryParkingBoxAreas(parkingBoxArea);
+            
+            // 遍历所有关联关系，将默认区域设置为false
             if (parkingBoxAreas != null && parkingBoxAreas.size() > 0) {
                 for (ParkingBoxAreaDto parkingBox : parkingBoxAreas) {
                     ParkingBoxAreaPo tmpParkingBoxAreaPo = new ParkingBoxAreaPo();
@@ -102,15 +140,23 @@ public class SaveParkingBoxAreaCmd extends Cmd {
                 }
             }
         }
+        
+        // 保存新的停车场区域与岗亭关联关系
         ParkingBoxAreaPo parkingBoxAreaPo = BeanConvertUtil.covertBean(reqJson, ParkingBoxAreaPo.class);
         parkingBoxAreaPo.setBaId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         int flag = parkingBoxAreaV1InnerServiceSMOImpl.saveParkingBoxArea(parkingBoxAreaPo);
+        
+        // 检查保存是否成功
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
+        
+        // 更新岗亭信息
         ParkingBoxPo parkingBoxPo = new ParkingBoxPo();
         parkingBoxPo.setBoxId(reqJson.getString("boxId"));
         parkingBoxV1InnerServiceSMOImpl.updateParkingBox(parkingBoxPo);
+        
+        // 设置响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

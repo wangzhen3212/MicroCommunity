@@ -41,9 +41,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * 类表述：删除
+ * 类表述：删除社区空间预约人员信息命令类
  * 服务编码：communitySpacePerson.deleteCommunitySpacePerson
  * 请求路劲：/app/communitySpacePerson.DeleteCommunitySpacePerson
+ * 功能描述：该命令类用于处理删除社区空间预约人员信息的业务逻辑，包括数据验证、状态更新、退款处理等操作
  * add by 吴学文 at 2022-09-30 11:36:52 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -63,70 +64,96 @@ public class DeleteCommunitySpacePersonCmd extends Cmd {
     @Autowired
     private ICommunitySpacePersonTimeV1InnerServiceSMO communitySpacePersonTimeV1InnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数
+     * 功能描述：验证删除社区空间预约人员信息所需的必要参数是否完整
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证cspId参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "cspId", "cspId不能为空");
+        // 验证communityId参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行删除社区空间预约人员信息命令
+     * 功能描述：处理删除社区空间预约人员信息的核心业务逻辑，包括查询预约信息、处理退款、更新状态等操作
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
-        // todo 是否线上支付
+        // 根据cspId查询预约订单信息
         CommunitySpacePersonDto communitySpacePersonDto = new CommunitySpacePersonDto();
         communitySpacePersonDto.setCspId(reqJson.getString("cspId"));
+        // 设置查询状态为已预约状态
         communitySpacePersonDto.setState(CommunitySpacePersonDto.STATE_S);
         List<CommunitySpacePersonDto> communitySpacePersonDtos = communitySpacePersonV1InnerServiceSMOImpl.queryCommunitySpacePersons(communitySpacePersonDto);
 
+        // 验证查询结果必须存在且唯一
         Assert.listOnlyOne(communitySpacePersonDtos, "预约订单不存在");
-        //todo 线上支付 自动退款
+        
+        // 处理线上支付的退款逻辑
         returnOnlinePayMoney(communitySpacePersonDtos);
 
+        // 如果存在订单ID且不为-1，则查询该订单下的所有预约记录
         if(!StringUtil.isEmpty(communitySpacePersonDtos.get(0).getOrderId()) &&
                 !"-1".equals(communitySpacePersonDtos.get(0).getOrderId())){
             communitySpacePersonDto = new CommunitySpacePersonDto();
             communitySpacePersonDto.setOrderId(communitySpacePersonDtos.get(0).getOrderId());
             communitySpacePersonDto.setState(CommunitySpacePersonDto.STATE_S);
             communitySpacePersonDtos = communitySpacePersonV1InnerServiceSMOImpl.queryCommunitySpacePersons(communitySpacePersonDto);
-
         }
 
+        // 遍历所有预约记录，逐个进行状态更新
         for (CommunitySpacePersonDto communitySpacePersonDto1 : communitySpacePersonDtos) {
+            // 更新社区空间预约人员状态为已取消
             CommunitySpacePersonPo communitySpacePersonPo = new CommunitySpacePersonPo();
             communitySpacePersonPo.setCspId(communitySpacePersonDto1.getCspId());
             communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_CL);
             int flag = communitySpacePersonV1InnerServiceSMOImpl.updateCommunitySpacePerson(communitySpacePersonPo);
 
+            // 如果更新失败，抛出异常
             if (flag < 1) {
                 throw new CmdException("删除数据失败");
             }
 
-
+            // 更新社区空间预约时间状态为已取消
             CommunitySpacePersonTimePo communitySpacePersonTimePo = new CommunitySpacePersonTimePo();
             communitySpacePersonTimePo.setCspId(communitySpacePersonDto1.getCspId());
             communitySpacePersonTimePo.setState(CommunitySpacePersonTimeDto.STATE_CL);
             communitySpacePersonTimeV1InnerServiceSMOImpl.updateCommunitySpacePersonTime(communitySpacePersonTimePo);
         }
 
-
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 
     /**
-     * 发起退款
-     *
-     * @param communitySpacePersonDtos
+     * 发起退款操作
+     * 功能描述：根据预约信息查询支付记录，并更新支付状态为等待退款
+     * @param communitySpacePersonDtos 社区空间预约人员信息列表
      */
     private void returnOnlinePayMoney(List<CommunitySpacePersonDto> communitySpacePersonDtos) {
+        // 根据订单ID查询支付记录
         OnlinePayDto onlinePayDto = new OnlinePayDto();
         onlinePayDto.setOrderId(communitySpacePersonDtos.get(0).getOrderId());
         List<OnlinePayDto> onlinePayDtos = onlinePayV1InnerServiceSMOImpl.queryOnlinePays(onlinePayDto);
+        
+        // 如果没有支付记录，直接返回
         if (onlinePayDtos == null || onlinePayDtos.size() < 1) {
             return;
         }
 
+        // 更新支付记录状态为等待退款
         OnlinePayPo onlinePayPo = new OnlinePayPo();
         onlinePayPo.setOrderId(onlinePayDtos.get(0).getOrderId());
         onlinePayPo.setPayId(onlinePayDtos.get(0).getPayId());

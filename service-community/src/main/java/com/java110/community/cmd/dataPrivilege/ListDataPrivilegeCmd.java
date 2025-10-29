@@ -46,38 +46,84 @@ import java.util.List;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 数据权限查询命令类
+ * 
+ * 该类负责处理数据权限列表查询请求，包括参数验证、数据查询和结果返回等功能
+ * 通过服务编码"dataPrivilege.listDataPrivilege"标识，处理对应的HTTP请求
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-09-05
+ */
 @Java110Cmd(serviceCode = "dataPrivilege.listDataPrivilege")
 public class ListDataPrivilegeCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListDataPrivilegeCmd.class);
+    
+    /**
+     * 数据权限服务接口，用于查询数据权限信息
+     */
     @Autowired
     private IDataPrivilegeV1InnerServiceSMO dataPrivilegeV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证请求参数的有效性，包括分页参数和必要字段的检查
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页参数
         super.validatePageInfo(reqJson);
+        // 验证小区ID参数是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区信息");
     }
 
+    /**
+     * 执行数据权限查询命令
+     * 
+     * 根据请求参数查询数据权限列表，支持分页查询，并返回查询结果
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为数据权限DTO对象
         DataPrivilegeDto dataPrivilegeDto = BeanConvertUtil.covertBean(reqJson, DataPrivilegeDto.class);
 
+        // 查询数据权限总记录数
         int count = dataPrivilegeV1InnerServiceSMOImpl.queryDataPrivilegesCount(dataPrivilegeDto);
 
         List<DataPrivilegeDto> dataPrivilegeDtos = null;
 
+        // 根据查询结果数量决定返回的数据
         if (count > 0) {
+            // 查询数据权限列表
             dataPrivilegeDtos = dataPrivilegeV1InnerServiceSMOImpl.queryDataPrivileges(dataPrivilegeDto);
         } else {
+            // 如果没有数据，返回空列表
             dataPrivilegeDtos = new ArrayList<>();
         }
 
-        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, dataPrivilegeDtos);
+        // 计算总页数：总记录数 / 每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 构建返回结果对象
+        ResultVo resultVo = new ResultVo(totalPage, count, dataPrivilegeDtos);
 
+        // 创建HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 设置响应结果到上下文
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

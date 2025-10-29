@@ -1,3 +1,14 @@
+/**
+ * 批量缴费命令处理类
+ * 
+ * 该类负责处理批量缴费业务，包括参数验证、费用计算、账户扣款、缴费记录生成等操作
+ * 支持多种缴费方式：自定义金额缴费、自定义结束时间缴费、自定义周期缴费
+ * 同时支持账户余额抵扣功能
+ * 
+ * @author Java110
+ * @version 1.0
+ * @since 2024
+ */
 package com.java110.fee.cmd.fee;
 
 import com.alibaba.fastjson.JSONArray;
@@ -50,7 +61,7 @@ public class PayBatchFeeCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(PayBatchFeeCmd.class);
 
-
+    // 费用相关服务
     @Autowired
     private IFeeInnerServiceSMO feeInnerServiceSMOImpl;
     @Autowired
@@ -58,29 +69,51 @@ public class PayBatchFeeCmd extends Cmd {
     @Autowired
     private IPayFeeDetailV1InnerServiceSMO payFeeDetailNewV1InnerServiceSMOImpl;
 
+    // 费用配置服务
     @Autowired
     private IFeeConfigInnerServiceSMO feeConfigInnerServiceSMOImpl;
 
+    // 费用计算服务
     @Autowired
     private IComputeFeeSMO computeFeeSMOImpl;
 
+    // 用户服务
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    // 收据服务
     @Autowired
     private IFeeReceiptInnerServiceSMO feeReceiptInnerServiceSMOImpl;
 
+    // 缴费完成通知服务
     @Autowired
     private IFinishFeeNotify finishFeeNotifyImpl;
 
+    // 账户服务
     @Autowired
     private IAccountInnerServiceSMO accountInnerServiceSMOImpl;
 
-
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括：
+     * 1. 必填字段验证
+     * 2. 费用状态验证
+     * 3. 缴费周期验证
+     * 4. 用户登录验证
+     * 5. 账户余额验证
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 验证小区ID必填
         Assert.jsonObjectHaveKey(reqJson, "communityId", "请求报文中未包含communityId节点");
 
+        // 验证费用列表必填
         if (!reqJson.containsKey("fees")) {
             throw new CmdException("未包含费用");
         }
@@ -91,24 +124,27 @@ public class PayBatchFeeCmd extends Cmd {
             throw new CmdException("未包含费用");
         }
 
-        //todo 查询用户信息
+        // 查询并验证用户登录信息
         String userId = cmdDataFlowContext.getReqHeaders().get("user-id");
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
         Assert.listOnlyOne(userDtos, "用户未登录");
 
-
         JSONObject paramInObj = null;
         List<PayFeeDataDto> feeDataDtos = new ArrayList<>();
         PayFeeDataDto payFeeDataDto = null;
+        
+        // 遍历所有费用项进行验证
         for (int feeIndex = 0; feeIndex < fees.size(); feeIndex++) {
             paramInObj = fees.getJSONObject(feeIndex);
+            // 验证费用项必填字段
             Assert.hasKeyAndValue(paramInObj, "feeId", "未包含费用ID");
             Assert.hasKeyAndValue(paramInObj, "tempCycle", "未包含缴费周期类型");
             Assert.hasKeyAndValue(paramInObj, "primeRate", "未包含缴费缴费方式");
             Assert.hasKeyAndValue(paramInObj, "receivedAmount", "未包含实收金额");
-            //todo 判断是否 费用状态为缴费结束
+            
+            // 验证费用状态，已结束的费用不能再次缴费
             FeeDto feeDto = new FeeDto();
             feeDto.setFeeId(paramInObj.getString("feeId"));
             feeDto.setCommunityId(reqJson.getString("communityId"));
@@ -117,7 +153,9 @@ public class PayBatchFeeCmd extends Cmd {
             if (FeeDto.STATE_FINISH.equals(feeDtos.get(0).getState())) {
                 throw new IllegalArgumentException("收费已经结束，不能再缴费");
             }
+            
             Date endTime = feeDtos.get(0).getEndTime();
+            // 查询费用配置信息
             FeeConfigDto feeConfigDto = new FeeConfigDto();
             feeConfigDto.setConfigId(feeDtos.get(0).getConfigId());
             feeConfigDto.setCommunityId(paramInObj.getString("communityId"));
@@ -125,19 +163,22 @@ public class PayBatchFeeCmd extends Cmd {
             if (ListUtil.isNull(feeConfigDtos)) {
                 throw new IllegalArgumentException("费用项不存在");
             }
+            
             Date maxEndTime = feeDtos.get(0).getDeadlineTime();
-            //周期性费用
+            // 周期性费用处理
             if (maxEndTime == null) {
                 maxEndTime = DateUtil.getDateFromStringA(feeConfigDtos.get(0).getEndTime());
             }
 
+            // 验证缴费周期是否超过最大结束时间
             if (maxEndTime != null && endTime != null && !FeeDto.FEE_FLAG_ONCE.equals(feeDtos.get(0).getFeeFlag())) {
                 Date newDate = DateUtil.stepMonth(endTime, paramInObj.getDouble("cycles").intValue());
                 if (newDate.getTime() > maxEndTime.getTime()) {
                     throw new CmdException(feeConfigDtos.get(0).getFeeName() + "缴费周期超过 缴费结束时间,请用按结束时间方式缴费");
                 }
             }
-            //todo 封装数据
+            
+            // 封装费用数据
             payFeeDataDto = new PayFeeDataDto();
             payFeeDataDto.setFeeDto(feeDtos.get(0));
             payFeeDataDto.setFeeConfigDto(feeConfigDtos.get(0));
@@ -154,42 +195,57 @@ public class PayBatchFeeCmd extends Cmd {
             feeDataDtos.add(payFeeDataDto);
         }
 
-        //todo 账户抵扣
+        // 处理账户抵扣逻辑
         ifHasAccount(reqJson, feeDataDtos);
 
+        // 将封装好的费用数据放入请求参数中供后续使用
         reqJson.put("feeDataDtos", feeDataDtos);
-
-
     }
 
-
+    /**
+     * 执行批量缴费命令
+     * 
+     * 主要功能：
+     * 1. 生成缴费订单和收据编号
+     * 2. 对每个费用项执行缴费操作
+     * 3. 使用分布式锁保证并发安全
+     * 4. 更新费用状态和相关业务数据
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当缴费操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
-        //todo 封装好的参数
+        // 获取封装好的费用数据
         List<PayFeeDataDto> feeDataDtos = (List<PayFeeDataDto>) reqJson.get("feeDataDtos");
         String communityId = reqJson.getString("communityId");
         String payOrderId = reqJson.getString("payOrderId");
 
-        //todo 生成收据编号
+        // 生成收据编号
         String receiptCode = feeReceiptInnerServiceSMOImpl.generatorReceiptCode(communityId);
         JSONArray details = new JSONArray();
-        //获取订单ID
+        // 获取订单ID
         String oId = Java110TransactionalFactory.getOId();
 
+        // 遍历所有费用项进行缴费处理
         for (PayFeeDataDto payFeeDataDto : feeDataDtos) {
             payFeeDataDto.setDetailId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_detailId));
             payFeeDataDto.setPayOrderId(oId);
-            // todo 如果 扫码枪支付 输入支付订单ID
+            // 如果使用扫码枪支付，使用传入的支付订单ID
             if (!StringUtil.isEmpty(payOrderId)) {
                 payFeeDataDto.setPayOrderId(payOrderId);
             }
 
+            // 使用分布式锁保证同一费用的并发安全
             String requestId = DistributedLock.getLockUUID();
             String key = this.getClass().getSimpleName() + payFeeDataDto.getFeeId();
             DistributedLock.waitGetDistributedLock(key, requestId);
             try {
+                // 执行单个费用项的缴费操作
                 doPayFee(payFeeDataDto, receiptCode);
             } finally {
                 DistributedLock.releaseDistributedLock(key, requestId);
@@ -197,55 +253,67 @@ public class PayBatchFeeCmd extends Cmd {
             details.add(payFeeDataDto.getDetailId());
         }
 
+        // 构建响应数据
         JSONObject data = new JSONObject();
         data.put("details", details);
 
         cmdDataFlowContext.setResponseEntity(ResultVo.createResponseEntity(data));
     }
 
+    /**
+     * 执行单个费用项的缴费操作
+     * 
+     * 主要步骤：
+     * 1. 设置缴费明细基本信息
+     * 2. 计算结束时间、周期和金额
+     * 3. 保存缴费明细记录
+     * 4. 更新费用状态
+     * 5. 执行相关业务通知
+     * 
+     * @param payFeeDataDto 缴费数据对象
+     * @param receiptCode 收据编号
+     */
     private void doPayFee(PayFeeDataDto payFeeDataDto, String receiptCode) {
 
-
+        // 创建缴费明细对象并设置基本信息
         PayFeeDetailPo payFeeDetailPo = payFeeDataDto;
-        payFeeDetailPo.setOpenInvoice("N");
-        payFeeDetailPo.setState(FeeDetailDto.STATE_NORMAL);
-        payFeeDetailPo.setStartTime(DateUtil.getFormatTimeStringA(payFeeDataDto.getFeeDto().getEndTime()));
+        payFeeDetailPo.setOpenInvoice("N"); // 默认不开具发票
+        payFeeDetailPo.setState(FeeDetailDto.STATE_NORMAL); // 设置状态为正常
+        payFeeDetailPo.setStartTime(DateUtil.getFormatTimeStringA(payFeeDataDto.getFeeDto().getEndTime())); // 开始时间为原费用结束时间
 
-        //todo 计算 结束时间 应收  缴费周期
-        /**
-         *         payFeeDetailPo.setCycles(cycles.doubleValue() + "");
-         *         payFeeDetailPo.setEndTime(DateUtil.getFormatTimeStringA(targetEndTime));
-         *         payFeeDetailPo.setReceivableAmount(receivableAmount);
-         *         payFeeDetailPo.setPayableAmount(receivableAmount);
-         */
+        // 计算结束时间、缴费周期和应收金额
         computeEndTimeCycleAmount(payFeeDataDto, payFeeDetailPo);
         payFeeDetailPo.setAcctAmount(payFeeDataDto.getAccountAmount()+"");
 
-        //todo 缓存收据编号
+        // 缓存收据编号，有效期2分钟
         CommonCache.setValue(payFeeDetailPo.getDetailId() + CommonCache.RECEIPT_CODE, receiptCode, CommonCache.DEFAULT_EXPIRETIME_TWO_MIN);
+        
+        // 保存缴费明细记录
         int flag = payFeeDetailNewV1InnerServiceSMOImpl.savePayFeeDetailNew(payFeeDetailPo);
         if (flag < 1) {
             throw new CmdException("缴费失败");
         }
 
+        // 更新费用主表信息
         PayFeePo payFeePo = new PayFeePo();
         payFeePo.setFeeId(payFeeDataDto.getFeeId());
-        payFeePo.setEndTime(DateUtil.getNextSecTime(payFeeDetailPo.getEndTime()));
-        payFeePo.setState(FeeDto.STATE_FINISH);
+        payFeePo.setEndTime(DateUtil.getNextSecTime(payFeeDetailPo.getEndTime())); // 结束时间加1秒避免重复
+        payFeePo.setState(FeeDto.STATE_FINISH); // 设置为完成状态
 
         Date maxTime = payFeeDataDto.getFeeDto().getDeadlineTime();
 
         if (maxTime == null) {
             maxTime = DateUtil.getDateFromStringA(payFeeDataDto.getFeeConfigDto().getEndTime());
         }
-        //todo 不是一次性费用
+        
+        // 对于非一次性费用，如果缴费结束时间接近最大结束时间，保持进行中状态
         if (!FeeDto.FEE_FLAG_ONCE.equals(payFeeDataDto.getFeeDto().getFeeFlag()) && maxTime != null) {
             Calendar calendar = Calendar.getInstance();
             calendar.setTime(maxTime);
-            calendar.add(Calendar.DAY_OF_MONTH, -5);
+            calendar.add(Calendar.DAY_OF_MONTH, -5); // 提前5天
             maxTime = calendar.getTime();
             if (maxTime.after(DateUtil.getDateFromStringA(payFeeDetailPo.getEndTime()))) {
-                payFeePo.setState(FeeDto.STATE_DOING);
+                payFeePo.setState(FeeDto.STATE_DOING); // 设置为进行中状态
             }
         }
 
@@ -254,50 +322,60 @@ public class PayBatchFeeCmd extends Cmd {
             throw new CmdException("缴费失败");
         }
 
-        //todo 账户扣款
+        // 执行账户扣款操作
         finishFeeNotifyImpl.withholdAccount(payFeeDataDto, payFeeDataDto.getFeeId(), payFeeDataDto.getCommunityId());
 
-        //todo 修改车辆
+        // 更新车辆结束时间
         finishFeeNotifyImpl.updateCarEndTime(payFeeDataDto.getFeeId(), payFeeDataDto.getCommunityId());
 
-
-        //todo 修改报修单
+        // 更新报修单状态
         finishFeeNotifyImpl.updateRepair(payFeeDataDto.getFeeId(), payFeeDataDto.getCommunityId(), payFeeDetailPo.getReceivedAmount());
 
-        //todo 租金延期房屋结束时间
+        // 更新房屋租赁结束时间
         finishFeeNotifyImpl.updateRoomEndTime(payFeeDataDto.getFeeId(), payFeeDataDto.getCommunityId());
     }
 
     /**
-     * 计算 结束时间 缴费周期 金额
-     * payFeeDetailPo.setCycles(cycles.doubleValue() + "");
-     * payFeeDetailPo.setEndTime(DateUtil.getFormatTimeStringA(targetEndTime));
-     * payFeeDetailPo.setReceivableAmount(receivableAmount);
-     *
-     * @param payFeeDataDto
-     * @param payFeeDetailPo
+     * 计算缴费结束时间、周期和应收金额
+     * 
+     * 根据不同的缴费方式计算：
+     * 1. 自定义金额缴费：根据金额计算周期和结束时间
+     * 2. 自定义结束时间缴费：根据结束时间计算周期和金额
+     * 3. 自定义周期缴费：根据周期计算结束时间和金额
+     * 
+     * @param payFeeDataDto 缴费数据对象
+     * @param payFeeDetailPo 缴费明细对象，计算结果将设置到此对象中
      */
     private void computeEndTimeCycleAmount(PayFeeDataDto payFeeDataDto, PayFeeDetailPo payFeeDetailPo) {
         Date targetEndTime = null;
         BigDecimal cycles = null;
         String receivableAmount = "";
+        
+        // 获取费用单价
         Map feePriceAll = computeFeeSMOImpl.getFeePrice(payFeeDataDto.getFeeDto());
         BigDecimal feePrice = new BigDecimal(feePriceAll.get("feePrice").toString());
-        if (PayFeeDataDto.TEMP_CYCLE_CUSTOM_AMOUNT.equals(payFeeDataDto.getTempCycle())) { //todo  自定义金额交费
+        
+        // 自定义金额缴费方式处理
+        if (PayFeeDataDto.TEMP_CYCLE_CUSTOM_AMOUNT.equals(payFeeDataDto.getTempCycle())) {
             Date endTime = payFeeDataDto.getFeeDto().getEndTime();
             Calendar endCalender = Calendar.getInstance();
             endCalender.setTime(endTime);
             BigDecimal receivedAmount = new BigDecimal(Double.parseDouble(payFeeDataDto.getReceivedAmount()));
-            //todo 考虑账户金额
+            
+            // 考虑账户抵扣金额
             if (payFeeDataDto.getAccountAmount() > 0) {
                 receivedAmount = receivedAmount.add(new BigDecimal(payFeeDataDto.getAccountAmount()));
             }
+            
+            // 根据金额计算周期数
             cycles = receivedAmount.divide(feePrice, 4, BigDecimal.ROUND_HALF_EVEN);
             targetEndTime = computeFeeSMOImpl.getTargetEndTime(cycles.doubleValue(), endCalender.getTime(),true);
             receivableAmount = payFeeDataDto.getReceivedAmount();
-            //处理 可能还存在 实收手工减免的情况
-        } else if (PayFeeDataDto.TEMP_CYCLE_CUSTOM_END_TIME.equals(payFeeDataDto.getTempCycle())) { //todo 这里按缴费结束时间缴费
+            
+        // 自定义结束时间缴费方式处理
+        } else if (PayFeeDataDto.TEMP_CYCLE_CUSTOM_END_TIME.equals(payFeeDataDto.getTempCycle())) {
             String custEndTime = payFeeDataDto.getCustEndTime();
+            // 处理时间格式，如果没有时分秒则补充
             if (!custEndTime.contains(":")) {
                 custEndTime += " 23:59:59";
             }
@@ -306,30 +384,43 @@ public class PayBatchFeeCmd extends Cmd {
             cycles = receivedAmount1.divide(feePrice, 4, BigDecimal.ROUND_HALF_EVEN);
             receivableAmount = payFeeDataDto.getReceivedAmount();
 
-        } else { //自定义周期
-            targetEndTime = computeFeeSMOImpl.getFeeEndTimeByCycles(payFeeDataDto.getFeeDto(), payFeeDataDto.getCycles());//根据缴费周期计算 结束时间
+        // 自定义周期缴费方式处理
+        } else {
+            // 根据缴费周期计算结束时间
+            targetEndTime = computeFeeSMOImpl.getFeeEndTimeByCycles(payFeeDataDto.getFeeDto(), payFeeDataDto.getCycles());
             cycles = new BigDecimal(Double.parseDouble(payFeeDataDto.getCycles()));
             double tmpReceivableAmount = cycles.multiply(feePrice).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
             receivableAmount = tmpReceivableAmount + "";
-            //出租递增问题处理
+            
+            // 出租递增费用特殊处理
             if (FeeConfigDto.COMPUTING_FORMULA_RANT_RATE.equals(payFeeDataDto.getFeeDto().getComputingFormula())) {
                 computeFeeSMOImpl.dealRentRateCycle(payFeeDataDto.getFeeDto(), cycles.doubleValue());
                 if (payFeeDataDto.getFeeDto().getOweFee() > 0) {
                     receivableAmount = payFeeDataDto.getFeeDto().getAmountOwed();
-
                 }
             }
         }
 
+        // 设置计算结果到缴费明细对象
         payFeeDetailPo.setCycles(cycles.doubleValue() + "");
         payFeeDetailPo.setEndTime(DateUtil.getFormatTimeStringA(targetEndTime));
         payFeeDetailPo.setReceivableAmount(receivableAmount);
         payFeeDetailPo.setPayableAmount(receivableAmount);
-
     }
 
-
+    /**
+     * 处理账户余额抵扣逻辑
+     * 
+     * 如果请求中包含账户抵扣信息，则：
+     * 1. 验证账户是否存在和余额是否充足
+     * 2. 按费用项顺序进行抵扣
+     * 3. 更新每个费用项的实收金额和账户抵扣金额
+     * 
+     * @param reqJson 请求JSON对象
+     * @param feeDataDtos 费用数据列表
+     */
     private void ifHasAccount(JSONObject reqJson, List<PayFeeDataDto> feeDataDtos) {
+        // 检查是否包含账户抵扣信息
         if (!reqJson.containsKey("accountAmount")) {
             return;
         }
@@ -338,9 +429,11 @@ public class PayBatchFeeCmd extends Cmd {
             return;
         }
 
+        // 验证账户ID必填
         Assert.hasKeyAndValue(reqJson, "acctId", "未包含账户ID");
         String acctId = reqJson.getString("acctId");
-        //todo 校验账户金额是否充足
+        
+        // 查询账户信息并验证余额
         AccountDto accountDto = new AccountDto();
         accountDto.setAcctId(acctId);
         List<AccountDto> accountDtos = accountInnerServiceSMOImpl.queryAccounts(accountDto);
@@ -354,6 +447,8 @@ public class PayBatchFeeCmd extends Cmd {
         BigDecimal accountAmountDec = null;
         double receivedAmount = 0.0;
         BigDecimal receivedAmountDec = null;
+        
+        // 遍历费用项进行账户抵扣
         for (PayFeeDataDto payFeeDataDto : feeDataDtos) {
             if (accountAmount == 0) {
                 continue;
@@ -361,6 +456,8 @@ public class PayBatchFeeCmd extends Cmd {
             accountAmountDec = new BigDecimal(accountAmount);
             receivedAmount = Double.parseDouble(payFeeDataDto.getReceivedAmount());
             receivedAmountDec = new BigDecimal(receivedAmount);
+            
+            // 如果账户余额足够抵扣当前费用
             if (receivedAmount >= accountAmount) {
                 receivedAmountDec = receivedAmountDec.subtract(accountAmountDec).setScale(2, BigDecimal.ROUND_HALF_UP);
                 payFeeDataDto.setReceivedAmount(receivedAmountDec.doubleValue() + "");
@@ -370,6 +467,7 @@ public class PayBatchFeeCmd extends Cmd {
                 continue;
             }
 
+            // 如果账户余额不足以抵扣当前费用，全部抵扣
             payFeeDataDto.setReceivedAmount("0");
             payFeeDataDto.setAccountAmount(receivedAmount);
             payFeeDataDto.setAcctId(acctId);
@@ -377,8 +475,5 @@ public class PayBatchFeeCmd extends Cmd {
             accountAmountDec = accountAmountDec.subtract(receivedAmountDec).setScale(2, BigDecimal.ROUND_HALF_UP);
             accountAmount = accountAmountDec.doubleValue();
         }
-
-
     }
 }
-

@@ -75,7 +75,16 @@ import java.util.List;
         reqBody = "http://{ip}:{port}/app/communitySpace.listCommunitySpace?spaceId=&name=&state=&communityId=2022081539020475&page=1&row=10",
         resBody = "{\"code\":0,\"data\":[{\"adminName\":\"无需文\",\"communityId\":\"2022081539020475\",\"endTime\":\"06:10\",\"feeMoney\":\"10.00\",\"name\":\"体育场\",\"page\":-1,\"records\":0,\"row\":0,\"spaceId\":\"102022093043260007\",\"startTime\":\"05:05\",\"state\":\"1001\",\"statusCd\":\"0\",\"tel\":\"18909711443\",\"total\":0,\"openTimes\":[{\"hours\":0,\"Y\"}]}],\"msg\":\"成功\",\"page\":0,\"records\":1,\"rows\":0,\"total\":2}"
 )
+
 /**
+ * 查询社区场地信息命令类
+ * 实现社区场地的查询功能，支持分页查询和场地开放时间的关联查询
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-09-30
+ * @see Cmd
+ * 
  * 类表述：查询
  * 服务编码：communitySpace.listCommunitySpace
  * 请求路劲：/app/communitySpace.ListCommunitySpace
@@ -89,67 +98,107 @@ import java.util.List;
 public class ListCommunitySpaceCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListCommunitySpaceCmd.class);
+    
+    /**
+     * 社区场地服务接口
+     */
     @Autowired
     private ICommunitySpaceV1InnerServiceSMO communitySpaceV1InnerServiceSMOImpl;
 
+    /**
+     * 社区场地开放时间服务接口
+     */
     @Autowired
     private ICommunitySpaceOpenTimeV1InnerServiceSMO communitySpaceOpenTimeV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数的有效性，主要验证分页参数
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 执行命令方法
+     * 处理查询社区场地的业务逻辑，包括分页查询和关联查询场地开放时间
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求参数转换为CommunitySpaceDto对象
         CommunitySpaceDto communitySpaceDto = BeanConvertUtil.covertBean(reqJson, CommunitySpaceDto.class);
 
+        // 查询场地总记录数
         int count = communitySpaceV1InnerServiceSMOImpl.queryCommunitySpacesCount(communitySpaceDto);
 
         List<CommunitySpaceDto> communitySpaceDtos = null;
 
         if (count > 0) {
+            // 如果有数据，查询场地列表
             communitySpaceDtos = communitySpaceV1InnerServiceSMOImpl.queryCommunitySpaces(communitySpaceDto);
 
+            // 刷新场地的开放时间信息
             refreshOpenTimes(communitySpaceDtos);
         } else {
+            // 如果没有数据，返回空列表
             communitySpaceDtos = new ArrayList<>();
         }
 
+        // 计算总页数并构建返回结果
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, communitySpaceDtos);
 
+        // 设置HTTP响应
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 
+    /**
+     * 刷新场地开放时间信息
+     * 为每个场地查询并设置对应的开放时间段信息
+     *
+     * @param communitySpaceDtos 社区场地数据列表
+     */
     private void refreshOpenTimes(List<CommunitySpaceDto> communitySpaceDtos) {
-
+        // 参数校验：如果场地列表为空或没有数据，直接返回
         if (communitySpaceDtos == null || communitySpaceDtos.size() < 1) {
             return;
         }
 
+        // 收集所有场地的ID
         List<String> spaceIds = new ArrayList<>();
-
         for (CommunitySpaceDto communitySpaceDto : communitySpaceDtos) {
             spaceIds.add(communitySpaceDto.getSpaceId());
         }
 
+        // 构建查询条件，查询所有相关场地的开放时间
         CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
         communitySpaceOpenTimeDto.setSpaceIds(spaceIds.toArray(new String[spaceIds.size()]));
         List<CommunitySpaceOpenTimeDto> communitySpaceOpenTimeDtos = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimes(communitySpaceOpenTimeDto);
 
+        // 为每个场地设置对应的开放时间段
         List<CommunitySpaceOpenTimeDto> tmpCommunitySpaceOpenTimeDtos = null;
         for (CommunitySpaceDto communitySpaceDto : communitySpaceDtos) {
             tmpCommunitySpaceOpenTimeDtos = new ArrayList<>();
+            // 遍历所有开放时间记录，找到属于当前场地的记录
             for (CommunitySpaceOpenTimeDto tmpCommunitySpaceOpenTimeDto : communitySpaceOpenTimeDtos) {
                 if (tmpCommunitySpaceOpenTimeDto.getSpaceId().equals(communitySpaceDto.getSpaceId())) {
                     tmpCommunitySpaceOpenTimeDtos.add(tmpCommunitySpaceOpenTimeDto);
                 }
             }
+            // 将匹配的开放时间设置到场地对象中
             communitySpaceDto.setOpenTimes(tmpCommunitySpaceOpenTimeDtos);
         }
-
     }
 }

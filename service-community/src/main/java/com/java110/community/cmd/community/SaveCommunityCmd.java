@@ -72,9 +72,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 )
 
 /**
- * 类表述：保存
+ * 小区信息保存命令类
+ * 负责处理小区信息的添加请求，包括小区基本信息、成员信息、费用配置和工作流配置
  * 服务编码：community.saveCommunity
- * 请求路劲：/app/community.SaveCommunity
+ * 请求路径：/app/community.SaveCommunity
  * add by 吴学文 at 2021-09-18 12:54:57 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -86,43 +87,69 @@ public class SaveCommunityCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveCommunityCmd.class);
 
+    /** 编码前缀常量 */
     public static final String CODE_PREFIX_ID = "10";
 
+    /** 小区业务操作接口 */
     @Autowired
     private ICommunityBMO communityBMOImpl;
 
+    /** 小区服务接口 */
     @Autowired
     private ICommunityV1InnerServiceSMO communityV1InnerServiceSMOImpl;
 
+    /** 工作流服务接口 */
     @Autowired
     private IWorkflowV1InnerServiceSMO workflowV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 校验必填参数
         Assert.hasKeyAndValue(reqJson, "name", "必填，请填写小区名称");
         Assert.hasKeyAndValue(reqJson, "address", "必填，请填写小区地址");
         Assert.hasKeyAndValue(reqJson, "cityCode", "请求报文中未包含cityCode");
         Assert.hasKeyAndValue(reqJson, "payFeeMonth", "请求报文中未包含payFeeMonth");
         Assert.hasKeyAndValue(reqJson, "feePrice", "请求报文中未包含feePrice");
-        //属性校验
+        // 校验属性参数
         Assert.judgeAttrValue(reqJson);
-
     }
 
+    /**
+     * 执行小区保存命令
+     * 处理小区信息的完整保存流程，包括基本信息、成员信息、费用配置和工作流配置
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 添加小区基本信息
         communityBMOImpl.addCommunity(reqJson, cmdDataFlowContext);
+        // 添加小区成员信息
         communityBMOImpl.addCommunityMembers(reqJson, cmdDataFlowContext);
-        //产生物业费配置信息 不要产生默认费
+        // 产生物业费配置信息 不要产生默认费
         //communityBMOImpl.addFeeConfigProperty(reqJson, cmdDataFlowContext);
-        communityBMOImpl.addFeeConfigRepair(reqJson, cmdDataFlowContext); // 报修费用
-        communityBMOImpl.addFeeConfigParkingSpaceTemp(reqJson, cmdDataFlowContext);//地下出租
+        // 添加报修费用配置
+        communityBMOImpl.addFeeConfigRepair(reqJson, cmdDataFlowContext);
+        // 添加地下出租车位费用配置
+        communityBMOImpl.addFeeConfigParkingSpaceTemp(reqJson, cmdDataFlowContext);
 
+        // 处理小区属性信息
         dealAttr(reqJson, cmdDataFlowContext);
 
-        WorkflowPo workflowPo = null;
-        workflowPo = new WorkflowPo();
+        // 创建投诉建议工作流
+        WorkflowPo workflowPo = new WorkflowPo();
         workflowPo.setCommunityId(reqJson.getString("communityId"));
         workflowPo.setFlowId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_flowId));
         workflowPo.setFlowName("投诉建议流程");
@@ -134,6 +161,7 @@ public class SaveCommunityCmd extends Cmd {
             throw new IllegalArgumentException("添加流程失败");
         }
 
+        // 注释掉的物品领用工作流配置
 //        WorkflowPo workflowPo1 = null;
 //        workflowPo1 = new WorkflowPo();
 //        workflowPo1.setCommunityId(reqJson.getString("communityId"));
@@ -147,6 +175,7 @@ public class SaveCommunityCmd extends Cmd {
 //            throw new IllegalArgumentException("添加流程失败");
 //        }
 
+        // 创建物品被调拨工作流
         WorkflowPo workflowPo2 = new WorkflowPo();
         workflowPo2.setCommunityId(reqJson.getString("communityId")); //被调拨小区
         workflowPo2.setFlowId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_flowId));
@@ -158,28 +187,38 @@ public class SaveCommunityCmd extends Cmd {
         if (flag < 1) {
             throw new IllegalArgumentException("添加流程失败");
         }
+        
+        // 设置响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.createResponseEntity(reqJson.getString("communityId")));
     }
 
-
+    /**
+     * 处理小区属性信息
+     * 解析并保存小区的扩展属性信息
+     *
+     * @param paramObj 请求参数对象
+     * @param context 数据流上下文
+     */
     private void dealAttr(JSONObject paramObj, ICmdDataFlowContext context) {
-
+        // 检查是否包含属性信息
         if (!paramObj.containsKey("attrs")) {
             return;
         }
 
         JSONArray attrs = paramObj.getJSONArray("attrs");
+        // 检查属性数组是否为空
         if (attrs.size() < 1) {
             return;
         }
 
-
+        // 遍历处理每个属性
         JSONObject attr = null;
         for (int attrIndex = 0; attrIndex < attrs.size(); attrIndex++) {
             attr = attrs.getJSONObject(attrIndex);
+            // 设置小区ID到属性中
             attr.put("communityId", paramObj.getString("communityId"));
+            // 添加属性信息
             communityBMOImpl.addAttr(attr, context);
         }
-
     }
 }

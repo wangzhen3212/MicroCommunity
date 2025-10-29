@@ -45,9 +45,14 @@ import java.util.List;
 
 
 /**
- * 类表述：更新
+ * 类表述：更新水表抄表记录命令类
  * 服务编码：meterWater.updateMeterWater
  * 请求路劲：/app/meterWater.UpdateMeterWater
+ * 功能描述：该类负责处理水表抄表记录的更新操作，包括数据验证、业务逻辑处理和数据库更新
+ * 主要功能：
+ * 1. 验证更新抄表记录的必填参数
+ * 2. 根据小区是否在黑名单中决定是否生成费用记录
+ * 3. 更新抄表记录和相关的费用信息
  * add by 吴学文 at 2022-07-21 09:17:10 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -59,29 +64,54 @@ public class UpdateMeterWaterCmd extends Cmd {
 
   private static Logger logger = LoggerFactory.getLogger(UpdateMeterWaterCmd.class);
 
-
+    /**
+     * 抄表记录V1版本服务接口
+     */
     @Autowired
     private IMeterWaterV1InnerServiceSMO meterWaterV1InnerServiceSMOImpl;
 
-
+    /**
+     * 抄表记录服务接口
+     */
     @Autowired
     private IMeterWaterInnerServiceSMO meterWaterInnerServiceSMOImpl;
 
+    /**
+     * 房屋信息服务接口
+     */
     @Autowired
     private IRoomInnerServiceSMO roomInnerServiceSMOImpl;
 
+    /**
+     * 费用服务接口
+     */
     @Autowired
     private IPayFeeV1InnerServiceSMO payFeeV1InnerServiceSMOImpl;
 
-    //域
+    /**
+     * 公共配置域
+     */
     public static final String DOMAIN_COMMON = "DOMAIN.COMMON";
 
-    //键(水费黑名单)
+    /**
+     * 水费黑名单配置键
+     */
     public static final String WATER_BLACK_LIST = "WATER_BLACK_LIST";
 
-    //键(电费黑名单)
+    /**
+     * 电费黑名单配置键
+     */
     public static final String ELECTRIC_BLACK_LIST = "ELECTRIC_BLACK_LIST";
 
+    /**
+     * 验证请求参数
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * 功能描述：验证更新抄表记录所需的必填参数是否完整
+     * 验证参数包括：waterId, preDegrees, curDegrees, preReadingTime, curReadingTime, communityId
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
         Assert.hasKeyAndValue(reqJson, "waterId", "waterId不能为空");
@@ -92,44 +122,66 @@ public class UpdateMeterWaterCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
     }
 
+    /**
+     * 执行抄表记录更新命令
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     * 功能描述：处理抄表记录的更新逻辑，包括：
+     * 1. 查询抄表记录和房屋信息
+     * 2. 根据小区黑名单配置决定是否生成费用
+     * 3. 更新抄表记录和费用信息
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 根据waterId查询抄表记录
         MeterWaterDto meterWaterDto = new MeterWaterDto();
         meterWaterDto.setWaterId(reqJson.getString("waterId"));
         meterWaterDto.setCommunityId(reqJson.getString("communityId"));
         List<MeterWaterDto> meterWaterDtos = meterWaterInnerServiceSMOImpl.queryMeterWaters(meterWaterDto);
+        // 验证查询结果唯一性
         Assert.listOnlyOne(meterWaterDtos, "数据异常未找到费用信息");
+        
+        // 查询房屋信息
         RoomDto roomDto = new RoomDto();
         roomDto.setRoomId(meterWaterDtos.get(0).getObjId());
         List<RoomDto> roomList = roomInnerServiceSMOImpl.queryRooms(roomDto);
         Assert.listOnlyOne(roomList, "查询房屋信息错误！");
-        //获取抄表对象所属小区id
+        
+        // 获取抄表对象所属小区id
         String communityId = roomList.get(0).getCommunityId();
-        //获取抄表类型
+        // 获取抄表类型
         String meterType = meterWaterDtos.get(0).getMeterType();
-        //取出开关映射的备注值(水费黑名单)
+        
+        // 取出开关映射的备注值(水费黑名单)
         String waterRemark = MappingCache.getRemark(DOMAIN_COMMON, WATER_BLACK_LIST);
         List<String> waterRemarkList = new ArrayList<>();
         if (!StringUtil.isEmpty(waterRemark)) {
             String[] waterSplit = waterRemark.split(",");
-            //将数组转成list集合(水费黑名单集合)
+            // 将数组转成list集合(水费黑名单集合)
             waterRemarkList = Arrays.asList(waterSplit);
         }
-        //取出开关映射的备注值(电费黑名单)
+        
+        // 取出开关映射的备注值(电费黑名单)
         String electricRemark = MappingCache.getRemark(DOMAIN_COMMON, ELECTRIC_BLACK_LIST);
         List<String> electricRemarkList = new ArrayList<>();
         if (!StringUtil.isEmpty(electricRemark)) {
             String[] electricSplit = electricRemark.split(",");
-            //将数组转成list集合(电费黑名单集合)
+            // 将数组转成list集合(电费黑名单集合)
             electricRemarkList = Arrays.asList(electricSplit);
         }
-        //如果是水费，且在水费黑名单就直接生成水费记录，不生成费用
+        
+        // 业务逻辑处理：根据黑名单配置决定是否生成费用
+        // 如果是水费，且在水费黑名单就直接生成水费记录，不生成费用
         if (waterRemarkList.contains(communityId) && meterType.equals("2020")) {
             updateMeterWater(reqJson);
         } else if (electricRemarkList.contains(communityId) && meterType.equals("1010")) {
             updateMeterWater(reqJson);
         } else {
+            // 正常流程：更新费用信息
             PayFeePo payFeePo = new PayFeePo();
             payFeePo.setFeeId(meterWaterDtos.get(0).getFeeId());
             payFeePo.setCommunityId(meterWaterDtos.get(0).getCommunityId());
@@ -146,13 +198,16 @@ public class UpdateMeterWaterCmd extends Cmd {
     }
 
     /**
-     * 添加活动信息
+     * 更新抄表记录信息
      *
-     * @param paramInJson     接口调用放传入入参
-     * @return 订单服务能够接受的报文
+     * @param paramInJson 接口调用方传入入参
+     * 功能描述：将JSON参数转换为抄表记录PO对象并执行更新操作
+     * 如果更新失败则抛出CmdException异常
      */
     public void updateMeterWater(JSONObject paramInJson) {
+        // 将JSON对象转换为抄表记录PO对象
         MeterWaterPo meterWaterPo = BeanConvertUtil.covertBean(paramInJson, MeterWaterPo.class);
+        // 执行更新操作
         int flag = meterWaterV1InnerServiceSMOImpl.updateMeterWater(meterWaterPo);
 
         if (flag < 1) {

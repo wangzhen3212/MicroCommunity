@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * 类表述：查询
+ * 类表述：查询缴费规则账单列表的命令类
  * 服务编码：payFeeRuleBill.listPayFeeRuleBill
  * 请求路劲：/app/payFeeRuleBill.ListPayFeeRuleBill
  * add by 吴学文 at 2023-10-23 16:59:08 mail: 928255095@qq.com
@@ -54,37 +54,63 @@ import org.slf4j.LoggerFactory;
 public class ListPayFeeRuleBillCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListPayFeeRuleBillCmd.class);
+    
+    /**
+     * 缴费规则账单服务接口
+     */
     @Autowired
     private IPayFeeRuleBillV1InnerServiceSMO payFeeRuleBillV1InnerServiceSMOImpl;
 
+    /**
+     * 费用计算服务接口
+     */
     @Autowired
     private IComputeFeeSMO computeFeeSMOImpl;
 
-
+    /**
+     * 参数验证方法
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
         super.validatePageInfo(reqJson);
+        // 验证小区ID不能为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
     }
 
+    /**
+     * 执行命令方法 - 查询缴费规则账单列表
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-        //todo 如果根据费用ID查询账单规则
+        // 如果请求中包含费用ID，则根据费用ID查询账单规则
         ifHasFeeId(reqJson);
+        
+        // 将请求参数转换为PayFeeRuleBillDto对象
         PayFeeRuleBillDto payFeeRuleBillDto = BeanConvertUtil.covertBean(reqJson, PayFeeRuleBillDto.class);
 
+        // 查询缴费规则账单总数
         int count = payFeeRuleBillV1InnerServiceSMOImpl.queryPayFeeRuleBillsCount(payFeeRuleBillDto);
 
         List<PayFeeRuleBillDto> payFeeRuleBillDtos = null;
 
         if (count > 0) {
+            // 查询缴费规则账单列表
             payFeeRuleBillDtos = payFeeRuleBillV1InnerServiceSMOImpl.queryPayFeeRuleBills(payFeeRuleBillDto);
         } else {
             payFeeRuleBillDtos = new ArrayList<>();
         }
 
+        // 计算费用价格
         computeFeePrice(payFeeRuleBillDtos);
 
+        // 构建返回结果
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, payFeeRuleBillDtos);
 
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
@@ -92,16 +118,23 @@ public class ListPayFeeRuleBillCmd extends Cmd {
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 
+    /**
+     * 计算费用价格
+     * @param payFeeRuleBillDtos 缴费规则账单列表
+     */
     private void computeFeePrice(List<PayFeeRuleBillDto> payFeeRuleBillDtos) {
 
         if (payFeeRuleBillDtos == null || payFeeRuleBillDtos.isEmpty()) {
             return;
         }
 
+        // 遍历每个缴费规则账单，计算费用价格
         for (PayFeeRuleBillDto payFeeRuleBillDto : payFeeRuleBillDtos) {
+            // 设置计费周期为1
             payFeeRuleBillDto.setCycle("1");
 
             try {
+                // 计算单个账单的费用价格
                 doComputeFeePrice(payFeeRuleBillDto, 1);
             } catch (Exception e) {
                 logger.error("查询费用信息 ，费用信息错误", e);
@@ -109,36 +142,45 @@ public class ListPayFeeRuleBillCmd extends Cmd {
         }
     }
 
-
     /**
-     * 根据房屋来算单价
-     *
-     * @param feeDto
+     * 计算单个费用价格
+     * @param feeDto 费用数据传输对象
+     * @param oweMonth 欠费月数
      */
     private void doComputeFeePrice(FeeDto feeDto, double oweMonth) {
         String computingFormula = feeDto.getComputingFormula();
+        // 获取费用价格信息
         Map feePriceAll = computeFeeSMOImpl.getFeePrice(feeDto);
+        // 设置单价
         feeDto.setFeePrice(Double.parseDouble(feePriceAll.get("feePrice").toString()));
-        //BigDecimal feeTotalPrice = new BigDecimal(Double.parseDouble(feePriceAll.get("feeTotalPrice").toString()));
+        // 设置总价，并进行精度处理
         feeDto.setFeeTotalPrice(MoneyUtil.computePriceScale(Double.parseDouble(feePriceAll.get("feeTotalPrice").toString()),
                 feeDto.getScale(),
                 Integer.parseInt(feeDto.getDecimalPlace())));
+        
+        // 计算欠费金额
         BigDecimal curFeePrice = new BigDecimal(feeDto.getFeePrice());
         curFeePrice = curFeePrice.multiply(new BigDecimal(oweMonth));
         feeDto.setAmountOwed(MoneyUtil.computePriceScale(curFeePrice.doubleValue(), feeDto.getScale(), Integer.parseInt(feeDto.getDecimalPlace())) + "");
-        //动态费用
+        
+        // 处理动态费用逻辑
         if ("4004".equals(computingFormula)
                 && FeeDto.FEE_FLAG_ONCE.equals(feeDto.getFeeFlag())
                 && !FeeDto.STATE_FINISH.equals(feeDto.getState())
                 && feeDto.getDeadlineTime() == null) {
+            // 设置动态费用的截止时间为当前时间
             feeDto.setDeadlineTime(DateUtil.getCurrentDate());
         }
-        //考虑租金递增
+        // 处理租金递增逻辑
         computeFeeSMOImpl.dealRentRate(feeDto);
-
     }
 
+    /**
+     * 如果请求中包含费用ID，则根据费用ID查询规则ID
+     * @param reqJson 请求参数JSON对象
+     */
     private void ifHasFeeId(JSONObject reqJson) {
+        // 检查请求中是否包含费用ID
         if (!reqJson.containsKey("feeId")) {
             return;
         }
@@ -149,6 +191,7 @@ public class ListPayFeeRuleBillCmd extends Cmd {
             return;
         }
 
+        // 根据费用ID查询缴费规则账单
         PayFeeRuleBillDto payFeeRuleBillDto = new PayFeeRuleBillDto();
         payFeeRuleBillDto.setFeeId(feeId);
         payFeeRuleBillDto.setCommunityId(reqJson.getString("communityId"));
@@ -157,6 +200,8 @@ public class ListPayFeeRuleBillCmd extends Cmd {
         if (ListUtil.isNull(payFeeRuleBillDtos)) {
             return;
         }
+        
+        // 用规则ID替换费用ID
         reqJson.remove("feeId");
         reqJson.put("ruleId", payFeeRuleBillDtos.get(0).getRuleId());
     }

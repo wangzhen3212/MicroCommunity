@@ -74,86 +74,120 @@ import java.util.List;
         resBody = "{'code':0,'msg':'成功'}"
 )
 /**
- * 类表述：更新
- * 服务编码：community.updateCommunity
- * 请求路劲：/app/community.UpdateCommunity
- * add by 吴学文 at 2021-09-18 12:54:57 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 小区信息更新命令类
+ * 该类负责处理小区信息的更新操作，包括小区基本信息、扩展属性和角色小区关联信息的更新
+ * 主要功能：
+ * 1. 验证更新请求参数的完整性
+ * 2. 更新小区基本信息
+ * 3. 处理小区扩展属性的新增和更新
+ * 4. 同步更新角色小区关联信息中的小区名称
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2021-09-18
  */
 @Java110Cmd(serviceCode = "community.updateCommunity")
 public class UpdateCommunityCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(UpdateCommunityCmd.class);
 
-
+    /**
+     * 小区服务接口
+     */
     @Autowired
     private ICommunityV1InnerServiceSMO communityV1InnerServiceSMOImpl;
 
+    /**
+     * 角色小区关联服务接口
+     */
     @Autowired
     private IRoleCommunityV1InnerServiceSMO roleCommunityV1InnerServiceSMOImpl;
 
-
+    /**
+     * 小区业务操作接口
+     */
     @Autowired
     private ICommunityBMO communityBMOImpl;
 
-
+    /**
+     * 验证请求参数
+     * 检查请求参数中必须包含的字段，确保更新操作的完整性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
-
+        // 验证必须参数是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "小区ID不能为空");
         Assert.hasKeyAndValue(reqJson, "name", "必填，请填写小区名称");
         Assert.hasKeyAndValue(reqJson, "address", "必填，请填写小区地址");
         Assert.hasKeyAndValue(reqJson, "nearbyLandmarks", "必填，请填写小区附近地标");
 
+        // 验证属性值
         Assert.judgeAttrValue(reqJson);
-
     }
 
+    /**
+     * 执行小区更新命令
+     * 处理小区信息的完整更新流程，包括基本信息、扩展属性和角色小区关联信息
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-
+        // 更新小区基本信息
         communityBMOImpl.updateCommunityOne(reqJson, cmdDataFlowContext);
 
+        // 检查是否存在扩展属性需要处理
         if (!reqJson.containsKey("attrs")) {
             return;
         }
 
         JSONArray attrs = reqJson.getJSONArray("attrs");
+        // 如果扩展属性为空，直接返回
         if (attrs == null || attrs.size() < 1) {
             return;
         }
 
-
+        // 处理每个扩展属性
         JSONObject attr = null;
         for (int attrIndex = 0; attrIndex < attrs.size(); attrIndex++) {
             attr = attrs.getJSONObject(attrIndex);
+            // 设置小区ID到属性中
             attr.put("communityId", reqJson.getString("communityId"));
+            
+            // 判断属性操作类型：新增或更新
             if (!attr.containsKey("attrId") || attr.getString("attrId").startsWith("-") || StringUtil.isEmpty(attr.getString("attrId"))) {
+                // 新增属性
                 communityBMOImpl.addAttr(attr, cmdDataFlowContext);
                 continue;
             }
+            // 更新属性
             communityBMOImpl.updateAttr(attr, cmdDataFlowContext);
         }
 
-        //todo 如果没有修改名称直接返回
+        // 如果小区名称没有修改，直接返回
         if (StringUtil.isEmpty(reqJson.getString("name"))) {
             return;
         }
 
-        //todo 修改角色小区
-
+        // 查询与小区关联的角色信息
         RoleCommunityDto roleCommunityDto = new RoleCommunityDto();
         roleCommunityDto.setCommunityId(reqJson.getString("communityId"));
         List<RoleCommunityDto> roleCommunityDtos = roleCommunityV1InnerServiceSMOImpl.queryRoleCommunitys(roleCommunityDto);
 
+        // 如果没有关联的角色信息，直接返回
         if (roleCommunityDtos == null || roleCommunityDtos.size() < 1) {
             return;
         }
+        
+        // 更新所有关联角色的小区名称
         RoleCommunityPo roleCommunityPo = null;
         for (RoleCommunityDto tmpRoleCommunityDto : roleCommunityDtos) {
             roleCommunityPo = new RoleCommunityPo();
@@ -161,6 +195,8 @@ public class UpdateCommunityCmd extends Cmd {
             roleCommunityPo.setCommunityName(reqJson.getString("name"));
             roleCommunityV1InnerServiceSMOImpl.updateRoleCommunity(roleCommunityPo);
         }
+        
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

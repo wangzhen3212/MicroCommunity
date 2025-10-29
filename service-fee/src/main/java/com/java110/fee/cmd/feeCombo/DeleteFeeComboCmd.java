@@ -30,41 +30,78 @@ import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
- * 类表述：删除
- * 服务编码：feeCombo.deleteFeeCombo
- * 请求路劲：/app/feeCombo.DeleteFeeCombo
- * add by 吴学文 at 2022-05-07 15:31:19 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 删除费用套餐命令类
+ * 
+ * 该类负责处理删除费用套餐的业务逻辑，通过服务编码"feeCombo.deleteFeeCombo"标识，
+ * 接收前端请求并删除指定的费用套餐信息
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2022-05-07 15:31:19
+ * @mail 928255095@qq.com
+ * @see Cmd
+ * @see IFeeComboV1InnerServiceSMO
  */
 @Java110Cmd(serviceCode = "feeCombo.deleteFeeCombo")
 public class DeleteFeeComboCmd extends Cmd {
-  private static Logger logger = LoggerFactory.getLogger(DeleteFeeComboCmd.class);
+    
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(DeleteFeeComboCmd.class);
 
+    /**
+     * 费用套餐服务接口
+     */
     @Autowired
     private IFeeComboV1InnerServiceSMO feeComboV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保删除操作的有效性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws IllegalArgumentException 当必要参数缺失时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含comboId字段
         Assert.hasKeyAndValue(reqJson, "comboId", "comboId不能为空");
-Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
+        // 验证请求参数中必须包含communityId字段
+        Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
     }
 
+    /**
+     * 执行删除费用套餐命令
+     * 
+     * 将请求参数转换为费用套餐对象，调用服务层进行删除操作，
+     * 并根据删除结果设置响应信息
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       FeeComboPo feeComboPo = BeanConvertUtil.covertBean(reqJson, FeeComboPo.class);
+        // 将JSON请求参数转换为FeeComboPo对象
+        FeeComboPo feeComboPo = BeanConvertUtil.covertBean(reqJson, FeeComboPo.class);
+        
+        // 调用服务层删除费用套餐，返回影响的行数
         int flag = feeComboV1InnerServiceSMOImpl.deleteFeeCombo(feeComboPo);
 
+        // 检查删除操作是否成功，影响行数小于1表示删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置成功响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

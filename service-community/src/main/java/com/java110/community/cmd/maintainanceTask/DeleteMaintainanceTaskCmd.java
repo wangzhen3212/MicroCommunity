@@ -30,41 +30,81 @@ import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
- * 类表述：删除
- * 服务编码：maintainanceTask.deleteMaintainanceTask
- * 请求路劲：/app/maintainanceTask.DeleteMaintainanceTask
- * add by 吴学文 at 2022-11-08 15:51:01 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 维护任务删除命令类
+ * 
+ * 该类负责处理维护任务的删除操作，实现了删除维护任务的业务逻辑。
+ * 通过注解标识服务编码，接收前端请求并执行相应的删除操作。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2022-11-08 15:51:01
+ * @mail 928255095@qq.com
+ * @see Cmd
+ * @see IMaintainanceTaskV1InnerServiceSMO
+ * @see MaintainanceTaskPo
  */
 @Java110Cmd(serviceCode = "maintainanceTask.deleteMaintainanceTask")
 public class DeleteMaintainanceTaskCmd extends Cmd {
-  private static Logger logger = LoggerFactory.getLogger(DeleteMaintainanceTaskCmd.class);
+    
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(DeleteMaintainanceTaskCmd.class);
 
+    /**
+     * 维护任务服务接口
+     * 用于调用维护任务的删除操作
+     */
     @Autowired
     private IMaintainanceTaskV1InnerServiceSMO maintainanceTaskV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保删除操作的有效性。
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含taskId字段
         Assert.hasKeyAndValue(reqJson, "taskId", "taskId不能为空");
-Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
+        // 验证请求参数中必须包含communityId字段
+        Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
     }
 
+    /**
+     * 执行删除命令方法
+     * 
+     * 将请求参数转换为维护任务对象，调用服务层执行删除操作，
+     * 并根据删除结果设置响应信息。
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       MaintainanceTaskPo maintainanceTaskPo = BeanConvertUtil.covertBean(reqJson, MaintainanceTaskPo.class);
+        // 将请求JSON对象转换为维护任务POJO对象
+        MaintainanceTaskPo maintainanceTaskPo = BeanConvertUtil.covertBean(reqJson, MaintainanceTaskPo.class);
+        
+        // 调用服务层删除维护任务，返回影响的行数
         int flag = maintainanceTaskV1InnerServiceSMOImpl.deleteMaintainanceTask(maintainanceTaskPo);
 
+        // 检查删除操作是否成功，影响行数小于1表示删除失败
         if (flag < 1) {
+            // 删除失败时抛出异常
             throw new CmdException("删除数据失败");
         }
 
+        // 设置成功响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

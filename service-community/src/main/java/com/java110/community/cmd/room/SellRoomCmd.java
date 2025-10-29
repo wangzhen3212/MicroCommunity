@@ -1,3 +1,13 @@
+/**
+ * 业主房屋关系绑定命令类
+ * 
+ * 该类负责处理业主与房屋的绑定关系操作，对应后台的业主入驻房屋功能。
+ * 主要功能包括：验证请求参数、绑定业主房屋关系、更新房屋状态、更新业主信息等。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023
+ */
 package com.java110.community.cmd.room;
 
 import com.alibaba.fastjson.JSONObject;
@@ -70,114 +80,163 @@ import java.util.List;
 @Java110Cmd(serviceCode = "room.sellRoom")
 public class SellRoomCmd extends Cmd {
 
+    // 单元内部服务接口
     @Autowired
     private IUnitInnerServiceSMO unitInnerServiceSMOImpl;
 
+    // 小区内部服务接口
     @Autowired
     private ICommunityInnerServiceSMO communityInnerServiceSMOImpl;
 
+    // 业主房屋关系内部服务接口
     @Autowired
     private IOwnerRoomRelV1InnerServiceSMO ownerRoomRelV1InnerServiceSMOImpl;
 
+    // 房屋内部服务接口
     @Autowired
     private IRoomV1InnerServiceSMO roomV1InnerServiceSMOImpl;
 
+    // 业主内部服务接口
     @Autowired
     private IOwnerV1InnerServiceSMO ownerV1InnerServiceSMOImpl;
 
-
+    /**
+     * 验证请求参数
+     * 
+     * 该方法用于验证请求参数的有效性，包括必填字段检查、字段非空检查以及房屋是否已绑定业主的检查。
+     * 
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求的JSON数据
+     * @throws CmdException 当验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        // 检查必填字段是否存在
         Assert.jsonObjectHaveKey(reqJson, "communityId", "请求报文中未包含communityId节点");
         Assert.jsonObjectHaveKey(reqJson, "ownerId", "请求报文中未包含ownerId节点");
         Assert.jsonObjectHaveKey(reqJson, "roomId", "请求报文中未包含roomId节点");
         Assert.jsonObjectHaveKey(reqJson, "state", "请求报文中未包含state节点");
         //  Assert.jsonObjectHaveKey(reqJson, "storeId", "请求报文中未包含storeId节点");
 
+        // 检查字段值是否为空
         Assert.hasLength(reqJson.getString("communityId"), "小区ID不能为空");
         Assert.hasLength(reqJson.getString("ownerId"), "ownerId不能为空");
         Assert.hasLength(reqJson.getString("roomId"), "roomId不能为空");
         Assert.hasLength(reqJson.getString("state"), "state不能为空");
 
+        // 检查房屋是否已经绑定业主
         OwnerRoomRelDto ownerRoomRelDto = new OwnerRoomRelDto();
         ownerRoomRelDto.setRoomId(reqJson.getString("roomId"));
         ownerRoomRelDto.setCommunityId(reqJson.getString("communityId"));
         List<OwnerRoomRelDto> ownerRoomRelDtos = ownerRoomRelV1InnerServiceSMOImpl.queryOwnerRoomRels(ownerRoomRelDto);
+        
+        // 如果房屋已经绑定业主，则抛出异常
         if(!ListUtil.isNull(ownerRoomRelDtos)){
             throw new CmdException("房屋已经绑定业主");
         }
     }
 
+    /**
+     * 执行业主房屋绑定命令
+     * 
+     * 该方法负责处理业主房屋绑定的主要业务逻辑，包括设置默认时间、绑定房屋关系、更新房屋状态和更新业主信息。
+     * 
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求的JSON数据
+     * @throws CmdException 当命令执行失败时抛出异常
+     * @throws ParseException 当时间解析失败时抛出异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
-
+        // 设置默认开始时间（当前时间）
         if (!reqJson.containsKey("startTime")) {
             reqJson.put("startTime", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
         }
+        // 设置默认结束时间（未来时间）
         if (!reqJson.containsKey("endTime")) {
             reqJson.put("endTime", "2037-01-01 00:00:00");
         }
-        //添加单元信息
+        
+        // 绑定业主房屋关系
         sellRoom(reqJson);
 
-        //更新房屋信息为售出
+        // 更新房屋状态为已售出
         updateShellRoom(reqJson);
 
-        //todo 修改业主信息，目的是触发databus 如果 业主房屋上费用的 业主名称 不正确 可以 刷一下
+        // 更新业主信息，触发databus同步，确保业主房屋上费用的业主名称正确
         updateOwner(reqJson);
     }
 
     /**
-     * 售卖房屋信息
-     *
-     * @param paramInJson 接口调用放传入入参
-     * @return 订单服务能够接受的报文
+     * 绑定业主房屋关系
+     * 
+     * 该方法用于创建业主与房屋的绑定关系，生成关系ID并保存到数据库。
+     * 
+     * @param paramInJson 接口调用方传入的参数
      */
     public void sellRoom(JSONObject paramInJson) {
-
+        // 创建业务数据对象
         JSONObject businessUnit = new JSONObject();
         businessUnit.putAll(paramInJson);
+        
+        // 生成关系ID并设置默认用户ID
         businessUnit.put("relId", GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId));
         businessUnit.put("userId", "-1");
+        
+        // 转换为PO对象并保存
         OwnerRoomRelPo ownerRoomRelPo = BeanConvertUtil.covertBean(businessUnit, OwnerRoomRelPo.class);
         int flag = ownerRoomRelV1InnerServiceSMOImpl.saveOwnerRoomRel(ownerRoomRelPo);
 
+        // 检查保存是否成功
         if (flag < 1) {
             throw new CmdException("添加业主房屋关系");
         }
-
     }
 
     /**
-     * 修改小区楼信息
-     *
-     * @param paramInJson 接口调用放传入入参
-     * @return 订单服务能够接受的报文
+     * 更新房屋状态
+     * 
+     * 该方法用于更新房屋的状态信息，将房屋状态标记为已售出。
+     * 
+     * @param paramInJson 接口调用方传入的参数
      */
     public void updateShellRoom(JSONObject paramInJson) {
+        // 创建业务数据对象
         JSONObject businessUnit = new JSONObject();
         businessUnit.putAll(paramInJson);
         businessUnit.put("userId", "-1");
+        
+        // 转换为PO对象并更新
         RoomPo roomPo = BeanConvertUtil.covertBean(businessUnit, RoomPo.class);
-
         int flag = roomV1InnerServiceSMOImpl.updateRoom(roomPo);
+        
+        // 检查更新是否成功
         if (flag < 1) {
             throw new CmdException("添加业主房屋关系");
         }
     }
 
-
     /**
-     * 修改业主信息 目的是触发databus 如果 业主房屋上费用的 业主名称 不正确 可以 刷一下
-     *
-     * @param reqJson
+     * 更新业主信息
+     * 
+     * 该方法用于更新业主信息，主要目的是触发databus同步机制，
+     * 确保业主房屋上相关费用的业主名称信息正确同步。
+     * 
+     * @param reqJson 请求的JSON数据
      */
     private void updateOwner(JSONObject reqJson) {
+        // 查询业主信息
         OwnerDto ownerDto = new OwnerDto();
         ownerDto.setMemberId(reqJson.getString("ownerId"));
         ownerDto.setOwnerTypeCd(OwnerDto.OWNER_TYPE_CD_OWNER);
         List<OwnerDto> ownerDtos = ownerV1InnerServiceSMOImpl.queryOwners(ownerDto);
+        
+        // 验证业主存在且唯一
         Assert.listOnlyOne(ownerDtos, "业主不存在");
+        
+        // 转换为PO对象并更新
         OwnerPo ownerPo = BeanConvertUtil.covertBean(ownerDtos.get(0), OwnerPo.class);
         ownerV1InnerServiceSMOImpl.updateOwner(ownerPo);
     }

@@ -43,7 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 类表述：查询
+ * 类表述：查询水表读数管理命令类
  * 服务编码：meterWater.listMeterWater
  * 请求路劲：/app/meterWater.ListMeterWater
  * add by 吴学文 at 2022-07-21 09:17:10 mail: 928255095@qq.com
@@ -51,6 +51,9 @@ import java.util.List;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：管理员水表读数查询命令类，用于处理管理员查询水表读数列表的请求
+ * 主要职责包括参数验证、数据查询和结果返回
  */
 @Java110Cmd(serviceCode = "meterWater.listAdminMeterWaters")
 public class ListAdminMeterWatersCmd extends Cmd {
@@ -69,30 +72,58 @@ public class ListAdminMeterWatersCmd extends Cmd {
     @Autowired
     private IParkingSpaceInnerServiceSMO parkingSpaceInnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数的有效性
+     * 主要验证分页参数和管理员权限
+     *
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取请求和响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页参数，确保page和row参数存在且有效
         super.validatePageInfo(reqJson);
+        // 验证管理员权限，确保当前用户具有管理员权限
         super.validateAdmin(cmdDataFlowContext);
     }
 
+    /**
+     * 执行水表读数查询命令
+     * 根据查询条件获取水表读数列表，并返回分页结果
+     *
+     * @param event 命令事件对象
+     * @param context 数据流上下文，用于设置响应结果
+     * @param reqJson 请求参数的JSON对象，包含查询条件和分页信息
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        // 将请求JSON转换为MeterWaterDto对象，用于查询条件
         MeterWaterDto meterWaterDto = BeanConvertUtil.covertBean(reqJson, MeterWaterDto.class);
 
+        // 查询符合条件的水表读数总数，用于分页计算
         int count = meterWaterInnerServiceSMOImpl.queryMeterWatersCount(meterWaterDto);
 
         List<MeterWaterDto> meterWaterDtos = null;
 
+        // 根据查询结果数量决定返回的数据
         if (count > 0) {
+            // 如果存在数据，则查询具体的水表读数列表
             meterWaterDtos = meterWaterInnerServiceSMOImpl.queryMeterWaters(meterWaterDto);
         } else {
+            // 如果没有数据，返回空列表
             meterWaterDtos = new ArrayList<>();
         }
 
+        // 构建分页结果对象，计算总页数
+        // Math.ceil用于向上取整，确保分页正确
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, meterWaterDtos);
 
+        // 创建HTTP响应实体，设置状态码为200 OK
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 将响应结果设置到上下文中
         context.setResponseEntity(responseEntity);
     }
 }

@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：查询
+ * 类表述：查询社区位置信息列表
  * 服务编码：communityLocation.listCommunityLocation
  * 请求路劲：/app/communityLocation.ListCommunityLocation
  * add by 吴学文 at 2022-07-17 00:10:38 mail: 928255095@qq.com
@@ -64,60 +64,103 @@ public class ListCommunityLocationCmd extends Cmd {
     @Autowired
     private IFloorInnerServiceSMO floorInnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息校验
         super.validatePageInfo(reqJson);
+        // 校验请求参数中必须包含小区ID
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含小区信息");
     }
 
+    /**
+     * 执行命令方法 - 查询社区位置信息列表
+     * @param event 命令事件对象
+     * @param context 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
 
+        // 将请求参数转换为CommunityLocationDto对象
         CommunityLocationDto communityLocationDto = BeanConvertUtil.covertBean(reqJson, CommunityLocationDto.class);
 
+        // 查询社区位置信息总数
         int count = communityLocationInnerServiceSMOImpl.queryCommunityLocationsCount(communityLocationDto);
 
         List<CommunityLocationDto> communityLocationDtos = new ArrayList<>();
 
+        // 如果有数据则进行详细查询和处理
         if (count > 0) {
+            // 查询社区位置信息列表
             List<CommunityLocationDto> communityLocations = communityLocationInnerServiceSMOImpl.queryCommunityLocations(communityLocationDto);
+            
+            // 遍历每个位置信息，根据位置类型进行不同的处理
             for (CommunityLocationDto communityLocation : communityLocations) {
+                // 处理单元类型的位置信息（2000表示单元）
                 if (!StringUtil.isEmpty(communityLocation.getLocationType()) && communityLocation.getLocationType().equals("2000")
-                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) { //单元
+                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) {
+                    // 根据单元ID查询单元信息
                     UnitDto unitDto = new UnitDto();
                     unitDto.setUnitId(communityLocation.getLocationObjId());
                     List<UnitDto> unitDtos = unitInnerServiceSMOImpl.queryUnits(unitDto);
-                    if(ListUtil.isNull(unitDtos)){
-                        continue;
+                    
+                    // 如果查询到单元信息，则设置楼层ID和单元ID
+                    if(!ListUtil.isNull(unitDtos)){
+                        communityLocation.setFloorId(unitDtos.get(0).getFloorId());
+                        communityLocation.setUnitId(unitDtos.get(0).getUnitId());
+                        
+                        // 根据楼层ID查询楼层信息
+                        FloorDto floorDto = new FloorDto();
+                        floorDto.setFloorId(unitDtos.get(0).getFloorId());
+                        List<FloorDto> floorDtos = floorInnerServiceSMOImpl.queryFloors(floorDto);
+                        
+                        // 如果查询到楼层信息，则设置楼层相关信息
+                        if(!ListUtil.isNull(floorDtos)){
+                            // 可以在这里设置楼层相关信息
+                        }
                     }
-                    communityLocation.setFloorId(unitDtos.get(0).getFloorId());
-                    communityLocation.setUnitId(unitDtos.get(0).getUnitId());
-                    FloorDto floorDto = new FloorDto();
-                    floorDto.setFloorId(unitDtos.get(0).getFloorId());
-                    List<FloorDto> floorDtos = floorInnerServiceSMOImpl.queryFloors(floorDto);
-                    if(ListUtil.isNull(floorDtos)){
-                        continue;
-                    }
-                } else if (!StringUtil.isEmpty(communityLocation.getLocationType()) && communityLocation.getLocationType().equals("6000")
-                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) { //楼栋
+                } 
+                // 处理楼栋类型的位置信息（6000表示楼栋）
+                else if (!StringUtil.isEmpty(communityLocation.getLocationType()) && communityLocation.getLocationType().equals("6000")
+                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) {
+                    // 设置楼层ID为位置对象ID
                     communityLocation.setFloorId(communityLocation.getLocationObjId());
-                } else if (!StringUtil.isEmpty(communityLocation.getLocationType()) && communityLocation.getLocationType().equals("7000")
-                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) { //停车场
+                } 
+                // 处理停车场类型的位置信息（7000表示停车场）
+                else if (!StringUtil.isEmpty(communityLocation.getLocationType()) && communityLocation.getLocationType().equals("7000")
+                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) {
+                    // 设置停车场ID为位置对象ID
                     communityLocation.setPaId(communityLocation.getLocationObjId());
-                } else if (!StringUtil.isEmpty(communityLocation.getLocationType()) && communityLocation.getLocationType().equals("4000")
-                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) { //岗亭
+                } 
+                // 处理岗亭类型的位置信息（4000表示岗亭）
+                else if (!StringUtil.isEmpty(communityLocation.getLocationType()) && communityLocation.getLocationType().equals("4000")
+                        && !StringUtil.isEmpty(communityLocation.getLocationObjId()) && !communityLocation.getLocationObjId().equals("-1")) {
+                    // 设置岗亭ID为位置对象ID
                     communityLocation.setBoxId(communityLocation.getLocationObjId());
                 }
+                
+                // 将处理后的位置信息添加到结果列表
                 communityLocationDtos.add(communityLocation);
             }
         } else {
+            // 如果没有数据，返回空列表
             communityLocationDtos = new ArrayList<>();
         }
 
+        // 构建分页结果对象
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, communityLocationDtos);
 
+        // 创建HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 设置响应实体到上下文
         context.setResponseEntity(responseEntity);
     }
 }

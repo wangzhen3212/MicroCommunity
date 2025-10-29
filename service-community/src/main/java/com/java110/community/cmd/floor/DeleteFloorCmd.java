@@ -1,3 +1,13 @@
+/**
+ * 删除楼栋命令类
+ * 
+ * 该命令用于处理删除楼栋信息的业务逻辑，包括参数验证、楼栋删除以及关联单元数据的清理。
+ * 在执行删除操作前会校验楼栋下是否存在房屋或商铺，确保数据完整性。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023
+ */
 package com.java110.community.cmd.floor;
 
 import com.alibaba.fastjson.JSONObject;
@@ -53,23 +63,41 @@ import java.util.List;
 
 @Java110Cmd(serviceCode = "floor.deleteFloor")
 public class DeleteFloorCmd extends Cmd {
+    
+    /** 楼栋内部服务接口 */
     @Autowired
     private IFloorInnerServiceSMO floorInnerServiceSMOImpl;
 
+    /** 楼栋V1版本内部服务接口 */
     @Autowired
     private IFloorV1InnerServiceSMO floorV1InnerServiceSMOImpl;
 
+    /** 单元V1版本内部服务接口 */
     @Autowired
     private IUnitV1InnerServiceSMO unitV1InnerServiceSMOImpl;
 
+    /** 房间V1版本内部服务接口 */
     @Autowired
     private IRoomV1InnerServiceSMO roomV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否完整，并检查楼栋下是否存在房屋或商铺数据
+     * 如果存在关联数据则抛出异常，阻止删除操作
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws IllegalArgumentException 当参数验证失败时抛出
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必要参数是否存在
         Assert.jsonObjectHaveKey(reqJson, "floorId", "请求报文中未包含floorId");
         Assert.jsonObjectHaveKey(reqJson, "communityId", "请求报文中未包含communityId");
 
+        // 注释掉的单元验证代码 - 后续可能需要启用
 //        UnitDto unitDto = new UnitDto();
 //        unitDto.setFloorId(reqJson.getString("floorId"));
 //        unitDto.setCommunityId(reqJson.getString("communityId"));
@@ -79,44 +107,63 @@ public class DeleteFloorCmd extends Cmd {
 //            throw new IllegalArgumentException("请先删除单元 再删除楼栋");
 //        }
 
-        //todo 校验 楼栋下是否有 房屋或者商铺
+        // 校验楼栋下是否存在房屋或者商铺数据
         RoomDto roomDto = new RoomDto();
-        roomDto.setFloorId(reqJson.getString("floorId"));
-        roomDto.setCommunityId(reqJson.getString("communityId"));
+        roomDto.setFloorId(reqJson.getString("floorId"));  // 设置楼栋ID
+        roomDto.setCommunityId(reqJson.getString("communityId"));  // 设置小区ID
         int count = roomV1InnerServiceSMOImpl.queryRoomsCount(roomDto);
         if (count > 0) {
             throw new IllegalArgumentException("请先删除楼栋下的房屋或者商铺");
         }
     }
 
+    /**
+     * 执行删除楼栋命令
+     * 
+     * 主要执行以下操作：
+     * 1. 删除指定的楼栋信息
+     * 2. 删除该楼栋下的所有单元信息
+     * 3. 设置操作成功的响应结果
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当删除操作失败时抛出
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将请求参数转换为楼栋PO对象
         FloorPo floorPo = BeanConvertUtil.covertBean(reqJson, FloorPo.class);
+        // 执行楼栋删除操作
         int flag = floorV1InnerServiceSMOImpl.deleteFloor(floorPo);
 
+        // 检查删除操作是否成功
         if (flag < 1) {
             throw new CmdException("删除楼栋失败");
         }
 
-        //todo 删除楼栋下的单元
+        // 删除楼栋下的所有单元信息
         UnitDto unitDto = new UnitDto();
-        unitDto.setFloorId(reqJson.getString("floorId"));
-        unitDto.setCommunityId(reqJson.getString("communityId"));
+        unitDto.setFloorId(reqJson.getString("floorId"));  // 设置要查询的楼栋ID
+        unitDto.setCommunityId(reqJson.getString("communityId"));  // 设置小区ID
+        // 查询楼栋下的所有单元
         List<UnitDto> unitDtos = unitV1InnerServiceSMOImpl.queryUnits(unitDto);
 
+        // 如果没有单元数据，直接返回
         if (unitDtos == null || unitDtos.size() < 1) {
             return;
         }
 
+        // 遍历并删除所有关联的单元
         UnitPo unitPo = null;
         for (UnitDto tmpUnitDto : unitDtos) {
             unitPo = new UnitPo();
-            unitPo.setUnitId(tmpUnitDto.getUnitId());
-            unitV1InnerServiceSMOImpl.deleteUnit(unitPo);
+            unitPo.setUnitId(tmpUnitDto.getUnitId());  // 设置单元ID
+            unitV1InnerServiceSMOImpl.deleteUnit(unitPo);  // 执行单元删除
         }
 
-
+        // 设置操作成功的响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

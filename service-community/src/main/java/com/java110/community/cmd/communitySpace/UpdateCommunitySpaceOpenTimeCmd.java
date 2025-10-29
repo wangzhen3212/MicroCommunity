@@ -42,33 +42,77 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 社区空间开放时间更新命令类
+ * 
+ * 该类负责处理社区空间开放时间的更新操作，是一个基于命令模式实现的业务处理器。
+ * 通过注解标识服务编码，接收前端请求并更新社区空间的开放时间信息。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-09-30
+ */
 @Java110Cmd(serviceCode = "communitySpaceOpenTime.updateCommunitySpaceOpenTime")
 public class UpdateCommunitySpaceOpenTimeCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(UpdateCommunitySpaceOpenTimeCmd.class);
 
-
+    /**
+     * 社区空间开放时间服务接口
+     * 用于调用底层数据操作服务
+     */
     @Autowired
     private ICommunitySpaceOpenTimeV1InnerServiceSMO communitySpaceOpenTimeV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证更新社区空间开放时间所需的必要参数是否完整
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证timeId参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "timeId", "timeId不能为空");
+        // 验证communityId参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行更新社区空间开放时间命令
+     * 
+     * 将请求参数转换为实体对象，调用服务层进行数据更新操作，
+     * 并处理更新结果，返回操作响应。
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当数据更新失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将JSON请求参数转换为社区空间开放时间实体对象
         CommunitySpaceOpenTimePo communitySpaceOpenTimePo = BeanConvertUtil.covertBean(reqJson, CommunitySpaceOpenTimePo.class);
+        
+        // 调用服务层接口更新社区空间开放时间信息
         int flag = communitySpaceOpenTimeV1InnerServiceSMOImpl.updateCommunitySpaceOpenTime(communitySpaceOpenTimePo);
 
+        // 检查更新操作是否成功，flag表示受影响的行数
         if (flag < 1) {
+            // 更新失败，抛出异常
             throw new CmdException("更新数据失败");
         }
 
+        // 设置成功响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

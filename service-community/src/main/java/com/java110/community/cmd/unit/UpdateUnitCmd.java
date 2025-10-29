@@ -1,3 +1,13 @@
+/**
+ * 单元修改命令类
+ * 
+ * 该命令类用于处理外系统修改单元信息的请求，包括参数验证、业务逻辑处理和事务管理
+ * 通过注解定义了API文档信息，支持小区单元信息的完整修改流程
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2024
+ */
 package com.java110.community.cmd.unit;
 
 import com.alibaba.fastjson.JSONObject;
@@ -54,17 +64,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @Java110Cmd(serviceCode = "unit.updateUnit")
 public class UpdateUnitCmd extends Cmd {
+    
+    /** 楼栋内部服务接口 */
     @Autowired
     private IFloorInnerServiceSMO floorInnerServiceSMOImpl;
 
+    /** 单元内部服务接口 */
     @Autowired
     private IUnitInnerServiceSMO unitInnerServiceSMOImpl;
 
+    /** 单元V1版本内部服务接口 */
     @Autowired
     private IUnitV1InnerServiceSMO unitV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证修改单元请求的必填参数、数据格式和业务规则
+     * 包括参数完整性检查、数据类型验证、业务关联性校验等
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws IllegalArgumentException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填参数是否存在
         Assert.jsonObjectHaveKey(reqJson, "communityId", "请求报文中未包含communityId节点");
         Assert.jsonObjectHaveKey(reqJson, "floorId", "请求报文中未包含floorId节点");
         Assert.jsonObjectHaveKey(reqJson, "unitId", "请求报文中未包含unitId节点");
@@ -72,35 +98,53 @@ public class UpdateUnitCmd extends Cmd {
         Assert.jsonObjectHaveKey(reqJson, "layerCount", "请求报文中未包含layerCount节点");
         Assert.jsonObjectHaveKey(reqJson, "lift", "请求报文中未包含lift节点");
 
+        // 验证楼层数是否为有效数字
         Assert.isInteger(reqJson.getString("layerCount"), "单元总层数据不是有效数字");
 
+        // 验证电梯参数值是否合法（1010表示有电梯，2020表示无电梯）
         if (!"1010".equals(reqJson.getString("lift")) && !"2020".equals(reqJson.getString("lift"))) {
             throw new IllegalArgumentException("是否有电梯 传入数据错误");
         }
 
+        // 创建楼栋查询对象
         FloorDto floorDto = new FloorDto();
         floorDto.setCommunityId(reqJson.getString("communityId"));
         floorDto.setFloorId(reqJson.getString("floorId"));
-        //校验小区楼ID和小区是否有对应关系
+        // 校验小区楼ID和小区是否有对应关系
         int total = floorInnerServiceSMOImpl.queryFloorsCount(floorDto);
 
+        // 如果查询结果小于1，说明传入的小区楼ID不属于该小区
         if (total < 1) {
             throw new IllegalArgumentException("传入小区楼ID不是该小区的楼");
         }
 
-        //校验 小区楼ID 和单元ID是否有关系
+        // 创建单元查询对象
         UnitDto unitDto = new UnitDto();
         unitDto.setFloorId(reqJson.getString("floorId"));
         unitDto.setUnitId(reqJson.getString("unitId"));
+        // 校验小区楼ID和单元ID是否有对应关系
         total = unitInnerServiceSMOImpl.queryUnitsCount(unitDto);
+        // 如果查询结果小于1，说明传入的单元不属于该小区的楼
         if (total < 1) {
             throw new IllegalArgumentException("传入单元不是该小区的楼的单元");
         }
     }
 
+    /**
+     * 执行单元修改命令
+     * 
+     * 在事务中执行单元信息的更新操作，将请求参数转换为业务对象并调用服务层进行数据更新
+     * 如果更新失败则抛出异常，成功则设置响应结果
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当单元修改失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 创建业务数据对象，组装需要更新的单元信息
         JSONObject businessUnit = new JSONObject();
         businessUnit.put("floorId", reqJson.getString("floorId"));
         businessUnit.put("layerCount", reqJson.getString("layerCount"));
@@ -110,13 +154,19 @@ public class UpdateUnitCmd extends Cmd {
         businessUnit.put("remark", reqJson.getString("remark"));
         businessUnit.put("unitArea", reqJson.getString("unitArea"));
         businessUnit.put("userId", reqJson.getString("userId"));
+        
+        // 将JSON对象转换为单元持久化对象
         UnitPo unitPo = BeanConvertUtil.covertBean(businessUnit, UnitPo.class);
+        
+        // 调用V1版本服务接口更新单元信息
         int flag = unitV1InnerServiceSMOImpl.updateUnit(unitPo);
 
+        // 如果更新影响的行数小于1，说明更新失败
         if (flag < 1) {
             throw new CmdException("修改单元失败");
         }
 
+        // 设置成功的响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }
