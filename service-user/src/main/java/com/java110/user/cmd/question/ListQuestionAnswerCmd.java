@@ -37,9 +37,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：查询
+ * 类表述：查询问题答案列表的命令类
  * 服务编码：questionAnswer.listQuestionAnswer
  * 请求路劲：/app/questionAnswer.ListQuestionAnswer
+ * 功能描述：该类负责处理查询问题答案列表的请求，包括参数验证、数据查询、投票统计和结果返回
  * add by 吴学文 at 2023-07-13 00:03:56 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -49,66 +50,107 @@ import org.slf4j.LoggerFactory;
 @Java110Cmd(serviceCode = "question.listQuestionAnswer")
 public class ListQuestionAnswerCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(ListQuestionAnswerCmd.class);
 
+    /**
+     * 问题答案服务接口
+     */
     @Autowired
     private IQuestionAnswerV1InnerServiceSMO questionAnswerV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 功能描述：验证请求参数的有效性，包括分页参数和必填参数
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页参数
         super.validatePageInfo(reqJson);
+        // 验证社区ID参数是否为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
     }
 
+    /**
+     * 命令执行方法
+     * 功能描述：执行查询问题答案列表的主要业务逻辑，包括数据查询、投票统计和结果封装
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求参数转换为QuestionAnswerDto对象
         QuestionAnswerDto questionAnswerDto = BeanConvertUtil.covertBean(reqJson, QuestionAnswerDto.class);
 
+        // 查询问题答案总数
         int count = questionAnswerV1InnerServiceSMOImpl.queryQuestionAnswersCount(questionAnswerDto);
 
         List<QuestionAnswerDto> questionAnswerDtos = null;
 
+        // 根据查询结果数量决定返回数据
         if (count > 0) {
+            // 查询问题答案列表数据
             questionAnswerDtos = questionAnswerV1InnerServiceSMOImpl.queryQuestionAnswers(questionAnswerDto);
         } else {
+            // 如果没有数据，返回空列表
             questionAnswerDtos = new ArrayList<>();
         }
 
-        //todo 查询已投票数据和 得分
+        // 计算投票数量和得分
         computeVotedCountAndScore(questionAnswerDtos);
 
+        // 构造返回结果对象，包含分页信息和数据列表
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, questionAnswerDtos);
 
+        // 设置HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 将响应实体设置到数据流上下文中
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 
     /**
-     * 计算 投票和得分
-     *
-     * @param questionAnswerDtos
+     * 计算投票数量和得分
+     * 功能描述：为问题答案列表中的每个答案计算投票数量和得分
+     * @param questionAnswerDtos 问题答案数据列表
      */
     private void computeVotedCountAndScore(List<QuestionAnswerDto> questionAnswerDtos) {
+        // 检查参数有效性
         if (questionAnswerDtos == null || questionAnswerDtos.size() < 1) {
             return;
         }
+        
+        // 收集所有问题答案ID
         List<String> qaIds = new ArrayList<>();
         for (QuestionAnswerDto questionAnswerDto : questionAnswerDtos) {
             qaIds.add(questionAnswerDto.getQaId());
         }
-        // todo 查询投票人数和得分
+        
+        // 查询投票人数和得分数据
         List<QuestionAnswerDto> votedQAs = questionAnswerV1InnerServiceSMOImpl.queryVotedCountAndScore(qaIds.toArray(new String[qaIds.size()]));
+        
+        // 检查查询结果
         if (votedQAs == null || votedQAs.size() < 1) {
             return;
         }
+        
+        // 将投票统计数据合并到原始数据中
         for (QuestionAnswerDto questionAnswerDto : questionAnswerDtos) {
             for (QuestionAnswerDto votedQa : votedQAs) {
+                // 匹配相同的问题答案ID
                 if (!questionAnswerDto.getQaId().equals(votedQa.getQaId())) {
                     continue;
                 }
+                // 设置投票数量
                 questionAnswerDto.setVotedCount(votedQa.getVotedCount());
+                // 设置得分
                 questionAnswerDto.setScore(votedQa.getScore());
             }
         }

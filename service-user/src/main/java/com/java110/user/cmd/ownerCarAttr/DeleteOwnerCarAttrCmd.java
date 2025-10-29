@@ -41,31 +41,76 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 业主车辆属性删除命令类
+ * 
+ * 该类负责处理业主车辆属性信息的删除操作，是一个Spring管理的命令类，
+ * 通过注解标识服务编码，用于处理特定的业务请求
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2022-03-14
+ */
 @Java110Cmd(serviceCode = "ownerCarAttr.deleteOwnerCarAttr")
 public class DeleteOwnerCarAttrCmd extends Cmd {
+    
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(DeleteOwnerCarAttrCmd.class);
 
+    /**
+     * 业主车辆属性服务接口
+     * 用于调用业主车辆属性的删除操作
+     */
     @Autowired
     private IOwnerCarAttrV1InnerServiceSMO ownerCarAttrV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否完整，确保删除操作的必要参数存在
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证attrId参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "attrId", "attrId不能为空");
+        // 验证communityId参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行删除命令方法
+     * 
+     * 该方法负责执行业主车辆属性的删除操作，包含事务管理，
+     * 将请求参数转换为PO对象并调用服务层进行删除
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为业主车辆属性PO对象
         OwnerCarAttrPo ownerCarAttrPo = BeanConvertUtil.covertBean(reqJson, OwnerCarAttrPo.class);
+        
+        // 调用服务层删除业主车辆属性，返回影响的行数
         int flag = ownerCarAttrV1InnerServiceSMOImpl.deleteOwnerCarAttr(ownerCarAttrPo);
 
+        // 检查删除操作是否成功，影响行数小于1表示删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

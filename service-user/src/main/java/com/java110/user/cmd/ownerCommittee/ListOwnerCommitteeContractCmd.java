@@ -47,39 +47,83 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 业主委员会合同查询命令类
+ * 
+ * 该类负责处理业主委员会合同列表查询请求，包括参数验证、数据查询和结果返回等功能。
+ * 通过服务编码"ownerCommittee.listOwnerCommitteeContract"对外提供服务。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023-03-06
+ */
 @Java110Cmd(serviceCode = "ownerCommittee.listOwnerCommitteeContract")
 public class ListOwnerCommitteeContractCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListOwnerCommitteeContractCmd.class);
+    
+    /**
+     * 业主委员会合同服务接口
+     */
     @Autowired
     private IOwnerCommitteeContractV1InnerServiceSMO ownerCommitteeContractV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括分页参数和必要字段的检查。
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法
         super.validatePageInfo(reqJson);
+        // 验证请求报文中必须包含小区ID
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含小区信息");
-
     }
 
+    /**
+     * 命令执行方法
+     * 
+     * 执行业主委员会合同查询业务逻辑，包括数据查询、结果封装和响应设置。
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为业主委员会合同DTO对象
         OwnerCommitteeContractDto ownerCommitteeContractDto = BeanConvertUtil.covertBean(reqJson, OwnerCommitteeContractDto.class);
 
+        // 查询符合条件的业主委员会合同总数
         int count = ownerCommitteeContractV1InnerServiceSMOImpl.queryOwnerCommitteeContractsCount(ownerCommitteeContractDto);
 
         List<OwnerCommitteeContractDto> ownerCommitteeContractDtos = null;
 
+        // 根据查询结果数量决定返回数据
         if (count > 0) {
+            // 如果存在数据，则查询具体的业主委员会合同列表
             ownerCommitteeContractDtos = ownerCommitteeContractV1InnerServiceSMOImpl.queryOwnerCommitteeContracts(ownerCommitteeContractDto);
         } else {
+            // 如果没有数据，返回空列表
             ownerCommitteeContractDtos = new ArrayList<>();
         }
 
-        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, ownerCommitteeContractDtos);
+        // 计算总页数：总记录数除以每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 封装返回结果对象
+        ResultVo resultVo = new ResultVo(totalPage, count, ownerCommitteeContractDtos);
 
+        // 创建HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 将响应实体设置到数据流上下文中
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

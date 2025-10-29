@@ -42,33 +42,76 @@ import com.java110.core.log.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 业主信息更新命令类
+ * 
+ * 该类负责处理业主信息的更新请求，包括参数验证和业务逻辑处理
+ * 通过服务编码 buildingOwner.updateBuildingOwner 对外提供服务
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2021-10-08
+ */
 @Java110Cmd(serviceCode = "buildingOwner.updateBuildingOwner")
 public class UpdateBuildingOwnerCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(UpdateBuildingOwnerCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(UpdateBuildingOwnerCmd.class);
 
-
+    /**
+     * 业主信息服务接口，用于执行业主信息的数据库操作
+     */
     @Autowired
     private IBuildingOwnerV1InnerServiceSMO buildingOwnerV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保请求数据的完整性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws IllegalArgumentException 当必要参数缺失时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含memberId字段
         Assert.hasKeyAndValue(reqJson, "memberId", "memberId不能为空");
-Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
+        // 验证请求参数中必须包含communityId字段
+        Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
     }
 
+    /**
+     * 执行业主信息更新命令
+     * 
+     * 将请求参数转换为业主对象，调用服务层更新业主信息
+     * 支持事务处理，确保数据一致性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当更新操作失败时抛出业务异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将JSON请求参数转换为OwnerPo对象
+        OwnerPo ownerPo = BeanConvertUtil.covertBean(reqJson, OwnerPo.class);
+        
+        // 调用服务层接口更新业主信息，返回受影响的行数
+        int flag = buildingOwnerV1InnerServiceSMOImpl.updateBuildingOwner(ownerPo);
 
-       OwnerPo OwnerPo = BeanConvertUtil.covertBean(reqJson, OwnerPo.class);
-        int flag = buildingOwnerV1InnerServiceSMOImpl.updateBuildingOwner(OwnerPo);
-
+        // 检查更新操作是否成功，如果受影响行数小于1则认为更新失败
         if (flag < 1) {
+            // 抛出业务异常，表示数据更新失败
             throw new CmdException("更新数据失败");
         }
 
+        // 设置响应结果为成功状态
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -1,3 +1,15 @@
+/**
+ * 特来电获取Token命令类
+ * 
+ * 该类主要用于特来电平台的身份认证，生成访问令牌(Token)
+ * 通过验证用户凭证后生成临时访问令牌，用于后续接口调用的身份验证
+ * 令牌有效期为2小时，客户端需要在令牌过期前重新获取
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @see Cmd
+ * @see IUserV1InnerServiceSMO
+ */
 package com.java110.user.cmd.login;
 
 import com.alibaba.fastjson.JSONObject;
@@ -74,65 +86,108 @@ import java.util.Map;
 @Java110Cmd(serviceCode = "query_token")
 public class QueryTokenForTeldCmd extends Cmd {
 
+    /** 操作密钥常量 - 用于加密通信 */
+    public static String OPERATOR_SECRET = "1234567890abcdef"; 
 
-    public static String OPERATOR_SECRET = "1234567890abcdef"; //
-
-    //
-    public static String OPERATOR_ID = "123456789"; //9位组织机构代码
-    //	// open平台地址
+    /** 操作ID常量 - 9位组织机构代码 */
+    public static String OPERATOR_ID = "123456789"; 
+    
+    /** 特来电平台API地址 */
     public static String URL = "http://hlht.telaidian.com.cn:9501/evcs/v20161110/";
 
+    /** 用户服务接口 - 用于用户信息查询和验证 */
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证请求中是否包含必要的加密数据字段
+     * 
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求JSON数据
+     * @throws CmdException 当验证失败时抛出命令异常
+     * @throws ParseException 当数据解析失败时抛出解析异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
-
+        // 验证请求JSON中是否包含Data字段（加密报文）
         Assert.hasKeyAndValue(reqJson, "Data", "未包含加密报文");
-
     }
 
+    /**
+     * 执行获取Token命令
+     * 
+     * 主要流程：
+     * 1. 从配置中获取加解密密钥
+     * 2. 解密请求数据
+     * 3. 验证用户身份
+     * 4. 生成访问令牌
+     * 5. 构造并返回响应数据
+     * 
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求JSON数据
+     * @throws CmdException 当命令执行失败时抛出命令异常
+     * @throws ParseException 当数据解析失败时抛出解析异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+        // 从缓存中获取特来电平台的加解密配置参数
+        String signKey = MappingCache.getValue("TELD_DOMAIN","SIGN_KEY");    // 签名密钥
+        String aesKey = MappingCache.getValue("TELD_DOMAIN","AES_KEY");      // AES加密密钥
+        String aesIv = MappingCache.getValue("TELD_DOMAIN","AES_IV");        // AES初始化向量
 
-        String signKey = MappingCache.getValue("TELD_DOMAIN","SIGN_KEY");
-        String aesKey = MappingCache.getValue("TELD_DOMAIN","AES_KEY");
-        String aesIv = MappingCache.getValue("TELD_DOMAIN","AES_IV");
-
+        // 使用AES解密请求中的加密数据
         String data = TeldUtil.Decrypt(reqJson.getString("Data"), aesKey, aesIv);
 
+        // 检查解密后的数据是否为空
         if (StringUtil.isEmpty(data)) {
             throw new CmdException("未包含报文");
         }
 
+        // 将解密后的JSON字符串解析为JSON对象
         JSONObject dataObj = JSONObject.parseObject(data);
 
-
+        // 创建用户DTO对象用于用户验证
         UserDto userDto = new UserDto();
+        // 使用OperatorID作为电话号码进行用户查询
         userDto.setTel(dataObj.getString("OperatorID"));
+        // 对OperatorSecret进行MD5加密后作为密码进行验证
         userDto.setPassword(AuthenticationFactory.md5UserPassword(dataObj.getString("OperatorSecret")));
+        // 查询匹配的用户信息
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
+        // 验证查询结果：必须且只能有一个匹配的用户
         Assert.listOnlyOne(userDtos, "用户不存在");
 
+        // 准备用户信息映射，用于生成Token
         Map userMap = new HashMap();
-        userMap.put(CommonConstant.LOGIN_USER_ID, userDtos.get(0).getUserId());
-        userMap.put(CommonConstant.LOGIN_USER_NAME, userDtos.get(0).getUserName());
+        userMap.put(CommonConstant.LOGIN_USER_ID, userDtos.get(0).getUserId());      // 用户ID
+        userMap.put(CommonConstant.LOGIN_USER_NAME, userDtos.get(0).getUserName());  // 用户名
+        
         String paramOut = "";
         try {
+            // 创建并保存用户Token，返回Token字符串
             String token = AuthenticationFactory.createAndSaveToken(userMap);
+            
+            // 构造返回给客户端的响应数据
             JSONObject param = new JSONObject();
-            param.put("OperatorID", dataObj.getString("OperatorID"));
-            param.put("SuccStat", 0);
-            param.put("AccessToken", token);
-            param.put("TokenAvailableTime", 7200);
-            param.put("FailReason", 0);
+            param.put("OperatorID", dataObj.getString("OperatorID"));    // 操作ID
+            param.put("SuccStat", 0);                                    // 成功状态
+            param.put("AccessToken", token);                             // 访问令牌
+            param.put("TokenAvailableTime", 7200);                       // 令牌有效期（2小时）
+            param.put("FailReason", 0);                                  // 失败原因
+            
+            // 生成加密的返回参数
             paramOut = TeldUtil.generateReturnParam(param.toJSONString(), aesKey, aesIv, signKey, dataObj.getString("OperatorID"));
+            
+            // 设置HTTP响应实体
             context.setResponseEntity(new ResponseEntity(paramOut, HttpStatus.OK));
         } catch (Exception e) {
+            // 处理异常情况
             throw new RuntimeException(e);
         }
     }
-
-
 }

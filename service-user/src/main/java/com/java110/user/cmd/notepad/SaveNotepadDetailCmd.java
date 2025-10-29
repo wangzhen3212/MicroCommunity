@@ -49,63 +49,127 @@ import java.util.List;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 便签详情保存命令类
+ * 
+ * 该类负责处理便签详情的保存请求，包括参数验证、用户信息获取、便签详情保存和便签状态更新等功能
+ * 实现了Cmd接口，遵循Java110框架的命令模式规范
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-08-16
+ */
 @Java110Cmd(serviceCode = "notepad.saveNotepadDetail")
 public class SaveNotepadDetailCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveNotepadDetailCmd.class);
 
+    /**
+     * 便签详情ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 便签详情服务接口
+     */
     @Autowired
     private INotepadDetailV1InnerServiceSMO notepadDetailV1InnerServiceSMOImpl;
+
+    /**
+     * 用户服务接口
+     */
     @Autowired
     private IUserInnerServiceSMO userInnerServiceSMOImpl;
 
+    /**
+     * 便签服务接口
+     */
     @Autowired
     private INotepadV1InnerServiceSMO notepadV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保请求数据的完整性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取请求和响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含noteId字段
         Assert.hasKeyAndValue(reqJson, "noteId", "请求报文中未包含noteId");
+        // 验证请求报文中必须包含content字段
         Assert.hasKeyAndValue(reqJson, "content", "请求报文中未包含content");
-
     }
 
+    /**
+     * 执行命令方法
+     * 
+     * 处理便签详情的保存逻辑，包括获取用户信息、保存便签详情、更新便签状态等操作
+     * 使用@Java110Transactional注解确保事务一致性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存或更新数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 从请求头中获取用户ID
         String userId = cmdDataFlowContext.getReqHeaders().get("user-id");
+        
+        // 构建用户查询条件
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         userDto.setPage(1);
         userDto.setRow(1);
+        
+        // 查询用户信息
         List<UserDto> userDtos = userInnerServiceSMOImpl.getUsers(userDto);
+        // 验证用户存在且唯一
         Assert.listOnlyOne(userDtos, "用户不存在");
 
+        // 将用户信息添加到请求参数中
         reqJson.put("createUserId", userDtos.get(0).getUserId());
         reqJson.put("createUserName", userDtos.get(0).getName());
 
+        // 将请求参数转换为便签详情持久化对象
         NotepadDetailPo notepadDetailPo = BeanConvertUtil.covertBean(reqJson, NotepadDetailPo.class);
+        // 生成便签详情ID
         notepadDetailPo.setDetailId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 保存便签详情数据
         int flag = notepadDetailV1InnerServiceSMOImpl.saveNotepadDetail(notepadDetailPo);
 
+        // 检查保存操作是否成功
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 如果便签状态不是已完成状态，则直接返回成功响应
         if(!NotepadDto.STATE_FINISH.equals(reqJson.getString("state"))){
             return;
         }
 
+        // 构建便签更新对象
         NotepadPo notepadPo = new NotepadPo();
         notepadPo.setNoteId(reqJson.getString("noteId"));
         notepadPo.setState(reqJson.getString("state"));
+        
+        // 更新便签状态
         flag = notepadV1InnerServiceSMOImpl.updateNotepad(notepadPo);
 
+        // 检查更新操作是否成功
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

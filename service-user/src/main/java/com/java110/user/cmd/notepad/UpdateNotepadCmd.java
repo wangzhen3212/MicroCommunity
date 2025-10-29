@@ -44,34 +44,78 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 记事本更新命令类
+ * 
+ * 该类负责处理记事本数据的更新操作，继承自Cmd基类，通过注解标识服务编码，
+ * 实现请求参数的验证和业务逻辑处理功能
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-08-16
+ */
 @Java110Cmd(serviceCode = "notepad.updateNotepad")
 public class UpdateNotepadCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(UpdateNotepadCmd.class);
 
-
+    /**
+     * 记事本服务接口，用于操作记事本数据
+     */
     @Autowired
     private INotepadV1InnerServiceSMO notepadV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保更新操作的完整性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含noteId字段
         Assert.hasKeyAndValue(reqJson, "noteId", "noteId不能为空");
+        // 验证请求参数中必须包含objId字段
         Assert.hasKeyAndValue(reqJson, "objId", "objId不能为空");
-
     }
 
+    /**
+     * 执行更新记事本命令
+     * 
+     * 将请求参数转换为记事本PO对象，设置状态为进行中，调用服务层进行数据更新，
+     * 并根据更新结果设置响应信息
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当更新操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为记事本PO对象
         NotepadPo notepadPo = BeanConvertUtil.covertBean(reqJson, NotepadPo.class);
+        // 设置记事本状态为进行中
         notepadPo.setState(NotepadDto.STATE_DOING);
+        
+        // 调用服务层更新记事本数据
         int flag = notepadV1InnerServiceSMOImpl.updateNotepad(notepadPo);
 
+        // 检查更新操作是否成功
         if (flag < 1) {
+            // 更新失败，抛出异常
             throw new CmdException("更新数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

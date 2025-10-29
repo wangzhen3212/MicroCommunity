@@ -42,33 +42,72 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 数据权限员工更新命令类
+ * 负责处理数据权限员工信息的更新操作，包括参数验证和业务逻辑执行
+ * 通过注解标识服务编码，与前端请求路径对应
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-09-28
+ */
 @Java110Cmd(serviceCode = "dataPrivilegeStaff.updateDataPrivilegeStaff")
 public class UpdateDataPrivilegeStaffCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(UpdateDataPrivilegeStaffCmd.class);
 
-
+    /**
+     * 数据权限员工服务接口
+     * 用于调用数据权限员工相关的业务操作
+     */
     @Autowired
     private IDataPrivilegeStaffV1InnerServiceSMO dataPrivilegeStaffV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数中是否包含必要的字段
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含dps_id字段
         Assert.hasKeyAndValue(reqJson, "dps_id", "dps_id不能为空");
+        // 验证请求参数中必须包含communityId字段
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 命令执行方法
+     * 执行数据权限员工信息的更新操作，包含事务管理
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当更新操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为数据权限员工PO对象
         DataPrivilegeStaffPo dataPrivilegeStaffPo = BeanConvertUtil.covertBean(reqJson, DataPrivilegeStaffPo.class);
+        
+        // 调用服务层方法更新数据权限员工信息，返回影响的行数
         int flag = dataPrivilegeStaffV1InnerServiceSMOImpl.updateDataPrivilegeStaff(dataPrivilegeStaffPo);
 
+        // 检查更新操作是否成功，如果影响行数小于1则认为更新失败
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

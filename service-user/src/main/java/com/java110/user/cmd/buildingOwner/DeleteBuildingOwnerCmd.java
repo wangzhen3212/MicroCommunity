@@ -30,41 +30,78 @@ import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
+
 /**
- * 类表述：删除
+ * 删除楼栋业主信息命令类
+ * 
+ * 该类负责处理删除楼栋业主信息的业务逻辑，包括参数验证和删除操作。
  * 服务编码：buildingOwner.deleteBuildingOwner
- * 请求路劲：/app/buildingOwner.DeleteBuildingOwner
- * add by 吴学文 at 2021-10-08 17:43:55 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
+ * 请求路径：/app/buildingOwner.DeleteBuildingOwner
+ * 
+ * @author 吴学文 at 2021-10-08 17:43:55 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * @温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "buildingOwner.deleteBuildingOwner")
 public class DeleteBuildingOwnerCmd extends Cmd {
-  private static Logger logger = LoggerFactory.getLogger(DeleteBuildingOwnerCmd.class);
+    
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(DeleteBuildingOwnerCmd.class);
 
+    /**
+     * 楼栋业主服务接口
+     */
     @Autowired
     private IBuildingOwnerV1InnerServiceSMO buildingOwnerV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保删除操作的基本数据完整性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含memberId字段
         Assert.hasKeyAndValue(reqJson, "memberId", "memberId不能为空");
-Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
+        // 验证请求参数中必须包含communityId字段
+        Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
     }
 
+    /**
+     * 执行删除楼栋业主命令
+     * 
+     * 将请求参数转换为业主对象，调用服务层进行删除操作，并处理删除结果
+     * 使用事务注解确保删除操作的原子性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将JSON请求参数转换为OwnerPo对象
+        OwnerPo ownerPo = BeanConvertUtil.covertBean(reqJson, OwnerPo.class);
+        
+        // 调用服务层删除楼栋业主信息，返回影响的行数
+        int flag = buildingOwnerV1InnerServiceSMOImpl.deleteBuildingOwner(ownerPo);
 
-       OwnerPo OwnerPo = BeanConvertUtil.covertBean(reqJson, OwnerPo.class);
-        int flag = buildingOwnerV1InnerServiceSMOImpl.deleteBuildingOwner(OwnerPo);
-
+        // 检查删除操作是否成功，如果影响行数小于1表示删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -103,48 +103,65 @@ import java.util.List;
         resBody="{'code':0,'msg':'成功'}"
 )
 /**
- * 类表述：保存
- * 服务编码：ownerSettledApply.saveOwnerSettledApply
- * 请求路劲：/app/ownerSettledApply.SaveOwnerSettledApply
- * add by 吴学文 at 2023-01-26 00:52:26 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 业主入驻申请命令处理类
+ * 负责处理业主企业入驻房屋的申请流程，包括数据验证、申请信息保存、房屋关联信息保存以及审核流程处理
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023-01-26
  */
 @Java110Cmd(serviceCode = "ownerSettled.saveOwnerSettledApply")
 public class SaveOwnerSettledApplyCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveOwnerSettledApplyCmd.class);
 
+    /** ID生成前缀 */
     public static final String CODE_PREFIX_ID = "10";
 
+    /** 业主入驻申请服务接口 */
     @Autowired
     private IOwnerSettledApplyV1InnerServiceSMO ownerSettledApplyV1InnerServiceSMOImpl;
 
+    /** 业主入驻房屋关联服务接口 */
     @Autowired
     private IOwnerSettledRoomsV1InnerServiceSMO ownerSettledRoomsV1InnerServiceSMOImpl;
 
+    /** 业主入驻设置服务接口 */
     @Autowired
     private IOwnerSettledSettingV1InnerServiceSMO ownerSettledSettingV1InnerServiceSMOImpl;
 
+    /** 房屋信息服务接口 */
     @Autowired
     private IRoomV1InnerServiceSMO roomV1InnerServiceSMOImpl;
 
+    /** 工作流服务接口 */
     @Autowired
     private IOaWorkflowInnerServiceSMO oaWorkflowInnerServiceSMOImpl;
 
+    /** 用户服务接口 */
     @Autowired
     private IUserInnerServiceSMO userInnerServiceSMOImpl;
 
+    /** Activiti工作流服务接口 */
     @Autowired
     private IOaWorkflowActivitiInnerServiceSMO oaWorkflowActivitiInnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数
+     * 检查请求中必需的参数是否存在，并对房屋信息进行详细验证
+     *
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必需的基本参数
         Assert.hasKeyAndValue(reqJson, "ownerId", "请求报文中未包含ownerId");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
 
+        // 验证房屋信息是否存在
         if (!reqJson.containsKey("rooms")) {
             throw new CmdException("房屋不存在");
         }
@@ -155,6 +172,7 @@ public class SaveOwnerSettledApplyCmd extends Cmd {
             throw new CmdException("房屋不存在");
         }
 
+        // 验证每个房屋的必需参数
         JSONObject room = null;
         for (int roomIndex = 0; roomIndex < rooms.size(); roomIndex++) {
             room = rooms.getJSONObject(roomIndex);
@@ -162,38 +180,54 @@ public class SaveOwnerSettledApplyCmd extends Cmd {
             Assert.hasKeyAndValue(room, "startTime", "请求报文中未包含startTime");
             Assert.hasKeyAndValue(room, "endTime", "请求报文中未包含endTime");
         }
-
     }
 
+    /**
+     * 执行业主入驻申请命令
+     * 处理业主入驻申请的完整流程，包括保存申请信息、关联房屋信息、处理审核流程
+     *
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当数据保存失败或流程处理异常时抛出
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 获取当前用户ID
         String userId = cmdDataFlowContext.getReqHeaders().get("user-id");
 
+        // 转换并保存业主入驻申请信息
         OwnerSettledApplyPo ownerSettledApplyPo = BeanConvertUtil.covertBean(reqJson, OwnerSettledApplyPo.class);
         ownerSettledApplyPo.setApplyId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         ownerSettledApplyPo.setCreateUserId(userId);
-        ownerSettledApplyPo.setState(OwnerSettledApplyDto.STATE_WAIT);
+        ownerSettledApplyPo.setState(OwnerSettledApplyDto.STATE_WAIT); // 设置初始状态为等待审核
         int flag = ownerSettledApplyV1InnerServiceSMOImpl.saveOwnerSettledApply(ownerSettledApplyPo);
 
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
+
+        // 处理关联的房屋信息
         JSONArray rooms = reqJson.getJSONArray("rooms");
         JSONObject room = null;
         RoomDto roomDto = null;
         List<RoomDto> roomDtos = null;
         for (int roomIndex = 0; roomIndex < rooms.size(); roomIndex++) {
             room = rooms.getJSONObject(roomIndex);
+            // 验证房屋是否存在
             roomDto = new RoomDto();
             roomDto.setCommunityId(ownerSettledApplyPo.getCommunityId());
             roomDto.setRoomId(room.getString("roomId"));
             roomDtos = roomV1InnerServiceSMOImpl.queryRooms(roomDto);
             Assert.listOnlyOne(roomDtos, "房屋不存在" + roomDto.getRoomId());
+            
+            // 保存业主入驻房屋关联信息
             OwnerSettledRoomsPo ownerSettledRoomsPo = BeanConvertUtil.covertBean(room, OwnerSettledRoomsPo.class);
             ownerSettledRoomsPo.setApplyId(ownerSettledApplyPo.getApplyId());
             ownerSettledRoomsPo.setCommunityId(ownerSettledApplyPo.getCommunityId());
             ownerSettledRoomsPo.setOsrId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+            // 构建完整的房间名称（楼层-单元-房间号）
             ownerSettledRoomsPo.setRoomName(roomDtos.get(0).getFloorNum() + "-" + roomDtos.get(0).getUnitNum() + "-" + roomDtos.get(0).getRoomNum());
             flag = ownerSettledRoomsV1InnerServiceSMOImpl.saveOwnerSettledRooms(ownerSettledRoomsPo);
             if (flag < 1) {
@@ -201,35 +235,41 @@ public class SaveOwnerSettledApplyCmd extends Cmd {
             }
         }
 
+        // 检查是否需要走审核流程
         OwnerSettledSettingDto ownerSettledSettingDto = new OwnerSettledSettingDto();
         ownerSettledSettingDto.setCommunityId(reqJson.getString("communityId"));
-        ownerSettledSettingDto.setAuditWay("Y");
+        ownerSettledSettingDto.setAuditWay("Y"); // 设置审核方式为需要审核
         List<OwnerSettledSettingDto> ownerSettledSettingDtos
                 = ownerSettledSettingV1InnerServiceSMOImpl.queryOwnerSettledSettings(ownerSettledSettingDto);
-        //不需要走审核流程
+        
+        // 如果不需要审核流程，直接设置申请状态为完成
         if (ownerSettledSettingDtos == null || ownerSettledSettingDtos.size() < 1) {
             OwnerSettledApplyPo tmpOwnerSettledApplyPo = new OwnerSettledApplyPo();
             tmpOwnerSettledApplyPo.setApplyId(ownerSettledApplyPo.getApplyId());
             tmpOwnerSettledApplyPo.setState(OwnerSettledApplyDto.STATE_COMPLETE);
             ownerSettledApplyV1InnerServiceSMOImpl.updateOwnerSettledApply(tmpOwnerSettledApplyPo);
+            cmdDataFlowContext.setResponseEntity(ResultVo.success());
             return;
         }
 
-
+        // 获取并验证工作流配置
         OaWorkflowDto oaWorkflowDto = new OaWorkflowDto();
         oaWorkflowDto.setStoreId(ownerSettledSettingDtos.get(0).getStoreId());
         oaWorkflowDto.setFlowId(ownerSettledSettingDtos.get(0).getFlowId());
         List<OaWorkflowDto> oaWorkflowDtos = oaWorkflowInnerServiceSMOImpl.queryOaWorkflows(oaWorkflowDto);
         Assert.listOnlyOne(oaWorkflowDtos, "流程不存在");
+        
+        // 检查工作流状态是否可用
         if (!OaWorkflowDto.STATE_COMPLAINT.equals(oaWorkflowDtos.get(0).getState())) {
             throw new IllegalArgumentException(oaWorkflowDtos.get(0).getFlowName() + "流程未部署");
         }
 
+        // 检查流程定义键是否存在
         if (StringUtil.isEmpty(oaWorkflowDtos.get(0).getProcessDefinitionKey())) {
             throw new IllegalArgumentException(oaWorkflowDtos.get(0).getFlowName() + "流程未部署");
         }
 
-        //启动任务
+        // 启动工作流流程
         JSONObject flowJson = new JSONObject();
         flowJson.put("processDefinitionKey", oaWorkflowDtos.get(0).getProcessDefinitionKey());
         flowJson.put("createUserId", userId);
@@ -240,7 +280,7 @@ public class SaveOwnerSettledApplyCmd extends Cmd {
         reqJson.put("processDefinitionKey", oaWorkflowDtos.get(0).getProcessDefinitionKey());
         JSONObject result = oaWorkflowActivitiInnerServiceSMOImpl.startProcess(flowJson);
 
-        //提交者提交
+        // 提交者提交审核任务
         flowJson = new JSONObject();
         flowJson.put("processInstanceId", result.getString("processInstanceId"));
         flowJson.put("createUserId", userId);
@@ -249,9 +289,10 @@ public class SaveOwnerSettledApplyCmd extends Cmd {
         flowJson.put("id", ownerSettledApplyPo.getApplyId());
         flowJson.put("flowId", oaWorkflowDtos.get(0).getFlowId());
 
-
+        // 自动完成第一个任务节点
         oaWorkflowActivitiInnerServiceSMOImpl.autoFinishFirstTask(flowJson);
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

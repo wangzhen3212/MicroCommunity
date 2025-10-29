@@ -33,54 +33,103 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 角色小区关系保存命令类
+ * 
+ * 该类负责处理角色与小区关联关系的保存操作，实现角色与多个小区的批量关联功能
  * 服务编码：roleCommunity.saveRoleCommunity
- * 请求路劲：/app/roleCommunity.SaveRoleCommunity
- * add by 吴学文 at 2022-07-25 17:12:49 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
+ * 请求路径：/app/roleCommunity.SaveRoleCommunity
+ * 
+ * @author 吴学文 at 2022-07-25 17:12:49 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * @温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "roleCommunity.saveRoleCommunity")
 public class SaveRoleCommunityCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveRoleCommunityCmd.class);
 
+    /**
+     * ID生成前缀，用于生成角色小区关系ID
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 角色小区关系服务接口
+     */
     @Autowired
     private IRoleCommunityV1InnerServiceSMO roleCommunityV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证请求报文中的必填参数，确保请求数据的完整性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，包含请求和响应数据
+     * @param reqJson 请求的JSON数据对象
+     * @throws IllegalArgumentException 当请求参数不满足要求时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含roleId参数
         Assert.hasKeyAndValue(reqJson, "roleId", "请求报文中未包含roleId");
+        
+        // 验证请求报文中必须包含小区信息且至少有一个小区
         if (!reqJson.containsKey("communitys") || reqJson.getJSONArray("communitys").size() < 1) {
             throw new IllegalArgumentException("未包含小区信息");
         }
     }
 
+    /**
+     * 执行保存角色小区关系命令
+     * 
+     * 该方法负责将角色与多个小区建立关联关系，采用事务处理确保数据一致性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求的JSON数据对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 从请求头中获取店铺ID
         String storeId = cmdDataFlowContext.getReqHeaders().get("store-id");
 
         RoleCommunityPo roleCommunityPo = null;
+        // 获取小区信息数组
         JSONArray communitys = reqJson.getJSONArray("communitys");
+        
+        // 遍历所有小区信息，为每个小区创建角色小区关系记录
         for (int communityIndex = 0; communityIndex < communitys.size(); communityIndex++) {
             roleCommunityPo = new RoleCommunityPo();
+            
+            // 设置小区ID
             roleCommunityPo.setCommunityId(communitys.getJSONObject(communityIndex).getString("communityId"));
+            // 设置小区名称
             roleCommunityPo.setCommunityName(communitys.getJSONObject(communityIndex).getString("communityName"));
+            // 设置角色ID
             roleCommunityPo.setRoleId(reqJson.getString("roleId"));
+            // 设置店铺ID
             roleCommunityPo.setStoreId(storeId);
+            // 生成角色小区关系ID
             roleCommunityPo.setRcId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+            
+            // 调用服务保存角色小区关系
             int flag = roleCommunityV1InnerServiceSMOImpl.saveRoleCommunity(roleCommunityPo);
 
+            // 检查保存结果，如果失败则抛出异常
             if (flag < 1) {
                 throw new CmdException("保存数据失败");
             }
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

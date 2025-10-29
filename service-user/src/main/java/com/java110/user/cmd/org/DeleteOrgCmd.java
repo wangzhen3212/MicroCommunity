@@ -39,7 +39,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * 类表述：删除
+ * 类表述：删除组织命令类
  * 服务编码：org.deleteOrg
  * 请求路劲：/app/org.DeleteOrg
  * add by 吴学文 at 2022-02-28 17:26:28 mail: 928255095@qq.com
@@ -47,36 +47,63 @@ import java.util.List;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：该命令类用于处理删除组织的业务逻辑，包括参数验证和删除操作
+ * 主要职责：
+ * 1. 验证删除组织的必要条件
+ * 2. 执行组织删除操作
+ * 3. 返回操作结果
  */
 @Java110Cmd(serviceCode = "org.deleteOrg")
 public class DeleteOrgCmd extends Cmd {
     private static Logger logger = LoggerFactory.getLogger(DeleteOrgCmd.class);
 
+    /**
+     * 组织服务接口
+     */
     @Autowired
     private IOrgV1InnerServiceSMO orgV1InnerServiceSMOImpl;
 
+    /**
+     * 组织员工关系服务接口
+     */
     @Autowired
     private IOrgStaffRelV1InnerServiceSMO orgStaffRelV1InnerServiceSMOImpl;
 
+    /**
+     * 用户服务接口
+     */
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 验证删除组织的请求参数和业务规则
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填参数
         Assert.hasKeyAndValue(reqJson, "orgId", "orgId不能为空");
         Assert.hasKeyAndValue(reqJson, "storeId", "storeId不能为空");
 
-        //校验组织下是否有部门或者员工
+        // 校验组织是否存在
         OrgDto orgDto = new OrgDto();
         orgDto.setOrgId(reqJson.getString("orgId"));
         List<OrgDto> orgDtos = orgV1InnerServiceSMOImpl.queryOrgs(orgDto);
 
+        // 验证组织存在且唯一
         Assert.listOnlyOne(orgDtos, "不存在");
 
+        // 检查是否为一级组织，一级组织不允许删除
         if (OrgDto.ORG_LEVEL_STORE.equals(orgDtos.get(0).getOrgLevel())) {
             throw new CmdException("一级组织不能删除");
         }
 
+        // 检查是否存在子组织
         orgDto = new OrgDto();
         orgDto.setParentOrgId(reqJson.getString("orgId"));
         List<OrgDto> subOrgDtos = orgV1InnerServiceSMOImpl.queryOrgs(orgDto);
@@ -84,32 +111,50 @@ public class DeleteOrgCmd extends Cmd {
             throw new CmdException("存在子组织");
         }
 
+        // 检查组织下是否存在员工关系
         OrgStaffRelDto orgStaffRelDto = new OrgStaffRelDto();
         orgStaffRelDto.setOrgId(reqJson.getString("orgId"));
         List<OrgStaffRelDto> orgStaffRelDtos = orgStaffRelV1InnerServiceSMOImpl.queryOrgStaffRels(orgStaffRelDto);
+        
+        // 如果存在员工关系，进一步验证员工信息
         if (orgStaffRelDtos == null || orgStaffRelDtos.size() < 1) {
             return;
         }
+        
+        // 查询员工详细信息
         UserDto userDto = new UserDto();
         userDto.setUserId(orgStaffRelDtos.get(0).getStaffId());
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
+        
+        // 如果员工存在，则不允许删除组织
         if (userDtos != null && userDtos.size() > 0) {
             throw new CmdException("存在员工 请先删除员工后再删除");
         }
-
     }
 
+    /**
+     * 执行删除组织操作
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求参数转换为组织持久化对象
         OrgPo orgPo = BeanConvertUtil.covertBean(reqJson, OrgPo.class);
+        
+        // 执行删除操作
         int flag = orgV1InnerServiceSMOImpl.deleteOrg(orgPo);
 
+        // 检查删除操作是否成功
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }
