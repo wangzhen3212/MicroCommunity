@@ -38,7 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 类表述：保存预约参数配置信息
  * 服务编码：reserveParams.saveReserveParams
  * 请求路劲：/app/reserveParams.SaveReserveParams
  * add by 吴学文 at 2022-12-05 18:04:04 mail: 928255095@qq.com
@@ -52,16 +52,34 @@ public class SaveReserveParamsCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveReserveParamsCmd.class);
 
+    /**
+     * ID生成前缀，用于生成预约参数和开放时间的唯一标识
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 预约参数服务接口
+     */
     @Autowired
     private IReserveParamsV1InnerServiceSMO reserveParamsV1InnerServiceSMOImpl;
 
+    /**
+     * 预约参数开放时间服务接口
+     */
     @Autowired
     private IReserveParamsOpenTimeV1InnerServiceSMO reserveParamsOpenTimeV1InnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数
+     * 检查请求报文中是否包含必要的参数
+     *
+     * @param event            命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson          请求JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填参数是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
         Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含name");
         Assert.hasKeyAndValue(reqJson, "paramWay", "请求报文中未包含paramWay");
@@ -69,39 +87,63 @@ public class SaveReserveParamsCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "startTime", "请求报文中未包含startTime");
         Assert.hasKeyAndValue(reqJson, "maxQuantity", "请求报文中未包含maxQuantity");
         Assert.hasKeyAndValue(reqJson, "hoursMaxQuantity", "请求报文中未包含hoursMaxQuantity");
-
     }
 
+    /**
+     * 执行保存预约参数命令
+     * 保存预约参数配置信息，并为每个小时生成默认的开放时间配置
+     *
+     * @param event            命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson          请求JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        // 将请求JSON转换为预约参数PO对象
         ReserveParamsPo reserveParamsPo = BeanConvertUtil.covertBean(reqJson, ReserveParamsPo.class);
+        // 生成预约参数ID
         reserveParamsPo.setParamsId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        // 保存预约参数到数据库
         int flag = reserveParamsV1InnerServiceSMOImpl.saveReserveParams(reserveParamsPo);
 
+        // 检查保存是否成功
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 创建24小时的开放时间配置列表
         List<ReserveParamsOpenTimePo> reserveParamsOpenTimePos = new ArrayList<>();
         ReserveParamsOpenTimePo reserveParamsOpenTimePo = null;
+        
+        // 为每个小时生成默认的开放时间配置
         for (int hours = 0; hours < 24; hours++) {
-
             reserveParamsOpenTimePo = new ReserveParamsOpenTimePo();
+            // 设置小区ID
             reserveParamsOpenTimePo.setCommunityId(reqJson.getString("communityId"));
+            // 设置关联的预约参数ID
             reserveParamsOpenTimePo.setParamsId(reserveParamsPo.getParamsId());
+            // 默认设置为不开放
             reserveParamsOpenTimePo.setIsOpen("N");
+            // 生成时间配置ID
             reserveParamsOpenTimePo.setTimeId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+            // 设置小时数
             reserveParamsOpenTimePo.setHours(hours + "");
+            // 添加到列表
             reserveParamsOpenTimePos.add(reserveParamsOpenTimePo);
-
         }
+        
+        // 批量保存开放时间配置到数据库
         flag = reserveParamsOpenTimeV1InnerServiceSMOImpl.saveReserveParamsOpenTimes(reserveParamsOpenTimePos);
+        
+        // 检查保存是否成功
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

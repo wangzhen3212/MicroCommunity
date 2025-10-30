@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：删除
+ * 类表述：删除投诉类型命令类
  * 服务编码：complaintType.deleteComplaintType
  * 请求路劲：/app/complaintType.DeleteComplaintType
  * add by 吴学文 at 2024-02-21 12:06:00 mail: 928255095@qq.com
@@ -42,40 +42,81 @@ import org.slf4j.LoggerFactory;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：处理删除投诉类型及其关联用户信息的业务命令
+ * 主要职责：
+ * 1. 验证删除请求参数的完整性
+ * 2. 删除投诉类型数据
+ * 3. 删除与投诉类型关联的用户信息
+ * 4. 返回操作结果
  */
 @Java110Cmd(serviceCode = "complaintType.deleteComplaintType")
 public class DeleteComplaintTypeCmd extends Cmd {
+    
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(DeleteComplaintTypeCmd.class);
 
+    /**
+     * 投诉类型服务接口
+     */
     @Autowired
     private IComplaintTypeV1InnerServiceSMO complaintTypeV1InnerServiceSMOImpl;
 
+    /**
+     * 投诉类型用户关联服务接口
+     */
     @Autowired
     private IComplaintTypeUserV1InnerServiceSMO complaintTypeUserV1InnerServiceSMOImpl;
 
+    /**
+     * 验证删除投诉类型请求参数
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求/响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求中必须包含typeCd参数
         Assert.hasKeyAndValue(reqJson, "typeCd", "typeCd不能为空");
+        // 验证请求中必须包含communityId参数
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行删除投诉类型及其关联用户信息的业务逻辑
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON转换为投诉类型PO对象
         ComplaintTypePo complaintTypePo = BeanConvertUtil.covertBean(reqJson, ComplaintTypePo.class);
+        
+        // 调用服务删除投诉类型数据
         int flag = complaintTypeV1InnerServiceSMOImpl.deleteComplaintType(complaintTypePo);
 
+        // 检查删除操作是否成功
         if (flag < 1) {
+            // 删除失败时抛出异常
             throw new CmdException("删除数据失败");
         }
 
+        // 创建投诉类型用户关联PO对象，用于删除关联数据
         ComplaintTypeUserPo complaintTypeUserPo = new ComplaintTypeUserPo();
+        // 设置要删除的投诉类型编码
         complaintTypeUserPo.setTypeCd(complaintTypePo.getTypeCd());
+        // 调用服务删除与投诉类型关联的用户信息
         complaintTypeUserV1InnerServiceSMOImpl.deleteComplaintTypeUser(complaintTypeUserPo);
 
-
+        // 设置操作成功的响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

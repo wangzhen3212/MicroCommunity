@@ -57,13 +57,18 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 投诉信息保存命令类
+ * 
+ * 该类负责处理投诉信息的保存请求，包括参数验证、投诉信息保存、投诉事件记录、
+ * 图片附件保存以及通知发送等完整业务流程
+ * 
  * 服务编码：complaint.saveComplaint
- * 请求路劲：/app/complaint.SaveComplaint
- * add by 吴学文 at 2024-02-21 13:08:05 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
+ * 请求路径：/app/complaint.SaveComplaint
+ * 
+ * @author 吴学文 at 2024-02-21 13:08:05 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * @温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "complaint.saveComplaint")
@@ -71,38 +76,58 @@ public class SaveComplaintCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveComplaintCmd.class);
 
+    /** ID生成前缀 */
     public static final String CODE_PREFIX_ID = "10";
 
+    /** 投诉信息服务接口 */
     @Autowired
     private IComplaintV1InnerServiceSMO complaintV1InnerServiceSMOImpl;
 
+    /** 投诉类型服务接口 */
     @Autowired
     private IComplaintTypeV1InnerServiceSMO complaintTypeV1InnerServiceSMOImpl;
 
+    /** 房屋信息服务接口 */
     @Autowired
     private IRoomInnerServiceSMO roomInnerServiceSMOImpl;
 
+    /** 小区信息服务接口 */
     @Autowired
     private ICommunityInnerServiceSMO communityInnerServiceSMOImpl;
 
+    /** 投诉事件服务接口 */
     @Autowired
     private IComplaintEventV1InnerServiceSMO complaintEventV1InnerServiceSMOImpl;
 
+    /** 用户信息服务接口 */
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /** 文件服务接口 */
     @Autowired
     private IFileInnerServiceSMO fileInnerServiceSMOImpl;
 
+    /** 文件关联服务接口 */
     @Autowired
     private IFileRelInnerServiceSMO fileRelInnerServiceSMOImpl;
 
+    /** 数据总线服务接口 */
     @Autowired
     private IDataBusInnerServiceSMO dataBusInnerServiceSMOImpl;
 
-
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括必填字段检查、投诉类型验证、房屋信息验证等
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON数据
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填字段
         Assert.hasKeyAndValue(reqJson, "complaintName", "请求报文中未包含complaintName");
         Assert.hasKeyAndValue(reqJson, "typeCd", "请求报文中未包含typeCd");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
@@ -110,7 +135,7 @@ public class SaveComplaintCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "tel", "请求报文中未包含tel");
         Assert.hasKeyAndValue(reqJson, "context", "请求报文中未包含context");
 
-
+        // 验证投诉类型是否存在
         ComplaintTypeDto complaintTypeDto = new ComplaintTypeDto();
         complaintTypeDto.setTypeCd(reqJson.getString("typeCd"));
         complaintTypeDto.setCommunityId(reqJson.getString("communityId"));
@@ -118,7 +143,7 @@ public class SaveComplaintCmd extends Cmd {
 
         Assert.listOnlyOne(complaintTypeDtos, "投诉类型不存在");
 
-
+        // 验证房屋信息是否存在
         RoomDto roomDto = new RoomDto();
         roomDto.setRoomId(reqJson.getString("roomId"));
         roomDto.setCommunityId(reqJson.getString("communityId"));
@@ -126,33 +151,47 @@ public class SaveComplaintCmd extends Cmd {
 
         Assert.listOnlyOne(roomDtos, "房屋不存在");
 
+        // 构建房屋完整名称：楼层-单元-房间号
         reqJson.put("roomName", roomDtos.get(0).getFloorNum() + "-" + roomDtos.get(0).getUnitNum() + "-" + roomDtos.get(0).getRoomNum());
 
+        // 处理业主信息，设置默认值
         String ownerId = roomDtos.get(0).getOwnerId();
         if (StringUtil.isEmpty(ownerId)) {
-            ownerId = "-1";
+            ownerId = "-1"; // 默认业主ID
         }
         String ownerName = roomDtos.get(0).getOwnerName();
         if (StringUtil.isEmpty(ownerName)) {
-            ownerName = "未知";
+            ownerName = "未知"; // 默认业主姓名
         }
         reqJson.put("ownerId", ownerId);
         reqJson.put("ownerName", ownerName);
-
     }
 
+    /**
+     * 执行投诉保存命令
+     * 
+     * 处理投诉信息的完整保存流程，包括用户验证、小区验证、投诉信息保存、
+     * 投诉事件记录、图片保存和通知发送
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON数据
+     * @throws CmdException 当保存操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 获取当前用户ID
         String userId = CmdContextUtils.getUserId(cmdDataFlowContext);
 
+        // 验证用户信息
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
         Assert.listOnlyOne(userDtos, "用户未登录");
 
+        // 验证小区是否已入驻物业
         CommunityMemberDto communityMemberDto = new CommunityMemberDto();
         communityMemberDto.setCommunityId(reqJson.getString("communityId"));
         communityMemberDto.setMemberTypeCd(CommunityMemberDto.MEMBER_TYPE_PROPERTY);
@@ -160,23 +199,24 @@ public class SaveComplaintCmd extends Cmd {
 
         Assert.listOnlyOne(communityMemberDtos, "小区未入驻");
 
-
+        // 保存投诉主信息
         ComplaintPo complaintPo = BeanConvertUtil.covertBean(reqJson, ComplaintPo.class);
         complaintPo.setComplaintId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
-        complaintPo.setState(ComplaintDto.STATE_WAIT);
-        complaintPo.setStoreId(communityMemberDtos.get(0).getMemberId());
-        complaintPo.setStartUserId(userId);
+        complaintPo.setState(ComplaintDto.STATE_WAIT); // 设置初始状态为等待处理
+        complaintPo.setStoreId(communityMemberDtos.get(0).getMemberId()); // 设置物业ID
+        complaintPo.setStartUserId(userId); // 设置发起用户ID
         int flag = complaintV1InnerServiceSMOImpl.saveComplaint(complaintPo);
 
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 保存投诉事件记录
         ComplaintEventPo complaintEventPo = new ComplaintEventPo();
         complaintEventPo.setRemark("用户提交投诉");
         complaintEventPo.setComplaintId(complaintPo.getComplaintId());
         complaintEventPo.setCommunityId(complaintPo.getCommunityId());
-        complaintEventPo.setEventType(ComplaintEventDto.EVENT_TYPE_SUBMIT);
+        complaintEventPo.setEventType(ComplaintEventDto.EVENT_TYPE_SUBMIT); // 事件类型：提交
         complaintEventPo.setCreateUserId(userId);
         complaintEventPo.setCreateUserName(userDtos.get(0).getName());
         complaintEventPo.setEventId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
@@ -186,50 +226,60 @@ public class SaveComplaintCmd extends Cmd {
             throw new CmdException("保存数据失败");
         }
 
-        //todo 图片
+        // 保存投诉相关图片
         savePhone(reqJson, complaintPo);
 
-        //todo 发送消息给处理师傅
+        // 发送投诉通知给处理人员
         dataBusInnerServiceSMOImpl.databusData(new DatabusDataDto(DatabusDataDto.BUSINESS_TYPE_SEND_COMPLAINT_NOTIFY_STAFF,BeanConvertUtil.beanCovertJson(complaintPo)));
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 
     /**
-     * 保存图片
-     *
-     * @param reqJson
-     * @param complaintPo
+     * 保存投诉相关图片
+     * 
+     * 处理投诉相关的图片附件，包括图片数据存储和文件关联关系建立
+     * 
+     * @param reqJson 请求JSON数据，包含图片信息
+     * @param complaintPo 投诉实体对象
      */
     private void savePhone(JSONObject reqJson, ComplaintPo complaintPo) {
-
+        // 检查是否存在图片数据
         if (!reqJson.containsKey("photos")) {
             return;
         }
+        
         JSONArray photos = reqJson.getJSONArray("photos");
         if (ListUtil.isNull(photos)) {
             return;
         }
+        
+        // 遍历处理所有图片
         for (int photoIndex = 0; photoIndex < photos.size(); photoIndex++) {
             String _photo = photos.getString(photoIndex);
+            
+            // 如果图片数据长度超过512，说明是base64编码的图片数据，需要保存到文件系统
             if (_photo.length() > 512) {
                 FileDto fileDto = new FileDto();
                 fileDto.setFileId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_file_id));
                 fileDto.setFileName(fileDto.getFileId());
-                fileDto.setContext(_photo);
-                fileDto.setSuffix("jpeg");
+                fileDto.setContext(_photo); // 图片base64数据
+                fileDto.setSuffix("jpeg"); // 文件后缀
                 fileDto.setCommunityId(reqJson.getString("communityId"));
-                _photo = fileInnerServiceSMOImpl.saveFile(fileDto);
+                _photo = fileInnerServiceSMOImpl.saveFile(fileDto); // 保存文件并返回文件路径
             }
+            
+            // 建立文件与投诉的关联关系
             JSONObject businessUnit = new JSONObject();
             businessUnit.put("fileRelId", GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_file_id));
-            businessUnit.put("relTypeCd", "13000");
-            businessUnit.put("saveWay", "table");
-            businessUnit.put("objId", complaintPo.getComplaintId());
-            businessUnit.put("fileRealName", _photo);
-            businessUnit.put("fileSaveName", _photo);
+            businessUnit.put("relTypeCd", "13000"); // 关联类型编码
+            businessUnit.put("saveWay", "table"); // 存储方式
+            businessUnit.put("objId", complaintPo.getComplaintId()); // 关联对象ID
+            businessUnit.put("fileRealName", _photo); // 文件真实名称
+            businessUnit.put("fileSaveName", _photo); // 文件保存名称
             FileRelPo fileRelPo = BeanConvertUtil.covertBean(businessUnit, FileRelPo.class);
-            fileRelInnerServiceSMOImpl.saveFileRel(fileRelPo);
+            fileRelInnerServiceSMOImpl.saveFileRel(fileRelPo); // 保存文件关联关系
         }
     }
 

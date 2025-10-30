@@ -76,14 +76,14 @@ import java.util.List;
         resBody="{'code':0,'msg':'成功'}"
 )
 /**
- * 类表述：查询
- * 服务编码：store.listStore
- * 请求路劲：/app/store.ListStore
- * add by 吴学文 at 2022-02-28 10:46:30 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 物业公司查询命令类
+ * 该类主要用于查询物业公司信息，支持按物业编号、名称、电话等条件进行分页查询
+ * 服务编码：property.listProperty
+ * 请求路径：/app/property.listProperty
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2022-02-28
  */
 @Java110Cmd(serviceCode = "property.listProperty")
 public class ListPropertyCmd extends Cmd {
@@ -96,56 +96,85 @@ public class ListPropertyCmd extends Cmd {
     @Autowired
     private IStoreInnerServiceSMO storeInnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数的有效性，包括分页参数验证和权限验证
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页参数
         super.validatePageInfo(reqJson);
 
+        // 根据storeId查询店铺信息
         StoreDto storeDto = new StoreDto();
         storeDto.setStoreId(reqJson.getString("storeId"));
         List<StoreDto> storeDtos = storeV1InnerServiceSMOImpl.queryStores(storeDto);
 
+        // 验证查询结果只能有一条记录
         Assert.listOnlyOne(storeDtos, "非法操作");
 
+        // 如果是管理员店铺，则移除storeId参数，允许查询所有物业
         if (StoreDto.STORE_TYPE_ADMIN.equals(storeDtos.get(0).getStoreTypeCd())) {
             reqJson.remove("storeId");
         }
     }
 
+    /**
+     * 执行查询命令
+     * 根据查询条件获取物业公司列表，并进行数据整合处理
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 转换请求参数为StoreDto对象，用于查询物业公司
         StoreDto storeDto = BeanConvertUtil.covertBean(reqJson, StoreDto.class);
         storeDto.setUserId("");
-        storeDto.setStoreTypeCd(StoreDto.STORE_TYPE_PROPERTY);
+        storeDto.setStoreTypeCd(StoreDto.STORE_TYPE_PROPERTY); // 设置店铺类型为物业公司
 
+        // 创建另一个StoreDto对象用于获取详细信息
         StoreDto storeDto1 = BeanConvertUtil.covertBean(reqJson, StoreDto.class);
         storeDto1.setUserId("");
         storeDto1.setStoreTypeCd(StoreDto.STORE_TYPE_PROPERTY);
 
+        // 查询符合条件的物业公司数量
         int count = storeV1InnerServiceSMOImpl.queryStoresCount(storeDto);
 
         List<StoreDto> storeDtos = new ArrayList<>();
 
         if (count > 0) {
+            // 获取物业公司基本信息列表
             List<StoreDto> storeList = storeV1InnerServiceSMOImpl.queryStores(storeDto);
+            // 获取物业公司详细信息列表
             List<StoreDto> stores = storeInnerServiceSMOImpl.getStores(storeDto1);
+            
+            // 合并基本信息和详细信息
             for (StoreDto store : storeList) {
                 for (StoreDto store1 : stores) {
                     if (store.getStoreId().equals(store1.getStoreId())) {
+                        // 将地标信息从详细信息设置到基本信息中
                         store.setNearByLandmarks(store1.getNearByLandmarks());
                     }
                 }
                 storeDtos.add(store);
             }
-//            storeDtos = storeV1InnerServiceSMOImpl.queryStores(storeDto);
         } else {
             storeDtos = new ArrayList<>();
         }
 
-        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, storeDtos);
+        // 计算总页数并构建返回结果
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        ResultVo resultVo = new ResultVo(totalPage, count, storeDtos);
 
+        // 设置HTTP响应
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
-
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

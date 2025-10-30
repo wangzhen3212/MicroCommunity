@@ -44,14 +44,16 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 类表述：更新
+ * 排班信息更新命令类
+ * 
+ * 该类负责处理排班信息的更新操作，包括排班基本信息、排班天信息和排班时间信息的更新
  * 服务编码：scheduleClasses.updateScheduleClasses
- * 请求路劲：/app/scheduleClasses.UpdateScheduleClasses
- * add by 吴学文 at 2022-10-29 15:29:19 mail: 928255095@qq.com
+ * 请求路径：/app/scheduleClasses.UpdateScheduleClasses
+ * 
+ * @author 吴学文 at 2022-10-29 15:29:19 mail: 928255095@qq.com
+ * @version 1.0
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "scheduleClasses.updateScheduleClasses")
 public class UpdateScheduleClassesCmd extends Cmd {
@@ -67,12 +69,25 @@ public class UpdateScheduleClassesCmd extends Cmd {
     @Autowired
     private IScheduleClassesTimeV1InnerServiceSMO scheduleClassesTimeV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 
+     * 验证请求参数的有效性，包括必填字段检查、排班天信息和时间信息的完整性验证
+     * 
+     * @param event CMD事件对象
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填字段
         Assert.hasKeyAndValue(reqJson, "scheduleId", "scheduleId不能为空");
         Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含name");
         Assert.hasKeyAndValue(reqJson, "scheduleType", "请求报文中未包含scheduleType");
         Assert.hasKeyAndValue(reqJson, "scheduleCycle", "请求报文中未包含scheduleCycle");
+        
+        // 验证排班天信息
         if (!reqJson.containsKey("days")) {
             throw new CmdException("未包含天");
         }
@@ -80,13 +95,17 @@ public class UpdateScheduleClassesCmd extends Cmd {
         if (days.size() < 1) {
             throw new CmdException("未包含天");
         }
+        
+        // 遍历每个排班天，验证时间信息
         JSONObject day = null;
         JSONArray times = null;
         for (int dayIndex = 0; dayIndex < days.size(); dayIndex++) {
             day = days.getJSONObject(dayIndex);
+            // 如果是休息日，跳过时间验证
             if (ScheduleClassesDayDto.WORKDAY_NO.equals(day.getString("workday"))) {
                 continue;
             }
+            // 验证工作日的时间信息
             if (!day.containsKey("times")) {
                 throw new CmdException("未包时间");
             }
@@ -97,18 +116,36 @@ public class UpdateScheduleClassesCmd extends Cmd {
         }
     }
 
+    /**
+     * 执行排班信息更新操作
+     * 
+     * 该方法负责更新排班信息，包括：
+     * 1. 更新排班基本信息
+     * 2. 删除原有的排班天和时间信息
+     * 3. 保存新的排班天和时间信息
+     * 
+     * @param event CMD事件对象
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当更新操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 查询现有的排班信息
         ScheduleClassesDto scheduleClassesDto = new ScheduleClassesDto();
         scheduleClassesDto.setScheduleId(reqJson.getString("scheduleId"));
         List<ScheduleClassesDto> scheduleClassesDtos = scheduleClassesV1InnerServiceSMOImpl.queryScheduleClassess(scheduleClassesDto);
         Assert.listOnlyOne(scheduleClassesDtos, "查询排班信息错误！");
+        
+        // 更新排班基本信息
         ScheduleClassesPo scheduleClassesPo = BeanConvertUtil.covertBean(reqJson, ScheduleClassesPo.class);
         int flag = scheduleClassesV1InnerServiceSMOImpl.updateScheduleClasses(scheduleClassesPo);
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
+        
+        // 删除原有的排班天信息
         ScheduleClassesDayDto scheduleClassesDayDto = new ScheduleClassesDayDto();
         scheduleClassesDayDto.setScheduleId(scheduleClassesDtos.get(0).getScheduleId());
         List<ScheduleClassesDayDto> scheduleClassesDayDtos = scheduleClassesDayV1InnerServiceSMOImpl.queryScheduleClassesDays(scheduleClassesDayDto);
@@ -120,9 +157,10 @@ public class UpdateScheduleClassesCmd extends Cmd {
                 throw new CmdException("更新数据失败");
             }
         }
+        
+        // 删除原有的排班时间信息
         ScheduleClassesTimeDto scheduleClassesTimeDto = new ScheduleClassesTimeDto();
         scheduleClassesTimeDto.setScheduleId(scheduleClassesDtos.get(0).getScheduleId());
-        //scheduleClassesTimeDto.setDayId(scheduleClassesDayDtos.get(0).getDayId());
         List<ScheduleClassesTimeDto> scheduleClassesTimeDtos = scheduleClassesTimeV1InnerServiceSMOImpl.queryScheduleClassesTimes(scheduleClassesTimeDto);
         if (scheduleClassesTimeDtos != null && scheduleClassesTimeDtos.size() >0) {
             ScheduleClassesTimePo scheduleClassesTimePo = new ScheduleClassesTimePo();
@@ -132,39 +170,46 @@ public class UpdateScheduleClassesCmd extends Cmd {
                 throw new CmdException("更新数据失败");
             }
         }
+        
+        // 保存新的排班天和时间信息
         JSONArray days = reqJson.getJSONArray("days");
         JSONObject day = null;
         JSONObject time = null;
         JSONArray times = null;
         for (int dayIndex = 0; dayIndex < days.size(); dayIndex++) {
             day = days.getJSONObject(dayIndex);
+            // 创建并保存排班天信息
             ScheduleClassesDayPo scheduleClassesDayPo = new ScheduleClassesDayPo();
             scheduleClassesDayPo.setScheduleId(scheduleClassesPo.getScheduleId());
-            scheduleClassesDayPo.setDayId(GenerateCodeFactory.getGeneratorId("11"));
+            scheduleClassesDayPo.setDayId(GenerateCodeFactory.getGeneratorId("11")); // 生成唯一ID
             scheduleClassesDayPo.setDay(day.getString("day"));
             scheduleClassesDayPo.setScheduleId(scheduleClassesPo.getScheduleId());
-            scheduleClassesDayPo.setWeekFlag(StringUtil.isEmpty(day.getString("weekFlag")) ? "1" : day.getString("weekFlag"));
+            scheduleClassesDayPo.setWeekFlag(StringUtil.isEmpty(day.getString("weekFlag")) ? "1" : day.getString("weekFlag")); // 默认值为1
             scheduleClassesDayPo.setWorkday(day.getString("workday"));
             flag = scheduleClassesDayV1InnerServiceSMOImpl.saveScheduleClassesDay(scheduleClassesDayPo);
             if (flag < 1) {
                 throw new CmdException("保存数据失败");
             }
+            
+            // 保存该天的排班时间信息
             times = day.getJSONArray("times");
             for (int timeIndex = 0; timeIndex < times.size(); timeIndex++) {
                 time = times.getJSONObject(timeIndex);
                 ScheduleClassesTimePo scheduleClassesTimePo = new ScheduleClassesTimePo();
                 scheduleClassesTimePo.setScheduleId(scheduleClassesPo.getScheduleId());
-                scheduleClassesTimePo.setDayId(scheduleClassesDayPo.getDayId());
+                scheduleClassesTimePo.setDayId(scheduleClassesDayPo.getDayId()); // 关联排班天ID
                 scheduleClassesTimePo.setEndTime(time.getString("endTime"));
                 scheduleClassesTimePo.setScheduleId(scheduleClassesPo.getScheduleId());
                 scheduleClassesTimePo.setStartTime(time.getString("startTime"));
-                scheduleClassesTimePo.setTimeId(GenerateCodeFactory.getGeneratorId("11"));
+                scheduleClassesTimePo.setTimeId(GenerateCodeFactory.getGeneratorId("11")); // 生成唯一ID
                 flag = scheduleClassesTimeV1InnerServiceSMOImpl.saveScheduleClassesTime(scheduleClassesTimePo);
                 if (flag < 1) {
                     throw new CmdException("保存数据失败");
                 }
             }
         }
+        
+        // 设置响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

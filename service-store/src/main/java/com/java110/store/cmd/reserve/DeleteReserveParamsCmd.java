@@ -41,31 +41,72 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 删除预约参数命令类
+ * 该类负责处理删除预约参数的业务逻辑，包括参数验证和执行删除操作
+ * 使用@Java110Cmd注解标识为命令类，服务编码为reserve.deleteReserveParams
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-12-05
+ */
 @Java110Cmd(serviceCode = "reserve.deleteReserveParams")
 public class DeleteReserveParamsCmd extends Cmd {
+    
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(DeleteReserveParamsCmd.class);
 
+    /**
+     * 预约参数服务接口，用于执行数据库操作
+     */
     @Autowired
     private IReserveParamsV1InnerServiceSMO reserveParamsV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数中是否包含必要的字段
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含paramsId字段
         Assert.hasKeyAndValue(reqJson, "paramsId", "paramsId不能为空");
+        // 验证请求参数中必须包含communityId字段
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行删除命令方法
+     * 将请求参数转换为实体对象并调用服务层执行删除操作
+     * 使用@Java110Transactional注解确保事务性操作
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将JSON请求参数转换为ReserveParamsPo实体对象
         ReserveParamsPo reserveParamsPo = BeanConvertUtil.covertBean(reqJson, ReserveParamsPo.class);
+        
+        // 调用服务层接口执行删除操作，返回受影响的行数
         int flag = reserveParamsV1InnerServiceSMOImpl.deleteReserveParams(reserveParamsPo);
 
+        // 检查删除操作是否成功，如果受影响行数小于1则认为删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

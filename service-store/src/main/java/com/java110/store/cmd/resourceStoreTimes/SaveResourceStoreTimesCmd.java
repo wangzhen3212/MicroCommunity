@@ -33,9 +33,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 类表述：保存资源库存次数信息命令类
  * 服务编码：resourceStoreTimes.saveResourceStoreTimes
- * 请求路劲：/app/resourceStoreTimes.SaveResourceStoreTimes
+ * 请求路径：/app/resourceStoreTimes.SaveResourceStoreTimes
+ * 功能描述：该类用于处理资源库存次数信息的保存操作，包括参数验证和数据持久化
  * add by 吴学文 at 2022-10-06 21:26:56 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -45,34 +46,65 @@ import org.slf4j.LoggerFactory;
 @Java110Cmd(serviceCode = "resourceStoreTimes.saveResourceStoreTimes")
 public class SaveResourceStoreTimesCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveResourceStoreTimesCmd.class);
 
+    /**
+     * ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 资源库存次数服务接口
+     */
     @Autowired
     private IResourceStoreTimesV1InnerServiceSMO resourceStoreTimesV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 功能描述：验证请求参数是否完整，确保必要的字段都存在
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含storeId字段
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
-Assert.hasKeyAndValue(reqJson, "resId", "请求报文中未包含resId");
-Assert.hasKeyAndValue(reqJson, "price", "请求报文中未包含price");
-Assert.hasKeyAndValue(reqJson, "applyOrderId", "请求报文中未包含applyOrderId");
-
+        // 验证请求报文中必须包含resId字段
+        Assert.hasKeyAndValue(reqJson, "resId", "请求报文中未包含resId");
+        // 验证请求报文中必须包含price字段
+        Assert.hasKeyAndValue(reqJson, "price", "请求报文中未包含price");
+        // 验证请求报文中必须包含applyOrderId字段
+        Assert.hasKeyAndValue(reqJson, "applyOrderId", "请求报文中未包含applyOrderId");
     }
 
+    /**
+     * 执行保存资源库存次数信息命令
+     * 功能描述：将请求参数转换为实体对象，生成主键ID，调用服务层进行数据保存
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       ResourceStoreTimesPo resourceStoreTimesPo = BeanConvertUtil.covertBean(reqJson, ResourceStoreTimesPo.class);
+        // 将JSON对象转换为资源库存次数实体对象
+        ResourceStoreTimesPo resourceStoreTimesPo = BeanConvertUtil.covertBean(reqJson, ResourceStoreTimesPo.class);
+        // 生成主键ID
         resourceStoreTimesPo.setTimesId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        // 调用服务层保存数据
         int flag = resourceStoreTimesV1InnerServiceSMOImpl.saveResourceStoreTimes(resourceStoreTimesPo);
 
+        // 检查保存结果，如果影响行数小于1则认为保存失败
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * 类表述：查询
+ * 类表述：查询投诉类型列表的命令类
  * 服务编码：complaintType.listComplaintType
  * 请求路劲：/app/complaintType.ListComplaintType
  * add by 吴学文 at 2024-02-21 12:06:00 mail: 928255095@qq.com
@@ -54,75 +54,120 @@ import org.slf4j.LoggerFactory;
 public class ListComplaintTypeCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListComplaintTypeCmd.class);
+    
+    /**
+     * 投诉类型服务接口
+     */
     @Autowired
     private IComplaintTypeV1InnerServiceSMO complaintTypeV1InnerServiceSMOImpl;
 
-
+    /**
+     * 投诉类型用户关联服务接口
+     */
     @Autowired
     private IComplaintTypeUserV1InnerServiceSMO complaintTypeUserV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数的有效性和完整性
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页信息
         super.validatePageInfo(reqJson);
+        // 验证属性信息
         super.validateProperty(cmdDataFlowContext);
+        // 验证必填参数communityId是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 命令执行方法
+     * 查询投诉类型列表并返回结果
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 命令执行异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON转换为投诉类型DTO对象
         ComplaintTypeDto complaintTypeDto = BeanConvertUtil.covertBean(reqJson, ComplaintTypeDto.class);
 
+        // 查询投诉类型总数
         int count = complaintTypeV1InnerServiceSMOImpl.queryComplaintTypesCount(complaintTypeDto);
 
         List<ComplaintTypeDto> complaintTypeDtos = null;
 
+        // 根据查询结果数量决定返回数据
         if (count > 0) {
+            // 查询投诉类型列表
             complaintTypeDtos = complaintTypeV1InnerServiceSMOImpl.queryComplaintTypes(complaintTypeDto);
         } else {
+            // 如果没有数据，返回空列表
             complaintTypeDtos = new ArrayList<>();
         }
 
-        //todo 查询类型员工
+        // 查询每个投诉类型对应的员工信息
         toQueryStaff(complaintTypeDtos);
 
+        // 构建返回结果对象，包含分页信息和数据
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, complaintTypeDtos);
 
+        // 创建HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 设置响应实体到数据流上下文
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 
+    /**
+     * 查询投诉类型对应的员工信息
+     * 为每个投诉类型设置关联的员工列表
+     *
+     * @param complaintTypeDtos 投诉类型数据列表
+     */
     private void toQueryStaff(List<ComplaintTypeDto> complaintTypeDtos) {
-
+        // 如果投诉类型列表为空，直接返回
         if (ListUtil.isNull(complaintTypeDtos)) {
             return;
         }
 
+        // 收集所有投诉类型的编码
         List<String> typeCds = new ArrayList<>();
         for (ComplaintTypeDto complaintTypeDto : complaintTypeDtos) {
             typeCds.add(complaintTypeDto.getTypeCd());
         }
 
+        // 构建投诉类型用户查询条件
         ComplaintTypeUserDto complaintTypeUserDto = new ComplaintTypeUserDto();
         complaintTypeUserDto.setTypeCds(typeCds.toArray(new String[typeCds.size()]));
 
+        // 查询投诉类型用户关联信息
         List<ComplaintTypeUserDto> complaintTypeUserDtos = complaintTypeUserV1InnerServiceSMOImpl.queryComplaintTypeUsers(complaintTypeUserDto);
 
+        // 如果没有关联用户信息，直接返回
         if (ListUtil.isNull(complaintTypeUserDtos)) {
             return;
         }
+        
         List<ComplaintTypeUserDto> staffs = null;
+        // 为每个投诉类型设置对应的员工列表
         for (ComplaintTypeDto complaintTypeDto : complaintTypeDtos) {
             staffs = new ArrayList<>();
+            // 遍历用户关联信息，匹配当前投诉类型
             for(ComplaintTypeUserDto complaintTypeUserDto1 : complaintTypeUserDtos){
                 if(complaintTypeDto.getTypeCd().equals(complaintTypeUserDto1.getTypeCd())){
                     staffs.add(complaintTypeUserDto1);
                 }
             }
+            // 设置投诉类型对应的员工列表
             complaintTypeDto.setStaffs(staffs);
         }
-
     }
 }

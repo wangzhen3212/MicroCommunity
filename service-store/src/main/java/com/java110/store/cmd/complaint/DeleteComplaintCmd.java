@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：删除
+ * 类表述：删除投诉工单命令类
  * 服务编码：complaint.deleteComplaint
  * 请求路劲：/app/complaint.DeleteComplaint
  * add by 吴学文 at 2024-02-21 13:08:05 mail: 928255095@qq.com
@@ -41,32 +41,67 @@ import org.slf4j.LoggerFactory;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * @description 删除投诉工单的命令处理类，负责处理删除投诉工单的业务逻辑
+ * @author 吴学文
+ * @version 1.0
+ * @since 2024-02-21
  */
 @Java110Cmd(serviceCode = "complaint.deleteComplaint")
 public class DeleteComplaintCmd extends Cmd {
+    
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(DeleteComplaintCmd.class);
 
+    /**
+     * 投诉工单服务接口
+     */
     @Autowired
     private IComplaintV1InnerServiceSMO complaintV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * @description 验证删除投诉工单请求的必填参数是否完整
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证投诉工单ID不能为空
         Assert.hasKeyAndValue(reqJson, "complaintId", "complaintId不能为空");
+        // 验证小区ID不能为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行删除投诉工单命令
+     * 
+     * @description 处理删除投诉工单的核心业务逻辑，包括数据转换、服务调用和结果处理
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为投诉工单PO对象
         ComplaintPo complaintPo = BeanConvertUtil.covertBean(reqJson, ComplaintPo.class);
+        
+        // 调用服务层删除投诉工单，返回影响的行数
         int flag = complaintV1InnerServiceSMOImpl.deleteComplaint(complaintPo);
 
+        // 检查删除操作是否成功，影响行数小于1表示删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

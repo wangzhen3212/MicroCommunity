@@ -69,50 +69,90 @@ import org.slf4j.LoggerFactory;
 )
 
 /**
- * 类表述：查询物品进货明细
- * 服务编码：resourceStoreTimes.listResourceStoreTimes
- * 请求路劲：/app/resourceStoreTimes.ListResourceStoreTimes
- * add by 吴学文 at 2022-10-06 21:26:56 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 物品进货明细查询命令类
+ * 
+ * 该类负责处理物品进货明细的查询请求，包括参数验证、数据查询和结果返回等功能。
+ * 通过调用资源存储次数服务接口，根据物品编号等条件查询进货明细信息。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-10-06
  */
 @Java110Cmd(serviceCode = "resourceStoreTimes.listResourceStoreTimes")
 public class ListResourceStoreTimesCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListResourceStoreTimesCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(ListResourceStoreTimesCmd.class);
+    
+    /**
+     * 资源存储次数服务接口
+     */
     @Autowired
     private IResourceStoreTimesV1InnerServiceSMO resourceStoreTimesV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括分页信息的验证
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取请求和响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 命令执行方法
+     * 
+     * 处理物品进货明细查询的核心业务逻辑，包括：
+     * 1. 参数转换和设置
+     * 2. 数据查询和计数
+     * 3. 结果封装和返回
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中出现异常时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将请求JSON转换为资源存储次数DTO对象
+        ResourceStoreTimesDto resourceStoreTimesDto = BeanConvertUtil.covertBean(reqJson, ResourceStoreTimesDto.class);
 
-           ResourceStoreTimesDto resourceStoreTimesDto = BeanConvertUtil.covertBean(reqJson, ResourceStoreTimesDto.class);
+        // 从请求头中获取店铺ID
+        String storeId = cmdDataFlowContext.getReqHeaders().get("store-id");
+        // 设置店铺ID到查询条件中
+        resourceStoreTimesDto.setStoreId(storeId);
 
-           String storeId = cmdDataFlowContext.getReqHeaders().get("store-id");
+        // 查询符合条件的记录总数
+        int count = resourceStoreTimesV1InnerServiceSMOImpl.queryResourceStoreTimessCount(resourceStoreTimesDto);
 
-           resourceStoreTimesDto.setStoreId(storeId);
+        List<ResourceStoreTimesDto> resourceStoreTimesDtos = null;
 
-           int count = resourceStoreTimesV1InnerServiceSMOImpl.queryResourceStoreTimessCount(resourceStoreTimesDto);
+        // 根据查询结果数量处理数据
+        if (count > 0) {
+            // 如果有数据，查询具体的物品进货明细列表
+            resourceStoreTimesDtos = resourceStoreTimesV1InnerServiceSMOImpl.queryResourceStoreTimess(resourceStoreTimesDto);
+        } else {
+            // 如果没有数据，返回空列表
+            resourceStoreTimesDtos = new ArrayList<>();
+        }
 
-           List<ResourceStoreTimesDto> resourceStoreTimesDtos = null;
+        // 计算总页数：总记录数除以每页显示数量，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 封装返回结果，包含总页数、总记录数和数据列表
+        ResultVo resultVo = new ResultVo(totalPage, count, resourceStoreTimesDtos);
 
-           if (count > 0) {
-               resourceStoreTimesDtos = resourceStoreTimesV1InnerServiceSMOImpl.queryResourceStoreTimess(resourceStoreTimesDto);
-           } else {
-               resourceStoreTimesDtos = new ArrayList<>();
-           }
+        // 创建HTTP响应实体，状态码为200 OK
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, resourceStoreTimesDtos);
-
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
-
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 设置响应实体到数据流上下文中
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

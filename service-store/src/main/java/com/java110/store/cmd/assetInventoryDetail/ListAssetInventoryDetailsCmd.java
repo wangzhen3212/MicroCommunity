@@ -45,25 +45,75 @@ import java.util.List;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 资产盘点明细查询命令类
+ * 
+ * 该类负责处理资产盘点明细的查询请求，通过调用服务层接口获取资产盘点完整详情数据，
+ * 并将结果封装成标准格式返回给前端
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2022-09-23
+ */
 @Java110Cmd(serviceCode = "assetInventoryDetail.listAssetInventoryWholeDetail")
 public class ListAssetInventoryDetailsCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListAssetInventoryDetailsCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(ListAssetInventoryDetailsCmd.class);
+    
+    /**
+     * 资产盘点明细服务接口
+     */
     @Autowired
     private IAssetInventoryDetailV1InnerServiceSMO assetInventoryDetailV1InnerServiceSMOImpl;
 
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证请求报文中的必填参数，确保applyOrderId参数存在，并调用父类的分页信息验证
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含applyOrderId参数
         Assert.hasKeyAndValue(reqJson, "applyOrderId", "请求报文中未包含applyOrderId");
+        // 调用父类方法验证分页参数
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 执行资产盘点明细查询命令
+     * 
+     * 将请求参数转换为DTO对象，调用服务层接口查询资产盘点完整详情列表，
+     * 并将结果封装成标准响应格式返回
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-           AssetInventoryDetailDto assetInventoryDetailDto = BeanConvertUtil.covertBean(reqJson, AssetInventoryDetailDto.class);
-           List<AssetInventoryDetailDto> assetInventoryDetailDtos = assetInventoryDetailV1InnerServiceSMOImpl.queryAssetInventoryWholeDetails(assetInventoryDetailDto);
-           ResultVo resultVo = new ResultVo(assetInventoryDetailDtos);
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 将请求JSON对象转换为AssetInventoryDetailDto对象
+        AssetInventoryDetailDto assetInventoryDetailDto = BeanConvertUtil.covertBean(reqJson, AssetInventoryDetailDto.class);
+        
+        // 调用服务层接口查询资产盘点完整详情列表
+        List<AssetInventoryDetailDto> assetInventoryDetailDtos = assetInventoryDetailV1InnerServiceSMOImpl.queryAssetInventoryWholeDetails(assetInventoryDetailDto);
+        
+        // 将查询结果封装成ResultVo对象
+        ResultVo resultVo = new ResultVo(assetInventoryDetailDtos);
+        
+        // 创建HTTP响应实体，设置状态码为200 OK
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
+        
+        // 将响应实体设置到数据流上下文中
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

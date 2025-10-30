@@ -31,10 +31,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 查询物品
- * add by wuxw 2023-01-19
+ * 查询物品命令类
+ * 负责处理物品查询相关的业务逻辑，包括物品列表查询、库存计算、价格统计等功能
+ * 通过HTTP接口对外提供物品查询服务，支持分页查询和权限控制
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023-01-19
  */
-
 @Java110CmdDoc(title = "查询物品",
         description = "外部系统通过此接口查询物品",
         httpMethod = "get",
@@ -157,48 +161,80 @@ public class ListResourceStoresCmd extends Cmd {
     @Autowired
     private IMenuInnerServiceSMO menuInnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数
+     * 检查分页信息和必要参数是否完整
+     *
+     * @param event 命令事件对象
+     * @param context 数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        // 验证分页信息
         super.validatePageInfo(reqJson);
+        // 验证商户ID是否存在
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含商户ID");
         /*if (!reqJson.containsKey("shId") || StringUtil.isEmpty(reqJson.getString("shId"))) {
             Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含小区ID");
         }*/
     }
 
+    /**
+     * 执行物品查询命令
+     * 查询物品列表，计算库存和价格信息，返回分页结果
+     *
+     * @param event 命令事件对象
+     * @param context 数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 命令执行异常
+     * @throws ParseException 数据解析异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+        // 从上下文中获取商户ID
         String storeId = CmdContextUtils.getStoreId(context);
+        // 将请求参数转换为ResourceStoreDto对象
         ResourceStoreDto resourceStoreDto = BeanConvertUtil.covertBean(reqJson, ResourceStoreDto.class);
         resourceStoreDto.setStoreId(storeId);
-        //采购2806集团仓库 物品领用2807小区仓库  默认查询当前小区所有商品
-        //是否具有查看集团仓库物品权限
+        
+        // 权限控制：检查用户是否有查看集团仓库物品的权限
+        // 采购2806集团仓库 物品领用2807小区仓库  默认查询当前小区所有商品
         String userId = reqJson.getString("userId");
         BasePrivilegeDto basePrivilegeDto1 = new BasePrivilegeDto();
         basePrivilegeDto1.setResource("/viewHiddenWarehouse");
         basePrivilegeDto1.setUserId(userId);
         List<Map> viewHiddenWarehousePrivileges = menuInnerServiceSMOImpl.checkUserHasResource(basePrivilegeDto1);
+        // 如果没有查看隐藏仓库的权限，则设置只显示可见物品
         if (ListUtil.isNull(viewHiddenWarehousePrivileges)) {
             resourceStoreDto.setIsShow("true");
         }
+        
+        // 查询物品总数
         int count = resourceStoreInnerServiceSMOImpl.queryResourceStoresCount(resourceStoreDto);
         List<ApiResourceStoreDataVo> resourceStores = new ArrayList<>();
-        //计算总价(小计)
-        BigDecimal subTotalPrice = BigDecimal.ZERO;
-        //计算总价(大计)
-        BigDecimal totalPrice = BigDecimal.ZERO;
+        // 初始化价格计算变量
+        BigDecimal subTotalPrice = BigDecimal.ZERO; // 小计价格
+        BigDecimal totalPrice = BigDecimal.ZERO;    // 总计价格
+        
         if (count > 0) {
+            // 查询物品列表
             List<ResourceStoreDto> resourceStoreDtos = resourceStoreInnerServiceSMOImpl.queryResourceStores(resourceStoreDto);
             resourceStores = BeanConvertUtil.covertBeanList(resourceStoreDtos, ApiResourceStoreDataVo.class);
-            //todo 计算物品 库存和 价格
+            
+            // 计算物品库存和价格信息
             queryResourceStoreAndResourceTotalPrice(resourceStores);
+            
+            // 计算批次库存总价值
             BigDecimal number = BigDecimal.ZERO;
             for (ResourceStoreDto resourceStore : resourceStoreDtos) {
                 ResourceStoreTimesDto resourceStoreTimesDto = new ResourceStoreTimesDto();
                 resourceStoreTimesDto.setResCode(resourceStore.getResCode());
                 resourceStoreTimesDto.setShId(resourceStore.getShId());
-                //查询批次表
+                // 查询物品批次信息
                 List<ResourceStoreTimesDto> resourceStoreTimesDtos = resourceStoreTimesV1InnerServiceSMOImpl.queryResourceStoreTimess(resourceStoreTimesDto);
+                // 计算每个批次的库存价值并累加
                 for (ResourceStoreTimesDto resourceStoreTimes : resourceStoreTimesDtos) {
                     BigDecimal stock = new BigDecimal(resourceStoreTimes.getStock());
                     BigDecimal price = new BigDecimal(resourceStoreTimes.getPrice());
@@ -207,44 +243,58 @@ public class ListResourceStoresCmd extends Cmd {
                 }
             }
             subTotalPrice = number;
+            
+            // 查询所有物品的总价格
             resourceStoreDto.setPage(PageDto.DEFAULT_PAGE);
             String price = resourceStoreInnerServiceSMOImpl.queryResourceStoresTotalPrice(resourceStoreDto);
             totalPrice = new BigDecimal(price);
         } else {
             resourceStores = new ArrayList<>();
         }
+        
+        // 构建返回结果对象
         ApiResourceStoreVo apiResourceStoreVo = new ApiResourceStoreVo();
         apiResourceStoreVo.setTotal(count);
         apiResourceStoreVo.setRecords((int) Math.ceil((double) count / (double) reqJson.getInteger("row")));
         apiResourceStoreVo.setResourceStores(resourceStores);
         apiResourceStoreVo.setTotalPrice(String.format("%.2f", totalPrice));
         apiResourceStoreVo.setSubTotal(String.format("%.2f", subTotalPrice));
+        
+        // 设置HTTP响应
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(JSONObject.toJSONString(apiResourceStoreVo), HttpStatus.OK);
         context.setResponseEntity(responseEntity);
     }
 
     /**
-     * 计算物品的数量和金额
+     * 计算物品的库存总量和总价格
+     * 遍历物品列表，对每个物品的批次信息进行统计计算
      *
-     * @param resourceStores
+     * @param resourceStores 物品数据列表
      */
     private void queryResourceStoreAndResourceTotalPrice(List<ApiResourceStoreDataVo> resourceStores) {
         if (ListUtil.isNull(resourceStores)) {
             return;
         }
+        
         BigDecimal stock = null;
         BigDecimal totalPrice = null;
+        // 遍历每个物品，计算其总库存和总价值
         for (ApiResourceStoreDataVo resourceStore : resourceStores) {
             stock = new BigDecimal(0.0);
             totalPrice = new BigDecimal(0.0);
             List<ResourceStoreTimesDto> resourceStoreTimesDtos = resourceStore.getTimes();
+            
             if (ListUtil.isNull(resourceStoreTimesDtos)) {
                 continue;
             }
+            
+            // 累加每个批次的库存和价格
             for (ResourceStoreTimesDto resourceStoreTimesDto : resourceStoreTimesDtos) {
                 stock = stock.add(new BigDecimal(resourceStoreTimesDto.getStock())).setScale(2, BigDecimal.ROUND_HALF_EVEN);
                 totalPrice = totalPrice.add(new BigDecimal(resourceStoreTimesDto.getTotalPrice())).setScale(2, BigDecimal.ROUND_HALF_EVEN);
             }
+            
+            // 设置计算结果到物品对象
             resourceStore.setStock(stock.doubleValue() + "");
             resourceStore.setTotalPrice(totalPrice.doubleValue() + "");
         }

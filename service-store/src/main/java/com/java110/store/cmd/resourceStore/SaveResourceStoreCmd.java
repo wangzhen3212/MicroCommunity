@@ -54,14 +54,14 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 物品保存命令类
+ * 负责处理物品信息的保存操作，包括物品基本信息、图片关联和入库流程
  * 服务编码：resourceStore.saveResourceStore
- * 请求路劲：/app/resourceStore.SaveResourceStore
- * add by 吴学文 at 2022-06-30 12:03:19 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 请求路径：/app/resourceStore.SaveResourceStore
+ * 
+ * @author 吴学文 at 2022-06-30 12:03:19 mail: 928255095@qq.com
+ * @version 1.0
+ * @see Cmd
  */
 @Java110CmdDoc(title = "添加物品",
         description = "外部系统通过此接口添加物品",
@@ -108,6 +108,7 @@ public class SaveResourceStoreCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveResourceStoreCmd.class);
 
+    /** 编码前缀ID */
     public static final String CODE_PREFIX_ID = "10";
 
     @Autowired
@@ -128,41 +129,64 @@ public class SaveResourceStoreCmd extends Cmd {
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数的有效性和业务规则
+     *
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws IllegalArgumentException 当参数验证失败时抛出
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
-        //Assert.hasKeyAndValue(reqJson, "xxx", "xxx");
+        // 验证必填参数
         Assert.hasKeyAndValue(reqJson, "resName", "必填，请填写物品名称");
         Assert.hasKeyAndValue(reqJson, "storeId", "必填，请填写商户信息");
         Assert.hasKeyAndValue(reqJson, "price", "必填，请填写物品价格");
         Assert.hasKeyAndValue(reqJson, "shId", "必填，请填写仓库");
         Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区");
-        //获取最低收费标准
+        
+        // 验证价格范围逻辑
         double outLowPrice = Double.parseDouble(reqJson.getString("outLowPrice"));
-        //获取最高收费标准
         double outHighPrice = Double.parseDouble(reqJson.getString("outHighPrice"));
         if (outLowPrice > outHighPrice) {
             throw new IllegalArgumentException("最低收费标准不能大于最高收费标准！");
         }
+        
+        // 验证物品编码唯一性
         String resCode = reqJson.getString("resCode");
         String storeId = cmdDataFlowContext.getReqHeaders().get("store-id");
-        //根据物品编码查询物品资源表
         ResourceStoreDto resourceStoreDto = new ResourceStoreDto();
         resourceStoreDto.setResCode(resCode);
         resourceStoreDto.setStoreId(storeId);
         List<ResourceStoreDto> resourceStoreDtos = resourceStoreInnerServiceSMOImpl.queryResourceStores(resourceStoreDto);
-        //判断资源表里是否有该物品编码，避免物品编码重复
+        // 检查物品编码是否已存在，避免重复
         Assert.listIsNull(resourceStoreDtos, "物品编码重复，请重新添加！");
     }
 
+    /**
+     * 执行命令方法
+     * 处理物品保存的核心业务逻辑，包括物品信息保存、图片关联和入库流程
+     *
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当业务处理失败时抛出
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 获取用户和商户信息
         String userId = CmdContextUtils.getUserId(cmdDataFlowContext);
         String storeId = CmdContextUtils.getStoreId(cmdDataFlowContext);
+        
+        // 构建物品信息对象
         JSONObject businessResourceStore = new JSONObject();
         businessResourceStore.putAll(reqJson);
         businessResourceStore.put("resId", GenerateCodeFactory.getResId(GenerateCodeFactory.CODE_PREFIX_resId));
-        // businessResourceStore.put("stock", "0");
+        
+        // 计算最小单位库存
         if (!StringUtil.isEmpty(reqJson.getString("stock")) && !StringUtil.isEmpty(reqJson.getString("miniUnitStock"))) {
             double stock = Double.parseDouble(reqJson.getString("stock"));
             double miniUnitStock = Double.parseDouble(reqJson.getString("miniUnitStock"));
@@ -172,29 +196,34 @@ public class SaveResourceStoreCmd extends Cmd {
         } else {
             businessResourceStore.put("miniStock", "0");
         }
+        
         businessResourceStore.put("createTime", new Date());
         ResourceStorePo resourceStorePo = BeanConvertUtil.covertBean(businessResourceStore, ResourceStorePo.class);
+        
+        // 设置默认平均价格
         if (StringUtil.isEmpty(resourceStorePo.getAveragePrice())) {
             resourceStorePo.setAveragePrice("0.00");
         }
-        //todo 写入物品
+        
+        // 保存物品基本信息
         int flag = resourceStoreV1InnerServiceSMOImpl.saveResourceStore(resourceStorePo);
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
-        //todo 入库
+        
+        // 执行入库操作
         inStore(reqJson, userId, storeId, resourceStorePo);
-        //将图片插入文件表里
+        
+        // 处理物品图片关联
         FileRelPo fileRelPo = new FileRelPo();
         fileRelPo.setObjId(resourceStorePo.getResId());
-        //table表示表存储 ftp表示ftp文件存储
-        fileRelPo.setSaveWay("ftp");
+        fileRelPo.setSaveWay("ftp"); // 设置存储方式为FTP
         fileRelPo.setCreateTime(new Date());
-        //图片
+        
+        // 保存物品图片信息
         List<String> photos = resourceStorePo.getPhotos();
         if (photos != null && photos.size() > 0) {
-            //22000表示物品图片
-            fileRelPo.setRelTypeCd("22000");
+            fileRelPo.setRelTypeCd("22000"); // 22000表示物品图片类型
             for (String photo : photos) {
                 fileRelPo.setFileRelId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId));
                 fileRelPo.setFileRealName(photo);
@@ -205,28 +234,37 @@ public class SaveResourceStoreCmd extends Cmd {
                 }
             }
         }
+        
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 
     /**
-     * 直接入库
+     * 入库处理方法
+     * 处理物品的入库流程，包括生成采购申请和更新库存记录
      *
-     * @param reqJson
-     * @param userId
-     * @param storeId
+     * @param reqJson 请求JSON对象
+     * @param userId 用户ID
+     * @param storeId 商户ID
+     * @param resourceStorePo 物品持久化对象
      */
     private void inStore(JSONObject reqJson, String userId, String storeId, ResourceStorePo resourceStorePo) {
+        // 查询用户信息
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         userDto.setPage(1);
         userDto.setRow(1);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
         Assert.listOnlyOne(userDtos, "用户不存在");
+        
         String applyOrderId = "-1";
         double stock = Double.parseDouble(resourceStorePo.getStock());
-        //todo 如果有库存才生成 采购流程
+        
+        // 如果有库存，生成采购申请流程
         if (stock > 0) {
             applyOrderId = GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_applyOrderId);
+            
+            // 构建采购申请信息
             PurchaseApplyPo purchaseApplyPo = new PurchaseApplyPo();
             purchaseApplyPo.setApplyOrderId(applyOrderId);
             purchaseApplyPo.setDescription("入库单（物品导入）");
@@ -235,14 +273,15 @@ public class SaveResourceStoreCmd extends Cmd {
             purchaseApplyPo.setEndUserName(userDtos.get(0).getName());
             purchaseApplyPo.setEndUserTel(userDtos.get(0).getTel());
             purchaseApplyPo.setStoreId(storeId);
-            purchaseApplyPo.setResOrderType(PurchaseApplyDto.RES_ORDER_TYPE_ENTER);
-            purchaseApplyPo.setState(PurchaseApplyDto.STATE_END);
+            purchaseApplyPo.setResOrderType(PurchaseApplyDto.RES_ORDER_TYPE_ENTER); // 入库类型
+            purchaseApplyPo.setState(PurchaseApplyDto.STATE_END); // 已完成状态
             purchaseApplyPo.setCreateTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
             purchaseApplyPo.setCreateUserId(userId);
             purchaseApplyPo.setCreateUserName(userDtos.get(0).getName());
-            purchaseApplyPo.setWarehousingWay(PurchaseApplyDto.WAREHOUSING_TYPE_URGENT);
+            purchaseApplyPo.setWarehousingWay(PurchaseApplyDto.WAREHOUSING_TYPE_URGENT); // 紧急入库
             purchaseApplyPo.setCommunityId(reqJson.getString("communityId"));
-            //获取采购物品信息
+            
+            // 构建采购申请明细
             List<PurchaseApplyDetailPo> purchaseApplyDetailPos = new ArrayList<>();
             PurchaseApplyDetailPo purchaseApplyDetailPo = new PurchaseApplyDetailPo();
             purchaseApplyDetailPo.setApplyOrderId(applyOrderId);
@@ -256,12 +295,15 @@ public class SaveResourceStoreCmd extends Cmd {
             purchaseApplyDetailPo.setRsId(resourceStorePo.getRssId());
             purchaseApplyDetailPos.add(purchaseApplyDetailPo);
             purchaseApplyPo.setPurchaseApplyDetailPos(purchaseApplyDetailPos);
+            
+            // 保存采购申请
             int saveFlag = purchaseApplyInnerServiceSMOImpl.savePurchaseApply(purchaseApplyPo);
             if (saveFlag < 1) {
                 throw new CmdException("采购申请失败");
             }
         }
-        // 保存至 物品 times表
+        
+        // 保存物品库存时间记录
         ResourceStoreTimesPo resourceStoreTimesPo = new ResourceStoreTimesPo();
         resourceStoreTimesPo.setApplyOrderId(applyOrderId);
         resourceStoreTimesPo.setPrice(resourceStorePo.getPrice());

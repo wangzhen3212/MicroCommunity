@@ -40,7 +40,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 物品领用申请
+ * 物品领用申请命令类
+ * 负责处理物品领用申请的业务逻辑，包括参数验证、申请单创建、库存检查、工作流启动等功能
+ * 支持直接出库和审批流程两种处理方式
+ * 
+ * @author Java110
+ * @version 1.0
+ * @since 2023
  */
 @Java110Cmd(serviceCode = "/collection/goodsCollection")
 public class GoodsCollectionCmd extends Cmd {
@@ -72,29 +78,48 @@ public class GoodsCollectionCmd extends Cmd {
     @Autowired
     private IUserStorehouseInnerServiceSMO userStorehouseInnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数的有效性
+     * 检查必填字段、物品库存、仓库信息和审批流程配置
+     *
+     * @param event   命令事件对象
+     * @param context 数据流上下文对象
+     * @param reqJson 请求JSON数据
+     * @throws CmdException    当命令执行异常时抛出
+     * @throws ParseException  当数据解析异常时抛出
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+        // 验证必填字段
         Assert.hasKeyAndValue(reqJson, "resourceStores", "必填，请填写物品领用的物资");
         Assert.hasKeyAndValue(reqJson, "description", "必填，请填写采购申请说明");
         Assert.hasKeyAndValue(reqJson, "shId", "必填，请填写采购申请说明");
         Assert.hasKeyAndValue(reqJson, "endUserName", "必填，请填写采购联系人");
         Assert.hasKeyAndValue(reqJson, "endUserTel", "必填，请填写采购联系电话");
         Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
+        
+        // 验证物品列表
         JSONArray resourceStores = reqJson.getJSONArray("resourceStores");
         String storeId = CmdContextUtils.getStoreId(context);
         if (resourceStores == null || resourceStores.size() < 1) {
             throw new IllegalArgumentException("未包含领用物品");
         }
+        
+        // 验证每个物品的库存和价格信息
         double quanitity = 0;
         double stock = 0;
         for (int resourceStoreIndex = 0; resourceStoreIndex < resourceStores.size(); resourceStoreIndex++) {
             JSONObject resourceStore = resourceStores.getJSONObject(resourceStoreIndex);
             Assert.hasKeyAndValue(resourceStore, "timesId", "必填，未选择价格");
+            
+            // 查询价格信息
             ResourceStoreTimesDto resourceStoreTimesDto = new ResourceStoreTimesDto();
             resourceStoreTimesDto.setTimesId(resourceStore.getString("timesId"));
             resourceStoreTimesDto.setStoreId(storeId);
             List<ResourceStoreTimesDto> resourceStoreTimesDtos = resourceStoreTimesV1InnerServiceSMOImpl.queryResourceStoreTimess(resourceStoreTimesDto);
             Assert.listOnlyOne(resourceStoreTimesDtos, "价格不存在");
+            
+            // 验证申请数量
             if(StringUtil.isEmpty(resourceStore.getString("quantity"))){
                 throw new IllegalArgumentException("申请数量不能为空");
             }
@@ -102,25 +127,34 @@ public class GoodsCollectionCmd extends Cmd {
             if (quanitity <= 0) {
                 throw new IllegalArgumentException("申请数量不正确");
             }
+            
+            // 验证库存是否充足
             stock = Double.parseDouble(resourceStoreTimesDtos.get(0).getStock());
             if (quanitity > stock) {
                 throw new IllegalArgumentException("该批次价格下库存数量不足！");
             }
             resourceStore.put("resourceStoreTimesDtos", resourceStoreTimesDtos);
         }
-        //todo 查询仓库是否存在
+        
+        // 验证仓库信息
         StorehouseDto storehouseDto = new StorehouseDto();
         storehouseDto.setShId(reqJson.getString("shId"));
         List<StorehouseDto> storehouseDtos = storehouseV1InnerServiceSMOImpl.queryStorehouses(storehouseDto);
         Assert.listOnlyOne(storehouseDtos, "仓库不存在");
+        
+        // 如果仓库不使用审批流程，直接返回
         if (!StorehouseDto.SWITCH_ON.equals(storehouseDtos.get(0).getUseSwitch())) {
             return;
         }
+        
+        // 验证审批流程配置
         OaWorkflowDto oaWorkflowDto = new OaWorkflowDto();
         oaWorkflowDto.setStoreId(storeId);
         oaWorkflowDto.setFlowId(storehouseDtos.get(0).getUseFlowId());
         List<OaWorkflowDto> oaWorkflowDtos = oaWorkflowInnerServiceSMOImpl.queryOaWorkflows(oaWorkflowDto);
         Assert.listOnlyOne(oaWorkflowDtos, "流程不存在");
+        
+        // 验证流程状态和部署情况
         if (!OaWorkflowDto.STATE_COMPLAINT.equals(oaWorkflowDtos.get(0).getState())) {
             throw new IllegalArgumentException(oaWorkflowDtos.get(0).getFlowName() + "流程未部署");
         }
@@ -130,13 +164,14 @@ public class GoodsCollectionCmd extends Cmd {
     }
 
     /**
-     * 物品领用申请-发起
+     * 执行物品领用申请命令
+     * 创建领用申请单，处理物品信息，启动审批流程或直接出库
      *
-     * @param event   事件对象
-     * @param context 数据上文对象
-     * @param reqJson 请求报文
-     * @throws CmdException
-     * @throws ParseException
+     * @param event   命令事件对象
+     * @param context 数据流上下文对象
+     * @param reqJson 请求JSON数据
+     * @throws CmdException    当命令执行异常时抛出
+     * @throws ParseException  当数据解析异常时抛出
      */
     @Override
     @Java110Transactional
@@ -144,19 +179,26 @@ public class GoodsCollectionCmd extends Cmd {
         String storeId = context.getReqHeaders().get("store-id");
         String userId = context.getReqHeaders().get("user-id");
         String acceptStaffId = reqJson.getString("acceptStaffId");
+        
+        // 如果指定了受理人员，使用指定人员ID
         if (!StringUtil.isEmpty(acceptStaffId)) {
             userId = acceptStaffId;
         }
-        //todo 查询仓库是否存在
+        
+        // 查询仓库信息
         StorehouseDto storehouseDto = new StorehouseDto();
         storehouseDto.setShId(reqJson.getString("shId"));
         List<StorehouseDto> storehouseDtos = storehouseV1InnerServiceSMOImpl.queryStorehouses(storehouseDto);
         Assert.listOnlyOne(storehouseDtos, "仓库不存在");
+        
+        // 查询用户信息
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
         Assert.listOnlyOne(userDtos, "未包含用户");
         String userName = userDtos.get(0).getName();
+        
+        // 创建采购申请单
         PurchaseApplyPo purchaseApplyPo = new PurchaseApplyPo();
         purchaseApplyPo.setApplyOrderId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_applyOrderId));
         purchaseApplyPo.setDescription(reqJson.getString("description"));
@@ -165,32 +207,38 @@ public class GoodsCollectionCmd extends Cmd {
         purchaseApplyPo.setEndUserName(reqJson.getString("endUserName"));
         purchaseApplyPo.setEndUserTel(reqJson.getString("endUserTel"));
         purchaseApplyPo.setStoreId(storeId);
-        purchaseApplyPo.setResOrderType(PurchaseApplyDto.RES_ORDER_TYPE_OUT);
-        purchaseApplyPo.setState(PurchaseApplyDto.STATE_WAIT_DEAL);
+        purchaseApplyPo.setResOrderType(PurchaseApplyDto.RES_ORDER_TYPE_OUT); // 出库类型
+        purchaseApplyPo.setState(PurchaseApplyDto.STATE_WAIT_DEAL); // 待处理状态
         purchaseApplyPo.setCreateTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
         purchaseApplyPo.setCreateUserId(userId);
         purchaseApplyPo.setCreateUserName(userName);
-        purchaseApplyPo.setWarehousingWay(PurchaseApplyDto.WAREHOUSING_TYPE_APPLY);
-        //直接出库不走OA流程
+        purchaseApplyPo.setWarehousingWay(PurchaseApplyDto.WAREHOUSING_TYPE_APPLY); // 申请入库方式
+        
+        // 如果仓库设置为直接出库，修改入库方式
         if (!StringUtil.isEmpty(reqJson.getString("useSwitch")) && StorehouseDto.SWITCH_OFF.equals(reqJson.getString("useSwitch"))) {
-            purchaseApplyPo.setWarehousingWay(PurchaseApplyDto.WAREHOUSING_TYPE_DIRECT);
+            purchaseApplyPo.setWarehousingWay(PurchaseApplyDto.WAREHOUSING_TYPE_DIRECT); // 直接入库方式
         }
         purchaseApplyPo.setCommunityId(reqJson.getString("communityId"));
-        //todo 封装物品
+        
+        // 处理物品详细信息
         JSONArray resourceStores = reqJson.getJSONArray("resourceStores");
         List<PurchaseApplyDetailPo> purchaseApplyDetailPos = new ArrayList<>();
         List<ResourceStoreTimesDto> resourceStoreTimesDtos = null;
+        
         for (int resourceStoreIndex = 0; resourceStoreIndex < resourceStores.size(); resourceStoreIndex++) {
             JSONObject resourceStore = resourceStores.getJSONObject(resourceStoreIndex);
             resourceStoreTimesDtos = (List<ResourceStoreTimesDto>) resourceStore.get("resourceStoreTimesDtos");
             resourceStore.put("originalStock", resourceStore.get("stock"));
+            
+            // 转换物品信息为采购申请详情对象
             PurchaseApplyDetailPo purchaseApplyDetailPo = BeanConvertUtil.covertBean(resourceStore, PurchaseApplyDetailPo.class);
             purchaseApplyDetailPo.setId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_applyOrderId));
             purchaseApplyDetailPo.setPrice(resourceStoreTimesDtos.get(0).getPrice());
             purchaseApplyDetailPo.setTimesId(resourceStoreTimesDtos.get(0).getTimesId());
             purchaseApplyDetailPo.setOriginalStock(resourceStoreTimesDtos.get(0).getStock());
             purchaseApplyDetailPo.setPurchaseQuantity(resourceStore.getString("quantity"));
-            //todo 获取批次采购参考价格
+            
+            // 获取批次采购参考价格
             String consultPrice = null;
             JSONArray timeList = resourceStore.getJSONArray("times");
             if (resourceStore.containsKey("timesId") && !StringUtil.isEmpty(resourceStore.getString("timesId"))) {
@@ -204,39 +252,52 @@ public class GoodsCollectionCmd extends Cmd {
             purchaseApplyDetailPo.setConsultPrice(consultPrice);
             purchaseApplyDetailPos.add(purchaseApplyDetailPo);
         }
+        
         purchaseApplyPo.setPurchaseApplyDetailPos(purchaseApplyDetailPos);
+        
+        // 保存采购申请单
         int saveFlag = purchaseApplyInnerServiceSMOImpl.savePurchaseApply(purchaseApplyPo);
         if (saveFlag < 1) {
             throw new CmdException("物品领用申请失败");
         }
+        
+        // 转换对象并设置审批相关信息
         PurchaseApplyDto purchaseApplyDto = BeanConvertUtil.covertBean(purchaseApplyPo, PurchaseApplyDto.class);
         purchaseApplyDto.setCurrentUserId(purchaseApplyPo.getUserId());
         purchaseApplyDto.setNextStaffId(reqJson.getString("staffId"));
-        //直接出库不走OA流程
+        
+        // 如果仓库设置为直接出库，更新开关状态
         if (!StringUtil.isEmpty(reqJson.getString("useSwitch")) && StorehouseDto.SWITCH_OFF.equals(reqJson.getString("useSwitch"))) {
             storehouseDtos.get(0).setUseSwitch(StorehouseDto.SWITCH_OFF);
         }
-        //todo 启动审核流程
+        
+        // 启动审批流程
         toStartWorkflow(purchaseApplyDto, storehouseDtos.get(0), reqJson);
         context.setResponseEntity(ResultVo.createResponseEntity(ResultVo.CODE_OK, "物品领用成功"));
     }
 
     /**
      * 启动审批流程
+     * 根据仓库配置决定是启动OA审批流程还是直接出库
      *
-     * @param purchaseApplyDto
+     * @param purchaseApplyDto 采购申请数据传输对象
+     * @param storehouseDto    仓库数据传输对象
+     * @param reqJson          请求JSON数据
      */
     private void toStartWorkflow(PurchaseApplyDto purchaseApplyDto, StorehouseDto storehouseDto, JSONObject reqJson) {
+        // 如果仓库不使用审批流程，直接出库
         if (!StorehouseDto.SWITCH_ON.equals(storehouseDto.getUseSwitch())) {
-            //todo 直接入库
             toPurchaseOutStorehouse(purchaseApplyDto, storehouseDto, reqJson);
             return;
         }
+        
+        // 查询OA工作流信息
         OaWorkflowDto oaWorkflowDto = new OaWorkflowDto();
         oaWorkflowDto.setStoreId(purchaseApplyDto.getStoreId());
         oaWorkflowDto.setFlowId(storehouseDto.getUseFlowId());
         List<OaWorkflowDto> oaWorkflowDtos = oaWorkflowInnerServiceSMOImpl.queryOaWorkflows(oaWorkflowDto);
-        //todo 提交审核
+        
+        // 准备流程启动参数
         JSONObject flowJson = new JSONObject();
         flowJson.put("processDefinitionKey", oaWorkflowDtos.get(0).getProcessDefinitionKey());
         flowJson.put("createUserId", purchaseApplyDto.getCurrentUserId());
@@ -245,7 +306,11 @@ public class GoodsCollectionCmd extends Cmd {
         flowJson.put("auditMessage", "提交审核");
         flowJson.put("storeId", purchaseApplyDto.getStoreId());
         reqJson.put("processDefinitionKey", oaWorkflowDtos.get(0).getProcessDefinitionKey());
+        
+        // 启动流程
         JSONObject result = oaWorkflowActivitiInnerServiceSMOImpl.startProcess(flowJson);
+        
+        // 获取下一处理人信息
         JSONObject audit = reqJson.getJSONObject("audit");
         String nextUserId = "-1";
         if (audit != null) {
@@ -256,7 +321,8 @@ public class GoodsCollectionCmd extends Cmd {
                 nextUserId = reqJson.getJSONObject("audit").getString("assignee");
             }
         }
-        //提交者提交
+        
+        // 自动完成第一个任务
         flowJson = new JSONObject();
         flowJson.put("processInstanceId", result.getString("processInstanceId"));
         flowJson.put("createUserId", purchaseApplyDto.getCurrentUserId());
@@ -268,13 +334,15 @@ public class GoodsCollectionCmd extends Cmd {
     }
 
     /**
-     * 入库
+     * 执行出库操作
+     * 更新库存信息，记录出库流水，更新个人仓库
      *
-     * @param purchaseApplyDto
-     * @param storehouseDto
-     * @param reqJson
+     * @param purchaseApplyDto 采购申请数据传输对象
+     * @param storehouseDto    仓库数据传输对象
+     * @param reqJson          请求JSON数据
      */
     private void toPurchaseOutStorehouse(PurchaseApplyDto purchaseApplyDto, StorehouseDto storehouseDto, JSONObject reqJson) {
+        // 查询采购申请详情
         PurchaseApplyDetailDto purchaseApplyDetailDto = new PurchaseApplyDetailDto();
         purchaseApplyDetailDto.setApplyOrderId(purchaseApplyDto.getApplyOrderId());
         purchaseApplyDetailDto.setStoreId(purchaseApplyDto.getStoreId());
@@ -282,74 +350,77 @@ public class GoodsCollectionCmd extends Cmd {
         if (purchaseApplyDetailDtos == null || purchaseApplyDetailDtos.size() < 1) {
             return;
         }
+        
         double stock = 0;
+        // 处理每个出库物品
         for (PurchaseApplyDetailDto tmpPurchaseApplyDetailDto : purchaseApplyDetailDtos) {
+            // 更新物品库存
             ResourceStorePo resourceStorePo = new ResourceStorePo();
             resourceStorePo.setResId(tmpPurchaseApplyDetailDto.getResId());
             resourceStorePo.setPurchasePrice(tmpPurchaseApplyDetailDto.getPrice());
-            resourceStorePo.setStock("-" + tmpPurchaseApplyDetailDto.getPurchaseQuantity());
-            resourceStorePo.setResOrderType(PurchaseApplyDto.RES_ORDER_TYPE_OUT);
-            //查询物品资源信息
+            resourceStorePo.setStock("-" + tmpPurchaseApplyDetailDto.getPurchaseQuantity()); // 出库，库存减少
+            resourceStorePo.setResOrderType(PurchaseApplyDto.RES_ORDER_TYPE_OUT); // 出库类型
+            
+            // 查询物品资源信息
             ResourceStoreDto resourceStoreDto = new ResourceStoreDto();
             resourceStoreDto.setResId(tmpPurchaseApplyDetailDto.getResId());
             resourceStoreDto.setShId(tmpPurchaseApplyDetailDto.getShId());
             List<ResourceStoreDto> resourceStoreDtos = resourceStoreInnerServiceSMOImpl.queryResourceStores(resourceStoreDto);
             Assert.listOnlyOne(resourceStoreDtos, "查询物品资源信息错误！");
+            
+            // 验证最小计量单位数量
             if (StringUtil.isEmpty(resourceStoreDtos.get(0).getMiniUnitStock())) {
                 throw new IllegalArgumentException("最小计量单位数量不能为空！");
             }
-            //获取最小计量单位数量
+            
+            // 获取最小计量单位数量
             BigDecimal miniUnitStock = new BigDecimal(resourceStoreDtos.get(0).getMiniUnitStock());
             if (StringUtil.isEmpty(resourceStoreDtos.get(0).getMiniStock())) {
                 throw new IllegalArgumentException("最小计量总数不能为空！");
             }
-            //获取采购前物品最小计量总数
-//            BigDecimal miniStock = new BigDecimal(resourceStoreDtos.get(0).getMiniStock());
-//            //计算采购的物品最小计量总数
-//            BigDecimal purchaseQuantity = new BigDecimal(tmpPurchaseApplyDetailDto.getPurchaseQuantity());
-//            BigDecimal purchaseMiniStock = purchaseQuantity.multiply(miniUnitStock);
-//            //计算采购后物品最小计量总数
-//            BigDecimal nowMiniStock = miniStock.subtract(purchaseMiniStock);
-//            if (nowMiniStock.compareTo(BigDecimal.ZERO) == -1) {
-//                throw new IllegalArgumentException("物品库存已经不足，请确认物品库存！");
-//            }
-//            resourceStorePo.setMiniStock(String.valueOf(nowMiniStock));
+            
+            // 更新物品库存
             resourceStoreInnerServiceSMOImpl.updateResourceStore(resourceStorePo);
-            // 保存至 物品 times表
+            
+            // 保存出库流水记录
             ResourceStoreTimesPo resourceStoreTimesPo = new ResourceStoreTimesPo();
             resourceStoreTimesPo.setApplyOrderId(tmpPurchaseApplyDetailDto.getApplyOrderId());
             resourceStoreTimesPo.setPrice(tmpPurchaseApplyDetailDto.getPrice());
-            resourceStoreTimesPo.setStock("-" + tmpPurchaseApplyDetailDto.getPurchaseQuantity());
+            resourceStoreTimesPo.setStock("-" + tmpPurchaseApplyDetailDto.getPurchaseQuantity()); // 出库数量
             resourceStoreTimesPo.setResCode(resourceStoreDtos.get(0).getResCode());
             resourceStoreTimesPo.setStoreId(resourceStoreDtos.get(0).getStoreId());
             resourceStoreTimesPo.setTimesId(GenerateCodeFactory.getGeneratorId("10"));
             resourceStoreTimesPo.setShId(tmpPurchaseApplyDetailDto.getShId());
             resourceStoreTimesV1InnerServiceSMOImpl.saveOrUpdateResourceStoreTimes(resourceStoreTimesPo);
-            //todo 个人仓库中添加
+            
+            // 添加到个人仓库
             addPersonStorehouse(purchaseApplyDto, resourceStoreDtos, tmpPurchaseApplyDetailDto);
         }
-        //获取订单号
+        
+        // 更新采购申请单状态为已完成
         PurchaseApplyPo purchaseApplyPo = null;
         purchaseApplyPo = new PurchaseApplyPo();
         purchaseApplyPo.setApplyOrderId(purchaseApplyDto.getApplyOrderId());
-        purchaseApplyPo.setState(PurchaseApplyDto.STATE_END);
+        purchaseApplyPo.setState(PurchaseApplyDto.STATE_END); // 完成状态
         purchaseApplyPo.setStatusCd("0");
         purchaseApplyInnerServiceSMOImpl.updatePurchaseApply(purchaseApplyPo);
     }
 
     /**
      * 向个人仓库中添加数据
+     * 更新或新增个人仓库中的物品库存信息
      *
-     * @param resourceStoreDtos
+     * @param purchaseApplyDto       采购申请数据传输对象
+     * @param resourceStoreDtos      物品资源数据传输对象列表
+     * @param purchaseApplyDetailDto 采购申请详情数据传输对象
      */
     private void addPersonStorehouse(PurchaseApplyDto purchaseApplyDto, List<ResourceStoreDto> resourceStoreDtos, PurchaseApplyDetailDto purchaseApplyDetailDto) {
-        //获取物品单位
+        // 获取物品单位信息
         String unitCode = resourceStoreDtos.get(0).getUnitCode();
-        //获取物品最小计量单位
         String miniUnitCode = resourceStoreDtos.get(0).getMiniUnitCode();
-        //获取物品最小计量单位数量
         String miniUnitStock = resourceStoreDtos.get(0).getMiniUnitStock();
-        //入库到个人仓库中
+        
+        // 创建个人仓库记录
         UserStorehousePo userStorehousePo = new UserStorehousePo();
         userStorehousePo.setUsId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_usId));
         userStorehousePo.setResId(resourceStoreDtos.get(0).getResId());
@@ -358,19 +429,22 @@ public class GoodsCollectionCmd extends Cmd {
         userStorehousePo.setStoreId(resourceStoreDtos.get(0).getStoreId());
         userStorehousePo.setUserId(purchaseApplyDto.getUserId());
         userStorehousePo.setTimesId(purchaseApplyDetailDto.getTimesId());
-        //查询物品 是否已经存在
+        
+        // 查询是否已存在个人仓库记录
         UserStorehouseDto userStorehouseDto = new UserStorehouseDto();
         userStorehouseDto.setResCode(resourceStoreDtos.get(0).getResCode());
         userStorehouseDto.setUserId(purchaseApplyDto.getUserId());
         userStorehouseDto.setStoreId(resourceStoreDtos.get(0).getStoreId());
         List<UserStorehouseDto> userStorehouseDtos = userStorehouseInnerServiceSMOImpl.queryUserStorehouses(userStorehouseDto);
+        
         if (userStorehouseDtos == null || userStorehouseDtos.size() < 1) {
+            // 新增个人仓库记录
             userStorehousePo.setStock(purchaseApplyDetailDto.getPurchaseQuantity());
+            
+            // 计算最小计量单位库存
             if (!StringUtil.isEmpty(unitCode) && !StringUtil.isEmpty(miniUnitCode) && !StringUtil.isEmpty(miniUnitStock) && !unitCode.equals(miniUnitCode)) {
-                //获取领取数量
                 BigDecimal purchaseQuantity2 = new BigDecimal(purchaseApplyDetailDto.getPurchaseQuantity());
                 BigDecimal miniUnitStock2 = new BigDecimal(miniUnitStock);
-                //计算个人物品最小计量总数
                 BigDecimal quantity = purchaseQuantity2.multiply(miniUnitStock2);
                 userStorehousePo.setMiniStock(String.valueOf(quantity));
             } else {
@@ -378,26 +452,27 @@ public class GoodsCollectionCmd extends Cmd {
             }
             userStorehouseInnerServiceSMOImpl.saveUserStorehouses(userStorehousePo);
         } else {
-            //获取个人物品领用后的库存
+            // 更新现有个人仓库记录
             BigDecimal purchaseQuantity3 = new BigDecimal(purchaseApplyDetailDto.getPurchaseQuantity());
             BigDecimal stock3 = new BigDecimal(userStorehouseDtos.get(0).getStock());
-            BigDecimal total = purchaseQuantity3.add(stock3);
+            BigDecimal total = purchaseQuantity3.add(stock3); // 累加库存
             userStorehousePo.setStock(total.toString());
             userStorehousePo.setUsId(userStorehouseDtos.get(0).getUsId());
+            
+            // 计算最小计量单位库存
             if (!StringUtil.isEmpty(unitCode) && !StringUtil.isEmpty(miniUnitCode) && !StringUtil.isEmpty(miniUnitStock) && !unitCode.equals(miniUnitCode)) {
-                //获取本次领取数量
                 BigDecimal miniUnitStock3 = new BigDecimal(miniUnitStock);
-                //计算本次领取的个人物品最小计量总数
                 BigDecimal quantity = purchaseQuantity3.multiply(miniUnitStock3);
                 BigDecimal miniStock = new BigDecimal(0);
-                //获取个人物品原先的最小计量总数
+                
+                // 获取原有最小计量库存
                 if (StringUtil.isEmpty(userStorehouseDtos.get(0).getMiniStock())) {
                     throw new IllegalArgumentException("信息错误，个人物品最小计量总数不能为空！");
                 } else {
                     miniStock = new BigDecimal(userStorehouseDtos.get(0).getMiniStock());
                 }
-                //计算领用后个人物品总的最小计量总数
-                BigDecimal miniQuantity = quantity.add(miniStock);
+                
+                BigDecimal miniQuantity = quantity.add(miniStock); // 累加最小计量库存
                 userStorehousePo.setMiniStock(String.valueOf(miniQuantity));
             } else {
                 userStorehousePo.setMiniStock(String.valueOf(total));
