@@ -33,7 +33,7 @@ import com.java110.core.log.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * 类表述：保存
+ * 类表述：保存报表自定义组件关系命令类
  * 服务编码：reportCustomComponentRel.saveReportCustomComponentRel
  * 请求路劲：/app/reportCustomComponentRel.SaveReportCustomComponentRel
  * add by 吴学文 at 2021-11-09 13:28:13 mail: 928255095@qq.com
@@ -41,37 +41,79 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：该命令类用于处理保存报表自定义组件关系的业务逻辑，包括参数验证和数据保存操作
+ * 主要职责：
+ * 1. 验证请求参数完整性
+ * 2. 将请求数据转换为持久化对象
+ * 3. 生成唯一ID并保存数据
+ * 4. 处理保存结果并返回响应
  */
 @Java110Cmd(serviceCode = "reportCustomComponentRel.saveReportCustomComponentRel")
 public class SaveReportCustomComponentRelCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveReportCustomComponentRelCmd.class);
 
+    /**
+     * ID生成前缀，用于生成唯一的关系ID
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 报表自定义组件关系服务接口，用于数据持久化操作
+     */
     @Autowired
     private IReportCustomComponentRelV1InnerServiceSMO reportCustomComponentRelV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求报文中是否包含必要的参数
+     *
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含componentId参数
         Assert.hasKeyAndValue(reqJson, "componentId", "请求报文中未包含componentId");
+        // 验证请求报文中必须包含customId参数
         Assert.hasKeyAndValue(reqJson, "customId", "请求报文中未包含customId");
+        // 验证请求报文中必须包含seq参数
         Assert.hasKeyAndValue(reqJson, "seq", "请求报文中未包含seq");
-
     }
 
+    /**
+     * 执行保存报表自定义组件关系命令
+     * 将请求数据转换为持久化对象并保存到数据库
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当数据保存失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为报表自定义组件关系持久化对象
         ReportCustomComponentRelPo reportCustomComponentRelPo = BeanConvertUtil.covertBean(reqJson, ReportCustomComponentRelPo.class);
+        
+        // 生成唯一的关系ID并设置到持久化对象中
         reportCustomComponentRelPo.setRelId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务层保存数据到数据库，返回影响的行数
         int flag = reportCustomComponentRelV1InnerServiceSMOImpl.saveReportCustomComponentRel(reportCustomComponentRelPo);
 
+        // 检查保存操作是否成功，如果影响行数小于1则认为保存失败
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置成功响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

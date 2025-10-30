@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 类表述：保存报表自定义组件条件命令类
  * 服务编码：reportCustomComponentCondition.saveReportCustomComponentCondition
  * 请求路劲：/app/reportCustomComponentCondition.SaveReportCustomComponentCondition
  * add by 吴学文 at 2021-11-09 13:33:12 mail: 928255095@qq.com
@@ -41,39 +41,73 @@ import com.java110.core.log.LoggerFactory;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：该命令类用于处理保存报表自定义组件条件信息的请求，包括参数验证和数据保存操作
  */
 @Java110Cmd(serviceCode = "reportCustomComponentCondition.saveReportCustomComponentCondition")
 public class SaveReportCustomComponentConditionCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveReportCustomComponentConditionCmd.class);
 
+    /**
+     * 条件ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 报表自定义组件条件服务接口
+     */
     @Autowired
     private IReportCustomComponentConditionV1InnerServiceSMO reportCustomComponentConditionV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含componentId字段
         Assert.hasKeyAndValue(reqJson, "componentId", "请求报文中未包含componentId");
-Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含name");
-Assert.hasKeyAndValue(reqJson, "holdpace", "请求报文中未包含holdpace");
-Assert.hasKeyAndValue(reqJson, "param", "请求报文中未包含param");
-Assert.hasKeyAndValue(reqJson, "type", "请求报文中未包含type");
-
+        // 验证请求参数中必须包含name字段
+        Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含name");
+        // 验证请求参数中必须包含holdpace字段
+        Assert.hasKeyAndValue(reqJson, "holdpace", "请求报文中未包含holdpace");
+        // 验证请求参数中必须包含param字段
+        Assert.hasKeyAndValue(reqJson, "param", "请求报文中未包含param");
+        // 验证请求参数中必须包含type字段
+        Assert.hasKeyAndValue(reqJson, "type", "请求报文中未包含type");
     }
 
+    /**
+     * 执行保存报表自定义组件条件命令
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       ReportCustomComponentConditionPo reportCustomComponentConditionPo = BeanConvertUtil.covertBean(reqJson, ReportCustomComponentConditionPo.class);
+        // 将请求JSON对象转换为报表自定义组件条件PO对象
+        ReportCustomComponentConditionPo reportCustomComponentConditionPo = BeanConvertUtil.covertBean(reqJson, ReportCustomComponentConditionPo.class);
+        
+        // 生成条件ID并设置到PO对象中
         reportCustomComponentConditionPo.setConditionId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务层保存数据，返回影响的行数
         int flag = reportCustomComponentConditionV1InnerServiceSMOImpl.saveReportCustomComponentCondition(reportCustomComponentConditionPo);
 
+        // 检查保存是否成功，如果影响行数小于1则抛出异常
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

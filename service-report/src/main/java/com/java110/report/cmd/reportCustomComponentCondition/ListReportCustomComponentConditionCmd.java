@@ -44,37 +44,83 @@ import com.java110.core.log.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 报表自定义组件条件查询命令类
+ * 
+ * 该类负责处理报表自定义组件条件的列表查询请求，包括参数验证、数据查询和结果返回等功能。
+ * 通过注解@Java110Cmd指定服务编码，与前端请求路径对应。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2021-11-09
+ */
 @Java110Cmd(serviceCode = "reportCustomComponentCondition.listReportCustomComponentCondition")
 public class ListReportCustomComponentConditionCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListReportCustomComponentConditionCmd.class);
+    private static Logger logger = LoggerFactory.getLogger(ListReportCustomComponentConditionCmd.class);
+    
+    /**
+     * 报表自定义组件条件服务接口
+     * 用于调用底层的业务逻辑处理
+     */
     @Autowired
     private IReportCustomComponentConditionV1InnerServiceSMO reportCustomComponentConditionV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 继承自父类Cmd，主要用于验证请求参数的有效性，特别是分页参数
+     * 
+     * @param event Cmd事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求/响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法，确保分页参数正确
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 命令执行方法
+     * 
+     * 主要的业务逻辑处理方法，负责查询报表自定义组件条件数据并返回结果
+     * 
+     * @param event Cmd事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求/响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
-           ReportCustomComponentConditionDto reportCustomComponentConditionDto = BeanConvertUtil.covertBean(reqJson, ReportCustomComponentConditionDto.class);
+        // 将请求JSON对象转换为数据传输对象
+        ReportCustomComponentConditionDto reportCustomComponentConditionDto = BeanConvertUtil.covertBean(reqJson, ReportCustomComponentConditionDto.class);
 
-           int count = reportCustomComponentConditionV1InnerServiceSMOImpl.queryReportCustomComponentConditionsCount(reportCustomComponentConditionDto);
+        // 查询符合条件的记录总数
+        int count = reportCustomComponentConditionV1InnerServiceSMOImpl.queryReportCustomComponentConditionsCount(reportCustomComponentConditionDto);
 
-           List<ReportCustomComponentConditionDto> reportCustomComponentConditionDtos = null;
+        List<ReportCustomComponentConditionDto> reportCustomComponentConditionDtos = null;
 
-           if (count > 0) {
-               reportCustomComponentConditionDtos = reportCustomComponentConditionV1InnerServiceSMOImpl.queryReportCustomComponentConditions(reportCustomComponentConditionDto);
-           } else {
-               reportCustomComponentConditionDtos = new ArrayList<>();
-           }
+        // 根据查询结果数量决定如何处理数据
+        if (count > 0) {
+            // 如果存在数据，则查询具体的数据列表
+            reportCustomComponentConditionDtos = reportCustomComponentConditionV1InnerServiceSMOImpl.queryReportCustomComponentConditions(reportCustomComponentConditionDto);
+        } else {
+            // 如果没有数据，返回空列表
+            reportCustomComponentConditionDtos = new ArrayList<>();
+        }
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, reportCustomComponentConditionDtos);
+        // 计算总页数：总记录数除以每页显示行数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 创建结果对象，包含分页信息和数据
+        ResultVo resultVo = new ResultVo(totalPage, count, reportCustomComponentConditionDtos);
 
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
+        // 创建HTTP响应实体，状态码为200 OK
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 将响应实体设置到数据流上下文中，返回给前端
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }
