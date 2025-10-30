@@ -33,44 +33,84 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * 类表述：保存
+ * 类表述：保存优惠券规则命令类
  * 服务编码：couponRule.saveCouponRule
- * 请求路劲：/app/couponRule.SaveCouponRule
- * add by 吴学文 at 2022-11-22 01:28:14 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
+ * 请求路径：/app/couponRule.SaveCouponRule
+ * 
+ * 该类负责处理优惠券规则的新增保存操作，包括参数验证和业务逻辑处理
+ * 
+ * @author 吴学文 at 2022-11-22 01:28:14 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * 
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "couponRule.saveCouponRule")
 public class SaveCouponRuleCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveCouponRuleCmd.class);
 
+    /**
+     * 优惠券规则ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 优惠券规则服务接口
+     */
     @Autowired
     private ICouponRuleV1InnerServiceSMO couponRuleV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含ruleName字段
         Assert.hasKeyAndValue(reqJson, "ruleName", "请求报文中未包含ruleName");
+        // 验证请求报文中必须包含communityId字段
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
-
     }
 
+    /**
+     * 执行保存优惠券规则命令
+     * 
+     * 将请求参数转换为优惠券规则对象并保存到数据库
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将JSON请求参数转换为CouponRulePo对象
         CouponRulePo couponRulePo = BeanConvertUtil.covertBean(reqJson, CouponRulePo.class);
+        
+        // 生成优惠券规则ID并设置到对象中
         couponRulePo.setRuleId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务层保存优惠券规则数据
         int flag = couponRuleV1InnerServiceSMOImpl.saveCouponRule(couponRulePo);
 
+        // 检查保存结果，如果影响行数小于1则认为保存失败
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

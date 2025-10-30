@@ -46,37 +46,81 @@ import java.util.List;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 积分规则费用更新命令类
+ * 
+ * 该类负责处理积分规则费用信息的更新操作，继承自Cmd基类，通过注解标识服务编码，
+ * 实现请求参数的验证和业务逻辑处理功能
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2022-12-11
+ */
 @Java110Cmd(serviceCode = "integral.updateIntegralRuleFee")
 public class UpdateIntegralRuleFeeCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(UpdateIntegralRuleFeeCmd.class);
 
-
+    /**
+     * 积分规则费用服务接口
+     */
     @Autowired
     private IIntegralRuleFeeV1InnerServiceSMO integralRuleFeeV1InnerServiceSMOImpl;
 
+    /**
+     * 费用配置服务接口
+     */
     @Autowired
     private IFeeConfigInnerServiceSMO feeConfigInnerServiceSMOImpl;
 
-
+    /**
+     * 请求参数验证方法
+     * 
+     * 验证更新积分规则费用所需的必要参数是否完整
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含irfId字段
         Assert.hasKeyAndValue(reqJson, "irfId", "irfId不能为空");
+        // 验证请求参数中必须包含communityId字段
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行积分规则费用更新命令
+     * 
+     * 将请求参数转换为积分规则费用对象，调用服务层进行数据更新，
+     * 并返回操作结果
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当数据更新失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为积分规则费用POJO对象
         IntegralRuleFeePo integralRuleFeePo = BeanConvertUtil.covertBean(reqJson, IntegralRuleFeePo.class);
+        
+        // 调用服务层接口更新积分规则费用信息
         int flag = integralRuleFeeV1InnerServiceSMOImpl.updateIntegralRuleFee(integralRuleFeePo);
 
+        // 检查更新操作是否成功，flag小于1表示更新失败
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -37,7 +37,14 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 
-
+/**
+ * 供应商优惠券更新命令类
+ * 负责处理供应商优惠券信息的更新操作，包括参数验证、业务逻辑处理和数据库更新
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-11-17
+ */
 @Java110CmdDoc(title = "修改供应商优惠券",
         description = "用于外系统修改供应商优惠券",
         httpMethod = "post",
@@ -67,9 +74,9 @@ import java.util.List;
         resBody="{'code':0,'msg':'成功'}"
 )
 /**
- * 类表述：更新
+ * 类表述：更新供应商优惠券信息
  * 服务编码：supplierCoupon.updateSupplierCoupon
- * 请求路劲：/app/supplierCoupon.UpdateSupplierCoupon
+ * 请求路径：/app/supplierCoupon.UpdateSupplierCoupon
  * add by 吴学文 at 2022-11-17 21:33:45 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -79,41 +86,75 @@ import java.util.List;
 @Java110Cmd(serviceCode = "supplierCoupon.updateSupplierCoupon")
 public class UpdateSupplierCouponCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(UpdateSupplierCouponCmd.class);
 
-
+    /**
+     * 供应商优惠券服务接口
+     */
     @Autowired
     private ISupplierCouponV1InnerServiceSMO supplierCouponV1InnerServiceSMOImpl;
 
-
+    /**
+     * 供应商服务接口
+     */
     @Autowired
     private ISupplierV1InnerServiceSMO supplierV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证优惠券ID不能为空
         Assert.hasKeyAndValue(reqJson, "couponId", "couponId不能为空");
+        // 验证供应商ID不能为空
         Assert.hasKeyAndValue(reqJson, "supplierId", "supplierId不能为空");
-
     }
 
+    /**
+     * 执行更新供应商优惠券命令
+     * 主要业务流程：验证供应商存在性 -> 构建优惠券对象 -> 更新数据库 -> 返回结果
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当更新操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 构建供应商查询条件
         SupplierDto supplierDto = new SupplierDto();
         supplierDto.setSupplierId(reqJson.getString("supplierId"));
+        
+        // 查询供应商信息
         List<SupplierDto> supplierDtos = supplierV1InnerServiceSMOImpl.querySuppliers(supplierDto);
 
+        // 验证供应商存在且唯一
         Assert.listOnlyOne(supplierDtos,"请先添加供应商");
 
+        // 将请求参数转换为供应商优惠券持久化对象
         SupplierCouponPo supplierCouponPo = BeanConvertUtil.covertBean(reqJson, SupplierCouponPo.class);
+        // 设置供应商名称
         supplierCouponPo.setSupplierName(supplierDtos.get(0).getSupplierName());
+        
+        // 执行更新操作
         int flag = supplierCouponV1InnerServiceSMOImpl.updateSupplierCoupon(supplierCouponPo);
 
+        // 检查更新结果
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

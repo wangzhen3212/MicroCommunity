@@ -30,40 +30,75 @@ import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
- * 类表述：删除
+ * 删除优惠券资产池命令类
+ * 
+ * 该类负责处理删除优惠券资产池的请求，包括参数验证和业务逻辑处理
  * 服务编码：couponProperty.deleteCouponPropertyPool
- * 请求路劲：/app/couponProperty.DeleteCouponPropertyPool
- * add by 吴学文 at 2022-11-19 23:00:42 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
+ * 请求路径：/app/couponProperty.DeleteCouponPropertyPool
+ * 
+ * @author 吴学文 at 2022-11-19 23:00:42 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * @温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "couponProperty.deleteCouponPropertyPool")
 public class DeleteCouponPropertyPoolCmd extends Cmd {
-  private static Logger logger = LoggerFactory.getLogger(DeleteCouponPropertyPoolCmd.class);
+    
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(DeleteCouponPropertyPoolCmd.class);
 
+    /**
+     * 优惠券资产池服务接口
+     */
     @Autowired
     private ICouponPropertyPoolV1InnerServiceSMO couponPropertyPoolV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求参数中必须包含cppId字段
         Assert.hasKeyAndValue(reqJson, "cppId", "cppId不能为空");
-
     }
 
+    /**
+     * 执行删除优惠券资产池命令
+     * 
+     * 将请求参数转换为实体对象，调用服务层进行删除操作，并处理返回结果
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       CouponPropertyPoolPo couponPropertyPoolPo = BeanConvertUtil.covertBean(reqJson, CouponPropertyPoolPo.class);
+        // 将JSON请求参数转换为优惠券资产池实体对象
+        CouponPropertyPoolPo couponPropertyPoolPo = BeanConvertUtil.covertBean(reqJson, CouponPropertyPoolPo.class);
+        
+        // 调用服务层删除优惠券资产池，返回受影响的行数
         int flag = couponPropertyPoolV1InnerServiceSMOImpl.deleteCouponPropertyPool(couponPropertyPoolPo);
 
+        // 检查删除操作是否成功，如果受影响行数小于1则认为删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

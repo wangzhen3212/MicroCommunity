@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 类表述：保存积分规则命令类
  * 服务编码：integralRule.saveIntegralRule
  * 请求路劲：/app/integralRule.SaveIntegralRule
  * add by 吴学文 at 2022-12-11 22:09:01 mail: 928255095@qq.com
@@ -41,36 +41,75 @@ import org.slf4j.LoggerFactory;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * @description 积分规则保存命令处理类，负责处理积分规则的创建和保存操作
+ * @author 吴学文
+ * @date 2022-12-11
+ * @version 1.0
  */
 @Java110Cmd(serviceCode = "integral.saveIntegralRule")
 public class SaveIntegralRuleCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveIntegralRuleCmd.class);
 
+    /**
+     * 积分规则ID前缀，用于生成唯一规则ID
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 积分规则服务接口，用于操作积分规则数据
+     */
     @Autowired
     private IIntegralRuleV1InnerServiceSMO integralRuleV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * @description 验证请求参数是否完整，确保必要的参数存在且有效
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含规则名称
         Assert.hasKeyAndValue(reqJson, "ruleName", "请求报文中未包含ruleName");
+        // 验证请求报文中必须包含小区ID
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
-
     }
 
+    /**
+     * 执行保存积分规则命令
+     * 
+     * @description 处理积分规则的保存逻辑，包括数据转换、ID生成、数据持久化等操作
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON数据转换为积分规则POJO对象
         IntegralRulePo integralRulePo = BeanConvertUtil.covertBean(reqJson, IntegralRulePo.class);
+        
+        // 生成唯一的积分规则ID
         integralRulePo.setRuleId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务层保存积分规则数据
         int flag = integralRuleV1InnerServiceSMOImpl.saveIntegralRule(integralRulePo);
 
+        // 检查保存操作是否成功，flag小于1表示保存失败
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -67,56 +67,93 @@ import java.util.List;
 )
 
 /**
- * 类表述：保存
- * 服务编码：supplierCoupon.saveSupplierCoupon
- * 请求路劲：/app/supplierCoupon.SaveSupplierCoupon
- * add by 吴学文 at 2022-11-17 21:33:45 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 保存供应商优惠券命令类
+ * 该类负责处理添加供应商优惠券的业务逻辑，包括参数验证、数据转换和持久化操作
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-11-17
  */
 @Java110Cmd(serviceCode = "supplierCoupon.saveSupplierCoupon")
 public class SaveSupplierCouponCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveSupplierCouponCmd.class);
 
+    /**
+     * 优惠券ID前缀，用于生成唯一的优惠券ID
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 供应商优惠券服务接口，用于操作供应商优惠券数据
+     */
     @Autowired
     private ISupplierCouponV1InnerServiceSMO supplierCouponV1InnerServiceSMOImpl;
 
+    /**
+     * 供应商服务接口，用于查询供应商信息
+     */
     @Autowired
     private ISupplierV1InnerServiceSMO supplierV1InnerServiceSMOImpl;
 
+    /**
+     * 验证请求参数的有效性
+     * 检查请求报文中是否包含必要的参数，确保后续业务逻辑能够正常执行
+     *
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证名称参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含name");
+        // 验证供应商ID参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "supplierId", "请求报文中未包含supplierId");
+        // 验证业务键参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "businessKey", "请求报文中未包含businessKey");
+        // 验证价值价格参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "valuePrice", "请求报文中未包含valuePrice");
-
     }
 
+    /**
+     * 执行保存供应商优惠券的核心业务逻辑
+     * 包括供应商验证、数据转换、优惠券ID生成和数据持久化操作
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出命令异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 创建供应商查询对象并设置供应商ID
         SupplierDto supplierDto = new SupplierDto();
         supplierDto.setSupplierId(reqJson.getString("supplierId"));
+        
+        // 查询供应商信息，验证供应商是否存在
         List<SupplierDto> supplierDtos = supplierV1InnerServiceSMOImpl.querySuppliers(supplierDto);
 
+        // 验证查询结果，确保只存在一个匹配的供应商
         Assert.listOnlyOne(supplierDtos,"请先添加供应商");
 
+        // 将请求JSON对象转换为供应商优惠券持久化对象
         SupplierCouponPo supplierCouponPo = BeanConvertUtil.covertBean(reqJson, SupplierCouponPo.class);
+        // 设置供应商名称
         supplierCouponPo.setSupplierName(supplierDtos.get(0).getSupplierName());
+        // 生成唯一的优惠券ID
         supplierCouponPo.setCouponId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务保存供应商优惠券数据
         int flag = supplierCouponV1InnerServiceSMOImpl.saveSupplierCoupon(supplierCouponPo);
 
+        // 检查保存操作是否成功，失败则抛出异常
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

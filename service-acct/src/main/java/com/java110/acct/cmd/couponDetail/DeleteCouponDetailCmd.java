@@ -46,12 +46,13 @@ public class DeleteCouponDetailCmd extends Cmd {
     
     /**
      * 日志记录器
+     * 用于记录操作日志和异常信息
      */
     private static Logger logger = LoggerFactory.getLogger(DeleteCouponDetailCmd.class);
 
     /**
      * 优惠券详情服务接口
-     * 用于调用优惠券详情的数据库操作
+     * 用于调用优惠券详情的数据库操作，包括删除、查询等功能
      */
     @Autowired
     private ICouponDetailV1InnerServiceSMO couponDetailV1InnerServiceSMOImpl;
@@ -60,10 +61,11 @@ public class DeleteCouponDetailCmd extends Cmd {
      * 参数验证方法
      * 
      * 验证请求参数中是否包含必要的detailId字段，确保删除操作有明确的标识。
+     * 如果参数验证失败，会抛出CmdException异常。
      * 
      * @param event 命令事件对象，包含请求相关信息
      * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
-     * @param reqJson 请求参数的JSON对象
+     * @param reqJson 请求参数的JSON对象，包含前端传递的所有参数
      * @throws CmdException 当参数验证失败时抛出异常
      */
     @Override
@@ -76,11 +78,11 @@ public class DeleteCouponDetailCmd extends Cmd {
      * 执行删除命令方法
      * 
      * 将请求参数转换为优惠券详情PO对象，调用服务层执行删除操作，
-     * 并根据删除结果设置响应信息。
+     * 并根据删除结果设置响应信息。该方法使用事务注解确保数据一致性。
      * 
-     * @param event 命令事件对象
-     * @param cmdDataFlowContext 命令数据流上下文
-     * @param reqJson 请求参数的JSON对象
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于设置响应结果
+     * @param reqJson 请求参数的JSON对象，包含要删除的优惠券详情信息
      * @throws CmdException 当删除操作失败时抛出异常
      */
     @Override
@@ -94,6 +96,7 @@ public class DeleteCouponDetailCmd extends Cmd {
 
         // 检查删除操作是否成功，如果影响行数小于1则认为删除失败
         if (flag < 1) {
+            // 删除失败时抛出异常，事务会回滚
             throw new CmdException("删除数据失败");
         }
 

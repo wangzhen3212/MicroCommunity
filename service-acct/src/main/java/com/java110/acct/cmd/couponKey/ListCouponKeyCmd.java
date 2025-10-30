@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * 类表述：查询
+ * 类表述：查询优惠券密钥列表命令类
  * 服务编码：couponKey.listCouponKey
  * 请求路劲：/app/couponKey.ListCouponKey
  * add by 吴学文 at 2022-11-19 23:07:21 mail: 928255095@qq.com
@@ -43,38 +43,72 @@ import org.slf4j.LoggerFactory;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：该命令类用于处理优惠券密钥列表查询请求，支持分页查询功能
+ * 主要职责包括参数验证、数据查询和结果返回
  */
 @Java110Cmd(serviceCode = "couponKey.listCouponKey")
 public class ListCouponKeyCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListCouponKeyCmd.class);
+    private static Logger logger = LoggerFactory.getLogger(ListCouponKeyCmd.class);
+    
+    /**
+     * 优惠券密钥服务接口，用于查询优惠券密钥相关数据
+     */
     @Autowired
     private ICouponKeyV1InnerServiceSMO couponKeyV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 主要验证请求参数中的分页信息是否合法
+     *
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法，确保分页参数合法
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 命令执行方法
+     * 处理优惠券密钥列表查询业务逻辑，包括数据查询、分页计算和结果返回
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中出现异常时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将请求JSON对象转换为CouponKeyDto对象，便于后续查询
+        CouponKeyDto couponKeyDto = BeanConvertUtil.covertBean(reqJson, CouponKeyDto.class);
 
-           CouponKeyDto couponKeyDto = BeanConvertUtil.covertBean(reqJson, CouponKeyDto.class);
+        // 查询符合条件的优惠券密钥总数量
+        int count = couponKeyV1InnerServiceSMOImpl.queryCouponKeysCount(couponKeyDto);
 
-           int count = couponKeyV1InnerServiceSMOImpl.queryCouponKeysCount(couponKeyDto);
+        List<CouponKeyDto> couponKeyDtos = null;
 
-           List<CouponKeyDto> couponKeyDtos = null;
+        // 根据查询结果数量决定返回的数据列表
+        if (count > 0) {
+            // 如果存在数据，则查询具体的优惠券密钥列表
+            couponKeyDtos = couponKeyV1InnerServiceSMOImpl.queryCouponKeys(couponKeyDto);
+        } else {
+            // 如果没有数据，返回空列表
+            couponKeyDtos = new ArrayList<>();
+        }
 
-           if (count > 0) {
-               couponKeyDtos = couponKeyV1InnerServiceSMOImpl.queryCouponKeys(couponKeyDto);
-           } else {
-               couponKeyDtos = new ArrayList<>();
-           }
+        // 计算总页数：总记录数除以每页显示行数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 构建返回结果对象，包含分页信息和数据列表
+        ResultVo resultVo = new ResultVo(totalPage, count, couponKeyDtos);
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, couponKeyDtos);
+        // 创建HTTP响应实体，状态码为200 OK
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
-
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 将响应结果设置到数据流上下文中
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

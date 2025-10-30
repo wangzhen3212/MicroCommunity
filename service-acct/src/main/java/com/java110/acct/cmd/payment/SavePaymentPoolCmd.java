@@ -43,13 +43,22 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 类表述：保存
- * 服务编码：paymentPool.savePaymentPool
- * 请求路劲：/app/paymentPool.SavePaymentPool
- * add by 吴学文 at 2023-10-25 11:52:42 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
+ * 支付池保存命令类
+ * 
+ * 该类负责处理支付池的保存操作，包括支付池基本信息、动态字段值和费用配置关联关系的保存
+ * 主要功能：
+ * 1. 验证请求参数的完整性
+ * 2. 保存支付池基本信息
+ * 3. 保存支付池的动态字段值
+ * 4. 保存支付池与费用配置的关联关系
+ * 
+ * 服务编码：payment.savePaymentPool
+ * 请求路径：/app/payment.SavePaymentPool
+ * 
+ * @author 吴学文 at 2023-10-25 11:52:42 mail: 928255095@qq.com
+ * @open source address: https://gitee.com/wuxw7/MicroCommunity
+ * @官网：http://www.homecommunity.cn
+ * @温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
 @Java110Cmd(serviceCode = "payment.savePaymentPool")
@@ -57,37 +66,71 @@ public class SavePaymentPoolCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SavePaymentPoolCmd.class);
 
+    /**
+     * ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 支付池服务接口
+     */
     @Autowired
     private IPaymentPoolV1InnerServiceSMO paymentPoolV1InnerServiceSMOImpl;
 
+    /**
+     * 支付池值服务接口
+     */
     @Autowired
     private IPaymentPoolValueV1InnerServiceSMO paymentPoolValueV1InnerServiceSMOImpl;
 
+    /**
+     * 费用配置服务接口
+     */
     @Autowired
     private IPayFeeConfigV1InnerServiceSMO payFeeConfigV1InnerServiceSMOImpl;
 
+    /**
+     * 支付池配置服务接口
+     */
     @Autowired
     private IPaymentPoolConfigV1InnerServiceSMO paymentPoolConfigV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的完整性和业务规则，包括：
+     * 1. 必填字段验证
+     * 2. 动态字段验证
+     * 3. 支付类型业务规则验证
+     * 4. 费用配置验证
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类属性验证方法
         super.validateProperty(cmdDataFlowContext);
+        
+        // 验证必填字段
         Assert.hasKeyAndValue(reqJson, "paymentName", "请求报文中未包含paymentName");
         Assert.hasKeyAndValue(reqJson, "paymentType", "请求报文中未包含paymentType");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
         Assert.hasKeyAndValue(reqJson, "state", "请求报文中未包含state");
         Assert.hasKeyAndValue(reqJson, "payType", "请求报文中未包含payType");
 
+        // 验证动态字段
         Assert.hasKey(reqJson, "paymentKeys", "未包含动态字段");
-
         JSONArray paymentKeys = reqJson.getJSONArray("paymentKeys");
-
         if (paymentKeys == null || paymentKeys.isEmpty()) {
             throw new CmdException("未包含字段");
         }
+        
+        // 验证动态字段的完整性
         JSONObject columns = null;
+        // 动态字段格式示例：
         // {"columnKey":"WECHAT_KEY","keyId":"2","name":"支付密码","page":-1,"paymentType":"WECHAT",
         // "records":0,"remark":"请输入微信v2支付秘钥","row":0,"statusCd":"0","total":0,"columnValue":"1"}
         for (int keyIndex = 0; keyIndex < paymentKeys.size(); keyIndex++) {
@@ -96,8 +139,8 @@ public class SavePaymentPoolCmd extends Cmd {
             Assert.hasKeyAndValue(columns, "columnValue", reqJson.getString("name") + "未填写值");
         }
 
+        // 如果支付类型不是费用配置类型，检查是否已存在相同支付类型的支付池
         if (!PaymentPoolDto.PAY_TYPE_FEE_CONFIG.equals(reqJson.getString("payType"))) {
-
             PaymentPoolDto paymentPoolDto = new PaymentPoolDto();
             paymentPoolDto.setCommunityId(reqJson.getString("communityId"));
             paymentPoolDto.setPayType(reqJson.getString("payType"));
@@ -108,17 +151,30 @@ public class SavePaymentPoolCmd extends Cmd {
             return;
         }
 
+        // 如果是费用配置类型，验证费用配置ID
         JSONArray configIds = reqJson.getJSONArray("configIds");
         if (configIds == null || configIds.isEmpty()) {
             throw new CmdException("未包含费用项");
         }
-
     }
 
+    /**
+     * 执行保存支付池命令
+     * 
+     * 该方法负责保存支付池的完整信息，包括：
+     * 1. 保存支付池基本信息
+     * 2. 保存支付池动态字段值
+     * 3. 保存支付池与费用配置的关联关系
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当保存操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 转换并保存支付池基本信息
         PaymentPoolPo paymentPoolPo = BeanConvertUtil.covertBean(reqJson, PaymentPoolPo.class);
         paymentPoolPo.setPpId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         int flag = paymentPoolV1InnerServiceSMOImpl.savePaymentPool(paymentPoolPo);
@@ -127,9 +183,8 @@ public class SavePaymentPoolCmd extends Cmd {
             throw new CmdException("保存数据失败");
         }
 
-        //todo 动态字段
+        // 保存动态字段值
         JSONArray paymentKeys = reqJson.getJSONArray("paymentKeys");
-
         JSONObject columns = null;
         PaymentPoolValuePo paymentPoolValuePo = null;
         for (int keyIndex = 0; keyIndex < paymentKeys.size(); keyIndex++) {
@@ -143,11 +198,13 @@ public class SavePaymentPoolCmd extends Cmd {
             paymentPoolValueV1InnerServiceSMOImpl.savePaymentPoolValue(paymentPoolValuePo);
         }
 
-        // todo 保存关联关系
-
+        // 如果支付类型不是费用配置类型，直接返回成功
         if (!PaymentPoolDto.PAY_TYPE_FEE_CONFIG.equals(reqJson.getString("payType"))) {
+            cmdDataFlowContext.setResponseEntity(ResultVo.success());
             return;
         }
+
+        // 保存支付池与费用配置的关联关系
         JSONArray configIds = reqJson.getJSONArray("configIds");
         FeeConfigDto feeConfigDto = new FeeConfigDto();
         feeConfigDto.setConfigIds(configIds.toArray(new String[configIds.size()]));
@@ -155,13 +212,13 @@ public class SavePaymentPoolCmd extends Cmd {
         List<FeeConfigDto> feeConfigDtos = payFeeConfigV1InnerServiceSMOImpl.queryPayFeeConfigs(feeConfigDto);
 
         if (feeConfigDtos == null || feeConfigDtos.isEmpty()) {
+            cmdDataFlowContext.setResponseEntity(ResultVo.success());
             return;
         }
 
-
+        // 遍历费用配置列表，保存关联关系
         PaymentPoolConfigPo paymentPoolConfigPo = null;
         for (FeeConfigDto tmpFeeConfigDto : feeConfigDtos) {
-
             paymentPoolConfigPo = new PaymentPoolConfigPo();
             paymentPoolConfigPo.setConfigId(tmpFeeConfigDto.getConfigId());
             paymentPoolConfigPo.setFeeName(tmpFeeConfigDto.getFeeName());
@@ -171,7 +228,7 @@ public class SavePaymentPoolCmd extends Cmd {
             paymentPoolConfigV1InnerServiceSMOImpl.savePaymentPoolConfig(paymentPoolConfigPo);
         }
 
-
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

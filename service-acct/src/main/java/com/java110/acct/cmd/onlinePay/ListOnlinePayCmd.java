@@ -35,7 +35,7 @@ import com.java110.core.log.LoggerFactory;
 
 
 /**
- * 类表述：查询
+ * 类表述：查询在线支付信息命令类
  * 服务编码：onlinePay.listOnlinePay
  * 请求路劲：/app/onlinePay.ListOnlinePay
  * add by 吴学文 at 2021-12-21 13:05:25 mail: 928255095@qq.com
@@ -43,38 +43,74 @@ import com.java110.core.log.LoggerFactory;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：该类用于处理在线支付信息的查询请求，包括分页查询在线支付记录
+ * 主要职责：
+ * 1. 验证请求参数
+ * 2. 调用服务层查询在线支付数据
+ * 3. 构建并返回分页查询结果
  */
 @Java110Cmd(serviceCode = "onlinePay.listOnlinePay")
 public class ListOnlinePayCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListOnlinePayCmd.class);
+    private static Logger logger = LoggerFactory.getLogger(ListOnlinePayCmd.class);
+    
+    /**
+     * 在线支付服务接口，用于查询在线支付相关信息
+     */
     @Autowired
     private IOnlinePayV1InnerServiceSMO onlinePayV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 继承自父类，主要用于验证分页参数
+     *
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于处理请求和响应
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类方法验证分页信息（页码、每页条数等）
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 执行命令方法
+     * 处理在线支付信息的查询请求，包括数据查询和结果返回
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将请求JSON对象转换为OnlinePayDto对象，便于后续查询
+        OnlinePayDto onlinePayDto = BeanConvertUtil.covertBean(reqJson, OnlinePayDto.class);
 
-           OnlinePayDto onlinePayDto = BeanConvertUtil.covertBean(reqJson, OnlinePayDto.class);
+        // 查询符合条件的在线支付记录总数
+        int count = onlinePayV1InnerServiceSMOImpl.queryOnlinePaysCount(onlinePayDto);
 
-           int count = onlinePayV1InnerServiceSMOImpl.queryOnlinePaysCount(onlinePayDto);
+        List<OnlinePayDto> onlinePayDtos = null;
 
-           List<OnlinePayDto> onlinePayDtos = null;
+        // 根据查询结果数量决定如何处理
+        if (count > 0) {
+            // 如果存在记录，则查询具体的在线支付数据列表
+            onlinePayDtos = onlinePayV1InnerServiceSMOImpl.queryOnlinePays(onlinePayDto);
+        } else {
+            // 如果没有记录，返回空列表
+            onlinePayDtos = new ArrayList<>();
+        }
 
-           if (count > 0) {
-               onlinePayDtos = onlinePayV1InnerServiceSMOImpl.queryOnlinePays(onlinePayDto);
-           } else {
-               onlinePayDtos = new ArrayList<>();
-           }
+        // 计算总页数：总记录数 / 每页条数，并向上取整
+        // 创建包含分页信息的返回结果对象
+        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, onlinePayDtos);
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, onlinePayDtos);
+        // 构建HTTP响应实体，设置状态码为200 OK
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
-
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 将响应实体设置到数据流上下文中，供框架后续处理
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

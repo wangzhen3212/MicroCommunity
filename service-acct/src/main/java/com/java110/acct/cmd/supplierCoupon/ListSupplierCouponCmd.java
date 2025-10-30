@@ -37,7 +37,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-
+/**
+ * 供应商优惠券查询命令类
+ * 
+ * 该类负责处理供应商优惠券的查询请求，通过REST接口对外提供查询服务
+ * 支持分页查询供应商的优惠券信息，包括优惠券ID、名称、售价等字段
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @date 2022-11-17 21:33:45
+ */
 @Java110CmdDoc(title = "查询供应商优惠券",
         description = "用于外系统查询供应商优惠券",
         httpMethod = "get",
@@ -80,34 +89,67 @@ import org.slf4j.LoggerFactory;
 @Java110Cmd(serviceCode = "supplierCoupon.listSupplierCoupon")
 public class ListSupplierCouponCmd extends Cmd {
 
+    // 日志记录器
     private static Logger logger = LoggerFactory.getLogger(ListSupplierCouponCmd.class);
+    
+    // 供应商优惠券服务接口
     @Autowired
     private ISupplierCouponV1InnerServiceSMO supplierCouponV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，主要验证分页参数
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求/响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息验证方法，验证page和row参数
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 命令执行方法
+     * 
+     * 处理供应商优惠券查询请求，执行查询逻辑并返回结果
+     * 支持分页查询，返回包含总页数、总记录数和数据列表的响应
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON转换为供应商优惠券DTO对象
         SupplierCouponDto supplierCouponDto = BeanConvertUtil.covertBean(reqJson, SupplierCouponDto.class);
 
+        // 查询符合条件的供应商优惠券总记录数
         int count = supplierCouponV1InnerServiceSMOImpl.querySupplierCouponsCount(supplierCouponDto);
 
         List<SupplierCouponDto> supplierCouponDtos = null;
 
+        // 根据查询结果数量决定返回数据
         if (count > 0) {
+            // 如果有数据，查询具体的优惠券列表
             supplierCouponDtos = supplierCouponV1InnerServiceSMOImpl.querySupplierCoupons(supplierCouponDto);
         } else {
+            // 如果没有数据，返回空列表
             supplierCouponDtos = new ArrayList<>();
         }
 
-        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, supplierCouponDtos);
+        // 计算总页数：总记录数 / 每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 构建返回结果对象，包含分页信息和数据
+        ResultVo resultVo = new ResultVo(totalPage, count, supplierCouponDtos);
 
+        // 创建HTTP响应实体，状态码为200 OK
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 将响应设置到数据流上下文中
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

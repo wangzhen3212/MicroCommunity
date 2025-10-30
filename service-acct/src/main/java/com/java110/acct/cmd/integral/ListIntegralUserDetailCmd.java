@@ -45,39 +45,85 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 积分用户明细查询命令类
+ * 
+ * 该类负责处理积分用户明细的列表查询请求，包括参数验证、数据查询和结果返回等功能。
+ * 通过调用积分用户明细服务接口，实现对积分明细数据的分页查询和统计。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-12-12
+ */
 @Java110Cmd(serviceCode = "integral.listIntegralUserDetail")
 public class ListIntegralUserDetailCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListIntegralUserDetailCmd.class);
+    private static Logger logger = LoggerFactory.getLogger(ListIntegralUserDetailCmd.class);
+    
+    /**
+     * 积分用户明细服务接口
+     */
     @Autowired
     private IIntegralUserDetailV1InnerServiceSMO integralUserDetailV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括分页参数和必填字段的校验。
+     * 必须包含communityId参数，用于标识小区信息。
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于处理请求和响应数据
+     * @param reqJson 请求参数的JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证分页参数
         super.validatePageInfo(reqJson);
+        // 验证必填参数communityId
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 命令执行方法
+     * 
+     * 处理积分用户明细查询业务逻辑，包括数据查询、结果封装和响应返回。
+     * 支持分页查询，返回包含总记录数、分页信息和明细数据的结果。
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当命令执行过程中发生错误时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将请求JSON转换为积分用户明细DTO对象
+        IntegralUserDetailDto integralUserDetailDto = BeanConvertUtil.covertBean(reqJson, IntegralUserDetailDto.class);
 
-           IntegralUserDetailDto integralUserDetailDto = BeanConvertUtil.covertBean(reqJson, IntegralUserDetailDto.class);
+        // 查询积分用户明细总记录数
+        int count = integralUserDetailV1InnerServiceSMOImpl.queryIntegralUserDetailsCount(integralUserDetailDto);
 
-           int count = integralUserDetailV1InnerServiceSMOImpl.queryIntegralUserDetailsCount(integralUserDetailDto);
+        List<IntegralUserDetailDto> integralUserDetailDtos = null;
 
-           List<IntegralUserDetailDto> integralUserDetailDtos = null;
+        // 根据查询结果数量决定返回数据
+        if (count > 0) {
+            // 查询积分用户明细列表数据
+            integralUserDetailDtos = integralUserDetailV1InnerServiceSMOImpl.queryIntegralUserDetails(integralUserDetailDto);
+        } else {
+            // 无数据时返回空列表
+            integralUserDetailDtos = new ArrayList<>();
+        }
 
-           if (count > 0) {
-               integralUserDetailDtos = integralUserDetailV1InnerServiceSMOImpl.queryIntegralUserDetails(integralUserDetailDto);
-           } else {
-               integralUserDetailDtos = new ArrayList<>();
-           }
+        // 计算总页数：总记录数除以每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 封装返回结果
+        ResultVo resultVo = new ResultVo(totalPage, count, integralUserDetailDtos);
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, integralUserDetailDtos);
+        // 创建HTTP响应实体
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
-
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 设置响应结果到数据流上下文
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

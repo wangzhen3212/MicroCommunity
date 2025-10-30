@@ -50,10 +50,14 @@ import com.java110.core.log.LoggerFactory;
 @Java110Cmd(serviceCode = "couponDetail.listCouponDetail")
 public class ListCouponDetailCmd extends Cmd {
 
+    /**
+     * 日志记录器，用于记录命令执行过程中的日志信息
+     */
     private static Logger logger = LoggerFactory.getLogger(ListCouponDetailCmd.class);
     
     /**
      * 优惠券详情服务接口，用于查询优惠券详情数据
+     * 通过Spring自动注入实现类
      */
     @Autowired
     private ICouponDetailV1InnerServiceSMO couponDetailV1InnerServiceSMOImpl;
@@ -64,11 +68,11 @@ public class ListCouponDetailCmd extends Cmd {
      *
      * @param event 命令事件对象，包含请求相关信息
      * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求/响应数据
-     * @param reqJson 请求参数的JSON对象
+     * @param reqJson 请求参数的JSON对象，包含查询条件和分页信息
      */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
-        // 调用父类的分页信息验证方法，验证分页参数的有效性
+        // 调用父类的分页信息验证方法，验证分页参数page和row的有效性
         super.validatePageInfo(reqJson);
     }
 
@@ -78,15 +82,15 @@ public class ListCouponDetailCmd extends Cmd {
      *
      * @param event 命令事件对象，包含请求相关信息
      * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求/响应数据
-     * @param reqJson 请求参数的JSON对象
+     * @param reqJson 请求参数的JSON对象，包含查询条件和分页信息
      * @throws CmdException 当命令执行过程中发生错误时抛出
      */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-        // 将请求JSON转换为优惠券详情数据传输对象
+        // 将请求JSON转换为优惠券详情数据传输对象，便于后续查询操作
         CouponDetailDto couponDetailDto = BeanConvertUtil.covertBean(reqJson, CouponDetailDto.class);
 
-        // 查询符合条件的优惠券详情总记录数
+        // 查询符合条件的优惠券详情总记录数，用于分页计算
         int count = couponDetailV1InnerServiceSMOImpl.queryCouponDetailsCount(couponDetailDto);
 
         List<CouponDetailDto> couponDetailDtos = null;
@@ -96,7 +100,7 @@ public class ListCouponDetailCmd extends Cmd {
             // 如果存在记录，则查询具体的优惠券详情列表数据
             couponDetailDtos = couponDetailV1InnerServiceSMOImpl.queryCouponDetails(couponDetailDto);
         } else {
-            // 如果没有记录，返回空列表
+            // 如果没有记录，返回空列表，避免返回null值
             couponDetailDtos = new ArrayList<>();
         }
 
@@ -105,7 +109,7 @@ public class ListCouponDetailCmd extends Cmd {
         // 封装返回结果，包含总页数、总记录数和数据列表
         ResultVo resultVo = new ResultVo(totalPage, count, couponDetailDtos);
 
-        // 创建HTTP响应实体，设置响应状态为200 OK
+        // 创建HTTP响应实体，设置响应状态为200 OK，将结果对象转换为JSON字符串
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
         // 将响应实体设置到数据流上下文中，供后续处理使用

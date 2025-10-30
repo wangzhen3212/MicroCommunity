@@ -72,48 +72,83 @@ import java.util.List;
         reqBody="http://{ip}:{port}/app/parkingCoupon.listShopParkingCoupon?page=1&row=100&communityId=2022081539020475&shopId=502022101140520018",
         resBody="{\"code\":0,\"data\":[{\"communityId\":\"2022081539020475\",\"communityName\":\"测试小区\",\"couponId\":\"102022101024650009\",\"couponName\":\"时卡优惠券\",\"couponShopId\":\"102022101112890007\",\"endTime\":\"2050-01-01 00:00:00\",\"paId\":\"102022082382290048\",\"paName\":\"\",\"page\":-1,\"quantity\":\"200\",\"records\":0,\"row\":0,\"shopId\":\"502022101140520018\",\"shopName\":\"测试商家\",\"startTime\":\"2022-10-11 19:01:03\",\"statusCd\":\"0\",\"total\":0}],\"msg\":\"成功\",\"page\":0,\"records\":1,\"rows\":0,\"total\":1}"
 )
+
 /**
- * 类表述：查询
- * 服务编码：parkingCouponShop.listParkingCouponShop
- * 请求路劲：/app/parkingCouponShop.ListParkingCouponShop
- * add by 吴学文 at 2022-10-10 16:43:42 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 查询商户停车券命令类
+ * 
+ * 该类负责处理查询商户停车券的请求，根据商户ID查询对应的停车券信息，
+ * 支持分页查询，返回停车券的详细信息列表
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-10-10
  */
 @Java110Cmd(serviceCode = "parkingCoupon.listShopParkingCoupon")
 public class ListShopParkingCouponCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListShopParkingCouponCmd.class);
+    
+    /**
+     * 停车券商户服务接口
+     */
     @Autowired
     private IParkingCouponShopV1InnerServiceSMO parkingCouponShopV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括分页参数和必填参数
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类方法验证分页参数
         super.validatePageInfo(reqJson);
+        // 验证请求中必须包含商铺ID参数
         Assert.hasKeyAndValue(reqJson, "shopId", "未包含商铺ID");
     }
 
+    /**
+     * 执行命令方法
+     * 
+     * 处理查询商户停车券的业务逻辑，包括数据查询、结果封装和响应设置
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当命令执行过程中发生异常时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求JSON对象转换为停车券商户数据传输对象
         ParkingCouponShopDto parkingCouponShopDto = BeanConvertUtil.covertBean(reqJson, ParkingCouponShopDto.class);
 
+        // 查询符合条件的停车券商户记录总数
         int count = parkingCouponShopV1InnerServiceSMOImpl.queryParkingCouponShopsCount(parkingCouponShopDto);
 
         List<ParkingCouponShopDto> parkingCouponShopDtos = null;
 
+        // 根据查询结果数量决定返回数据
         if (count > 0) {
+            // 如果存在记录，查询具体的停车券商户列表
             parkingCouponShopDtos = parkingCouponShopV1InnerServiceSMOImpl.queryParkingCouponShops(parkingCouponShopDto);
         } else {
+            // 如果没有记录，返回空列表
             parkingCouponShopDtos = new ArrayList<>();
         }
 
-        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, parkingCouponShopDtos);
+        // 计算总页数：总记录数除以每页记录数，向上取整
+        int totalPage = (int) Math.ceil((double) count / (double) reqJson.getInteger("row"));
+        // 封装返回结果对象
+        ResultVo resultVo = new ResultVo(totalPage, count, parkingCouponShopDtos);
 
+        // 创建HTTP响应实体
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
+        // 设置响应实体到数据流上下文
         cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

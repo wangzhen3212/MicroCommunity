@@ -56,103 +56,180 @@ import java.util.List;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 发票申请审核命令类
+ * 
+ * 该类负责处理发票申请的审核操作，包括审核通过和审核拒绝两种情况。
+ * 审核通过时，将发票申请状态更新为"待上传"，并记录审核事件，同时更新相关缴费明细的开票状态。
+ * 审核拒绝时，将发票申请状态更新为"审核失败"，并记录审核事件。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023-10-08
+ */
 @Java110Cmd(serviceCode = "invoice.auditInvoiceApply")
 public class AuditInvoiceApplyCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(AuditInvoiceApplyCmd.class);
 
-
+    /**
+     * 发票申请服务接口
+     */
     @Autowired
     private IInvoiceApplyV1InnerServiceSMO invoiceApplyV1InnerServiceSMOImpl;
 
+    /**
+     * 发票申请项服务接口
+     */
     @Autowired
     private IInvoiceApplyItemV1InnerServiceSMO invoiceApplyItemV1InnerServiceSMOImpl;
 
+    /**
+     * 发票事件服务接口
+     */
     @Autowired
     private IInvoiceEventV1InnerServiceSMO invoiceEventV1InnerServiceSMOImpl;
 
+    /**
+     * 用户服务接口
+     */
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 缴费明细服务接口
+     */
     @Autowired
     private IPayFeeDetailV1InnerServiceSMO payFeeDetailV1InnerServiceSMOImpl;
 
-
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否完整，确保必要的参数都存在且不为空
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取请求上下文信息
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证申请ID是否存在
         Assert.hasKeyAndValue(reqJson, "applyId", "applyId不能为空");
+        // 验证审核状态是否存在
         Assert.hasKeyAndValue(reqJson, "state", "状态不能为空");
+        // 验证审核说明是否存在
         Assert.hasKeyAndValue(reqJson, "remark", "说明不能为空");
-
+        // 验证小区ID是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行发票申请审核命令
+     * 
+     * 该方法处理发票申请的审核逻辑，包括：
+     * 1. 验证用户登录状态
+     * 2. 更新发票申请状态
+     * 3. 记录审核事件
+     * 4. 更新相关缴费明细的开票状态
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当业务处理失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        // 从上下文中获取当前用户ID
         String userId = CmdContextUtils.getUserId(cmdDataFlowContext);
 
+        // 查询用户信息，验证用户是否登录
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
+        // 确保只有一个用户记录，防止数据异常
         Assert.listOnlyOne(userDtos, "用户未登录");
 
-
+        // 创建发票申请PO对象，用于更新申请状态
         InvoiceApplyPo invoiceApplyPo = new InvoiceApplyPo();
         invoiceApplyPo.setApplyId(reqJson.getString("applyId"));
-        //退费审核通过
+        
+        // 根据审核状态设置相应的发票申请状态
+        // 1100表示审核通过，将状态设置为待上传
         if ("1100".equals(reqJson.getString("state"))) {
             invoiceApplyPo.setState(InvoiceApplyDto.STATE_UPLOAD);
-        }else{
+        } else {
+            // 其他状态表示审核失败
             invoiceApplyPo.setState(InvoiceApplyDto.STATE_FAIL);
         }
+        
+        // 更新发票申请状态
         int flag = invoiceApplyV1InnerServiceSMOImpl.updateInvoiceApply(invoiceApplyPo);
 
+        // 检查更新是否成功
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
-        // todo 保存事件
+        // 保存审核事件记录
         InvoiceEventPo invoiceEventPo = new InvoiceEventPo();
         invoiceEventPo.setApplyId(reqJson.getString("applyId"));
         invoiceEventPo.setCommunityId(reqJson.getString("communityId"));
+        // 生成唯一的事件ID
         invoiceEventPo.setEventId(GenerateCodeFactory.getGeneratorId("11"));
+        
+        // 根据审核状态设置事件类型
         if ("1100".equals(reqJson.getString("state"))) {
             invoiceEventPo.setEventType(InvoiceEventDto.STATE_COMPLETE);
-        }else{
+        } else {
             invoiceEventPo.setEventType(InvoiceEventDto.STATE_FAIL);
         }
+        
+        // 设置事件创建人信息
         invoiceEventPo.setCreateUserId(userId);
         invoiceEventPo.setCreateUserName(userDtos.get(0).getName());
         invoiceEventPo.setRemark(reqJson.getString("remark"));
+        
+        // 保存事件记录
         invoiceEventV1InnerServiceSMOImpl.saveInvoiceEvent(invoiceEventPo);
 
-        //todo 修改缴费明细开票状态为完成或者待开票
+        // 查询发票申请相关的缴费明细项
         InvoiceApplyItemDto invoiceApplyItemDto = new InvoiceApplyItemDto();
         invoiceApplyItemDto.setApplyId(invoiceApplyPo.getApplyId());
+        // 设置项类型为费用类型
         invoiceApplyItemDto.setItemType(InvoiceApplyItemDto.ITEM_TYPE_FEE);
         List<InvoiceApplyItemDto> invoiceApplyItemDtos = invoiceApplyItemV1InnerServiceSMOImpl.queryInvoiceApplyItems(invoiceApplyItemDto);
-        if(ListUtil.isNull(invoiceApplyItemDtos)){
+        
+        // 如果没有相关的缴费明细项，直接返回
+        if (ListUtil.isNull(invoiceApplyItemDtos)) {
             return;
         }
 
-        for(InvoiceApplyItemDto tmpInvoiceApplyItemDto : invoiceApplyItemDtos){
-            // todo 将缴费记录开票状态修改为D 开票中
+        // 遍历所有相关的缴费明细项，更新开票状态
+        for (InvoiceApplyItemDto tmpInvoiceApplyItemDto : invoiceApplyItemDtos) {
+            // 创建缴费明细PO对象，用于更新开票状态
             PayFeeDetailPo payFeeDetailPo = new PayFeeDetailPo();
             payFeeDetailPo.setDetailId(tmpInvoiceApplyItemDto.getItemObjId());
             payFeeDetailPo.setCommunityId(tmpInvoiceApplyItemDto.getCommunityId());
+            
+            // 根据审核状态设置开票状态
             if ("1100".equals(reqJson.getString("state"))) {
-                payFeeDetailPo.setOpenInvoice("Y"); // todo 开票完成
-            }else{
-                payFeeDetailPo.setOpenInvoice("N"); // todo 带开票
+                // 审核通过，设置开票状态为已完成
+                payFeeDetailPo.setOpenInvoice("Y");
+            } else {
+                // 审核失败，设置开票状态为待开票
+                payFeeDetailPo.setOpenInvoice("N");
             }
 
+            // 更新缴费明细的开票状态
             payFeeDetailV1InnerServiceSMOImpl.updatePayFeeDetailNew(payFeeDetailPo);
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -55,68 +55,109 @@ import java.util.List;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 发票照片上传命令类
+ * 负责处理发票照片上传的业务逻辑，包括更新发票信息、记录操作事件和保存照片文件关联信息
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023-10-08
+ */
 @Java110Cmd(serviceCode = "invoice.uploadInvoicePhoto")
 public class UploadInvoicePhotoCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(UploadInvoicePhotoCmd.class);
 
-
+    /**
+     * 发票申请服务接口
+     */
     @Autowired
     private IInvoiceApplyV1InnerServiceSMO invoiceApplyV1InnerServiceSMOImpl;
 
+    /**
+     * 发票事件服务接口
+     */
     @Autowired
     private IInvoiceEventV1InnerServiceSMO invoiceEventV1InnerServiceSMOImpl;
 
+    /**
+     * 用户服务接口
+     */
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 文件关联服务接口
+     */
     @Autowired
     private IFileRelInnerServiceSMO fileRelInnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证申请ID不能为空
         Assert.hasKeyAndValue(reqJson, "applyId", "applyId不能为空");
+        // 验证发票号不能为空
         Assert.hasKeyAndValue(reqJson, "invoiceCode", "发票号不能为空");
-
+        // 验证小区ID不能为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
-
     }
 
+    /**
+     * 执行发票照片上传命令
+     * 主要业务流程：验证用户身份、更新发票申请信息、记录操作事件、保存照片文件关联
+     *
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当业务处理失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 从上下文中获取当前用户ID
         String userId = CmdContextUtils.getUserId(cmdDataFlowContext);
 
+        // 查询用户信息，验证用户是否登录
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
-
+        // 验证用户存在且唯一
         Assert.listOnlyOne(userDtos, "用户未登录");
 
+        // 查询发票申请信息
         InvoiceApplyDto invoiceApplyDto = new InvoiceApplyDto();
         invoiceApplyDto.setApplyId(reqJson.getString("applyId"));
         invoiceApplyDto.setCommunityId(reqJson.getString("communityId"));
         List<InvoiceApplyDto> invoiceApplyDtos = invoiceApplyV1InnerServiceSMOImpl.queryInvoiceApplys(invoiceApplyDto);
-
+        // 验证发票申请存在且唯一
         Assert.listOnlyOne(invoiceApplyDtos, "发票申请不存在");
 
-
-        //todo 修改发票号
+        // 更新发票申请信息
         InvoiceApplyPo invoiceApplyPo = new InvoiceApplyPo();
         invoiceApplyPo.setApplyId(reqJson.getString("applyId"));
         invoiceApplyPo.setInvoiceCode(reqJson.getString("invoiceCode"));
+        // 如果当前状态为已上传，则更新为已获取状态
         if (InvoiceApplyDto.STATE_UPLOAD.equals(invoiceApplyDtos.get(0).getState())) {
             invoiceApplyPo.setState(InvoiceApplyDto.STATE_GET);
         }
         int flag = invoiceApplyV1InnerServiceSMOImpl.updateInvoiceApply(invoiceApplyPo);
 
+        // 检查更新是否成功
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
-        // todo 保存事件
+        // 记录发票操作事件
         InvoiceEventPo invoiceEventPo = new InvoiceEventPo();
         invoiceEventPo.setApplyId(reqJson.getString("applyId"));
         invoiceEventPo.setCommunityId(reqJson.getString("communityId"));
@@ -127,22 +168,25 @@ public class UploadInvoicePhotoCmd extends Cmd {
         invoiceEventPo.setRemark("上传发票，发票号：" + reqJson.getString("invoiceCode"));
         invoiceEventV1InnerServiceSMOImpl.saveInvoiceEvent(invoiceEventPo);
 
-        //todo 保存图片
+        // 处理照片文件上传
         if (!reqJson.containsKey("photos")) {
             return;
         }
 
         JSONArray photos = reqJson.getJSONArray("photos");
 
+        // 检查照片列表是否为空
         if (photos == null || photos.isEmpty()) {
             return;
         }
 
+        // 删除原有的照片文件关联
         FileRelPo fileRelPo = new FileRelPo();
         fileRelPo.setObjId(reqJson.getString("applyId"));
         fileRelPo.setRelTypeCd(FileRelDto.REL_TYPE_CE_INVOICE);
         fileRelInnerServiceSMOImpl.deleteFileRel(fileRelPo);
 
+        // 保存新的照片文件关联
         FileRelPo tmpFileRelPo = null;
         for (int photoIndex = 0; photoIndex < photos.size(); photoIndex++) {
             tmpFileRelPo = new FileRelPo();
@@ -155,7 +199,7 @@ public class UploadInvoicePhotoCmd extends Cmd {
             fileRelInnerServiceSMOImpl.saveFileRel(tmpFileRelPo);
         }
 
-
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 

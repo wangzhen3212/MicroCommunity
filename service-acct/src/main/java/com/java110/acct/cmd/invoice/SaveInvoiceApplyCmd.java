@@ -58,20 +58,21 @@ import java.util.Calendar;
 import java.util.List;
 
 /**
- * 类表述：保存
- * 服务编码：invoiceApply.saveInvoiceApply
- * 请求路劲：/app/invoiceApply.SaveInvoiceApply
- * add by 吴学文 at 2023-10-08 16:26:34 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 发票申请保存命令类
+ * 
+ * 该类负责处理发票申请的保存操作，包括参数验证、业务逻辑处理和数据库操作。
+ * 主要功能包括验证请求参数、计算发票金额、保存发票申请信息和发票申请项信息。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023-10-08
  */
 @Java110Cmd(serviceCode = "invoice.saveInvoiceApply")
 public class SaveInvoiceApplyCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveInvoiceApplyCmd.class);
 
+    /** 申请ID前缀 */
     public static final String CODE_PREFIX_ID = "10";
 
     @Autowired
@@ -86,7 +87,6 @@ public class SaveInvoiceApplyCmd extends Cmd {
     @Autowired
     private IInvoiceApplyItemV1InnerServiceSMO invoiceApplyItemV1InnerServiceSMOImpl;
 
-
     @Autowired
     private IFeeDetailInnerServiceSMO feeDetailInnerServiceSMOImpl;
 
@@ -99,15 +99,25 @@ public class SaveInvoiceApplyCmd extends Cmd {
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否完整有效，包括必填字段检查、发票抬头验证和业主信息验证。
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 数据流上下文对象
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填字段
         Assert.hasKeyAndValue(reqJson, "oiId", "请求报文中未包含oiId");
         Assert.hasKeyAndValue(reqJson, "invoiceType", "请求报文中未包含invoiceType");
         Assert.hasKeyAndValue(reqJson, "ownerName", "请求报文中未包含ownerName");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
 
-        //todo 查询发票抬头补充 申请手机号
-
+        // 查询发票抬头信息并验证
         OwnerInvoiceDto ownerInvoiceDto = new OwnerInvoiceDto();
         ownerInvoiceDto.setOiId(reqJson.getString("oiId"));
         ownerInvoiceDto.setCommunityId(reqJson.getString("communityId"));
@@ -115,6 +125,7 @@ public class SaveInvoiceApplyCmd extends Cmd {
 
         Assert.listOnlyOne(ownerInvoiceDtos, "发票抬头不存在");
 
+        // 查询业主信息并验证
         OwnerDto ownerDto = new OwnerDto();
         ownerDto.setMemberId(ownerInvoiceDtos.get(0).getOwnerId());
         ownerDto.setCommunityId(reqJson.getString("communityId"));
@@ -124,76 +135,95 @@ public class SaveInvoiceApplyCmd extends Cmd {
             throw new CmdException("业主不存在");
         }
 
+        // 设置申请手机号
         reqJson.put("applyTel", ownerDtos.get(0).getLink());
-
     }
 
     /**
-     * {"invoiceAddress":"精神分裂水电费和水电费水电费","invoiceFlag":"ACCT","invoiceName":"张三丰","invoiceNum":"123585452156215",
-     * "invoiceType":"1001","ownerId":"772023063013350054","ownerName":"qq2","detailIds":[],
-     * "arIds":["112023091107560029","112023090897430042"],
-     * "communityId":"2023052267100146"}
-     *
-     * @param event              事件对象
-     * @param cmdDataFlowContext 数据上文对象
-     * @param reqJson            请求报文
-     * @throws CmdException
+     * 执行发票申请保存命令
+     * 
+     * 处理发票申请的核心业务逻辑，包括：
+     * 1. 用户信息验证
+     * 2. 发票申请信息保存
+     * 3. 发票金额计算
+     * 4. 发票申请项保存
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 数据流上下文对象
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当业务处理失败时抛出异常
      */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        // 获取当前用户ID
         String userId = CmdContextUtils.getUserId(cmdDataFlowContext);
 
+        // 验证用户信息
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
         Assert.listOnlyOne(userDtos, "用户未登录");
 
+        // 转换请求数据为发票申请PO对象
         InvoiceApplyPo invoiceApplyPo = BeanConvertUtil.covertBean(reqJson, InvoiceApplyPo.class);
         invoiceApplyPo.setApplyId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
 
         List<InvoiceApplyItemPo> invoiceApplyItemPos = new ArrayList<>();
         BigDecimal invoiceAmount = new BigDecimal("0.0");
-        //todo 计算已缴费用
+        
+        // 计算已缴费用的发票金额
         invoiceAmount = computeFeeDetail(reqJson, invoiceApplyItemPos, invoiceAmount, invoiceApplyPo);
 
-        //todo 计算账户费用
+        // 计算账户费用的发票金额
         invoiceAmount = computeAcctDetail(reqJson, invoiceApplyItemPos, invoiceAmount, invoiceApplyPo);
 
+        // 验证是否包含开票项
         if (invoiceApplyItemPos.isEmpty()) {
             throw new CmdException("未包含开票项");
         }
 
+        // 设置发票总金额和创建信息
         invoiceApplyPo.setInvoiceAmount(invoiceAmount.doubleValue() + "");
         invoiceApplyPo.setCreateUserId(userId);
         invoiceApplyPo.setCreateUserName(userDtos.get(0).getName());
         invoiceApplyPo.setState(InvoiceApplyDto.STATE_WAIT);
+        
+        // 保存发票申请信息
         int flag = invoiceApplyV1InnerServiceSMOImpl.saveInvoiceApply(invoiceApplyPo);
 
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
-
-        //todo 保存开票申请项
+        // 保存发票申请项信息
         invoiceApplyItemV1InnerServiceSMOImpl.saveInvoiceApplyItems(invoiceApplyItemPos);
 
-
+        // 设置响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 
-
     /**
-     * 计算已缴费费用
-     *
-     * @param reqJson             "detailIds":[],
-     * @param invoiceApplyItemPos
-     * @return
+     * 计算已缴费用的发票金额
+     * 
+     * 处理缴费明细的开票逻辑，包括：
+     * 1. 验证缴费明细数据
+     * 2. 计算缴费金额总和
+     * 3. 验证开票时间限制
+     * 4. 更新缴费明细的开票状态
+     * 
+     * @param reqJson 请求JSON对象，包含detailIds数组
+     * @param invoiceApplyItemPos 发票申请项列表
+     * @param invoiceAmount 当前发票金额
+     * @param invoiceApplyPo 发票申请对象
+     * @return 更新后的发票金额
+     * @throws CmdException 当开票时间超过限制时抛出异常
      */
     private BigDecimal computeFeeDetail(JSONObject reqJson, List<InvoiceApplyItemPo> invoiceApplyItemPos, BigDecimal invoiceAmount, InvoiceApplyPo invoiceApplyPo) {
 
+        // 检查是否包含缴费明细ID
         if (!reqJson.containsKey("detailIds")) {
             return invoiceAmount;
         }
@@ -203,6 +233,7 @@ public class SaveInvoiceApplyCmd extends Cmd {
             return invoiceAmount;
         }
 
+        // 查询缴费明细信息
         FeeDetailDto feeDetailDto = new FeeDetailDto();
         feeDetailDto.setDetailIds(detailIds.toArray(new String[detailIds.size()]));
         feeDetailDto.setCommunityId(reqJson.getString("communityId"));
@@ -211,17 +242,22 @@ public class SaveInvoiceApplyCmd extends Cmd {
         if (ListUtil.isNull(feeDetailDtos)) {
             return invoiceAmount;
         }
+        
         InvoiceApplyItemPo invoiceApplyItemPo = null;
         for (FeeDetailDto tmpFeeDetailDto : feeDetailDtos) {
-            //todo 判断不能提前开票，也就是startTime 不能大于当年 12月31日
+            // 验证开票时间：不能预开明年的票
             Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.MONTH, 1);
-            calendar.set(Calendar.DAY_OF_MONTH, 1);
-            calendar.add(Calendar.YEAR, 1);
+            calendar.set(Calendar.MONTH, 1); // 设置为2月
+            calendar.set(Calendar.DAY_OF_MONTH, 1); // 设置为1号
+            calendar.add(Calendar.YEAR, 1); // 加一年，即明年的2月1日
             if (tmpFeeDetailDto.getStartTime().getTime() > calendar.getTime().getTime()) {
                 throw new CmdException("不能预开明年的票");
             }
+            
+            // 累加发票金额
             invoiceAmount = invoiceAmount.add(new BigDecimal(tmpFeeDetailDto.getReceivedAmount()));
+            
+            // 创建发票申请项
             invoiceApplyItemPo = new InvoiceApplyItemPo();
             invoiceApplyItemPo.setApplyId(invoiceApplyPo.getApplyId());
             invoiceApplyItemPo.setCommunityId(invoiceApplyPo.getCommunityId());
@@ -239,28 +275,33 @@ public class SaveInvoiceApplyCmd extends Cmd {
             invoiceApplyItemPo.setItemType(InvoiceApplyItemDto.ITEM_TYPE_FEE);
             invoiceApplyItemPos.add(invoiceApplyItemPo);
 
-            // todo 将缴费记录开票状态修改为D 开票中
+            // 更新缴费明细的开票状态为"开票中"
             PayFeeDetailPo payFeeDetailPo = new PayFeeDetailPo();
             payFeeDetailPo.setDetailId(tmpFeeDetailDto.getDetailId());
             payFeeDetailPo.setCommunityId(tmpFeeDetailDto.getCommunityId());
-            payFeeDetailPo.setOpenInvoice("D"); // todo 开票中
+            payFeeDetailPo.setOpenInvoice("D"); // 开票中状态
             payFeeDetailV1InnerServiceSMOImpl.updatePayFeeDetailNew(payFeeDetailPo);
         }
 
         return invoiceAmount;
     }
 
-
     /**
-     * "arIds":["112023091107560029","112023090897430042"],
-     *
-     * @param reqJson
-     * @param invoiceApplyItemPos
-     * @param invoiceAmount
-     * @param invoiceApplyPo
-     * @return
+     * 计算账户费用的发票金额
+     * 
+     * 处理账户收据的开票逻辑，包括：
+     * 1. 验证账户收据数据
+     * 2. 计算账户收据金额总和
+     * 3. 创建账户收据对应的发票申请项
+     * 
+     * @param reqJson 请求JSON对象，包含arIds数组
+     * @param invoiceApplyItemPos 发票申请项列表
+     * @param invoiceAmount 当前发票金额
+     * @param invoiceApplyPo 发票申请对象
+     * @return 更新后的发票金额
      */
     private BigDecimal computeAcctDetail(JSONObject reqJson, List<InvoiceApplyItemPo> invoiceApplyItemPos, BigDecimal invoiceAmount, InvoiceApplyPo invoiceApplyPo) {
+        // 检查是否包含账户收据ID
         if (!reqJson.containsKey("arIds")) {
             return invoiceAmount;
         }
@@ -270,7 +311,7 @@ public class SaveInvoiceApplyCmd extends Cmd {
             return invoiceAmount;
         }
 
-
+        // 查询账户收据信息
         AccountReceiptDto accountReceiptDto = new AccountReceiptDto();
         accountReceiptDto.setArIds(arIds.toArray(new String[arIds.size()]));
         accountReceiptDto.setCommunityId(reqJson.getString("communityId"));
@@ -281,7 +322,10 @@ public class SaveInvoiceApplyCmd extends Cmd {
 
         InvoiceApplyItemPo invoiceApplyItemPo = null;
         for (AccountReceiptDto tmpAccountReceiptDto : accountReceiptDtos) {
+            // 累加发票金额
             invoiceAmount = invoiceAmount.add(new BigDecimal(tmpAccountReceiptDto.getReceivedAmount()));
+            
+            // 创建发票申请项
             invoiceApplyItemPo = new InvoiceApplyItemPo();
             invoiceApplyItemPo.setApplyId(invoiceApplyPo.getApplyId());
             invoiceApplyItemPo.setCommunityId(invoiceApplyPo.getCommunityId());
@@ -294,7 +338,6 @@ public class SaveInvoiceApplyCmd extends Cmd {
 
             invoiceApplyItemPos.add(invoiceApplyItemPo);
         }
-
 
         return invoiceAmount;
     }

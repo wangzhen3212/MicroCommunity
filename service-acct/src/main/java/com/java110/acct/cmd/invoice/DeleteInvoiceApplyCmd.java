@@ -40,9 +40,11 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 类表述：删除
+ * 类表述：删除发票申请命令类
  * 服务编码：invoiceApply.deleteInvoiceApply
  * 请求路劲：/app/invoiceApply.DeleteInvoiceApply
+ * 功能描述：该类负责处理删除发票申请的业务逻辑，包括删除发票申请主记录、关联的申请项记录，
+ *          并更新相关费用明细的开票状态
  * add by 吴学文 at 2023-10-08 16:26:34 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -53,59 +55,94 @@ import java.util.List;
 public class DeleteInvoiceApplyCmd extends Cmd {
     private static Logger logger = LoggerFactory.getLogger(DeleteInvoiceApplyCmd.class);
 
+    /**
+     * 发票申请服务接口
+     */
     @Autowired
     private IInvoiceApplyV1InnerServiceSMO invoiceApplyV1InnerServiceSMOImpl;
 
+    /**
+     * 发票申请项服务接口
+     */
     @Autowired
     private IInvoiceApplyItemV1InnerServiceSMO invoiceApplyItemV1InnerServiceSMOImpl;
 
+    /**
+     * 费用明细服务接口
+     */
     @Autowired
     private IPayFeeDetailV1InnerServiceSMO payFeeDetailV1InnerServiceSMOImpl;
 
-
+    /**
+     * 参数验证方法
+     * 功能描述：验证请求参数是否完整，确保删除操作的必要参数存在
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证申请ID不能为空
         Assert.hasKeyAndValue(reqJson, "applyId", "applyId不能为空");
+        // 验证小区ID不能为空
         Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
-
     }
 
+    /**
+     * 执行删除发票申请命令
+     * 功能描述：删除发票申请记录及其关联的申请项，并更新相关费用明细的开票状态
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将请求参数转换为发票申请PO对象
         InvoiceApplyPo invoiceApplyPo = BeanConvertUtil.covertBean(reqJson, InvoiceApplyPo.class);
+        // 调用服务删除发票申请记录
         int flag = invoiceApplyV1InnerServiceSMOImpl.deleteInvoiceApply(invoiceApplyPo);
 
+        // 检查删除操作是否成功
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 创建查询条件，查询该申请下的所有申请项
         InvoiceApplyItemDto invoiceApplyItemDto = new InvoiceApplyItemDto();
         invoiceApplyItemDto.setApplyId(invoiceApplyPo.getApplyId());
 
+        // 查询发票申请项列表
         List<InvoiceApplyItemDto> invoiceApplyItemDtos = invoiceApplyItemV1InnerServiceSMOImpl.queryInvoiceApplyItems(invoiceApplyItemDto);
 
+        // 如果没有申请项，直接返回成功
         if(ListUtil.isNull(invoiceApplyItemDtos)){
             cmdDataFlowContext.setResponseEntity(ResultVo.success());
             return;
         }
 
-        //todo 删除 申请项
+        // 删除申请项记录
         InvoiceApplyItemPo invoiceApplyItemPo = new InvoiceApplyItemPo();
         invoiceApplyItemPo.setApplyId(invoiceApplyPo.getApplyId());
         invoiceApplyItemV1InnerServiceSMOImpl.deleteInvoiceApplyItem(invoiceApplyItemPo);
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
 
+        // 遍历所有申请项，更新相关费用明细的开票状态
         PayFeeDetailPo payFeeDetailPo = null;
         for(InvoiceApplyItemDto tmpInvoiceApplyItemDto: invoiceApplyItemDtos){
+            // 只处理费用类型的申请项
             if(!InvoiceApplyItemDto.ITEM_TYPE_FEE.equals(tmpInvoiceApplyItemDto.getItemType())){
                 continue;
             }
+            // 创建费用明细PO对象，用于更新开票状态
             payFeeDetailPo = new PayFeeDetailPo();
             payFeeDetailPo.setDetailId(tmpInvoiceApplyItemDto.getItemObjId());
+            // 将开票状态设置为"N"，表示未开票
             payFeeDetailPo.setOpenInvoice("N");
+            // 更新费用明细的开票状态
             payFeeDetailV1InnerServiceSMOImpl.updatePayFeeDetailNew(payFeeDetailPo);
         }
     }

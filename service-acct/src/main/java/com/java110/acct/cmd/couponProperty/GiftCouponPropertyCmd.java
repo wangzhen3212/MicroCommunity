@@ -1,3 +1,14 @@
+/**
+ * 手工赠送优惠券命令类
+ * 
+ * 功能描述：该命令类用于处理手工赠送优惠券的业务逻辑，包括验证请求参数、查询业主信息、
+ * 检查优惠券库存、生成赠送记录、更新库存和为用户添加优惠券等操作。
+ * 支持普通优惠券和充电券两种类型，充电券会同步到物联网系统。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023
+ */
 package com.java110.acct.cmd.couponProperty;
 
 import com.alibaba.fastjson.JSONObject;
@@ -82,58 +93,101 @@ public class GiftCouponPropertyCmd extends Cmd{
     private IIotInnerServiceSMO iotInnerServiceSMOImpl;
 
 
+    /**
+     * 验证请求参数
+     * 
+     * 功能描述：验证请求参数是否完整，确保包含必要的参数信息
+     * 
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求的JSON数据
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        // 验证小区ID参数
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区");
+        // 验证业主手机号参数
         Assert.hasKeyAndValue(reqJson, "tel", "未包含业主手机号");
+        // 验证优惠券ID参数
         Assert.hasKeyAndValue(reqJson, "cppId", "未包含停车券");
+        // 验证赠送数量参数
         Assert.hasKeyAndValue(reqJson, "giftCount", "未包含赠送数量");
     }
 
+    /**
+     * 执行赠送优惠券命令
+     * 
+     * 功能描述：处理手工赠送优惠券的核心业务逻辑，包括：
+     * 1. 查询业主信息
+     * 2. 获取分布式锁保证数据一致性
+     * 3. 检查优惠券库存
+     * 4. 生成赠送记录
+     * 5. 更新优惠券库存
+     * 6. 为用户添加优惠券
+     * 7. 处理充电券的物联网同步
+     * 
+     * @param event 命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求的JSON数据
+     * @throws CmdException 当业务处理失败时抛出异常
+     * @throws ParseException 当日期解析失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+        // 构建业主查询条件
         OwnerDto ownerDto = new OwnerDto();
         ownerDto.setLink(reqJson.getString("tel"));
         ownerDto.setCommunityId(reqJson.getString("communityId"));
+        // 根据手机号查询业主信息
         List<OwnerDto> ownerDtos = ownerV1InnerServiceSMOImpl.queryOwners(ownerDto);
 
+        // 验证业主是否存在
         if(ListUtil.isNull(ownerDtos)){
             throw new CmdException("根据手机号未查询到业主");
         }
 
+        // 获取分布式锁，防止并发操作
         String requestId = DistributedLock.getLockUUID();
         String key = this.getClass().getSimpleName() + reqJson.getString("cppId");
         try {
+            // 等待获取分布式锁
             DistributedLock.waitGetDistributedLock(key, requestId);
 
+            // 查询优惠券信息
             CouponPropertyPoolDto couponPropertyPoolDto = new CouponPropertyPoolDto();
             couponPropertyPoolDto.setCppId(reqJson.getString("cppId"));
             List<CouponPropertyPoolDto> couponPropertyPoolDtos = couponPropertyPoolV1InnerServiceSMOImpl.queryCouponPropertyPools(couponPropertyPoolDto);
 
+            // 验证优惠券是否存在
             if (ListUtil.isNull(couponPropertyPoolDtos)) {
                 return;
             }
 
+            // 获取优惠券库存
             int stock = Integer.parseInt(couponPropertyPoolDtos.get(0).getStock());
-
+            // 获取赠送数量
             int quantity = Integer.parseInt(reqJson.getString("giftCount"));
 
+            // 检查库存是否充足
             if (stock < quantity) {
                 return;
             }
 
-
+            // 查询优惠券配置信息
             CouponPropertyPoolConfigDto couponPropertyPoolConfigDto = new CouponPropertyPoolConfigDto();
             couponPropertyPoolConfigDto.setCouponId(reqJson.getString("cppId"));
             List<CouponPropertyPoolConfigDto> couponPropertyPoolConfigDtos
                     = couponPropertyPoolConfigV1InnerServiceSMOImpl.queryCouponPropertyPoolConfigs(couponPropertyPoolConfigDto);
+            
+            // 构建配置值字符串
             String value = "";
             for (CouponPropertyPoolConfigDto couponPropertyPoolConfigDto1 : couponPropertyPoolConfigDtos) {
                 value += (couponPropertyPoolConfigDto1.getName() + ":" + couponPropertyPoolConfigDto1.getColumnValue() + ";");
             }
 
-            //先加明细
+            // 生成赠送记录
             CouponPropertyPoolDetailPo couponPropertyPoolDetailPo = new CouponPropertyPoolDetailPo();
             couponPropertyPoolDetailPo.setCommunityId(couponPropertyPoolDtos.get(0).getCommunityId());
             couponPropertyPoolDetailPo.setCouponName(couponPropertyPoolDtos.get(0).getCouponName());
@@ -144,12 +198,13 @@ public class GiftCouponPropertyCmd extends Cmd{
             couponPropertyPoolDetailPo.setUserName(ownerDtos.get(0).getName());
             couponPropertyPoolDetailPo.setTel(ownerDtos.get(0).getLink());
             couponPropertyPoolDetailPo.setValue(value);
+            // 保存赠送记录
             int flag = couponPropertyPoolDetailV1InnerServiceSMOImpl.saveCouponPropertyPoolDetail(couponPropertyPoolDetailPo);
             if(flag < 1){
                 throw new CmdException("保存赠送记录失败");
             }
 
-            //优惠券扣除账户
+            // 更新优惠券库存
             CouponPropertyPoolPo couponPropertyPoolPo = new CouponPropertyPoolPo();
             couponPropertyPoolPo.setCppId(couponPropertyPoolDtos.get(0).getCppId());
             couponPropertyPoolPo.setStock((stock - quantity) + "");
@@ -157,7 +212,8 @@ public class GiftCouponPropertyCmd extends Cmd{
             if(flag < 1){
                 throw new CmdException("赠送失败");
             }
-            //用户账户写入优惠券
+            
+            // 为用户添加优惠券
             CouponPropertyUserPo couponPropertyUserPo = new CouponPropertyUserPo();
             couponPropertyUserPo.setCommunityId(couponPropertyPoolDtos.get(0).getCommunityId());
             couponPropertyUserPo.setCppId(couponPropertyPoolDtos.get(0).getCppId());
@@ -172,18 +228,23 @@ public class GiftCouponPropertyCmd extends Cmd{
             couponPropertyUserPo.setTel(ownerDtos.get(0).getLink());
             couponPropertyUserPo.setValue(value);
             couponPropertyUserPo.setStartTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_B));
-            // todo 充点券 同步物联网
+            
+            // 根据优惠券类型处理不同的业务逻辑
             if(CouponPropertyUserDto.TO_TYPE_CHARGE.equals(couponPropertyPoolDtos.get(0).getToType())){
+                // 处理充电券类型
                 couponPropertyUserPo.setValue(couponPropertyPoolConfigDtos.get(0).getColumnValue());
-                // todo 优惠券写到物联网系统
+                // 将充电券同步到物联网系统
                 iotInnerServiceSMOImpl.sendChargeCoupon(couponPropertyUserPo);
             }else{
+                // 处理普通优惠券类型，保存到用户优惠券表
                 couponPropertyUserV1InnerServiceSMOImpl.saveCouponPropertyUser(couponPropertyUserPo);
             }
         } finally {
+            // 释放分布式锁
             DistributedLock.releaseDistributedLock(requestId, key);
         }
 
+        // 设置成功响应
         context.setResponseEntity(ResultVo.success());
     }
 }

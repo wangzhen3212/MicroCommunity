@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 类表述：保存业主发票信息命令类
  * 服务编码：ownerInvoice.saveOwnerInvoice
  * 请求路劲：/app/ownerInvoice.SaveOwnerInvoice
  * add by 吴学文 at 2023-10-08 16:21:23 mail: 928255095@qq.com
@@ -41,40 +41,85 @@ import org.slf4j.LoggerFactory;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 
+ * 功能描述：处理业主发票信息保存的Cmd命令类，负责接收前端请求并保存业主发票信息
+ * 主要职责：
+ * 1. 验证请求参数的完整性
+ * 2. 将请求数据转换为持久化对象
+ * 3. 调用服务层保存发票信息
+ * 4. 处理保存结果并返回响应
  */
 @Java110Cmd(serviceCode = "invoice.saveOwnerInvoice")
 public class SaveOwnerInvoiceCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveOwnerInvoiceCmd.class);
 
+    /**
+     * ID生成前缀，用于生成发票记录的唯一标识
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 业主发票服务接口，用于调用发票相关的业务操作
+     */
     @Autowired
     private IOwnerInvoiceV1InnerServiceSMO ownerInvoiceV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 验证请求参数是否完整和有效
+     *
+     * @param event Cmd事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证业主ID参数是否存在
         Assert.hasKeyAndValue(reqJson, "ownerId", "请求报文中未包含ownerId");
+        // 验证业主姓名参数是否存在
         Assert.hasKeyAndValue(reqJson, "ownerName", "请求报文中未包含ownerName");
+        // 验证发票类型参数是否存在
         Assert.hasKeyAndValue(reqJson, "invoiceType", "请求报文中未包含invoiceType");
+        // 验证小区ID参数是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
+        // 验证发票名称参数是否存在
         Assert.hasKeyAndValue(reqJson, "invoiceName", "请求报文中未包含invoiceName");
+        // 验证发票地址参数是否存在
         Assert.hasKeyAndValue(reqJson, "invoiceAddress", "请求报文中未包含invoiceAddress");
-
     }
 
+    /**
+     * 执行保存业主发票信息的核心方法
+     * 将请求数据转换为持久化对象并保存到数据库
+     *
+     * @param event Cmd事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将JSON请求参数转换为OwnerInvoicePo持久化对象
         OwnerInvoicePo ownerInvoicePo = BeanConvertUtil.covertBean(reqJson, OwnerInvoicePo.class);
+        
+        // 生成发票记录的唯一ID
         ownerInvoicePo.setOiId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务层保存业主发票信息
         int flag = ownerInvoiceV1InnerServiceSMOImpl.saveOwnerInvoice(ownerInvoicePo);
 
+        // 检查保存结果，如果影响行数小于1则认为保存失败
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置成功响应结果
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

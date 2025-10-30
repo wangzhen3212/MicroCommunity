@@ -42,33 +42,75 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 优惠券资产池配置更新命令类
+ * 
+ * 该类负责处理优惠券资产池配置信息的更新操作，包括参数验证和业务逻辑执行
+ * 通过注解标识服务编码，与前端请求路径对应
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-11-19
+ */
 @Java110Cmd(serviceCode = "couponProperty.updateCouponPropertyPoolConfig")
 public class UpdateCouponPropertyPoolConfigCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(UpdateCouponPropertyPoolConfigCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(UpdateCouponPropertyPoolConfigCmd.class);
 
-
+    /**
+     * 优惠券资产池配置服务接口
+     */
     @Autowired
     private ICouponPropertyPoolConfigV1InnerServiceSMO couponPropertyPoolConfigV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数中是否包含必要的字段，确保更新操作的完整性
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证configId参数是否存在且不为空
         Assert.hasKeyAndValue(reqJson, "configId", "configId不能为空");
-Assert.hasKeyAndValue(reqJson, "couponId", "couponId不能为空");
-
+        // 验证couponId参数是否存在且不为空
+        Assert.hasKeyAndValue(reqJson, "couponId", "couponId不能为空");
     }
 
+    /**
+     * 执行更新命令方法
+     * 
+     * 将请求参数转换为实体对象，调用服务层进行数据更新操作
+     * 支持事务处理，确保数据一致性
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当更新操作失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       CouponPropertyPoolConfigPo couponPropertyPoolConfigPo = BeanConvertUtil.covertBean(reqJson, CouponPropertyPoolConfigPo.class);
+        // 将JSON请求参数转换为优惠券资产池配置实体对象
+        CouponPropertyPoolConfigPo couponPropertyPoolConfigPo = BeanConvertUtil.covertBean(reqJson, CouponPropertyPoolConfigPo.class);
+        
+        // 调用服务层接口执行更新操作，返回受影响的行数
         int flag = couponPropertyPoolConfigV1InnerServiceSMOImpl.updateCouponPropertyPoolConfig(couponPropertyPoolConfigPo);
 
+        // 检查更新操作是否成功，如果受影响行数小于1则认为更新失败
         if (flag < 1) {
             throw new CmdException("更新数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

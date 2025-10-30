@@ -66,68 +66,99 @@ import java.util.Map;
 )
 
 /**
- * 统一支付接口
+ * 统一支付接口命令类
+ * 
+ * 该类负责处理系统中的统一支付请求，根据不同的支付场景和业务类型，
+ * 调用相应的支付业务处理和支付适配器完成支付流程。
+ * 支持多种支付方式（微信支付等）和多种支付场景（费用支付、临时车缴费等）。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2024
  */
 @Java110Cmd(serviceCode = "payment.unifiedPayment")
 public class UnifiedPaymentCmd extends Cmd{
 
-
+    /** 日志记录器 */
     private static final Logger logger = LoggerFactory.getLogger(UnifiedPaymentCmd.class);
 
-    protected static final String DEFAULT_PAYMENT_ADAPT = "wechatPaymentFactory";// 默认微信通用支付
+    /** 默认支付适配器 - 微信通用支付 */
+    protected static final String DEFAULT_PAYMENT_ADAPT = "wechatPaymentFactory";
 
+    /** 支付池配置服务接口 */
     @Autowired
     private IPaymentPoolConfigV1InnerServiceSMO paymentPoolConfigV1InnerServiceSMOImpl;
 
+    /** 支付池服务接口 */
     @Autowired
     private IPaymentPoolV1InnerServiceSMO paymentPoolV1InnerServiceSMOImpl;
 
+    /** 费用服务接口 */
     @Autowired
     private IPayFeeV1InnerServiceSMO payFeeV1InnerServiceSMOImpl;
 
     /**
-     * 校验
-     * @param event              事件对象
-     * @param context 请求报文数据
-     * @param reqJson
-     * @throws CmdException
+     * 参数校验方法
+     * 
+     * 验证请求参数中是否包含必要的业务类型字段
+     * 
+     * @param event   命令事件对象
+     * @param context 命令数据流上下文，包含请求报文数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数校验失败时抛出异常
      */
-
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
-
+        // 校验请求参数中必须包含business字段
         Assert.hasKeyAndValue(reqJson,"business","未包含业务");
-
     }
 
+    /**
+     * 执行支付命令的主方法
+     * 
+     * 处理支付请求的完整流程，包括：
+     * 1. 获取支付业务处理器
+     * 2. 调用业务下单接口
+     * 3. 环境判断（开发/测试环境特殊处理）
+     * 4. 零金额支付特殊处理
+     * 5. 选择支付适配器
+     * 6. 调用支付厂商接口
+     * 7. 缓存请求参数
+     * 
+     * @param event   命令事件对象
+     * @param context 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException    当支付业务处理失败时抛出
+     * @throws ParseException  当数据解析异常时抛出
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
 
         logger.debug(">>>>>>>>>>>>>>>>支付参数报文,{}",reqJson.toJSONString());
+        // 从请求头中获取应用ID和用户ID
         String appId = context.getReqHeaders().get("app-id");
         String userId = context.getReqHeaders().get("user-id");
 
-
-        //1.0 查询当前支付的业务
-
+        // 1.0 根据业务类型获取对应的支付业务处理器
         IPaymentBusiness paymentBusiness = ApplicationContextFactory.getBean(reqJson.getString("business"), IPaymentBusiness.class);
 
         if(paymentBusiness == null){
             throw new CmdException("当前支付业务不支持");
         }
 
-        //2.0 相应业务 下单 返回 单号 ，金额，
+        // 2.0 调用业务处理器的统一支付方法，生成支付订单
         PaymentOrderDto paymentOrderDto =  paymentBusiness.unified(context,reqJson);
         paymentOrderDto.setAppId(appId);
         paymentOrderDto.setUserId(userId);
 
-
         logger.debug(">>>>>>>>>>>>>>>>支付业务下单返回,{}",JSONObject.toJSONString(paymentOrderDto));
 
+        // 获取当前环境配置
         String env = MappingCache.getValue(MappingConstant.ENV_DOMAIN,"HC_ENV");
 
-        // 这里 演示环境不向微信下单
+        // 开发环境和测试环境特殊处理：不实际调用支付接口
         if ("DEV".equals(env) || "TEST".equals(env)) {
+            // 模拟支付成功回调
             paymentBusiness.notifyPayment(paymentOrderDto,reqJson);
             JSONObject param = new JSONObject();
             param.put("code", "100");
@@ -136,7 +167,7 @@ public class UnifiedPaymentCmd extends Cmd{
             return ;
         }
 
-        // 3.0 如果支付金额为0 直接调用 支付完通知接口
+        // 3.0 如果支付金额为0，直接调用支付完成通知接口
         if (paymentOrderDto.getMoney() <= 0) {
             paymentBusiness.notifyPayment(paymentOrderDto,reqJson);
             JSONObject param = new JSONObject();
@@ -146,19 +177,19 @@ public class UnifiedPaymentCmd extends Cmd{
             return ;
         }
 
-        // 3.0 寻找当前支付适配器
-        // todo 3.0 寻找当前支付适配器
+        // 4.0 计算并获取支付适配器
         String payAdapt = computeAdapt(reqJson.getString("business"), reqJson);
-        //String payAdapt = MappingCache.getValue(WechatConstant.WECHAT_DOMAIN, WechatConstant.PAYMENT_ADAPT);
         payAdapt = StringUtil.isEmpty(payAdapt) ? DEFAULT_PAYMENT_ADAPT : payAdapt;
 
+        // 如果请求中指定了支付适配器，则使用指定的适配器
         if(reqJson.containsKey("payAdapt") && !StringUtil.isEmpty(reqJson.getString("payAdapt"))){
             payAdapt = reqJson.getString("payAdapt");
         }
 
+        // 获取支付适配器实例
         IPaymentFactoryAdapt tPayAdapt = ApplicationContextFactory.getBean(payAdapt, IPaymentFactoryAdapt.class);
 
-        // 4.0 相应支付厂家下单
+        // 5.0 调用支付厂商接口进行实际支付
         Map result = null;
         try {
             result = tPayAdapt.java110Payment(paymentOrderDto,reqJson, context);
@@ -171,29 +202,41 @@ public class UnifiedPaymentCmd extends Cmd{
         logger.debug("调用支付厂家返回,{}",responseEntity);
         context.setResponseEntity(responseEntity);
 
-
-        // redis 中 保存 请求参数
+        // 6.0 将请求参数缓存到Redis中，用于后续处理
         CommonCache.setValue("unifiedPayment_"+paymentOrderDto.getOrderId(),reqJson.toJSONString(),CommonCache.PAY_DEFAULT_EXPIRE_TIME);
     }
 
+    /**
+     * 计算支付适配器
+     * 
+     * 根据业务类型和请求参数确定使用哪个支付适配器，优先级：
+     * 1. 费用支付业务适配器
+     * 2. 临时车缴费业务适配器
+     * 3. 小区默认支付适配器
+     * 
+     * @param business  业务类型
+     * @param reqJson   请求参数
+     * @return String   支付适配器Bean名称
+     */
     private String computeAdapt(String business, JSONObject reqJson) {
 
         String communityId = reqJson.getString("communityId");
-        //todo 如果是单个费用缴费
+        
+        // 1. 如果是费用支付业务，获取对应的支付适配器
         PaymentPoolDto paymentPoolDto = ifPayFeeBusiness(business, reqJson);
         if (paymentPoolDto != null) {
             reqJson.put("paymentPoolId", paymentPoolDto.getPpId());
             return paymentPoolDto.getBeanJsapi();
         }
 
-        //todo 如果是临时车
+        // 2. 如果是临时车缴费业务，获取对应的支付适配器
         paymentPoolDto = ifTempCarFeeBusiness(business, communityId);
         if (paymentPoolDto != null) {
             reqJson.put("paymentPoolId", paymentPoolDto.getPpId());
             return paymentPoolDto.getBeanJsapi();
         }
 
-        //todo 按小区查询 支付信息
+        // 3. 按小区查询默认支付信息
         paymentPoolDto = new PaymentPoolDto();
         paymentPoolDto.setCommunityId(communityId);
         paymentPoolDto.setPayType(PaymentPoolDto.PAY_TYPE_COMMUNITY);
@@ -208,17 +251,21 @@ public class UnifiedPaymentCmd extends Cmd{
     }
 
     /**
-     * 临时车场景处理
-     *
-     * @param business
-     * @param communityId
-     * @return
+     * 临时车缴费业务处理
+     * 
+     * 检查是否为临时车缴费业务，并返回对应的支付池配置
+     * 
+     * @param business    业务类型
+     * @param communityId 小区ID
+     * @return PaymentPoolDto 支付池数据传输对象，如果不是临时车业务返回null
      */
     private PaymentPoolDto ifTempCarFeeBusiness(String business, String communityId) {
+        // 检查业务类型是否为临时车缴费
         if (!"tempCarFee".equals(business)) {
             return null;
         }
-        //todo 按小区查询 支付信息
+        
+        // 查询临时车缴费的支付池配置
         PaymentPoolDto paymentPoolDto = new PaymentPoolDto();
         paymentPoolDto.setCommunityId(communityId);
         paymentPoolDto.setPayType(PaymentPoolDto.PAY_TYPE_TEMP_CAT);
@@ -231,17 +278,29 @@ public class UnifiedPaymentCmd extends Cmd{
         return paymentPoolDtos.get(0);
     }
 
+    /**
+     * 费用支付业务处理
+     * 
+     * 检查是否为费用支付业务，并返回对应的支付池配置
+     * 
+     * @param business 业务类型
+     * @param reqJson  请求参数
+     * @return PaymentPoolDto 支付池数据传输对象，如果不是费用支付业务返回null
+     */
     private PaymentPoolDto ifPayFeeBusiness(String business, JSONObject reqJson) {
         String feeId = "";
+        // 检查业务类型是否为费用支付且包含费用ID
         if (!"payFee".equals(business) || !reqJson.containsKey("feeId")) {
             return null;
         }
 
         feeId = reqJson.getString("feeId");
+        // 检查费用ID是否为数字（这里逻辑可能需要调整，通常应该检查是否为有效数字）
         if (StringUtil.isNumber(feeId)) {
             return null;
         }
 
+        // 查询费用信息
         PayFeeDto feeDto = new PayFeeDto();
         feeDto.setFeeId(feeId);
         feeDto.setCommunityId(reqJson.getString("communityId"));
@@ -251,6 +310,7 @@ public class UnifiedPaymentCmd extends Cmd{
             return null;
         }
 
+        // 根据费用配置查询支付池配置
         PaymentPoolConfigDto paymentPoolConfigDto = new PaymentPoolConfigDto();
         paymentPoolConfigDto.setConfigId(feeDtos.get(0).getConfigId());
         paymentPoolConfigDto.setCommunityId(feeDtos.get(0).getCommunityId());
@@ -259,6 +319,7 @@ public class UnifiedPaymentCmd extends Cmd{
             return null;
         }
 
+        // 查询支付池信息
         PaymentPoolDto paymentPoolDto = new PaymentPoolDto();
         paymentPoolDto.setPpId(paymentPoolConfigDtos.get(0).getPpId());
         paymentPoolDto.setCommunityId(paymentPoolConfigDtos.get(0).getCommunityId());

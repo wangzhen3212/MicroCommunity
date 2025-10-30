@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 类表述：保存发票事件信息
  * 服务编码：invoiceEvent.saveInvoiceEvent
  * 请求路劲：/app/invoiceEvent.SaveInvoiceEvent
  * add by 吴学文 at 2023-10-08 19:40:59 mail: 928255095@qq.com
@@ -42,38 +42,89 @@ import org.slf4j.LoggerFactory;
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
  */
+
+/**
+ * 发票事件保存命令类
+ * 
+ * 该类负责处理发票事件的保存操作，包括参数验证和业务逻辑处理
+ * 通过注解@Java110Cmd标识服务编码，用于路由请求到对应的处理器
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2023-10-08
+ */
 @Java110Cmd(serviceCode = "invoiceEvent.saveInvoiceEvent")
 public class SaveInvoiceEventCmd extends Cmd {
 
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(SaveInvoiceEventCmd.class);
 
+    /**
+     * ID生成前缀，用于生成事件ID
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 发票事件服务接口
+     */
     @Autowired
     private IInvoiceEventV1InnerServiceSMO invoiceEventV1InnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数是否包含必要的字段，如果缺少必要参数会抛出异常
+     * 
+     * @param event 命令事件对象，包含请求相关信息
+     * @param cmdDataFlowContext 命令数据流上下文，用于获取和设置请求响应数据
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证请求报文中必须包含applyId字段
         Assert.hasKeyAndValue(reqJson, "applyId", "请求报文中未包含applyId");
-Assert.hasKeyAndValue(reqJson, "eventType", "请求报文中未包含eventType");
-Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
-Assert.hasKeyAndValue(reqJson, "createUserId", "请求报文中未包含createUserId");
-Assert.hasKeyAndValue(reqJson, "createUserName", "请求报文中未包含createUserName");
-
+        // 验证请求报文中必须包含eventType字段
+        Assert.hasKeyAndValue(reqJson, "eventType", "请求报文中未包含eventType");
+        // 验证请求报文中必须包含communityId字段
+        Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
+        // 验证请求报文中必须包含createUserId字段
+        Assert.hasKeyAndValue(reqJson, "createUserId", "请求报文中未包含createUserId");
+        // 验证请求报文中必须包含createUserName字段
+        Assert.hasKeyAndValue(reqJson, "createUserName", "请求报文中未包含createUserName");
     }
 
+    /**
+     * 执行保存发票事件命令
+     * 
+     * 将请求参数转换为发票事件PO对象，生成唯一事件ID，并调用服务层保存数据
+     * 使用@Java110Transactional注解确保方法在事务中执行
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数的JSON对象
+     * @throws CmdException 当保存数据失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       InvoiceEventPo invoiceEventPo = BeanConvertUtil.covertBean(reqJson, InvoiceEventPo.class);
+        // 将请求JSON对象转换为发票事件PO对象
+        InvoiceEventPo invoiceEventPo = BeanConvertUtil.covertBean(reqJson, InvoiceEventPo.class);
+        
+        // 生成唯一的事件ID
         invoiceEventPo.setEventId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务层保存发票事件数据
         int flag = invoiceEventV1InnerServiceSMOImpl.saveInvoiceEvent(invoiceEventPo);
 
+        // 检查保存操作是否成功，flag小于1表示保存失败
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

@@ -82,43 +82,59 @@ import java.util.List;
 )
 
 /**
- * 类表述：保存
- * 服务编码：parkingCouponCar.saveParkingCouponCar
- * 请求路劲：/app/parkingCouponCar.SaveParkingCouponCar
- * add by 吴学文 at 2022-10-12 13:02:09 mail: 928255095@qq.com
- * open source address: https://gitee.com/wuxw7/MicroCommunity
- * 官网：http://www.homecommunity.cn
- * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
- * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * 停车券赠送命令类
+ * 
+ * 该类负责处理商家向车辆赠送停车券的业务逻辑，包括参数验证、库存检查、并发控制、
+ * 库存扣减和停车券发放等操作。
+ * 
+ * @author 吴学文
+ * @version 1.0
+ * @since 2022-10-12
  */
 @Java110Cmd(serviceCode = "parkingCoupon.saveParkingCouponCar")
 public class SaveParkingCouponCarCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveParkingCouponCarCmd.class);
 
+    /** ID生成前缀 */
     public static final String CODE_PREFIX_ID = "10";
 
+    /** 停车券车辆服务接口 */
     @Autowired
     private IParkingCouponCarV1InnerServiceSMO parkingCouponCarV1InnerServiceSMOImpl;
 
+    /** 停车券服务接口 */
     @Autowired
     private IParkingCouponV1InnerServiceSMO parkingCouponV1InnerServiceSMOImpl;
 
+    /** 停车券店铺服务接口 */
     @Autowired
     private IParkingCouponShopV1InnerServiceSMO parkingCouponShopV1InnerServiceSMOImpl;
 
+    /** 店铺服务接口 */
     @Autowired
     private IStoreShopV1InnerServiceSMO shopInnerServiceSMOImpl;
 
+    /**
+     * 参数验证方法
+     * 
+     * 验证请求参数的有效性，包括必填字段检查、店铺存在性验证和临时票据验证
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当参数验证失败时抛出异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 验证必填参数是否存在
         Assert.hasKeyAndValue(reqJson, "couponShopId", "请求报文中未包含couponShopId");
         Assert.hasKeyAndValue(reqJson, "shopId", "请求报文中未包含shopId");
         Assert.hasKeyAndValue(reqJson, "carNum", "请求报文中未包含carNum");
         Assert.hasKeyAndValue(reqJson, "giveWay", "请求报文中未包含giveWay");
         Assert.hasKeyAndValue(reqJson, "code", "请求报文中未包含临时票据");
 
-
+        // 验证店铺是否存在
         StoreShopDto shopDto = new StoreShopDto();
         shopDto.setShopId(reqJson.getString("shopId"));
         List<ShopDto> shopDtos = shopInnerServiceSMOImpl.queryStoreShops(shopDto);
@@ -127,77 +143,109 @@ public class SaveParkingCouponCarCmd extends Cmd {
             throw new CmdException("店铺不存在");
         }
 
+        // 构建缓存键
         String codeKey = reqJson.getString("shopId") + reqJson.getString("code");
 
+        // 检查是否开启停车券二维码验证
         String checkCode = MappingCache.getValue(MappingConstant.DOMAIN_SYSTEM_SWITCH, "CHECK_PARKING_COUPON_QRCODE_CODE");
 
+        // 如果验证功能关闭，直接返回
         if ("OFF".equals(checkCode)) {
             return;
         }
+        
+        // 验证临时票据是否有效
         if (!reqJson.getString("code").equals(CommonCache.getAndRemoveValue(codeKey))) {
             throw new CmdException("非法操作");
         }
     }
 
+    /**
+     * 执行停车券赠送命令
+     * 
+     * 处理停车券赠送的核心业务逻辑，包括库存检查、并发控制、库存扣减和停车券发放
+     * 
+     * @param event 命令事件对象
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 当业务处理失败时抛出异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
-
+        // 查询停车券店铺信息
         ParkingCouponShopDto parkingCouponShopDto = new ParkingCouponShopDto();
         parkingCouponShopDto.setCouponShopId(reqJson.getString("couponShopId"));
         parkingCouponShopDto.setShopId(reqJson.getString("shopId"));
         List<ParkingCouponShopDto> parkingCouponShopDtos = parkingCouponShopV1InnerServiceSMOImpl.queryParkingCouponShops(parkingCouponShopDto);
 
+        // 验证停车券是否存在且唯一
         Assert.listOnlyOne(parkingCouponShopDtos, "停车劵不存在");
 
+        // 检查停车券库存
         int quantity = Integer.parseInt(parkingCouponShopDtos.get(0).getQuantity());
-
         if (quantity < 1) {
             throw new CmdException("停车劵不足，请购买");
         }
+        
         int flag = 0;
-        // 这里加全局锁 防止 并发
+        // 使用分布式锁防止并发问题
         String requestId = DistributedLock.getLockUUID();
         String key = this.getClass().getSimpleName() + reqJson.getString("couponShopId");
         try {
+            // 获取分布式锁
             DistributedLock.waitGetDistributedLock(key, requestId);
+            
+            // 在锁内重新查询库存，防止库存被其他线程修改
             parkingCouponShopDto = new ParkingCouponShopDto();
             parkingCouponShopDto.setCouponShopId(reqJson.getString("couponShopId"));
             parkingCouponShopDto.setShopId(reqJson.getString("shopId"));
             parkingCouponShopDtos = parkingCouponShopV1InnerServiceSMOImpl.queryParkingCouponShops(parkingCouponShopDto);
             quantity = Integer.parseInt(parkingCouponShopDtos.get(0).getQuantity());
+            
+            // 再次检查库存
             if (quantity < 1) {
                 throw new CmdException("停车劵不足，请购买");
             }
+            
+            // 扣减停车券库存
             ParkingCouponShopPo parkingCouponShopPo = new ParkingCouponShopPo();
             parkingCouponShopPo.setCouponShopId(parkingCouponShopDtos.get(0).getCouponShopId());
             parkingCouponShopPo.setQuantity((quantity - 1) + "");
             flag = parkingCouponShopV1InnerServiceSMOImpl.updateParkingCouponShop(parkingCouponShopPo);
+            
             if (flag < 1) {
                 throw new CmdException("优惠券递减失败");
             }
         } finally {
+            // 释放分布式锁
             DistributedLock.releaseDistributedLock(key, requestId);
         }
 
+        // 创建停车券车辆记录
         ParkingCouponCarPo parkingCouponCarPo = BeanConvertUtil.covertBean(reqJson, ParkingCouponCarPo.class);
         parkingCouponCarPo.setPccId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         parkingCouponCarPo.setCouponId(parkingCouponShopDtos.get(0).getCouponId());
         parkingCouponCarPo.setCommunityId(parkingCouponShopDtos.get(0).getCommunityId());
+        // 设置开始时间为当前时间
         parkingCouponCarPo.setStartTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+        // 设置结束时间为第二天
         parkingCouponCarPo.setEndTime(DateUtil.getAddDayString(DateUtil.getCurrentDate(), DateUtil.DATE_FORMATE_STRING_A, 1));
         parkingCouponCarPo.setPaId(parkingCouponShopDtos.get(0).getPaId());
+        // 设置状态为待使用
         parkingCouponCarPo.setState(ParkingCouponCarDto.STATE_WAIT);
         parkingCouponCarPo.setTypeCd(parkingCouponShopDtos.get(0).getTypeCd());
         parkingCouponCarPo.setValue(parkingCouponShopDtos.get(0).getValue());
 
+        // 保存停车券车辆记录
         flag = parkingCouponCarV1InnerServiceSMOImpl.saveParkingCouponCar(parkingCouponCarPo);
 
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 返回成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }
