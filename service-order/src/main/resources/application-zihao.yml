@@ -46,28 +46,4 @@ spring:
       min-idle: 5
       max-wait: 60000
 
-  consumer:
-      connect: dev.zk.java110.com:2181
-    enable:
-      auto:
-        commit: true
-    session:
-      timeout: 6000
-    auto:
-      commit:
-        interval: 100
-      offset:
-        reset: latest
-    topic: test
-    group:
-      id: notifyBusinessStatus
-    concurrency: 10
 
-  producer:
-      connect: dev.zk.java110.com:2181
-    retries: 0
-    batch:
-      size: 4096
-    linger: 1
-    buffer:
-      memory: 40960
