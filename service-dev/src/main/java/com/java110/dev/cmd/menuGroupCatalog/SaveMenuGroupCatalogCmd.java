@@ -37,9 +37,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 类表述：保存菜单组目录关系
  * 服务编码：menuGroupCatalog.saveMenuGroupCatalog
- * 请求路劲：/app/menuGroupCatalog.SaveMenuGroupCatalog
+ * 请求路径：/app/menuGroupCatalog.SaveMenuGroupCatalog
  * add by 吴学文 at 2022-02-26 10:18:54 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -51,41 +51,75 @@ public class SaveMenuGroupCatalogCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveMenuGroupCatalogCmd.class);
 
+    /**
+     * ID生成前缀
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 菜单组目录关系服务接口
+     */
     @Autowired
     private IMenuGroupCatalogV1InnerServiceSMO menuGroupCatalogV1InnerServiceSMOImpl;
 
+    /**
+     * 菜单目录服务接口
+     */
     @Autowired
     private IMenuCatalogV1InnerServiceSMO menuCatalogV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 校验必填参数：菜单目录ID
         Assert.hasKeyAndValue(reqJson, "caId", "请求报文中未包含caId");
+        // 校验必填参数：菜单组ID
         Assert.hasKeyAndValue(reqJson, "gId", "请求报文中未包含gId");
-
     }
 
+    /**
+     * 业务处理主方法
+     * 保存菜单组与菜单目录的关联关系
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-        //查询 catalog
+        // 查询菜单目录信息
         MenuCatalogDto menuCatalogDto = new MenuCatalogDto();
         menuCatalogDto.setCaId(reqJson.getString("caId"));
         List<MenuCatalogDto> menuCatalogDtos = menuCatalogV1InnerServiceSMOImpl.queryMenuCatalogs(menuCatalogDto);
 
+        // 校验菜单目录是否存在且唯一
         Assert.listOnlyOne(menuCatalogDtos, "菜单目录不存在");
 
+        // 转换请求参数为PO对象
         MenuGroupCatalogPo menuGroupCatalogPo = BeanConvertUtil.covertBean(reqJson, MenuGroupCatalogPo.class);
+        // 生成主键ID
         menuGroupCatalogPo.setGcId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        // 设置存储类型（从菜单目录中获取）
         menuGroupCatalogPo.setStoreType(menuCatalogDtos.get(0).getStoreType());
+        
+        // 调用服务保存菜单组目录关系
         int flag = menuGroupCatalogV1InnerServiceSMOImpl.saveMenuGroupCatalog(menuGroupCatalogPo);
 
+        // 校验保存结果
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

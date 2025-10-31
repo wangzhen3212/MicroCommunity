@@ -35,9 +35,9 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * 类表述：查询
+ * 类表述：查询字典规格列表
  * 服务编码：dictSpec.listDictSpec
- * 请求路劲：/app/dictSpec.ListDictSpec
+ * 请求路径：/app/dictSpec.ListDictSpec
  * add by 吴学文 at 2022-07-07 09:00:30 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -47,34 +47,63 @@ import org.slf4j.LoggerFactory;
 @Java110Cmd(serviceCode = "dictSpec.listDictSpec")
 public class ListDictSpecCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(ListDictSpecCmd.class);
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(ListDictSpecCmd.class);
+    
+    /**
+     * 字典规格服务接口
+     */
     @Autowired
     private IDictSpecV1InnerServiceSMO dictSpecV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 调用父类的分页信息校验方法
         super.validatePageInfo(reqJson);
     }
 
+    /**
+     * 命令执行方法 - 查询字典规格列表
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令异常
+     */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
+        // 将请求JSON转换为DictSpecDto对象
+        DictSpecDto dictSpecDto = BeanConvertUtil.covertBean(reqJson, DictSpecDto.class);
 
-           DictSpecDto dictSpecDto = BeanConvertUtil.covertBean(reqJson, DictSpecDto.class);
+        // 查询字典规格总数
+        int count = dictSpecV1InnerServiceSMOImpl.queryDictSpecsCount(dictSpecDto);
 
-           int count = dictSpecV1InnerServiceSMOImpl.queryDictSpecsCount(dictSpecDto);
+        List<DictSpecDto> dictSpecDtos = null;
 
-           List<DictSpecDto> dictSpecDtos = null;
+        // 根据查询结果处理数据
+        if (count > 0) {
+            // 如果存在数据，则查询字典规格列表
+            dictSpecDtos = dictSpecV1InnerServiceSMOImpl.queryDictSpecs(dictSpecDto);
+        } else {
+            // 如果没有数据，返回空列表
+            dictSpecDtos = new ArrayList<>();
+        }
 
-           if (count > 0) {
-               dictSpecDtos = dictSpecV1InnerServiceSMOImpl.queryDictSpecs(dictSpecDto);
-           } else {
-               dictSpecDtos = new ArrayList<>();
-           }
+        // 构造返回结果对象
+        // 计算总页数：总记录数/每页记录数，向上取整
+        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, dictSpecDtos);
 
-           ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")), count, dictSpecDtos);
+        // 设置HTTP响应实体
+        ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
-           ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
-
-           cmdDataFlowContext.setResponseEntity(responseEntity);
+        // 将响应实体设置到数据流上下文中
+        cmdDataFlowContext.setResponseEntity(responseEntity);
     }
 }

@@ -36,9 +36,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * 类表述：保存
+ * 类表述：保存字典数据
  * 服务编码：dict.saveDict
- * 请求路劲：/app/dict.SaveDict
+ * 请求路径：/app/dict.SaveDict
  * add by 吴学文 at 2022-07-06 20:03:58 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -50,41 +50,78 @@ public class SaveDictCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(SaveDictCmd.class);
 
+    /**
+     * ID前缀常量
+     */
     public static final String CODE_PREFIX_ID = "10";
 
+    /**
+     * 字典服务接口
+     */
     @Autowired
     private IDictV1InnerServiceSMO dictV1InnerServiceSMOImpl;
 
+    /**
+     * 字典规格服务接口
+     */
     @Autowired
     private IDictSpecV1InnerServiceSMO dictSpecV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 命令异常
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
-        Assert.hasKeyAndValue(reqJson, "statusCd", "请求报文中未包含statusCd");
-        Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含name");
-        Assert.hasKeyAndValue(reqJson, "specId", "请求报文中未包含类型");
-
+        // 校验必填参数
+        Assert.hasKeyAndValue(reqJson, "statusCd", "请求报文中未包含状态码");
+        Assert.hasKeyAndValue(reqJson, "name", "请求报文中未包含字典名称");
+        Assert.hasKeyAndValue(reqJson, "specId", "请求报文中未包含字典规格ID");
     }
 
+    /**
+     * 执行保存字典命令
+     * 主要流程：
+     * 1. 根据规格ID查询字典规格信息
+     * 2. 设置字典数据的表名和表字段
+     * 3. 保存字典数据
+     * 4. 返回操作结果
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 命令异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-        DictSpecDto dictSpecDto  = new DictSpecDto();
+        // 根据规格ID查询字典规格信息
+        DictSpecDto dictSpecDto = new DictSpecDto();
         dictSpecDto.setSpecId(reqJson.getString("specId"));
         List<DictSpecDto> dictSpecDtos = dictSpecV1InnerServiceSMOImpl.queryDictSpecs(dictSpecDto);
 
-        Assert.listOnlyOne(dictSpecDtos,"未查询到类型");
+        // 验证查询结果唯一性
+        Assert.listOnlyOne(dictSpecDtos, "未查询到对应的字典规格信息或查询到多条记录");
 
+        // 转换请求参数为字典PO对象
         DictPo dictPo = BeanConvertUtil.covertBean(reqJson, DictPo.class);
+        // 设置表名和表字段信息
         dictPo.setTableName(dictSpecDtos.get(0).getTableName());
         dictPo.setTableColumns(dictSpecDtos.get(0).getTableColumns());
+        
+        // 保存字典数据
         int flag = dictV1InnerServiceSMOImpl.saveDict(dictPo);
 
+        // 检查保存结果
         if (flag < 1) {
-            throw new CmdException("保存数据失败");
+            throw new CmdException("保存字典数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

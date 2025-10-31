@@ -31,10 +31,11 @@ import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
- * 类表述：删除
+ * 类表述：删除字典数据命令类
  * 服务编码：dict.deleteDict
- * 请求路劲：/app/dict.DeleteDict
+ * 请求路径：/app/dict.DeleteDict
  * add by 吴学文 at 2022-07-06 20:03:58 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -43,28 +44,68 @@ import org.slf4j.LoggerFactory;
  */
 @Java110Cmd(serviceCode = "dict.deleteDict")
 public class DeleteDictCmd extends Cmd {
-  private static Logger logger = LoggerFactory.getLogger(DeleteDictCmd.class);
+    
+    /**
+     * 日志记录器
+     */
+    private static Logger logger = LoggerFactory.getLogger(DeleteDictCmd.class);
 
+    /**
+     * 字典服务接口
+     */
     @Autowired
     private IDictV1InnerServiceSMO dictV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当参数校验失败时抛出异常
+     * 
+     * 功能说明：
+     * 1. 校验请求参数中必须包含id字段
+     * 2. 确保删除操作有明确的标识
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 校验请求参数中必须包含id字段
         Assert.hasKeyAndValue(reqJson, "id", "id不能为空");
-
     }
 
+    /**
+     * 执行删除字典命令
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 当删除操作失败时抛出异常
+     * 
+     * 功能说明：
+     * 1. 将请求参数转换为字典对象
+     * 2. 调用字典服务执行删除操作
+     * 3. 检查删除结果，失败时抛出异常
+     * 4. 设置响应结果为成功
+     * 
+     * 事务说明：
+     * 使用@Java110Transactional注解确保删除操作的原子性
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       DictPo dictPo = BeanConvertUtil.covertBean(reqJson, DictPo.class);
+        // 将请求JSON参数转换为字典对象
+        DictPo dictPo = BeanConvertUtil.covertBean(reqJson, DictPo.class);
+        
+        // 调用字典服务执行删除操作
         int flag = dictV1InnerServiceSMOImpl.deleteDict(dictPo);
 
+        // 检查删除结果，如果影响行数小于1说明删除失败
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
 
+        // 设置响应结果为成功
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

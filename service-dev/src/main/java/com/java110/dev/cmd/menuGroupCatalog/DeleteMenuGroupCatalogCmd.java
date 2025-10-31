@@ -32,9 +32,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * 类表述：删除
+ * 类表述：删除菜单组目录
  * 服务编码：menuGroupCatalog.deleteMenuGroupCatalog
- * 请求路劲：/app/menuGroupCatalog.DeleteMenuGroupCatalog
+ * 请求路径：/app/menuGroupCatalog.DeleteMenuGroupCatalog
  * add by 吴学文 at 2022-02-26 10:18:54 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -43,29 +43,67 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @Java110Cmd(serviceCode = "menuGroupCatalog.deleteMenuGroupCatalog")
 public class DeleteMenuGroupCatalogCmd extends Cmd {
+    
+    /**
+     * 日志记录器
+     */
     private static Logger logger = LoggerFactory.getLogger(DeleteMenuGroupCatalogCmd.class);
 
+    /**
+     * 菜单组目录服务接口
+     */
     @Autowired
     private IMenuGroupCatalogV1InnerServiceSMO menuGroupCatalogV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * 
+     * 功能说明：
+     * 1. 校验必填参数是否存在
+     * 2. 确保删除操作的必要参数完整
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 校验目录ID参数
         Assert.hasKeyAndValue(reqJson, "gcId", "gcId不能为空");
+        // 校验店铺类型参数
         Assert.hasKeyAndValue(reqJson, "storeType", "storeType不能为空");
-
     }
 
+    /**
+     * 执行删除菜单组目录命令
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 数据流上下文
+     * @param reqJson 请求参数JSON对象
+     * @throws CmdException 命令执行异常
+     * 
+     * 功能说明：
+     * 1. 将请求参数转换为菜单组目录PO对象
+     * 2. 调用服务层执行删除操作
+     * 3. 处理删除结果并返回响应
+     * 4. 使用事务注解确保数据一致性
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
+        // 将JSON请求参数转换为菜单组目录PO对象
         MenuGroupCatalogPo menuGroupCatalogPo = BeanConvertUtil.covertBean(reqJson, MenuGroupCatalogPo.class);
+        
+        // 调用服务层执行删除操作，返回影响的行数
         int flag = menuGroupCatalogV1InnerServiceSMOImpl.deleteMenuGroupCatalog(menuGroupCatalogPo);
 
+        // 检查删除操作是否成功
         if (flag < 1) {
+            // 删除失败时抛出异常
             throw new CmdException("删除数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

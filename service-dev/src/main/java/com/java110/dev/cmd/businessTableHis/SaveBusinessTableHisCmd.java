@@ -33,9 +33,9 @@ import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 
 /**
- * 类表述：保存
+ * 类表述：保存业务表历史记录
  * 服务编码：businessTableHis.SaveBusinessTableHis
- * 请求路劲：/app/businessTableHis.SaveBusinessTableHis
+ * 请求路径：/app/businessTableHis.SaveBusinessTableHis
  * add by 吴学文 at 2021-09-12 13:58:05 mail: 928255095@qq.com
  * open source address: https://gitee.com/wuxw7/MicroCommunity
  * 官网：http://www.homecommunity.cn
@@ -45,34 +45,60 @@ import com.java110.core.log.LoggerFactory;
 @Java110Cmd(serviceCode = "businessTableHis.saveBusinessTableHis")
 public class SaveBusinessTableHisCmd extends Cmd {
 
+    // 日志记录器
     private static Logger logger = LoggerFactory.getLogger(SaveBusinessTableHisCmd.class);
 
+    // ID生成前缀
     public static final String CODE_PREFIX_ID = "10";
 
+    // 业务表历史记录服务接口
     @Autowired
     private IBusinessTableHisV1InnerServiceSMO businessTableHisV1InnerServiceSMOImpl;
 
+    /**
+     * 参数校验方法
+     * 验证请求参数是否完整和有效
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 校验必填参数
         Assert.hasKeyAndValue(reqJson, "action", "请求报文中未包含action");
-Assert.hasKeyAndValue(reqJson, "actionObj", "请求报文中未包含actionObj");
-Assert.hasKeyAndValue(reqJson, "actionObjHis", "请求报文中未包含actionObjHis");
-Assert.hasKeyAndValue(reqJson, "businessTypeCd", "请求报文中未包含businessTypeCd");
-
+        Assert.hasKeyAndValue(reqJson, "actionObj", "请求报文中未包含actionObj");
+        Assert.hasKeyAndValue(reqJson, "actionObjHis", "请求报文中未包含actionObjHis");
+        Assert.hasKeyAndValue(reqJson, "businessTypeCd", "请求报文中未包含businessTypeCd");
     }
 
+    /**
+     * 业务处理方法
+     * 保存业务表历史记录到数据库
+     * 
+     * @param event 命令事件
+     * @param cmdDataFlowContext 命令数据流上下文
+     * @param reqJson 请求JSON对象
+     * @throws CmdException 命令异常
+     */
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
-
-       BusinessTableHisPo businessTableHisPo = BeanConvertUtil.covertBean(reqJson, BusinessTableHisPo.class);
+        // 将JSON对象转换为业务实体对象
+        BusinessTableHisPo businessTableHisPo = BeanConvertUtil.covertBean(reqJson, BusinessTableHisPo.class);
+        
+        // 生成历史记录ID
         businessTableHisPo.setHisId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+        
+        // 调用服务保存数据
         int flag = businessTableHisV1InnerServiceSMOImpl.saveBusinessTableHis(businessTableHisPo);
 
+        // 检查保存结果
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
 
+        // 设置成功响应
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }
