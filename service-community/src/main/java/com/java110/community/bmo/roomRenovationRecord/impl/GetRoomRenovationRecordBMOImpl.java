@@ -49,23 +49,27 @@ public class GetRoomRenovationRecordBMOImpl implements IGetRoomRenovationRecordB
             String imgUrl = MappingCache.getValue(MappingConstant.FILE_DOMAIN, "IMG_PATH");
             for (RoomRenovationRecordPo renovationRecordPo : roomRenovationRecordList) {
                 if (!StringUtil.isEmpty(renovationRecordPo.getFileRealName()) && renovationRecordPo.getRelTypeCd().equals("19000")) {
+                    if (renovationRecordPo.getFileRealName().startsWith("http")) {
+                        renovationRecordPo.setUrl(
+                                renovationRecordPo.getFileRealName());
+                    } else {
+                        renovationRecordPo.setUrl(imgUrl +
+                                renovationRecordPo.getFileRealName());
+                    }
                     renovationRecordPo.setUrl(imgUrl +
                             renovationRecordPo.getFileRealName());
                 } else if (!StringUtil.isEmpty(renovationRecordPo.getFileRealName()) && renovationRecordPo.getRelTypeCd().equals("21000")) {
+                    if (renovationRecordPo.getFileRealName().startsWith("http")) {
+                        renovationRecordPo.setUrl(
+                                renovationRecordPo.getFileRealName());
+                    } else {
+                        renovationRecordPo.setUrl(imgUrl +
+                                renovationRecordPo.getFileRealName());
+                    }
                     renovationRecordPo.setUrl(imgUrl +
                             renovationRecordPo.getFileRealName());
                 }
 
-                FileRelDto fileRelDto = new FileRelDto();
-                fileRelDto.setObjId(renovationRecordPo.getRecordId());
-                fileRelDtos = fileRelInnerServiceSMOImpl.queryFileRels(fileRelDto);
-                List<String> urls = new ArrayList<>();
-                if (!ListUtil.isNull(fileRelDtos)) {
-                    for (FileRelDto fRelDto : fileRelDtos) {
-                        urls.add(imgUrl + fRelDto.getFileRealName());
-                    }
-                }
-                renovationRecordPo.setUrls(urls.toArray(new String[urls.size()]));
                 roomRenovationRecordPos.add(renovationRecordPo);
             }
         } else {
