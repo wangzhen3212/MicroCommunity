@@ -56,8 +56,6 @@ public class GetRoomRenovationRecordBMOImpl implements IGetRoomRenovationRecordB
                         renovationRecordPo.setUrl(imgUrl +
                                 renovationRecordPo.getFileRealName());
                     }
-                    renovationRecordPo.setUrl(imgUrl +
-                            renovationRecordPo.getFileRealName());
                 } else if (!StringUtil.isEmpty(renovationRecordPo.getFileRealName()) && renovationRecordPo.getRelTypeCd().equals("21000")) {
                     if (renovationRecordPo.getFileRealName().startsWith("http")) {
                         renovationRecordPo.setUrl(
@@ -66,8 +64,6 @@ public class GetRoomRenovationRecordBMOImpl implements IGetRoomRenovationRecordB
                         renovationRecordPo.setUrl(imgUrl +
                                 renovationRecordPo.getFileRealName());
                     }
-                    renovationRecordPo.setUrl(imgUrl +
-                            renovationRecordPo.getFileRealName());
                 }
 
                 roomRenovationRecordPos.add(renovationRecordPo);
