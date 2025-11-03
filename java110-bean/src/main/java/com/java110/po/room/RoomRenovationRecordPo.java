@@ -36,6 +36,8 @@ public class RoomRenovationRecordPo extends PageDto implements Serializable {
 
     private String url;
 
+    private String[] urls;
+
     //文件类型
     private String relTypeCd;
 
@@ -188,5 +190,13 @@ public class RoomRenovationRecordPo extends PageDto implements Serializable {
 
     public void setIsTrueName(String isTrueName) {
         this.isTrueName = isTrueName;
+    }
+
+    public String[] getUrls() {
+        return urls;
+    }
+
+    public void setUrls(String[] urls) {
+        this.urls = urls;
     }
 }
