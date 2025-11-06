@@ -158,7 +158,8 @@ public class PurchaseApplyInnerServiceSMOImpl extends BaseServiceSMO implements 
     private void refreshPurchaseApply(PurchaseApplyDto purchaseApply, List<UserDto> users) {
         for (UserDto user : users) {
             if (purchaseApply.getUserId().equals(user.getUserId())) {
-                BeanConvertUtil.covertBean(user, purchaseApply);
+                //BeanConvertUtil.covertBean(user, purchaseApply);
+                purchaseApply.setUserName(user.getUserName());
             }
         }
     }
