@@ -103,6 +103,7 @@ public class OwnerPrestoreAccountCmd extends Cmd {
         accountDetailPo.setRemark(reqJson.getString("remark"));
         accountDetailPo.setObjId(reqJson.getString("ownerId"));
         accountDetailPo.setAmount(reqJson.getString("amount"));
+        String acctType = reqJson.getString("acctType");
 
         // 查询业主是否已有账户
         AccountDto accountDto = new AccountDto();
@@ -110,6 +111,9 @@ public class OwnerPrestoreAccountCmd extends Cmd {
         accountDto.setObjType(AccountDto.OBJ_TYPE_PERSON); // 设置对象类型为个人
         accountDto.setPartId(reqJson.getString("communityId"));
         accountDto.setAcctType(reqJson.getString("acctType"));
+        if (AccountDto.ACCT_TYPE_PROPERTY_FEE.equals(acctType) || AccountDto.ACCT_TYPE_METER.equals(acctType)) {
+            accountDto.setRoomId(reqJson.getString("roomId"));
+        }
         List<AccountDto> accountDtos = accountInnerServiceSMOImpl.queryAccounts(accountDto);
         
         if (ListUtil.isNull(accountDtos)) {
