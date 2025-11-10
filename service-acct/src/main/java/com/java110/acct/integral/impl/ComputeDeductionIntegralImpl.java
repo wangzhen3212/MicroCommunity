@@ -55,7 +55,7 @@ public class ComputeDeductionIntegralImpl implements IComputeDeductionIntegral {
         }
 
 
-        JSONObject data = reqJson.getJSONObject("data");
+        JSONObject data = (JSONObject) resultVo.getData();
 
 
         DeductionIntegralDto deductionIntegralDto = new DeductionIntegralDto(data.getIntValue("integral"), data.getDoubleValue("integralMoney"));
