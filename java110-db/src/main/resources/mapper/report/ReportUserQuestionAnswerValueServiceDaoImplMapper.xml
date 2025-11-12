@@ -51,6 +51,9 @@
         <if test="userTitleId !=null and userTitleId != ''">
             and t.user_title_id= #{userTitleId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
         <if test="qaId !=null and qaId != ''">
             and t.qa_id= #{qaId}
         </if>
@@ -108,7 +111,9 @@
         <if test="valueContent !=null and valueContent != ''">
             and t.value_content= #{valueContent}
         </if>
-
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
         <if test="statusCd !=null and statusCd != ''">
             and t.status_cd= #{statusCd}
         </if>
