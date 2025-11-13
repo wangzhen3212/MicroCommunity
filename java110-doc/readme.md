@@ -1,218 +1,182 @@
-## java110 api 文档使用说明
+# java110-doc 模块技术文档
 
-### 文档查看地址
+## 项目概述
 
-http://ip:port/doc-ui.html
+`java110-doc` 是 HC 微服务社区项目的 API 文档生成模块，基于自定义注解实现智能化的 API 文档管理和展示功能。该模块为整个微服务架构提供统一的接口文档管理解决方案。
 
-比如:hc的文档 http://127.0.0.1:8008/doc-ui.html
+## 模块说明
 
-### @Java110ApiDoc 的使用
+- **模块类型**: API 文档生成与管理
+- **技术栈**: Spring Boot + 自定义注解 + 前端静态页面
+- **核心功能**: 通过注解自动生成 API 文档，提供可视化文档界面
 
-样例
+## 技术架构
+
+### 核心组件
+
+1. **注解系统** (11个核心注解)
+   - `@Java110ApiDoc`: 项目级文档配置
+   - `@Java110CmdDoc`: 接口命令文档
+   - `@Java110ParamsDoc`: 请求参数文档
+   - `@Java110ResponseDoc`: 响应参数文档
+   - `@Java110ExampleDoc`: 请求/响应示例
+
+2. **控制器层**
+   - `DocController`: 文档数据接口控制器
+
+3. **数据实体层**
+   - `ApiDocDto`: API 文档数据传输对象
+   - `CmdDocDto`: 命令文档数据传输对象
+   - `RequestMappingsDocDto`: 请求映射文档数据传输对象
+
+4. **注册器层**
+   - 注解发现与注册机制
+   - 文档发布管理
+
+5. **前端界面**
+   - `doc-ui.html`: 文档展示主页面
+   - 静态资源 (CSS/JS/Mock数据)
+
+## 目录结构
 
 ```
+java110-doc/
+├── src/main/java/com/java110/doc/
+│   ├── annotation/          # 注解定义 (11个核心注解)
+│   ├── controller/          # 控制器层
+│   ├── entity/             # 数据实体层
+│   └── registrar/          # 注解注册器
+├── src/main/resources/static/
+│   ├── css/               # 样式文件
+│   ├── js/                # JavaScript文件
+│   ├── mock/              # 模拟数据
+│   └── doc-ui.html        # 文档界面
+└── pom.xml               # Maven配置
+```
+
+## 核心功能详解
+
+### 1. 项目级文档配置
+
+```java
 @Java110ApiDoc(
-        title = "HC小区管理系统api接口文档",
-        description = "HC小区管理系统api接口文档",
-        company="Java110工作室",
-        version = "v1.4"
+    title = "HC小区管理系统api接口文档",
+    description = "HC小区管理系统api接口文档",
+    company="Java110工作室",
+    version = "v1.4"
 )
 ```
-title 表示 接口文档题目
 
-description 表示 接口文档说明
+### 2. 微服务路由映射
 
-company 文档公司
-
-version 文档版本
-
-该注解用在入口 类 比如 Hc api 的restApi.java 中
-
-### @Java110RequestMappingsDoc 和 @Java110RequestMappingDoc 的使用
-
-```
+```java
 @Java110RequestMappingsDoc(
-        mappingsDocs = {
-                @Java110RequestMappingDoc(name="用户中心",resource = "user",url="http://service-user/userDoc",seq = 1),
-                @Java110RequestMappingDoc(name="账户中心",resource = "acct",url="http://service-acct/acctDoc",seq = 2),
-                @Java110RequestMappingDoc(name="通用中心",resource = "common",url="http://service-common/commonDoc",seq = 3),
-                @Java110RequestMappingDoc(name="小区中心",resource = "community",url="http://service-community/communityDoc",seq = 4),
-                @Java110RequestMappingDoc(name="开发中心",resource = "dev",url="http://service-dev/devDoc",seq = 5),
-                @Java110RequestMappingDoc(name="费用中心",resource = "fee",url="http://service-fee/feeDoc",seq = 6),
-                @Java110RequestMappingDoc(name="定时任务",resource = "job",url="http://service-job/jobDoc",seq = 7),
-                @Java110RequestMappingDoc(name="oa",resource = "oa",url="http://service-oa/oaDoc",seq = 8),
-                @Java110RequestMappingDoc(name="订单中心",resource = "order",url="http://service-order/orderDoc",seq = 9),
-                @Java110RequestMappingDoc(name="报表中心",resource = "report",url="http://service-report/reportDoc",seq = 10),
-                @Java110RequestMappingDoc(name="商户中心",resource = "store",url="http://service-store/storeDoc",seq = 11),
-        }
+    mappingsDocs = {
+        @Java110RequestMappingDoc(name="用户中心", resource="user", url="http://service-user/userDoc", seq=1),
+        @Java110RequestMappingDoc(name="账户中心", resource="acct", url="http://service-acct/acctDoc", seq=2)
+    }
 )
 ```
 
-资源目录映射 注解
+### 3. 接口命令文档
 
-name 为 名称 文档中的菜单
-
-resource 为资源目录
-
-url 为微服务地址
-
-seq 文档中的排序
-
-### Java110CmdDoc
-
-接口注解
-
-```
-@Java110CmdDoc(title = "用户登录",
-        description="登录功能 主要用于 员工 或者管理员登录使用",
-        httpMethod="post",
-        url="/app/login.pcUserLogin",
-        resource = "user",
-        author = "吴学文"
+```java
+@Java110CmdDoc(
+    title = "用户登录",
+    description = "登录功能主要用于员工或管理员登录使用",
+    httpMethod = "post",
+    url = "/app/login.pcUserLogin",
+    resource = "user",
+    author = "吴学文"
 )
 ```
 
-作用在cmd文件上注解 描述 接口信息
+### 4. 参数文档系统
 
-title 接口名称
+- **请求参数**: `@Java110ParamsDoc` + `@Java110ParamDoc`
+- **响应参数**: `@Java110ResponseDoc` + `@Java110ParamDoc`
+- **示例数据**: `@Java110ExampleDoc`
 
-description 接口描述
+## 依赖配置
 
-httpMethod 接口类型
-
-url 接口请求地址
-
-resource 资源路径，要写 @Java110RequestMappingDoc 下resource
-
-author 作者信息
-
-### @Java110ParamsDoc 
-请求参数注解
-
-```
-@Java110ParamsDoc(params = {
-        @Java110ParamDoc(name = "username", length = 30, remark = "用户名，物业系统分配"),
-        @Java110ParamDoc(name = "passwd", length = 30, remark = "密码，物业系统分配"),
-})
-```
-描述请求参数信息
-
-parentNodeName 上级节点名称
-
-name 当前节点名称
-
-type 类型 String  int  Object Array 
-
-length 类型为 string时 的长度 
-
-defaultValue 默认值;
-
-remark 说明;
-
-### @Java110ResponseDoc
-
-返回参数注解
-```
-@Java110ResponseDoc(
-        params = {
-                @Java110ParamDoc(name = "code", type = "int", length = 11, defaultValue = "0", remark = "返回编号，0 成功 其他失败"),
-                @Java110ParamDoc(name = "msg", type = "String", length = 250, defaultValue = "成功", remark = "描述"),
-                @Java110ParamDoc(name = "data", type = "Object", remark = "有效数据"),
-                @Java110ParamDoc(parentNodeName = "data",name = "userId", type = "String", remark = "用户ID"),
-                @Java110ParamDoc(parentNodeName = "data",name = "token", type = "String", remark = "临时票据"),
-        }
-)
-
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.java110</groupId>
+        <artifactId>java110-core</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>fastjson</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
 ```
 
-描述返回参数信息
+## 使用指南
 
-parentNodeName 上级节点名称
+### 1. 文档访问
 
-name 当前节点名称
+访问地址: `http://ip:port/doc-ui.html`  
+示例: `http://127.0.0.1:8008/doc-ui.html`
 
-type 类型 String  int  Object Array
+### 2. 注解使用流程
 
-length 类型为 string时 的长度
+1. **项目配置**: 在入口类使用 `@Java110ApiDoc`
+2. **服务映射**: 配置 `@Java110RequestMappingsDoc`
+3. **接口定义**: 为每个接口添加 `@Java110CmdDoc`
+4. **参数说明**: 添加请求和响应参数注解
+5. **示例配置**: 提供请求响应示例
 
-defaultValue 默认值;
+### 3. Nginx 配置示例
 
-remark 说明;
-
-### @Java110ExampleDoc
-
-举例节点
-
-```
-@Java110ExampleDoc(
-        reqBody="{'username':'wuxw','passwd':'admin'}",
-        resBody="{'code':0,'msg':'成功','data':{'userId':'123123','token':'123213'}}"
-)
-```
-
-reqBody 请求报文
-
-resBody 返回报文
-
-
-### demo
-
-/**
- * 用户登录 功能
- * 请求地址为/app/login.pcUserLogin
- */
-
-@Java110CmdDoc(title = "用户登录",
-        description = "登录功能 主要用于 员工 或者管理员登录使用",
-        httpMethod = "post",
-        url = "http://{ip}:{port}/app/login.pcUserLogin",
-        resource = "userDoc",
-        author = "吴学文",
-        serviceCode = "login.pcUserLogin"
-)
-
-@Java110ParamsDoc(params = {
-        @Java110ParamDoc(name = "username", length = 30, remark = "用户名，物业系统分配"),
-        @Java110ParamDoc(name = "passwd", length = 30, remark = "密码，物业系统分配"),
-})
-
-@Java110ResponseDoc(
-        params = {
-                @Java110ParamDoc(name = "code", type = "int", length = 11, defaultValue = "0", remark = "返回编号，0 成功 其他失败"),
-                @Java110ParamDoc(name = "msg", type = "String", length = 250, defaultValue = "成功", remark = "描述"),
-                @Java110ParamDoc(name = "data", type = "Object", remark = "有效数据"),
-                @Java110ParamDoc(parentNodeName = "data",name = "userId", type = "String", remark = "用户ID"),
-                @Java110ParamDoc(parentNodeName = "data",name = "token", type = "String", remark = "临时票据"),
-        }
-)
-
-@Java110ExampleDoc(
-        reqBody="{'username':'wuxw','passwd':'admin'}",
-        resBody="{'code':0,'msg':'成功','data':{'userId':'123123','token':'123213'}}"
-)
-
-### nginx 配置api 文档供外网访问
-
-apidoc.conf
-```agsl
+```nginx
 server {
-	listen       80;
-	server_name  apidoc.homecommunity.cn;
-
-	location / {
-	   proxy_pass http://dev.api.java110.com:8008/doc-ui.html;
-	}
+    listen 80;
+    server_name apidoc.homecommunity.cn;
+    
+    location / {
+        proxy_pass http://dev.api.java110.com:8008/doc-ui.html;
+    }
     location /js {
-	   proxy_pass http://dev.api.java110.com:8008;
-	}
+        proxy_pass http://dev.api.java110.com:8008;
+    }
     location /css {
-	   proxy_pass http://dev.api.java110.com:8008;
-	}
-	location /doc
-	{
-	  add_header 'Access-Control-Allow-Origin' '*';
-	  proxy_pass   http://dev.api.java110.com:8088;
-	}
+        proxy_pass http://dev.api.java110.com:8008;
+    }
+    location /doc {
+        add_header 'Access-Control-Allow-Origin' '*';
+        proxy_pass http://dev.api.java110.com:8088;
+    }
 }
 ```
 
+## 开发规范
+
+1. **注解完整性**: 每个接口必须包含完整的注解配置
+2. **参数说明**: 所有参数必须明确类型、长度、说明
+3. **示例数据**: 提供真实的请求响应示例
+4. **版本管理**: 及时更新文档版本信息
+
+## 优势特点
+
+- **自动化**: 基于注解自动生成文档，减少手动维护
+- **标准化**: 统一的文档格式和规范
+- **可视化**: 友好的Web界面展示
+- **集成化**: 与微服务架构深度集成
+- **可扩展**: 支持多服务、多版本的文档管理
+
+## 注意事项
+
+1. 确保所有微服务正确配置文档注解
+2. 文档服务需要能够访问各微服务的文档接口
+3. 生产环境建议通过Nginx进行反向代理
+4. 定期检查文档与实际接口的一致性
+
+---
+
+*本文档基于模块代码分析生成，最后更新日期: 2024年*
