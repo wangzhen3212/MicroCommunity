@@ -170,8 +170,3 @@ java110.mapping.path=classpath:mapper/*.xml,classpath:mapper/*/*.xml
 ### 多数据源支持
 当前模块支持单数据源配置，如需多数据源需扩展数据源配置类。
 
----
-
-**文档版本**: 1.0  
-**最后更新**: 2024年  
-**维护团队**: MicroCommunity 开发团队

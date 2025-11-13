@@ -173,7 +173,26 @@ java110.ftpUserPassword = 123456
 - `spring-boot-starter-thymeleaf`: 模板引擎
 
 ### 业务模块依赖
-集成了所有MicroCommunity业务模块，确保功能完整性
+本模块集成了以下12个核心业务模块：
+- `service-acct`: 账户管理模块
+- `service-common`: 通用服务模块  
+- `service-community`: 社区管理模块
+- `service-dev`: 开发工具模块
+- `service-fee`: 费用管理模块
+- `service-job`: 任务调度模块
+- `service-oa`: 办公自动化模块
+- `service-order`: 订单管理模块
+- `service-report`: 报表统计模块
+- `service-store`: 商户管理模块
+- `service-user`: 用户管理模块
+- `service-scm`: 供应链管理模块
+- `service-api`: API接口模块
+
+### 依赖管理说明
+**重要架构设计**: 所有业务模块均排除了`java110-service`依赖，避免重复依赖冲突
+- **依赖排除配置**: 在pom.xml中每个业务模块dependency都配置了exclusions排除java110-service
+- **架构优势**: 采用集中式服务依赖管理，确保依赖版本一致性
+- **构建优化**: 避免重复依赖，减少构建包大小，提高构建效率
 
 ## 注意事项
 
