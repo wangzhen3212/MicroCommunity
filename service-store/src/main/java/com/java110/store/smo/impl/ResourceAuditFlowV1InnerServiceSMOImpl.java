@@ -50,26 +50,26 @@ public class ResourceAuditFlowV1InnerServiceSMOImpl extends BaseServiceSMO imple
     private IOaWorkflowInnerServiceSMO oaWorkflowInnerServiceSMOImpl;
 
     @Override
-    public int saveResourceAuditFlow(@RequestBody  ResourceAuditFlowPo resourceAuditFlowPo) {
+    public int saveResourceAuditFlow(@RequestBody ResourceAuditFlowPo resourceAuditFlowPo) {
         int saveFlag = resourceAuditFlowV1ServiceDaoImpl.saveResourceAuditFlowInfo(BeanConvertUtil.beanCovertMap(resourceAuditFlowPo));
         return saveFlag;
     }
 
-     @Override
-    public int updateResourceAuditFlow(@RequestBody  ResourceAuditFlowPo resourceAuditFlowPo) {
+    @Override
+    public int updateResourceAuditFlow(@RequestBody ResourceAuditFlowPo resourceAuditFlowPo) {
         int saveFlag = resourceAuditFlowV1ServiceDaoImpl.updateResourceAuditFlowInfo(BeanConvertUtil.beanCovertMap(resourceAuditFlowPo));
         return saveFlag;
     }
 
-     @Override
-    public int deleteResourceAuditFlow(@RequestBody  ResourceAuditFlowPo resourceAuditFlowPo) {
-       resourceAuditFlowPo.setStatusCd("1");
-       int saveFlag = resourceAuditFlowV1ServiceDaoImpl.updateResourceAuditFlowInfo(BeanConvertUtil.beanCovertMap(resourceAuditFlowPo));
-       return saveFlag;
+    @Override
+    public int deleteResourceAuditFlow(@RequestBody ResourceAuditFlowPo resourceAuditFlowPo) {
+        resourceAuditFlowPo.setStatusCd("1");
+        int saveFlag = resourceAuditFlowV1ServiceDaoImpl.updateResourceAuditFlowInfo(BeanConvertUtil.beanCovertMap(resourceAuditFlowPo));
+        return saveFlag;
     }
 
     @Override
-    public List<ResourceAuditFlowDto> queryResourceAuditFlows(@RequestBody  ResourceAuditFlowDto resourceAuditFlowDto) {
+    public List<ResourceAuditFlowDto> queryResourceAuditFlows(@RequestBody ResourceAuditFlowDto resourceAuditFlowDto) {
 
         //校验是否传了 分页信息
 
@@ -87,7 +87,8 @@ public class ResourceAuditFlowV1InnerServiceSMOImpl extends BaseServiceSMO imple
 
     @Override
     public int queryResourceAuditFlowsCount(@RequestBody ResourceAuditFlowDto resourceAuditFlowDto) {
-        return resourceAuditFlowV1ServiceDaoImpl.queryResourceAuditFlowsCount(BeanConvertUtil.beanCovertMap(resourceAuditFlowDto));    }
+        return resourceAuditFlowV1ServiceDaoImpl.queryResourceAuditFlowsCount(BeanConvertUtil.beanCovertMap(resourceAuditFlowDto));
+    }
 
 
     /**
@@ -96,8 +97,8 @@ public class ResourceAuditFlowV1InnerServiceSMOImpl extends BaseServiceSMO imple
      * @param resourceAuditFlows
      */
     private void refreshWorkflow(List<ResourceAuditFlowDto> resourceAuditFlows) {
-        if(resourceAuditFlows == null || resourceAuditFlows.size()< 1){
-            return ;
+        if (resourceAuditFlows == null || resourceAuditFlows.size() < 1) {
+            return;
         }
         List<String> flowIds = new ArrayList<>();
         for (ResourceAuditFlowDto resourceAuditFlowDto : resourceAuditFlows) {
@@ -107,10 +108,13 @@ public class ResourceAuditFlowV1InnerServiceSMOImpl extends BaseServiceSMO imple
         OaWorkflowDto oaWorkflowDto = new OaWorkflowDto();
         oaWorkflowDto.setFlowIds(flowIds.toArray(new String[flowIds.size()]));
         List<OaWorkflowDto> oaWorkflowDtos = oaWorkflowInnerServiceSMOImpl.queryOaWorkflows(oaWorkflowDto);
+        String flowName = "";
         for (ResourceAuditFlowDto resourceAuditFlowDto : resourceAuditFlows) {
+            flowName = resourceAuditFlowDto.getFlowName();
             for (OaWorkflowDto tmpOaWorkflowDto : oaWorkflowDtos) {
                 if (resourceAuditFlowDto.getFlowId().equals(tmpOaWorkflowDto.getFlowId())) {
                     BeanConvertUtil.covertBean(tmpOaWorkflowDto, resourceAuditFlowDto);
+                    resourceAuditFlowDto.setFlowName(flowName);
                 }
             }
         }
