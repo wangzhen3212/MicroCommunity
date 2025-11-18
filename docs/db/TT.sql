@@ -9772,8 +9772,6 @@ INSERT INTO `community_setting` VALUES ('112023082350890061', '2023052267100146'
 INSERT INTO `community_setting` VALUES ('112023082377810065', '2023052267100146', '欠费催缴模板', '7007', 'ALI_OWE_TEMPLATE_CODE', '2', '欠费催缴模板,尊敬的业主，您${house}的${feeType}，账单日期${date}至${date2}，缴费金额：${mount}元，请及时缴费', '2023-08-23 09:33:39', '0');
 INSERT INTO `community_setting` VALUES ('112023082389970064', '2023052267100146', '区域', '7007', 'ALI_REGION', '4', '阿里短信区域，如cn-hangzhou', '2023-08-23 09:33:39', '0');
 INSERT INTO `community_setting` VALUES ('112023082393450062', '2023052267100146', '访问秘钥', '7007', 'ALI_ACCESS_SECRET', '23', '阿里短信访问秘钥', '2023-08-23 09:33:39', '0');
-INSERT INTO `community_setting` VALUES ('112023101809580030', '2023052267100146', '账单模式', '2002', 'PAY_FEE_MONTH', 'OFF', 'ON 表示账单模式，周期费用按月生成一次性费用，比如物业费会生成12条，OFF 非账单模式，周期性费用一条费用，缴费延期计费起始时间', '2023-10-18 17:58:37', '0');
-INSERT INTO `community_setting` VALUES ('112023102581290054', '2023052267100146', '账单周期', '2002', 'PAY_FEE_MONTH_CYCLE', '1', '正整数，月的倍数，比如1个月生成一条账单请填写1', '2023-10-25 01:11:17', '0');
 INSERT INTO `community_setting` VALUES ('112024022084435452', '2023052267100146', '是否让管理员看到所有工单', '9050', 'OFF', 'ON', '是否让管理员看到所有工单ON 开 OFF关', '2024-02-20 14:10:14', '0');
 INSERT INTO `community_setting` VALUES ('112025062886300067', '2024122649870005', '派单企业微信url', '5005', 'WECHAT_SEND_REPAIR_URL', 'xx', '值请填写 1,请填写备注中', '2025-06-28 23:31:21', '0');
 INSERT INTO `community_setting` VALUES ('362021101013610001', '2021081177860471', '小数点位数', '2002', 'SCALE', '3', '', '2021-10-10 22:04:28', '0');
