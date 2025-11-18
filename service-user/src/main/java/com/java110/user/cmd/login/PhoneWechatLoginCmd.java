@@ -251,14 +251,14 @@ public class PhoneWechatLoginCmd extends Cmd {
         OwnerAppUserPo ownerAppUserPo = new OwnerAppUserPo();
         // 状态类型：10000 审核中，12000 审核成功，13000 审核失败
         ownerAppUserPo.setState("12000");
-        ownerAppUserPo.setAppTypeCd(OwnerAppUserDto.APP_TYPE_WECHAT_MINA);
+        ownerAppUserPo.setAppTypeCd("10010");
         ownerAppUserPo.setAppUserId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_appUserId));
         ownerAppUserPo.setMemberId(ownerDtos.get(0).getMemberId());
         ownerAppUserPo.setCommunityName(tmpCommunityDto.getName());
         ownerAppUserPo.setCommunityId(ownerDtos.get(0).getCommunityId());
         ownerAppUserPo.setAppUserName(ownerDtos.get(0).getName());
         ownerAppUserPo.setIdCard(ownerDtos.get(0).getIdCard());
-        ownerAppUserPo.setAppType("WECHAT");
+        ownerAppUserPo.setAppType(OwnerAppUserDto.APP_TYPE_WECHAT_MINA);
         ownerAppUserPo.setLink(ownerDtos.get(0).getLink());
         ownerAppUserPo.setUserId(userDto.getUserId());
         ownerAppUserPo.setOpenId("-1");
