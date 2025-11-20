@@ -187,5 +187,3 @@ KafkaFactory.sendKafkaMessage(topic, message);
 - **更新日期**：文档生成日期
 
 ---
-
-*本文档基于模块代码分析生成，内容与实际实现保持一致，可作为开发参考标准。*

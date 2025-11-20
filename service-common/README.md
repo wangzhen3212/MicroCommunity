@@ -308,4 +308,3 @@ POST /app/workflow.saveWorkflow
 - 维护团队: Java110 Team
 
 ---
-*本文档基于 service-common 模块代码分析生成，内容与代码实现保持一致。*
