@@ -469,6 +469,7 @@ public class RoomRenovationApi {
             fileRelPo.setRelTypeCd("21000");
             fileRelPo.setFileRealName(videoName);
             fileRelPo.setFileSaveName(videoName);
+            fileRelPo.setFileRelId(GenerateCodeFactory.getGeneratorId("11"));
             fileRelInnerServiceSMOImpl.saveFileRel(fileRelPo);
         }
         RoomRenovationRecordPo roomRenovationRecord = new RoomRenovationRecordPo();
