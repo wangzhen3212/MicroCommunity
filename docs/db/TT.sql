@@ -25320,7 +25320,7 @@ INSERT INTO `p_privilege` VALUES ('502020071781630004', '微信模板', '', '202
 INSERT INTO `p_privilege` VALUES ('502020073133960005', 'vvv', 'xxx', '2020-07-31 13:31:59', '0', '800900000000', '/vvv', '702020073151460004');
 INSERT INTO `p_privilege` VALUES ('502020073158140002', '我爱学习', 'xx', '2020-07-31 13:41:05', '0', '800900000000', '/vvc', '702020073141060001');
 INSERT INTO `p_privilege` VALUES ('502020073172490003', '权限测试', '', '2020-07-31 13:30:23', '0', '800900000000', '/sss', '702020073151730002');
-INSERT INTO `p_privilege` VALUES ('502020080570210194', '欠费缴费', '', '2020-08-05 11:47:39', '0', '800900000003', '/admin.html#/pages/property/owePayFeeOrder', '702025030368020011');
+INSERT INTO `p_privilege` VALUES ('502020080570210194', '欠费缴费', '', '2020-08-05 11:47:39', '0', '800900000003', '/admin.html#/pages/property/owePayFeeOrder', '502020080570210194');
 INSERT INTO `p_privilege` VALUES ('502020080760550020', '查询我的小区', '', '2020-08-07 09:15:17', '0', '800900000003', '/callComponent/enterCommunity/listMyCommunity', '700201904008');
 INSERT INTO `p_privilege` VALUES ('502020080814960064', '费用导入', '', '2020-08-08 12:26:16', '0', '800900000003', '/admin.html#/pages/property/roomFeeImport', '702020080856940063');
 INSERT INTO `p_privilege` VALUES ('502020080849660005', '小区大屏', '', '2020-08-08 18:44:49', '0', '800900000003', '/bigScreen/', '702020080836480004');
