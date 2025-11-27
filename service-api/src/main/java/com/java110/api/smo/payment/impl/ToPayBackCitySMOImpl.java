@@ -41,7 +41,7 @@ public class ToPayBackCitySMOImpl extends AppAbstractComponentSMO implements ITo
     @Override
     protected void validate(IPageData pd, JSONObject paramIn) {
 
-        Assert.jsonObjectHaveKey(paramIn, "communityId", "请求报文中未包含settingId节点");
+        Assert.jsonObjectHaveKey(paramIn, "communityId", "请求报文中未包含communityId节点");
 
     }
 
