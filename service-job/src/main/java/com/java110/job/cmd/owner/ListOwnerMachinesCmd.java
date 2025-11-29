@@ -47,10 +47,12 @@ public class ListOwnerMachinesCmd extends Cmd {
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        String communityId = reqJson.getString("communityId");
 
         String userId = CmdContextUtils.getUserId(context);
         OwnerAppUserDto ownerAppUserDto = new OwnerAppUserDto();
         ownerAppUserDto.setUserId(userId);
+        ownerAppUserDto.setCommunityId(communityId);
         List<OwnerAppUserDto> ownerAppUserDtos = ownerAppUserV1InnerServiceSMOImpl.queryOwnerAppUsers(ownerAppUserDto);
 
         if(ListUtil.isNull(ownerAppUserDtos)){
@@ -62,7 +64,6 @@ public class ListOwnerMachinesCmd extends Cmd {
             throw new CmdException("未认证业主");
         }
 
-        String communityId = reqJson.getString("communityId");
 
         OwnerDto ownerDto = new OwnerDto();
         ownerDto.setCommunityId(communityId);
