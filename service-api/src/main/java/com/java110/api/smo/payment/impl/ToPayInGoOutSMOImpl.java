@@ -47,8 +47,8 @@ public class ToPayInGoOutSMOImpl extends AppAbstractComponentSMO implements IToP
     @Override
     protected void validate(IPageData pd, JSONObject paramIn) {
 
-        Assert.jsonObjectHaveKey(paramIn, "settingId", "请求报文中未包含communityId节点");
-        Assert.jsonObjectHaveKey(paramIn, "communityId", "请求报文中未包含settingId节点");
+        Assert.jsonObjectHaveKey(paramIn, "settingId", "请求报文中未包含settingId节点");
+        Assert.jsonObjectHaveKey(paramIn, "communityId", "请求报文中未包含communityId节点");
 
     }
 
