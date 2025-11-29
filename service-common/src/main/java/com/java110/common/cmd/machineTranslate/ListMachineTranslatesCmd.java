@@ -30,7 +30,7 @@ public class ListMachineTranslatesCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         super.validatePageInfo(reqJson);
-        super.validateProperty(context);
+       // super.validateProperty(context);
         Assert.jsonObjectHaveKey(reqJson,"communityId","请求报文中未包含小区信息");
     }
 
