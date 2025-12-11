@@ -173,9 +173,9 @@ public class QueryOwnerAndMembersCmd extends Cmd {
                 continue;
             }
             roomName = "";
-            for (int roomIndex = 0; roomIndex < roomDtos.size(); roomIndex++) {
-                if (roomIndex > 2) {
-                    break;
+            for (int roomIndex = 0; roomIndex < roomDtos.size() && roomIndex <3;roomIndex++) {
+                if (roomIndex > 0) {
+                    roomName += ",";
                 }
                 RoomDto tmpRoomDto = roomDtos.get(roomIndex);
                 roomName += (tmpRoomDto.getFloorNum() + "-" + tmpRoomDto.getUnitNum() + "-" + tmpRoomDto.getRoomNum());
