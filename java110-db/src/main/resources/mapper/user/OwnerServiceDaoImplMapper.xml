@@ -136,7 +136,10 @@
         left join t_dict tdType on tdType.table_name = 'building_owner' and tdType.`table_columns` = 'person_type' and tdType.status_cd = t.person_type
         left join t_dict tdRole on tdRole.table_name = 'building_owner' and tdRole.`table_columns` = 'person_role' and tdRole.status_cd = t.person_role
         <if test="roomId != null and roomId != ''">
-            left join building_owner_room_rel borr on borr.status_cd = '0' and t.member_id = borr.owner_id
+            <!-- left join building_owner_room_rel borr on borr.status_cd = '0' and t.member_id = borr.owner_id -->
+			left join building_owner_room_rel borr on borr.status_cd = '0'
+			<!-- 关键修改：同时匹配户主的owner_id和家庭成员的member_id -->
+			and (t.owner_id = borr.owner_id or t.member_id = borr.owner_id)
         </if>
         <if test="roomIds != null ">
             left join building_owner_room_rel borr on t.member_id = borr.owner_id and borr.status_cd = t.status_cd
@@ -241,7 +244,10 @@
         from building_owner t
         left join t_dict td on td.table_name = 'building_owner' and td.`table_columns` = 'owner_type_cd' and td.status_cd = t.owner_type_cd
         <if test="roomId != null and roomId != ''">
-            left join building_owner_room_rel borr on borr.status_cd = '0' and t.owner_id = borr.owner_id
+            <!-- left join building_owner_room_rel borr on borr.status_cd = '0' and t.owner_id = borr.owner_id -->
+			left join building_owner_room_rel borr on borr.status_cd = '0'
+			<!-- 关键修改：同时匹配户主的owner_id和家庭成员的member_id -->
+			and (t.owner_id = borr.owner_id or t.member_id = borr.owner_id)
         </if>
         <if test="roomIds != null ">
             left join building_owner_room_rel borr on t.owner_id = borr.owner_id and borr.status_cd = t.status_cd
