@@ -125,7 +125,7 @@ public class UpdateAdvertCmd extends Cmd {
             throw new CmdException("保存失败");
         }
 
-        if(reqJson.containsKey("photos")){
+        if(!reqJson.containsKey("photos")){
             return;
         }
 
