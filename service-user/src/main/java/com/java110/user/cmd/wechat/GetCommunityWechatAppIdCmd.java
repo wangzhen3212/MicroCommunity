@@ -2,6 +2,7 @@ package com.java110.user.cmd.wechat;
 
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.annotation.Java110Cmd;
+import com.java110.core.context.Environment;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
@@ -11,6 +12,7 @@ import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.WechatConstant;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
+import com.java110.utils.util.ListUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -65,6 +67,14 @@ public class GetCommunityWechatAppIdCmd extends Cmd {
      */
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+
+        // 初始化AppId变量
+        String appId = "";
+        if(Environment.isDev()){
+            appId = MappingCache.getValue("MALL_WECHAT", "wechatAppId");
+            context.setResponseEntity(ResultVo.createResponseEntity(appId));
+            return;
+        }
         // 创建微信小程序数据传输对象，用于封装查询条件
         SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
         // 设置查询条件：小区ID，从请求参数中获取
@@ -77,18 +87,11 @@ public class GetCommunityWechatAppIdCmd extends Cmd {
         // 根据条件查询微信小程序配置信息
         List<SmallWeChatDto> smallWeChatDtos = smallWechatV1InnerServiceSMOImpl.querySmallWechats(smallWeChatDto);
         
-        // 初始化AppId变量
-        String appId = "";
-        
         // 判断查询结果，如果未找到小区绑定的微信配置，则使用全局默认AppId
-        if (smallWeChatDtos == null || smallWeChatDtos.size() < 1) {
+        if (!ListUtil.isNull(smallWeChatDtos)) {
             // 从缓存中获取全局默认的微信AppId
-            appId = MappingCache.getValue(WechatConstant.WECHAT_DOMAIN, "appId");
-        } else {
-            // 使用查询到的第一个微信配置的AppId
             appId = smallWeChatDtos.get(0).getAppId();
         }
-
         // 将AppId设置到响应中返回给调用方
         context.setResponseEntity(ResultVo.createResponseEntity(appId));
     }

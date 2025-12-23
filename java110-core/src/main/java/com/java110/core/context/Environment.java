@@ -95,6 +95,14 @@ public class Environment {
         }
     }
 
+    public static boolean isDev(){
+        String env = MappingCache.getValue(MappingConstant.ENV_DOMAIN,"HC_ENV");
+        if ("DEV".equals(env) || "TEST".equals(env)) {
+            return true;
+        }
+        return false;
+    }
+
 
     /**
      * boot 方式启动
