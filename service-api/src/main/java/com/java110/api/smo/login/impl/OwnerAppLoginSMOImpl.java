@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.java110.api.properties.WechatAuthProperties;
 import com.java110.api.smo.DefaultAbstractComponentSMO;
 import com.java110.api.smo.login.IOwnerAppLoginSMO;
+import com.java110.core.context.Environment;
 import com.java110.core.context.IPageData;
 import com.java110.core.context.PageData;
 import com.java110.core.factory.AuthenticationFactory;
@@ -16,6 +17,7 @@ import com.java110.dto.wechat.SmallWeChatDto;
 import com.java110.dto.user.UserDto;
 import com.java110.intf.user.IOwnerCarOpenUserV1InnerServiceSMO;
 import com.java110.utils.cache.CommonCache;
+import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.CommonConstant;
 import com.java110.utils.constant.ResponseConstant;
 import com.java110.utils.constant.ServiceCodeConstant;
@@ -424,6 +426,17 @@ public class OwnerAppLoginSMOImpl extends DefaultAbstractComponentSMO implements
             wAppId = wechatAuthProperties.getWechatAppId();
         }
 
+        if(Environment.isDev()){
+            smallWeChatDto = new SmallWeChatDto();
+            String appId = MappingCache.getValue("MALL_WECHAT", "wechatAppId");
+            String appSecret = MappingCache.getValue("MALL_WECHAT", "wechatAppSecret");
+            smallWeChatDto.setAppId(appId);
+            smallWeChatDto.setAppSecret(appSecret);
+            smallWeChatDto.setMchId("1");
+            smallWeChatDto.setPayPassword("1");
+            wAppId = wechatAuthProperties.getWechatAppId();
+        }
+
         //分配urlCode
         String urlCode = UUID.randomUUID().toString();
         JSONObject param = new JSONObject();
@@ -495,7 +508,15 @@ public class OwnerAppLoginSMOImpl extends DefaultAbstractComponentSMO implements
             smallWeChatDto.setMchId(wechatAuthProperties.getMchId());
             smallWeChatDto.setPayPassword(wechatAuthProperties.getKey());
         }
-
+        if(Environment.isDev()){
+            smallWeChatDto = new SmallWeChatDto();
+            String appId = MappingCache.getValue("MALL_WECHAT", "wechatAppId");
+            String appSecret = MappingCache.getValue("MALL_WECHAT", "wechatAppSecret");
+            smallWeChatDto.setAppId(appId);
+            smallWeChatDto.setAppSecret(appSecret);
+            smallWeChatDto.setMchId("1");
+            smallWeChatDto.setPayPassword("1");
+        }
         String url = WechatConstant.APP_GET_ACCESS_TOKEN_URL.replace("APPID", smallWeChatDto.getAppId())
                 .replace("SECRET", smallWeChatDto.getAppSecret())
                 .replace("CODE", authCode);
