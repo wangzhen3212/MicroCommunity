@@ -30,7 +30,9 @@
 
 1、手机端演示环境
 
-   ![image](docs/img/hcOwner.jpg)
+
+<img src="docs/img/hcOwner.jpg" width="300" alt="description">
+
 关注公众号体验手机端
 
 2、电脑端<br/>
