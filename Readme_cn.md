@@ -30,7 +30,8 @@
 
 1、手机端演示环境
 
-   ![image](docs/img/hc.png)
+   ![image](docs/img/hcOwner.jpg)
+关注公众号体验手机端
 
 2、电脑端<br/>
 地址：http://demo.homecommunity.cn <br/>
