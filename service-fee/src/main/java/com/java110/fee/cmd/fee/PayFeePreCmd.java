@@ -305,25 +305,25 @@ public class PayFeePreCmd extends Cmd {
     private double judgeAccount(JSONObject reqJson) {
         // 检查是否包含抵扣金额参数
         if (!reqJson.containsKey("deductionAmount")) {
-            reqJson.put("deductionAmount", 0.0);
+            reqJson.put("acctAmount", 0.0);
             return 0.0;
         }
 
         double deductionAmount = reqJson.getDouble("deductionAmount");
         if (deductionAmount <= 0) {
-            reqJson.put("deductionAmount", 0.0);
+            reqJson.put("acctAmount", 0.0);
             return 0.0;
         }
 
         // 检查是否选择了用户账户
         if (!reqJson.containsKey("selectUserAccount")) {
-            reqJson.put("deductionAmount", 0.0);
+            reqJson.put("acctAmount", 0.0);
             return 0.0;
         }
 
         JSONArray selectUserAccount = reqJson.getJSONArray("selectUserAccount");
         if (selectUserAccount == null || selectUserAccount.size() < 1) {
-            reqJson.put("deductionAmount", 0.0);
+            reqJson.put("acctAmount", 0.0);
             return 0.0;
         }
         
@@ -339,7 +339,7 @@ public class PayFeePreCmd extends Cmd {
         List<AccountDto> accountDtos = accountInnerServiceSMOImpl.queryAccounts(accountDto);
 
         if (ListUtil.isNull(accountDtos)) {
-            reqJson.put("deductionAmount", 0.0);
+            reqJson.put("acctAmount", 0.0);
             return 0.0;
         }
         
@@ -376,52 +376,11 @@ public class PayFeePreCmd extends Cmd {
                     dedAmount = dedAmount.subtract(amount);
                 }
                 money = money.add(cashMoney);
-            } 
-            // 积分账户抵扣逻辑
-            else if ("2004".equals(tmpAccountDto.getAcctType()) && compare > 0) {
-                // 获取积分账户配置参数
-                String maximumNumber = CommunitySettingFactory.getValue(reqJson.getString("communityId"), MAXIMUM_NUMBER);
-                BigDecimal maxNumber = new BigDecimal(maximumNumber);
-                String deductionProportion = CommunitySettingFactory.getValue(reqJson.getString("communityId"), DEDUCTION_PROPORTION);
-                BigDecimal deductionProportionNum = new BigDecimal(deductionProportion);
-                
-                // 积分账户金额
-                BigDecimal amount = new BigDecimal(tmpAccountDto.getAmount());
-                int flag = amount.compareTo(maxNumber);
-                if (flag == -1) { 
-                    // 积分账户金额小于最大使用积分，用全部积分抵扣
-                    pointsMoney = amount;
-                } else if (flag == 0) { 
-                    // 积分账户金额等于最大使用积分，用全部积分抵扣
-                    pointsMoney = amount;
-                } else if (flag == 1) { 
-                    // 积分账户金额大于最大使用积分，用最大使用积分抵扣
-                    pointsMoney = maxNumber;
-                }
-                
-                // 计算积分能抵扣的现金金额 = 积分数 ÷ 抵扣比例
-                BigDecimal integralMoney = pointsMoney.divide(deductionProportionNum);
-                BigDecimal redepositAmount = new BigDecimal("0.00");
-                int count = integralMoney.compareTo(dedAmount);
-                if (count == 1 || count == 0) { 
-                    // 积分抵扣金额大于等于应收金额，用应收金额全额抵扣
-                    redepositAmount = dedAmount;
-                    pointsMoney = dedAmount.multiply(deductionProportionNum); // 计算实际需要扣除的积分数
-                    pointsMoneyNow = dedAmount;
-                    dedAmount = new BigDecimal("0.0");
-                }
-                if (count == -1) { 
-                    // 积分抵扣金额小于应收金额，用积分全部抵扣金额
-                    redepositAmount = integralMoney;
-                    dedAmount = dedAmount.subtract(integralMoney); // 剩余应收金额
-                    pointsMoneyNow = integralMoney;
-                }
-                money = money.add(redepositAmount);
             }
         }
         
         // 设置抵扣结果到请求参数中
-        reqJson.put("deductionAmount", money.doubleValue());
+        reqJson.put("acctAmount", money.doubleValue());
         reqJson.put("cashMoney", cashMoney); // 现金抵扣金额
         reqJson.put("pointsMoney", pointsMoney); // 积分抵扣扣除数
         reqJson.put("pointsMoneyNow", pointsMoneyNow); // 积分抵扣实际现金数
