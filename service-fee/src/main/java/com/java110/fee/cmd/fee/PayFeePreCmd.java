@@ -381,6 +381,7 @@ public class PayFeePreCmd extends Cmd {
         
         // 设置抵扣结果到请求参数中
         reqJson.put("acctAmount", money.doubleValue());
+        reqJson.put("deductionAmount", "0"); // 这里减免金额 改成0 因为减免金额要落到账户上
         reqJson.put("cashMoney", cashMoney); // 现金抵扣金额
         reqJson.put("pointsMoney", pointsMoney); // 积分抵扣扣除数
         reqJson.put("pointsMoneyNow", pointsMoneyNow); // 积分抵扣实际现金数
