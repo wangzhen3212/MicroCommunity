@@ -42,7 +42,8 @@ public class GetOwnerByTelImpl implements IMallCommonApiBmo {
         }
         OwnerAppUserDto ownerAppUserDto = new OwnerAppUserDto();
         ownerAppUserDto.setUserId(userDtos.get(0).getUserId());
-        List<OwnerAppUserDto>   ownerAppUserDtos = ownerAppUserV1InnerServiceSMOImpl.queryOwnerAppUsers(ownerAppUserDto);
+        ownerAppUserDto.setCommunityId(reqJson.getString("communityId"));
+        List<OwnerAppUserDto> ownerAppUserDtos = ownerAppUserV1InnerServiceSMOImpl.queryOwnerAppUsers(ownerAppUserDto);
         if(!ListUtil.isNull(ownerAppUserDtos)){
             context.setResponseEntity(ResultVo.createResponseEntity(ownerAppUserDtos));
             return;
