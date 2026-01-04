@@ -52,7 +52,6 @@ public class GetOwnerOweFeeImpl implements IMallCommonApiBmo {
         Assert.jsonObjectHaveKey(reqJson, "row", "请求中未包含row信息");
 
         // 从上下文中获取当前用户ID
-        String userId = CmdContextUtils.getUserId(context);
         // 构建业主应用用户查询条件
         OwnerAppUserDto ownerAppUserDto = new OwnerAppUserDto();
         ownerAppUserDto.setLink(reqJson.getString("mallTel"));

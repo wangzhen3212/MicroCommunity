@@ -5,12 +5,18 @@ import com.java110.common.bmo.mall.IMallCommonApiBmo;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.dto.fee.FeeAccountDetailDto;
 import com.java110.dto.fee.FeeDetailDto;
+import com.java110.dto.owner.OwnerAppUserDto;
+import com.java110.dto.owner.OwnerDto;
 import com.java110.dto.payFee.PayFeeDetailDiscountDto;
 import com.java110.intf.fee.IFeeAccountDetailServiceSMO;
 import com.java110.intf.fee.IFeeDetailInnerServiceSMO;
 import com.java110.intf.fee.IPayFeeDetailDiscountInnerServiceSMO;
+import com.java110.intf.user.IOwnerAppUserV1InnerServiceSMO;
+import com.java110.intf.user.IOwnerV1InnerServiceSMO;
+import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.ListUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import com.java110.vo.api.ApiFeeDetailDataVo;
@@ -26,6 +32,17 @@ import java.util.List;
 @Service("getFeeDetailImpl")
 public class GetFeeDetailImpl implements IMallCommonApiBmo {
 
+    /**
+     * 业主应用用户V1版本内部服务
+     */
+    @Autowired
+    private IOwnerAppUserV1InnerServiceSMO ownerAppUserV1InnerServiceSMOImpl;
+
+    /**
+     * 业主V1版本内部服务
+     */
+    @Autowired
+    private IOwnerV1InnerServiceSMO ownerV1InnerServiceSMOImpl;
     /**
      * 缴费明细服务接口
      */
@@ -47,7 +64,42 @@ public class GetFeeDetailImpl implements IMallCommonApiBmo {
     @Override
     public void validate(ICmdDataFlowContext context, JSONObject reqJson) {
         Assert.jsonObjectHaveKey(reqJson, "communityId", "请求中未包含communityId信息");
+        OwnerAppUserDto ownerAppUserDto = new OwnerAppUserDto();
+        ownerAppUserDto.setLink(reqJson.getString("mallTel"));
+        ownerAppUserDto.setCommunityId(reqJson.getString("communityId"));
 
+        // 查询业主应用用户信息
+        List<OwnerAppUserDto> ownerAppUserDtos = ownerAppUserV1InnerServiceSMOImpl.queryOwnerAppUsers(ownerAppUserDto);
+
+        // 验证用户认证状态
+        if (ListUtil.isNull(ownerAppUserDtos)
+                || OwnerAppUserDto.STATE_AUDIT_ERROR.equals(ownerAppUserDtos.get(0).getState())) {
+            throw new CmdException("用户未认证,请先认证");
+        }
+
+        // 检查认证审核状态
+        if (OwnerAppUserDto.STATE_AUDITING.equals(ownerAppUserDtos.get(0).getState())) {
+            ResultVo resultVo = new ResultVo(-101, "认证审核中");
+            context.setResponseEntity(ResultVo.createResponseEntity(resultVo));
+            return;
+        }
+
+        // 构建业主查询条件
+        OwnerDto ownerDto = new OwnerDto();
+        ownerDto.setMemberId(ownerAppUserDtos.get(0).getMemberId());
+        ownerDto.setCommunityId(ownerAppUserDtos.get(0).getCommunityId());
+        // 查询业主信息
+        List<OwnerDto> ownerDtos = ownerV1InnerServiceSMOImpl.queryOwners(ownerDto);
+
+        // 验证业主是否存在
+        if (ListUtil.isNull(ownerDtos)) {
+            throw new CmdException("业主不存在");
+        }
+
+        // 获取第一个业主信息
+        ownerDto = ownerDtos.get(0);
+        // 将业主ID设置到请求参数中，供后续处理使用
+        reqJson.put("ownerId", ownerDto.getOwnerId());
     }
 
     @Override
