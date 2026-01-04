@@ -59,7 +59,8 @@ public class GetUserComplaintsImpl implements IMallCommonApiBmo {
         Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
         // 调用父类的分页信息验证方法
         Assert.hasKeyAndValue(reqJson, "page", "未包含page");
-        Assert.hasKeyAndValue(reqJson, "row", "未包含row");    }
+        Assert.hasKeyAndValue(reqJson, "row", "未包含row");
+    }
 
     @Override
     public void doCmd(ICmdDataFlowContext context, JSONObject reqJson) {
