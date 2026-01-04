@@ -8,12 +8,14 @@ import com.java110.dto.community.CommunityDto;
 import com.java110.dto.complaint.ComplaintDto;
 import com.java110.dto.complaint.ComplaintTypeUserDto;
 import com.java110.dto.file.FileRelDto;
+import com.java110.dto.user.UserDto;
 import com.java110.intf.common.IComplaintUserInnerServiceSMO;
 import com.java110.intf.common.IFileRelInnerServiceSMO;
 import com.java110.intf.community.IRoomInnerServiceSMO;
 import com.java110.intf.store.IComplaintTypeUserV1InnerServiceSMO;
 import com.java110.intf.store.IComplaintV1InnerServiceSMO;
 import com.java110.intf.user.IOwnerV1InnerServiceSMO;
+import com.java110.intf.user.IUserV1InnerServiceSMO;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.ListUtil;
@@ -47,6 +49,9 @@ public class GetUserComplaintsImpl implements IMallCommonApiBmo {
     private IOwnerV1InnerServiceSMO ownerV1InnerServiceSMOImpl;
 
     @Autowired
+    private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
+
+    @Autowired
     private IComplaintTypeUserV1InnerServiceSMO complaintTypeUserV1InnerServiceSMOImpl;
     @Override
     public void validate(ICmdDataFlowContext context, JSONObject reqJson) {
@@ -59,12 +64,16 @@ public class GetUserComplaintsImpl implements IMallCommonApiBmo {
     @Override
     public void doCmd(ICmdDataFlowContext context, JSONObject reqJson) {
         // 从上下文中获取当前用户ID
-        String userId = CmdContextUtils.getUserId(context);
+        // 验证用户信息
+        UserDto userDto = new UserDto();
+        userDto.setTel(reqJson.getString("mallTel"));
+        List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
+        Assert.listOnlyOne(userDtos, "用户未登录");
         // 将请求JSON转换为ComplaintDto对象
         ComplaintDto complaintDto = BeanConvertUtil.covertBean(reqJson, ComplaintDto.class);
         // 设置查询条件：只查询当前用户发起的投诉
-        complaintDto.setStartUserId(userId);
+        complaintDto.setStartUserId(userDtos.get(0).getUserId());
 
         // 查询投诉总数
         int count = complaintV1InnerServiceSMOImpl.queryComplaintsCount(complaintDto);
