@@ -219,11 +219,12 @@ public class OweFeePaymentBusiness implements IPaymentBusiness {
         JSONObject fee = null;
         for (int feeIndex = 0; feeIndex < fees.size(); feeIndex++) {
             fee = fees.getJSONObject(feeIndex);
+            fee.put("receivedAmount", fee.getString("feeTotalPrice"));
+            fee.put("receivableAmount", fee.getString("feeTotalPrice"));
+            fee.put("state", "");
             if (fee.containsKey("deadlineTime")) {
                 fee.put("startTime", DateUtil.getFormatTimeString(fee.getDate("endTime"), DateUtil.DATE_FORMATE_STRING_A));
                 fee.put("endTime", DateUtil.getFormatTimeString(fee.getDate("deadlineTime"), DateUtil.DATE_FORMATE_STRING_A));
-                fee.put("receivedAmount", fee.getString("feeTotalPrice"));
-                fee.put("state", "");
             }
         }
     }

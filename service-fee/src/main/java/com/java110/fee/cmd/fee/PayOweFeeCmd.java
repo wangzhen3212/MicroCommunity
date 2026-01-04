@@ -341,15 +341,16 @@ public class PayOweFeeCmd extends Cmd {
         Date endTime = feeDto.getEndTime();
         Calendar endCalender = Calendar.getInstance();
         endCalender.setTime(endTime);
-        BigDecimal receivedAmount = new BigDecimal(Double.parseDouble(paramInJson.getString("receivedAmount")));
-        // 计算缴费周期（实收金额除以单价）
-        cycles = receivedAmount.divide(feePrice, 4, BigDecimal.ROUND_HALF_EVEN);
-        businessFeeDetail.put("cycles", receivedAmount.divide(feePrice, 2, BigDecimal.ROUND_HALF_UP).doubleValue());
 
         // 设置金额信息
         if (!paramInJson.containsKey("receivableAmount") || StringUtil.isEmpty(paramInJson.getString("receivableAmount"))) {
             paramInJson.put("receivableAmount", paramInJson.getString("receivedAmount"));
         }
+        BigDecimal receivableAmount = new BigDecimal(Double.parseDouble(paramInJson.getString("receivableAmount")));
+        // 计算缴费周期（实收金额除以单价）
+        cycles = receivableAmount.divide(feePrice, 4, BigDecimal.ROUND_HALF_EVEN);
+        businessFeeDetail.put("cycles", receivableAmount.divide(feePrice, 2, BigDecimal.ROUND_HALF_UP).doubleValue());
+
 
         businessFeeDetail.put("receivableAmount", paramInJson.getString("receivableAmount"));
         businessFeeDetail.put("receivedAmount", paramInJson.getString("receivedAmount"));
