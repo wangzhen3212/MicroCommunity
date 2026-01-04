@@ -72,6 +72,7 @@ public class GetUserComplaintsImpl implements IMallCommonApiBmo {
         Assert.listOnlyOne(userDtos, "用户未登录");
         // 将请求JSON转换为ComplaintDto对象
         ComplaintDto complaintDto = BeanConvertUtil.covertBean(reqJson, ComplaintDto.class);
+        complaintDto.setStoreId("");
         // 设置查询条件：只查询当前用户发起的投诉
         complaintDto.setStartUserId(userDtos.get(0).getUserId());
 
