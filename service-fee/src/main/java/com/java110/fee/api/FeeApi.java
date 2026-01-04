@@ -9,12 +9,14 @@ import com.java110.dto.fee.FeeAttrDto;
 import com.java110.dto.fee.FeeDto;
 import com.java110.fee.bmo.*;
 import com.java110.fee.smo.IFeeServiceSMO;
+import com.java110.intf.fee.IOweFeeInnerServiceSMO;
 import com.java110.utils.constant.ResponseConstant;
 import com.java110.utils.exception.InitConfigDataException;
 import com.java110.utils.exception.InitDataFlowContextException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
+import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,6 +47,9 @@ public class FeeApi extends BaseController {
 
     @Autowired
     private IQueryOweFee queryOweFeeImpl;
+
+    @Autowired
+    private IOweFeeInnerServiceSMO oweFeeInnerServiceSMOImpl;
 
     @Autowired
     private IPayOweFee payOweFeeImpl;
@@ -195,7 +201,8 @@ public class FeeApi extends BaseController {
         feeDto.setPayerObjType(payObjType);
         feeDto.setOwnerId(ownerId);
         feeDto.setCommunityId(communityId);
-        return queryOweFeeImpl.query(feeDto);
+        List<FeeDto> feeDtos = oweFeeInnerServiceSMOImpl.queryOwnerOweFee(feeDto);
+        return ResultVo.createResponseEntity(feeDtos);
     }
 
     /**

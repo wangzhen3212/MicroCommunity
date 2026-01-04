@@ -10,6 +10,7 @@ import com.java110.dto.fee.FeeDto;
 import com.java110.dto.owner.OwnerAppUserDto;
 import com.java110.dto.owner.OwnerDto;
 import com.java110.fee.bmo.IQueryOweFee;
+import com.java110.intf.fee.IOweFeeInnerServiceSMO;
 import com.java110.intf.user.IOwnerAppUserInnerServiceSMO;
 import com.java110.intf.user.IOwnerAppUserV1InnerServiceSMO;
 import com.java110.intf.user.IOwnerV1InnerServiceSMO;
@@ -49,7 +50,7 @@ public class QueryOwnerOweFeeCmd extends Cmd {
      * 欠费查询业务接口
      */
     @Autowired
-    private IQueryOweFee queryOweFeeImpl;
+    private IOweFeeInnerServiceSMO oweFeeInnerServiceSMOImpl;
 
     /**
      * 请求参数验证方法
@@ -145,7 +146,8 @@ public class QueryOwnerOweFeeCmd extends Cmd {
         }
         
         // 调用欠费查询服务
-        ResponseEntity<String> responseEntity = queryOweFeeImpl.query(feeDto);
+        List<FeeDto> feeDtos = oweFeeInnerServiceSMOImpl.queryOwnerOweFee(feeDto);
+        ResponseEntity<String> responseEntity = ResultVo.createResponseEntity(feeDtos);
         // 设置响应结果
         context.setResponseEntity(responseEntity);
     }

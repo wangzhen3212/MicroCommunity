@@ -73,61 +73,7 @@ public class QueryOweFeeImpl implements IQueryOweFee {
     //禁用电脑端提交收费按钮
     public static final String OFFLINE_PAY_FEE_SWITCH = "OFFLINE_PAY_FEE_SWITCH";
 
-    @Override
-    public ResponseEntity<String> query(FeeDto feeDto) {
 
-        //查询费用信息arrearsEndTime
-        // todo 这里考虑预付期的费用 所以查询全量再用费用
-        feeDto.setState(FeeDto.STATE_DOING);
-        List<FeeDto> feeDtos = feeInnerServiceSMOImpl.queryFees(feeDto);
-
-        if (ListUtil.isNull(feeDtos)) {
-            feeDtos = new ArrayList<>();
-            return ResultVo.createResponseEntity(feeDtos);
-        }
-        String val = CommunitySettingFactory.getValue(feeDtos.get(0).getCommunityId(), TOTAL_FEE_PRICE);
-        if (StringUtil.isEmpty(val)) {
-            val = MappingCache.getValue(DOMAIN_COMMON, TOTAL_FEE_PRICE);
-        }
-        List<FeeDto> tmpFeeDtos = new ArrayList<>();
-        for (FeeDto tmpFeeDto : feeDtos) {
-            try {
-                if (!StringUtil.isEmpty(tmpFeeDto.getAdditionalAmount())) {
-                    tmpFeeDto.setAdditionalAmount(Double.parseDouble(tmpFeeDto.getAdditionalAmount()) + "");
-                }
-                if (!StringUtil.isEmpty(tmpFeeDto.getSquarePrice())) {
-                    tmpFeeDto.setSquarePrice(Double.parseDouble(tmpFeeDto.getSquarePrice()) + "");
-                }
-
-                //todo 有目标结束时间,并且不是一次性费用
-                if (!StringUtil.isEmpty(feeDto.getTargetEndTime())
-                        && !FeeDto.FEE_FLAG_ONCE.equals(tmpFeeDto.getFeeFlag())
-                ) {
-                    computeFeeSMOImpl.computeEveryOweFeeByTargetEndTime(tmpFeeDto, feeDto.getTargetEndTime());//计算欠费金额
-                } else {
-                    computeFeeSMOImpl.computeEveryOweFee(tmpFeeDto);//计算欠费金额
-                }
-                //如果金额为0 就排除
-                tmpFeeDto.setFeeTotalPrice(
-                        MoneyUtil.computePriceScale(
-                                tmpFeeDto.getFeeTotalPrice(),
-                                tmpFeeDto.getScale(),
-                                Integer.parseInt(tmpFeeDto.getDecimalPlace())
-                        )
-                );
-
-                tmpFeeDto.setVal(val);
-                if (tmpFeeDto.getFeeTotalPrice() != 0) {
-                    tmpFeeDtos.add(tmpFeeDto);
-                }
-            } catch (Exception e) {
-                logger.error("可能费用资料有问题导致算费失败", e);
-            }
-        }
-
-
-        return ResultVo.createResponseEntity(tmpFeeDtos);
-    }
 
     @Override
     public ResponseEntity<String> queryAllOwneFee(FeeDto feeDto) {

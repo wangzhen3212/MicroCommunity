@@ -5,13 +5,7 @@ import org.springframework.http.ResponseEntity;
 
 public interface IQueryOweFee {
 
-    /**
-     * 查询费用
-     *
-     * @param feeDto
-     * @return
-     */
-    ResponseEntity<String> query(FeeDto feeDto);
+
 
     /**
      * 查询费用
