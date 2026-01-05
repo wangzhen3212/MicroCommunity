@@ -10,6 +10,7 @@ import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.MappingConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,6 +51,9 @@ public class MallUploadImageImpl implements IMallCommonApiBmo {
         String imgUrl = MappingCache.getValue(MappingConstant.FILE_DOMAIN,"IMG_PATH");
         outParam.put("url", imgUrl + fileName);
 
-        ResponseEntity<String> responseEntity = new ResponseEntity<String>(outParam.toJSONString(), HttpStatus.OK);
+
+
+        ResponseEntity<String> responseEntity =  ResultVo.createResponseEntity(outParam);
+        context.setResponseEntity(responseEntity);
     }
 }
