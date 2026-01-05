@@ -354,7 +354,7 @@ public class PayOweFeeCmd extends Cmd {
 
         businessFeeDetail.put("receivableAmount", paramInJson.getString("receivableAmount"));
         businessFeeDetail.put("receivedAmount", paramInJson.getString("receivedAmount"));
-        businessFeeDetail.put("payableAmount", paramInJson.getString("receivedAmount"));
+        businessFeeDetail.put("payableAmount", paramInJson.getString("receivableAmount"));
         businessFeeDetail.put("endTime", paramInJson.getString("endTime"));
         paramInJson.put("feeInfo", feeDto);
         paramInJson.put("cycles", cycles.doubleValue());
