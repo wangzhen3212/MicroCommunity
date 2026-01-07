@@ -3,6 +3,7 @@ package com.java110.fee.bmo.fee;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.context.DataFlowContext;
 import com.java110.core.context.ICmdDataFlowContext;
+import com.java110.dto.fee.FeeDto;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.owner.OwnerCarDto;
@@ -30,11 +31,11 @@ public interface IFeeBMO extends IApiBaseBMO {
     /**
      * 添加费用明细信息
      *
-     * @param paramInJson     接口调用放传入入参
+     * @param paramObj     接口调用放传入入参
      * @param
      * @return 订单服务能够接受的报文
      */
-    JSONObject addFeePreDetail(JSONObject paramInJson);
+    PayFeeDetailPo addFeePreDetail(FeeDto feeDto, JSONObject paramObj, PayFeeDetailPo payFeeDetailPo);
 
     /**
      * 修改费用信息
@@ -43,7 +44,7 @@ public interface IFeeBMO extends IApiBaseBMO {
      * @param
      * @return 订单服务能够接受的报文
      */
-    JSONObject modifyPreFee(JSONObject paramInJson);
+    JSONObject modifyPreFee(FeeDto feeDto, JSONObject paramInJson, PayFeeDetailPo payFeeDetailPo);
 
 
 

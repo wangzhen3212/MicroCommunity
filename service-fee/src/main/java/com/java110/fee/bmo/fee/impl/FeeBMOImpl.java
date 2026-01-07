@@ -5,6 +5,7 @@ import com.java110.core.context.DataFlowContext;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.core.smo.IComputeFeeSMO;
+import com.java110.dto.fee.FeeDetailDto;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.fee.FeeConfigDto;
@@ -30,10 +31,7 @@ import com.java110.po.fee.FeeReceiptDetailPo;
 import com.java110.utils.cache.CommonCache;
 import com.java110.utils.constant.*;
 import com.java110.utils.exception.ListenerExecuteException;
-import com.java110.utils.util.Assert;
-import com.java110.utils.util.BeanConvertUtil;
-import com.java110.utils.util.DateUtil;
-import com.java110.utils.util.StringUtil;
+import com.java110.utils.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -103,103 +101,70 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
     /**
      * 添加费用明细信息
      *
-     * @param paramInJson 接口调用放传入入参
+     * @param paramObj 接口调用放传入入参
      * @param
      * @return 订单服务能够接受的报文
      */
-    public JSONObject addFeePreDetail(JSONObject paramInJson) {
+    public PayFeeDetailPo addFeePreDetail(FeeDto feeDto, JSONObject paramObj, PayFeeDetailPo payFeeDetailPo) {
+
+        payFeeDetailPo.setDetailId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_detailId));
 
         //todo 生成收据编号
-        String receiptCode = feeReceiptInnerServiceSMOImpl.generatorReceiptCode(paramInJson.getString("communityId"));
+        String receiptCode = feeReceiptInnerServiceSMOImpl.generatorReceiptCode(paramObj.getString("communityId"));
+        //todo 缓存收据编号
+        CommonCache.setValue(payFeeDetailPo.getDetailId() + CommonCache.RECEIPT_CODE, receiptCode, CommonCache.DEFAULT_EXPIRETIME_TWO_MIN);
+        payFeeDetailPo.setPayOrderId(paramObj.getString("oId"));
+        payFeeDetailPo.setbId("-1");
+        payFeeDetailPo.setPrimeRate("6");
+        payFeeDetailPo.setRemark("线上小程序支付");
+        payFeeDetailPo.setState(FeeDetailDto.STATE_NORMAL);
+        payFeeDetailPo.setOpenInvoice("N");
+        payFeeDetailPo.setCommunityId(feeDto.getCommunityId());
+        payFeeDetailPo.setFeeId(feeDto.getFeeId());
+        payFeeDetailPo.setCycles(paramObj.getString("cycles"));
+        payFeeDetailPo.setReceivableAmount(paramObj.getString("receivableAmount"));
+        payFeeDetailPo.setReceivedAmount(paramObj.getString("receivedAmount"));
+        payFeeDetailPo.setPayableAmount(paramObj.getString("receivableAmount"));
+        payFeeDetailPo.setStartTime(DateUtil.getFormatTimeString(feeDto.getEndTime(), DateUtil.DATE_FORMATE_STRING_A));
 
-        JSONObject businessFeeDetail = new JSONObject();
-        businessFeeDetail.putAll(paramInJson);
-        businessFeeDetail.put("detailId", paramInJson.getString("detailId"));
-        businessFeeDetail.put("primeRate", paramInJson.getString("primeRate"));
-        if (!businessFeeDetail.containsKey("state")) {
-            businessFeeDetail.put("state", "1400");
-        }
-        //计算 应收金额
-        FeeDto feeDto = new FeeDto();
-        feeDto.setFeeId(paramInJson.getString("feeId"));
-        feeDto.setCommunityId(paramInJson.getString("communityId"));
-        List<FeeDto> feeDtos = feeInnerServiceSMOImpl.queryFees(feeDto);
-        Assert.listOnlyOne(feeDtos,"查询费用信息失败，未查到数据或查到多条数据");
-
-        feeDto = feeDtos.get(0);
-        paramInJson.put("feeInfo", feeDto);
-        businessFeeDetail.put("startTime", DateUtil.getFormatTimeString(feeDto.getEndTime(), DateUtil.DATE_FORMATE_STRING_A));
         Date endTime = feeDto.getEndTime();
         Calendar endCalender = Calendar.getInstance();
         endCalender.setTime(endTime);
-        int hours = 0;
-        if ("-101".equals(paramInJson.getString("cycles"))) {
-//            hours = new Double(Double.parseDouble(paramInJson.getString("tmpCycles")) * DateUtil.getCurrentMonthDay() * 24).intValue();
-//            endCalender.add(Calendar.HOUR, hours);
-            endCalender = getTargetEndTime(endCalender, Double.parseDouble(paramInJson.getString("tmpCycles")));
-        } else {
-            endCalender.add(Calendar.MONTH, Integer.parseInt(paramInJson.getString("cycles")));
-            if (FeeDto.FEE_FLAG_ONCE.equals(feeDto.getFeeFlag())) {
-                if (feeDto.getDeadlineTime() != null) {
-                    endCalender.setTime(feeDto.getDeadlineTime());
-                } else if (!StringUtil.isEmpty(feeDto.getCurDegrees())) {
-                    endCalender.setTime(feeDto.getCurReadingTime());
-                } else if (feeDto.getImportFeeEndTime() == null) {
-                    endCalender.setTime(feeDto.getConfigEndTime());
-                } else {
-                    endCalender.setTime(feeDto.getImportFeeEndTime());
-                }
+
+        endCalender.add(Calendar.MONTH, Integer.parseInt(paramObj.getString("cycles")));
+        if (FeeDto.FEE_FLAG_ONCE.equals(feeDto.getFeeFlag())) {
+            if (feeDto.getDeadlineTime() != null) {
+                endCalender.setTime(feeDto.getDeadlineTime());
+            } else if (!StringUtil.isEmpty(feeDto.getCurDegrees())) {
+                endCalender.setTime(feeDto.getCurReadingTime());
+            } else if (feeDto.getImportFeeEndTime() == null) {
+                endCalender.setTime(feeDto.getConfigEndTime());
+            } else {
+                endCalender.setTime(feeDto.getImportFeeEndTime());
             }
+        } else {
+            endCalender.add(Calendar.SECOND, -1);
         }
-        businessFeeDetail.put("endTime", DateUtil.getFormatTimeString(endCalender.getTime(), DateUtil.DATE_FORMATE_STRING_A));
-        businessFeeDetail.put("receivableAmount", paramInJson.getString("receivableAmount"));
-        businessFeeDetail.put("receivedAmount", paramInJson.getString("receivedAmount"));
-        businessFeeDetail.put("payableAmount", paramInJson.getString("receivableAmount"));
 
-        PayFeeDetailPo payFeeDetail = BeanConvertUtil.covertBean(businessFeeDetail, PayFeeDetailPo.class);
-        payFeeDetail.setbId("-1");
-        if (StringUtil.isEmpty(payFeeDetail.getPayableAmount())) {
-            payFeeDetail.setPayableAmount("0.0");
-        }
-        payFeeDetail.setPayOrderId(paramInJson.getString("oId"));
-        //todo 缓存收据编号
-        CommonCache.setValue(payFeeDetail.getDetailId() + CommonCache.RECEIPT_CODE, receiptCode, CommonCache.DEFAULT_EXPIRETIME_TWO_MIN);
-        // todo 刷入收银人员信息
-        freshCashierInfo(payFeeDetail, paramInJson);
-        payFeeDetail.setOpenInvoice("N");
-        int flag = payFeeDetailNewV1InnerServiceSMOImpl.savePayFeeDetailNew(payFeeDetail);
-        if (flag < 1) {
-            throw new ListenerExecuteException(ResponseConstant.RESULT_CODE_ERROR, "保存费用明细失败");
-        }
-        return businessFeeDetail;
-    }
+        String endTimeStr = DateUtil.getFormatTimeString(endCalender.getTime(), DateUtil.DATE_FORMATE_STRING_A);
+        payFeeDetailPo.setEndTime(endTimeStr);
 
-    /**
-     * 刷入收银人员
-     *
-     * @param payFeeDetail
-     * @param paramInJson
-     */
-    private void freshCashierInfo(PayFeeDetailPo payFeeDetail, JSONObject paramInJson) {
-        String userId = paramInJson.getString("userId");
+        payFeeDetailPo.setCashierId("-1");
+        payFeeDetailPo.setCashierName("系统收银");
+
+        String userId = paramObj.getString("userId");
         if (StringUtil.isEmpty(userId)) {
-            payFeeDetail.setCashierId("-1");
-            payFeeDetail.setCashierName("系统收银");
-            return;
+            return payFeeDetailPo;
         }
 
         UserDto userDto = new UserDto();
         userDto.setUserId(userId);
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
-        if (userDtos != null && userDtos.size() > 0) {
-            payFeeDetail.setCashierId(userDtos.get(0).getUserId());
-            payFeeDetail.setCashierName(userDtos.get(0).getName());
-            return;
+        if (!ListUtil.isNull(userDtos)) {
+            payFeeDetailPo.setCashierId(userDtos.get(0).getUserId());
+            payFeeDetailPo.setCashierName(userDtos.get(0).getName());
         }
-
-        payFeeDetail.setCashierId("-1");
-        payFeeDetail.setCashierName("系统收银");
-
+        return payFeeDetailPo;
     }
 
     /**
@@ -209,39 +174,16 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
      * @param
      * @return 订单服务能够接受的报文
      */
-    public JSONObject modifyPreFee(JSONObject paramInJson) {
+    public JSONObject modifyPreFee(FeeDto feeInfo, JSONObject paramInJson, PayFeeDetailPo payFeeDetailPo) {
 
-        JSONObject businessFee = new JSONObject();
-        FeeDto feeInfo = (FeeDto) paramInJson.get("feeInfo");
-        Date endTime = feeInfo.getEndTime();
-        Calendar endCalender = Calendar.getInstance();
-        endCalender.setTime(endTime);
-        endCalender.add(Calendar.MONTH, Integer.parseInt(paramInJson.getString("cycles")));
-        if (FeeDto.FEE_FLAG_ONCE.equals(feeInfo.getFeeFlag())) {
-            if (feeInfo.getDeadlineTime() != null) {
-                endCalender.setTime(feeInfo.getDeadlineTime());
-            } else if (!StringUtil.isEmpty(feeInfo.getCurDegrees())) {
-                endCalender.setTime(feeInfo.getCurReadingTime());
-            } else if (feeInfo.getImportFeeEndTime() == null) {
-                endCalender.setTime(feeInfo.getConfigEndTime());
-            } else {
-                endCalender.setTime(feeInfo.getImportFeeEndTime());
-            }
-            //businessFee.put("state",FeeDto.STATE_FINISH);
-            feeInfo.setState(FeeDto.STATE_FINISH);
+        String endTime = payFeeDetailPo.getEndTime();
+        PayFeePo payFeePo = new PayFeePo();
+        payFeePo.setEndTime(endTime);
+
+        if (!FeeDto.FEE_FLAG_ONCE.equals(feeInfo.getFeeFlag())) { // 周期性减了一秒这里加回来
+            endTime = DateUtil.getNextSecTime(endTime);
+            payFeePo.setEndTime(endTime);
         }
-        feeInfo.setEndTime(endCalender.getTime());
-
-
-        //判断 结束时间 是否大于 费用项 结束时间，这里 容错一下，如果 费用结束时间大于 费用项结束时间 30天 走报错 属于多缴费
-        if (feeInfo.getEndTime().getTime() - feeInfo.getConfigEndTime().getTime() > 30 * 24 * 60 * 60 * 1000L) {
-            throw new IllegalArgumentException("缴费超过了 费用项结束时间" + JSONObject.toJSONString(feeInfo) + "|||" + paramInJson.getString("cycles"));
-        }
-        Map feeMap = BeanConvertUtil.beanCovertMap(feeInfo);
-        feeMap.put("startTime", DateUtil.getFormatTimeString(feeInfo.getStartTime(), DateUtil.DATE_FORMATE_STRING_A));
-        feeMap.put("endTime", DateUtil.getFormatTimeString(feeInfo.getEndTime(), DateUtil.DATE_FORMATE_STRING_A));
-        businessFee.putAll(feeMap);
-        // business.getJSONObject(CommonConstant.HTTP_BUSINESS_DATAS).put(PayFeePo.class.getSimpleName(), businessFee);
 
         Date maxEndTime = feeInfo.getDeadlineTime();
         if (FeeDto.FEE_FLAG_CYCLE.equals(feeInfo.getFeeFlag())) {
@@ -272,13 +214,12 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
             calendar.add(Calendar.DAY_OF_MONTH, -5);
             maxEndTime = calendar.getTime();
             if (feeInfo.getEndTime().after(maxEndTime)) {
-                businessFee.put("state", FeeDto.STATE_FINISH);
-                businessFee.put("endTime", maxEndTime);
+                payFeePo.setState(FeeDto.STATE_FINISH);
+                payFeePo.setEndTime(DateUtil.getFormatTimeStringA(maxEndTime));
             }
         }
 
-        PayFeePo payFee = BeanConvertUtil.covertBean(businessFee, PayFeePo.class);
-        int flag = payFeeV1InnerServiceSMOImpl.updatePayFee(payFee);
+        int flag = payFeeV1InnerServiceSMOImpl.updatePayFee(payFeePo);
         if (flag < 1) {
             throw new ListenerExecuteException(ResponseConstant.RESULT_CODE_ERROR, "保存费用明细失败");
         }
@@ -351,10 +292,10 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
         businessUnit.put("userId", context.getReqHeaders().get(CommonConstant.HTTP_USER_ID));
         paramInJson.put("feeId", businessUnit.getString("feeId"));
 
-        if(FeeDto.FEE_FLAG_CYCLE.equals(feeConfigDtos.get(0).getFeeFlag())) {
-            businessUnit.put("maxTime",  feeConfigDtos.get(0).getEndTime());
-        }else {
-            businessUnit.put("maxTime",  paramInJson.getString("endTime"));
+        if (FeeDto.FEE_FLAG_CYCLE.equals(feeConfigDtos.get(0).getFeeFlag())) {
+            businessUnit.put("maxTime", feeConfigDtos.get(0).getEndTime());
+        } else {
+            businessUnit.put("maxTime", paramInJson.getString("endTime"));
         }
         return businessUnit;
     }
@@ -370,7 +311,6 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
         return feeAttrPo;
 
     }
-
 
 
     /**
@@ -413,10 +353,10 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
         businessUnit.put("batchId", paramInJson.getString("batchId"));
         businessUnit.put("userId", dataFlowContext.getReqHeaders().get(CommonConstant.HTTP_USER_ID));
 
-        if(FeeDto.FEE_FLAG_CYCLE.equals(feeConfigDtos.get(0).getFeeFlag())) {
-            businessUnit.put("maxTime",  feeConfigDtos.get(0).getEndTime());
-        }else {
-            businessUnit.put("maxTime",  paramInJson.getString("endTime"));
+        if (FeeDto.FEE_FLAG_CYCLE.equals(feeConfigDtos.get(0).getFeeFlag())) {
+            businessUnit.put("maxTime", feeConfigDtos.get(0).getEndTime());
+        } else {
+            businessUnit.put("maxTime", paramInJson.getString("endTime"));
         }
 
         paramInJson.put("feeId", businessUnit.getString("feeId"));

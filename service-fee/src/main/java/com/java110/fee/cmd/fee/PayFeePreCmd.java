@@ -49,10 +49,10 @@ import java.util.Map;
 
 /**
  * 费用预支付命令处理类
- * 
+ * <p>
  * 功能描述：处理费用预支付请求，计算应收金额、折扣金额、账户抵扣金额和优惠券抵扣金额，
  * 最终确定实收金额，并返回预支付结果信息
- * 
+ *
  * @author 吴学文 at 2021-09-16 22:26:04 mail: 928255095@qq.com
  * @version 1.0
  * @see Cmd
@@ -115,10 +115,10 @@ public class PayFeePreCmd extends Cmd {
 
     /**
      * 验证请求参数的有效性
-     * 
-     * @param event 命令事件对象
+     *
+     * @param event              命令事件对象
      * @param cmdDataFlowContext 命令数据流上下文
-     * @param reqJson 请求参数JSON对象
+     * @param reqJson            请求参数JSON对象
      * @throws IllegalArgumentException 当参数验证失败时抛出异常
      */
     @Override
@@ -182,10 +182,10 @@ public class PayFeePreCmd extends Cmd {
 
     /**
      * 执行费用预支付计算命令
-     * 
-     * @param event 命令事件对象
+     *
+     * @param event              命令事件对象
      * @param cmdDataFlowContext 命令数据流上下文
-     * @param reqJson 请求参数JSON对象
+     * @param reqJson            请求参数JSON对象
      * @throws CmdException 当命令执行过程中发生错误时抛出
      */
     @Override
@@ -229,7 +229,7 @@ public class PayFeePreCmd extends Cmd {
         // 1.0 判断并计算折扣金额
         double discountPrice = judgeDiscount(reqJson);
         tmpReceivedAmout = tmpReceivedAmout.subtract(new BigDecimal(discountPrice)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-        
+
         // 2.0 考虑账户抵消金额
         double accountPrice = judgeAccount(reqJson);
         tmpReceivedAmout = tmpReceivedAmout.subtract(new BigDecimal(accountPrice)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
@@ -265,7 +265,7 @@ public class PayFeePreCmd extends Cmd {
 
     /**
      * 获取费用对象的显示名称
-     * 
+     *
      * @param feeDto 费用数据传输对象
      * @return 格式化的费用显示名称
      */
@@ -294,11 +294,11 @@ public class PayFeePreCmd extends Cmd {
 
     /**
      * 计算账户抵扣金额
-     * 
+     * <p>
      * 处理现金账户和积分账户的抵扣逻辑：
      * 1. 现金账户直接抵扣
      * 2. 积分账户根据配置的抵扣比例和最大使用积分进行抵扣
-     * 
+     *
      * @param reqJson 请求参数JSON对象
      * @return 账户抵扣总金额
      */
@@ -326,7 +326,7 @@ public class PayFeePreCmd extends Cmd {
             reqJson.put("acctAmount", 0.0);
             return 0.0;
         }
-        
+
         // 提取账户ID列表
         List<String> acctIds = new ArrayList<>();
         for (int userAccountIndex = 0; userAccountIndex < selectUserAccount.size(); userAccountIndex++) {
@@ -342,13 +342,13 @@ public class PayFeePreCmd extends Cmd {
             reqJson.put("acctAmount", 0.0);
             return 0.0;
         }
-        
+
         BigDecimal money = new BigDecimal(0);
         BigDecimal cashMoney = new BigDecimal("0.00"); // 抵扣的现金账户金额
         BigDecimal pointsMoney = new BigDecimal(0.00); // 抵扣的积分数
         BigDecimal pointsMoneyNow = new BigDecimal(0.00); // 积分转换为现金的实际金额
         BigDecimal totalAccountAmount = new BigDecimal(0.00);
-        
+
         // 获取应收金额
         BigDecimal dedAmount = new BigDecimal("0.00");
         if (reqJson.containsKey("receivedMoney") && !StringUtil.isEmpty(reqJson.getString("receivedMoney"))) {
@@ -356,7 +356,7 @@ public class PayFeePreCmd extends Cmd {
         } else {
             dedAmount = new BigDecimal(reqJson.getString("deductionAmount"));
         }
-        
+
         // 遍历所有账户进行抵扣计算
         for (AccountDto tmpAccountDto : accountDtos) {
             int compare = dedAmount.compareTo(BigDecimal.ZERO);
@@ -365,12 +365,12 @@ public class PayFeePreCmd extends Cmd {
                 // 账户金额
                 BigDecimal amount = new BigDecimal(tmpAccountDto.getAmount());
                 int flag = amount.compareTo(dedAmount);
-                if (flag == 1 || flag == 0) { 
+                if (flag == 1 || flag == 0) {
                     // 现金账户大于等于应收金额，用应收金额全额抵扣
                     cashMoney = dedAmount;
                     dedAmount = new BigDecimal("0.0");
                 }
-                if (flag == -1) { 
+                if (flag == -1) {
                     // 现金账户小于应收金额，用现金账户全额抵扣
                     cashMoney = amount;
                     dedAmount = dedAmount.subtract(amount);
@@ -378,7 +378,7 @@ public class PayFeePreCmd extends Cmd {
                 money = money.add(cashMoney);
             }
         }
-        
+
         // 设置抵扣结果到请求参数中
         reqJson.put("acctAmount", money.doubleValue());
         reqJson.put("deductionAmount", "0"); // 这里减免金额 改成0 因为减免金额要落到账户上
@@ -391,7 +391,7 @@ public class PayFeePreCmd extends Cmd {
 
     /**
      * 检查并计算优惠券抵扣金额
-     * 
+     *
      * @param paramObj 请求参数JSON对象
      * @return 优惠券抵扣总金额
      */
@@ -406,22 +406,22 @@ public class PayFeePreCmd extends Cmd {
             paramObj.put("couponUserDtos", new JSONArray()); // 返回空数组
             return couponPrice.doubleValue();
         }
-        
+
         // 提取优惠券ID列表
         for (int couponIndex = 0; couponIndex < couponList.size(); couponIndex++) {
             couponIds.add(couponList.getJSONObject(couponIndex).getString("couponId"));
         }
-        
+
         // 查询优惠券信息
         CouponUserDto couponUserDto = new CouponUserDto();
         couponUserDto.setCouponIds(couponIds.toArray(new String[couponIds.size()]));
         List<CouponUserDto> couponUserDtos = couponUserV1InnerServiceSMOImpl.queryCouponUsers(couponUserDto);
-        
+
         if (couponUserDtos == null || couponUserDtos.size() < 1) {
             paramObj.put("couponPrice", couponPrice.doubleValue());
             return couponPrice.doubleValue();
         }
-        
+
         // 计算有效优惠券的总抵扣金额
         for (CouponUserDto couponUser : couponUserDtos) {
             // 只计算未过期的优惠券
@@ -429,7 +429,7 @@ public class PayFeePreCmd extends Cmd {
                 couponPrice = couponPrice.add(new BigDecimal(Double.parseDouble(couponUser.getActualPrice())));
             }
         }
-        
+
         paramObj.put("couponPrice", couponPrice.doubleValue());
         paramObj.put("couponUserDtos", BeanConvertUtil.beanCovertJSONArray(couponUserDtos));
         return couponPrice.doubleValue();
@@ -437,9 +437,9 @@ public class PayFeePreCmd extends Cmd {
 
     /**
      * 计算折扣金额
-     * 
+     * <p>
      * 根据费用详情和周期计算适用的折扣金额
-     * 
+     *
      * @param paramObj 请求参数JSON对象
      * @return 折扣总金额
      * @throws CmdException 当日期解析失败时抛出
@@ -451,7 +451,7 @@ public class PayFeePreCmd extends Cmd {
         feeDetailDto.setCycles(paramObj.getString("cycles"));
         feeDetailDto.setPayerObjId(paramObj.getString("payerObjId"));
         feeDetailDto.setPayerObjType(paramObj.getString("payerObjType"));
-        
+
         // 设置缴费开始时间为当前缴费周期的结束时间
         String endTime = paramObj.getString("endTime");
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -463,21 +463,22 @@ public class PayFeePreCmd extends Cmd {
 
         feeDetailDto.setRow(20);
         feeDetailDto.setPage(1);
-        
+
         // 计算折扣
         List<ComputeDiscountDto> computeDiscountDtos = feeDiscountInnerServiceSMOImpl.computeDiscount(feeDetailDto);
 
-        if (computeDiscountDtos == null || computeDiscountDtos.size() < 1) {
+        if (ListUtil.isNull(computeDiscountDtos)) {
             paramObj.put("discountPrice", 0.0);
             return 0.0;
         }
-        
+
         // 累加所有折扣金额
         BigDecimal discountPrice = new BigDecimal(0);
         for (ComputeDiscountDto computeDiscountDto : computeDiscountDtos) {
             discountPrice = discountPrice.add(new BigDecimal(computeDiscountDto.getDiscountPrice()));
         }
-        
+
+        paramObj.put("discountPrice", discountPrice.doubleValue());
         paramObj.put("discountPrice", discountPrice.doubleValue());
         paramObj.put("computeDiscountDtos", BeanConvertUtil.beanCovertJSONArray(computeDiscountDtos));
         return discountPrice.doubleValue();
