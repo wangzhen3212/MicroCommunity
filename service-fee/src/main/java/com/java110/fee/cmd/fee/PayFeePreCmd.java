@@ -475,6 +475,9 @@ public class PayFeePreCmd extends Cmd {
         // 累加所有折扣金额
         BigDecimal discountPrice = new BigDecimal(0);
         for (ComputeDiscountDto computeDiscountDto : computeDiscountDtos) {
+            if ("102020008".equals(computeDiscountDto.getRuleId())) { //赠送规则
+                continue;
+            }
             discountPrice = discountPrice.add(new BigDecimal(computeDiscountDto.getDiscountPrice()));
         }
 

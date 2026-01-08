@@ -186,7 +186,7 @@ public class PayFeeConfirmCmd extends Cmd {
         String appId = paramObj.getString("appId");
         PayFeeDetailPo payFeeDetailPo = new PayFeeDetailPo();
 
-        feeBMOImpl.addFeePreDetail(feeDtos.get(0), paramObj,payFeeDetailPo);
+        feeBMOImpl.addFeePreDetail(feeDtos.get(0), paramObj, payFeeDetailPo);
 
         // 根据应用ID设置不同的支付渠道参数
         if (AppDto.WECHAT_OWNER_APP_ID.equals(appId)) {  //微信公众号支付
@@ -208,7 +208,7 @@ public class PayFeeConfirmCmd extends Cmd {
         if (flag < 1) {
             throw new ListenerExecuteException(ResponseConstant.RESULT_CODE_ERROR, "保存费用明细失败");
         }
-        feeBMOImpl.modifyPreFee(feeDtos.get(0), paramObj,payFeeDetailPo);
+        feeBMOImpl.modifyPreFee(feeDtos.get(0), paramObj, payFeeDetailPo);
 
         //todo 为停车费单独处理 - 更新车辆结束时间
         finishFeeNotifyImpl.updateCarEndTime(feeDtos.get(0).getFeeId(), paramObj.getString("communityId"));
@@ -238,7 +238,7 @@ public class PayFeeConfirmCmd extends Cmd {
                         //将业务id更新到空置房优惠里面
                         applyRoomDiscountPo.setbId(bId);
                         applyRoomDiscountPo.setArdId(computeDiscountDto.getArdId());
-                         flag = applyRoomDiscountInnerServiceSMOImpl.updateApplyRoomDiscount(applyRoomDiscountPo);
+                        flag = applyRoomDiscountInnerServiceSMOImpl.updateApplyRoomDiscount(applyRoomDiscountPo);
                         if (flag < 1) {
                             throw new CmdException("更新微信派单池信息失败");
                         }
@@ -258,7 +258,7 @@ public class PayFeeConfirmCmd extends Cmd {
             ParkingSpaceApplyPo parkingSpaceApplyPo = new ParkingSpaceApplyPo();
             parkingSpaceApplyPo.setApplyId(parkingSpaceApplyDtos.get(0).getApplyId());
             parkingSpaceApplyPo.setState("3003");
-             flag = parkingSpaceApplyV1InnerServiceSMOImpl.updateParkingSpaceApply(parkingSpaceApplyPo);
+            flag = parkingSpaceApplyV1InnerServiceSMOImpl.updateParkingSpaceApply(parkingSpaceApplyPo);
             if (flag < 1) {
                 throw new CmdException("更新车位申请表状态失败");
             }
@@ -438,17 +438,17 @@ public class PayFeeConfirmCmd extends Cmd {
                 continue;
             }
             discountId = paramJson.getString("discountId");
-            if(StringUtil.isEmpty(discountId)){
+            if (StringUtil.isEmpty(discountId)) {
                 continue;
             }
             FeeDiscountSpecDto feeDiscountSpecDto = new FeeDiscountSpecDto();
             feeDiscountSpecDto.setDiscountId(discountId);
             feeDiscountSpecDto.setCommunityId(payFeeDetailPo.getCommunityId());
             List<FeeDiscountSpecDto> feeDiscountSpecDtos = feeDiscountSpecInnerServiceSMOImpl.queryFeeDiscountSpecs(feeDiscountSpecDto);
-            if(ListUtil.isNull(feeDiscountSpecDtos)){
+            if (ListUtil.isNull(feeDiscountSpecDtos)) {
                 continue;
             }
-            for (FeeDiscountSpecDto tFeeDiscountSpecDto: feeDiscountSpecDtos) {
+            for (FeeDiscountSpecDto tFeeDiscountSpecDto : feeDiscountSpecDtos) {
                 if (!"89002020980015".equals(tFeeDiscountSpecDto.getSpecId())) { //赠送月份
                     continue;
                 }
@@ -460,16 +460,18 @@ public class PayFeeConfirmCmd extends Cmd {
                 cal.add(Calendar.MONTH, Integer.parseInt(specValue));
                 //cal.add(Calendar.SECOND,1);
                 payFeeDetailPo.setEndTime(DateUtil.getFormatTimeStringA(cal.getTime()));
-
-                BigDecimal value = new BigDecimal(payFeeDetailPo.getGiftAmount());
-                value = value.add(new BigDecimal(paramJson.getString("discountPrice")));
-                payFeeDetailPo.setGiftAmount(value.doubleValue() + "");
+                double cycle = Double.parseDouble(payFeeDetailPo.getCycles()) + Integer.parseInt(specValue);
+                payFeeDetailPo.setCycles(cycle + "");
             }
 
         }
 
         for (int discountIndex = 0; discountIndex < computeDiscountDtos.size(); discountIndex++) {
             JSONObject discountJson = computeDiscountDtos.getJSONObject(discountIndex);
+            if ("102020008".equals(discountJson.getString("ruleId"))) { //赠送规则
+                continue;
+            }
+
             FeeDiscountDto feeDiscountDto = new FeeDiscountDto();
             feeDiscountDto.setDiscountId(discountJson.getString("discountId"));
             List<FeeDiscountDto> feeDiscountDtos = feeDiscountInnerServiceSMOImpl.queryFeeDiscounts(feeDiscountDto);
@@ -494,6 +496,10 @@ public class PayFeeConfirmCmd extends Cmd {
                 BigDecimal value = new BigDecimal(payFeeDetailPo.getLateAmount());
                 value = value.add(new BigDecimal(discountJson.getString("discountPrice")));
                 payFeeDetailPo.setLateAmount(value.doubleValue() + "");
+            }else if (FeeDiscountRuleDto.DISCOUNT_SMALL_TYPE_GIFT.equals(feeDiscountDtos.get(0).getDiscountSmallType())) {
+                BigDecimal value = new BigDecimal(payFeeDetailPo.getGiftAmount());
+                value = value.add(new BigDecimal(discountJson.getString("discountPrice")));
+                payFeeDetailPo.setGiftAmount(value.doubleValue() + "");
             }
         }
 
