@@ -186,12 +186,9 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
             payFeePo.setEndTime(endTime);
         }
 
+
         Date maxEndTime = feeInfo.getDeadlineTime();
         if (FeeDto.FEE_FLAG_CYCLE.equals(feeInfo.getFeeFlag())) {
-            maxEndTime = feeInfo.getConfigEndTime();
-        }
-
-        if (FeeDto.FEE_FLAG_CYCLE_ONCE.equals(feeInfo.getFeeFlag())) {
             maxEndTime = feeInfo.getMaxEndTime();
         }
 
@@ -218,6 +215,8 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
                 payFeePo.setState(FeeDto.STATE_FINISH);
                 payFeePo.setEndTime(DateUtil.getFormatTimeStringA(maxEndTime));
             }
+        }else{
+            feeInfo.setState(FeeDto.STATE_FINISH);// 一次性直接结束
         }
 
         int flag = payFeeV1InnerServiceSMOImpl.updatePayFee(payFeePo);
