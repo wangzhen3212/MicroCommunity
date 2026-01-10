@@ -423,9 +423,9 @@ public class PayFeeConfirmCmd extends Cmd {
         payFeeDetailPo.setLateAmount("0");
         payFeeDetailPo.setGiftAmount("0");
         // 检查是否有折扣金额且金额大于0
-        if (!paramObj.containsKey("discountPrice") || paramObj.getDouble("discountPrice") <= 0) {
-            return;
-        }
+//        if (!paramObj.containsKey("discountPrice") || paramObj.getDouble("discountPrice") <= 0) {
+//            return;
+//        }
 
         JSONArray computeDiscountDtos = paramObj.getJSONArray("computeDiscountDtos");
         if (ListUtil.isNull(computeDiscountDtos)) {

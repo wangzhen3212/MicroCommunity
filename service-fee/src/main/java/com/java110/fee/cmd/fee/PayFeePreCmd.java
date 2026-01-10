@@ -482,7 +482,6 @@ public class PayFeePreCmd extends Cmd {
         }
 
         paramObj.put("discountPrice", discountPrice.doubleValue());
-        paramObj.put("discountPrice", discountPrice.doubleValue());
         paramObj.put("computeDiscountDtos", BeanConvertUtil.beanCovertJSONArray(computeDiscountDtos));
         return discountPrice.doubleValue();
     }
