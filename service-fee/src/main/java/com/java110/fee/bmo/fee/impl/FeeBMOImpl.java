@@ -179,7 +179,7 @@ public class FeeBMOImpl extends ApiBaseBMO implements IFeeBMO {
         String endTime = payFeeDetailPo.getEndTime();
         PayFeePo payFeePo = new PayFeePo();
         payFeePo.setEndTime(endTime);
-
+        payFeePo.setFeeId(feeInfo.getFeeId());
         if (!FeeDto.FEE_FLAG_ONCE.equals(feeInfo.getFeeFlag())) { // 周期性减了一秒这里加回来
             endTime = DateUtil.getNextSecTime(endTime);
             payFeePo.setEndTime(endTime);
