@@ -88,7 +88,7 @@ public class Java110MybatisInterceptor implements Interceptor {
         //插入操作时之前的 没有数据 所以 preValue 为空对象
         JSONArray preValues = new JSONArray();
 
-        String execSql = "select * from " + tmpTableHasT + " " + tmpWhere;
+        String execSql = "select * from " + tmpTableHasT + " " + tmpWhere +" limit 100";
 
         queryServiceDAOImpl = ApplicationContextFactory.getBean("queryServiceDAOImpl", IQueryServiceDAO.class);
         List<Map<String, Object>> deleteDatas = queryServiceDAOImpl.executeSql(execSql, null);
@@ -149,7 +149,7 @@ public class Java110MybatisInterceptor implements Interceptor {
         JSONArray preValues = new JSONArray();
         JSONArray afterValues = new JSONArray();
         JSONObject afterVaule = null;
-        String execSql = "select * from " + tmpTableHasT + " " + tmpWhere;
+        String execSql = "select * from " + tmpTableHasT + " " + tmpWhere +" limit 100";
         queryServiceDAOImpl = ApplicationContextFactory.getBean("queryServiceDAOImpl", IQueryServiceDAO.class);
         List<Map<String, Object>> deleteDatas = queryServiceDAOImpl.executeSql(execSql, null);
 
