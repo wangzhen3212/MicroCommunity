@@ -22094,7 +22094,6 @@ INSERT INTO `m_menu` VALUES ('702021020165340987', '今日考勤', '802023122509
 INSERT INTO `m_menu` VALUES ('702021020295631127', '月考勤', '802023122509830009', '/#/pages/property/monthAttendanceManage', '7', '-1', '', '2021-02-02 13:05:40', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702021020311270020', '考勤记录', '802023122509830009', '/#/pages/property/attendanceLogManage', '9', '-1', '', '2021-02-03 09:44:38', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702021020534720080', '问卷调研', '800201904007', '/#/pages/property/questionAnswerManage', '17', '-1', '', '2021-02-05 17:31:57', '0', 'Y');
-INSERT INTO `m_menu` VALUES ('702021020705710273', '考核项目', '800201904007', '/#/pages/examine/examineProjectManage', '19', '-1', '', '2021-02-07 21:46:39', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702021020740160219', '问卷题目', '800201904007', '/#/pages/question/questionTitle', '16', '-1', '', '2021-02-07 11:22:10', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702021022283800608', '费用台账', '802020101628950105', '/#/pages/property/reportProficient', '1', '-1', '', '2021-02-22 18:02:51', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702021022611740004', '装修记录', '800201904004', '/#/pages/property/listRoomDecorationRecord', '6', '-1', '装修记录', '2021-02-26 11:47:24', '0', 'N');
@@ -22345,8 +22344,6 @@ INSERT INTO `m_menu` VALUES ('702023021744650019', '云打印机', '802019110855
 INSERT INTO `m_menu` VALUES ('702023021764650009', '云打印规则', '802019110855900043', '/#/pages/print/printerRule', '12', '-1', '', '2023-02-17 17:33:47', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702023022241710033', '考勤人员', '802023122509830009', '/#/pages/attendance/attendanceClassesStaffManage', '5', '-1', '', '2023-02-22 00:25:51', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702023030667090037', '业委会', '800201904006', '/#/pages/owner/ownerCommitteeManage', '15', '-1', '', '2023-03-06 12:23:52', '0', 'Y');
-INSERT INTO `m_menu` VALUES ('702023030845250014', '考核人员', '800201904007', '/#/pages/examine/examineStaffManage', '20', '-1', '', '2023-03-08 16:08:38', '0', 'Y');
-INSERT INTO `m_menu` VALUES ('702023030973660020', '考核评分', '800201904007', '/#/pages/examine/examineStaffValue', '21', '-1', '', '2023-03-09 17:04:54', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702023040650020360', '小区公示', '800201904004', '/#/pages/community/communityPublicityManage', '12', '-1', '', '2023-04-06 19:25:35', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702023041871290001', '强制回单', '802019102057730004', '/#/pages/property/constrainFinishRepair', '10', '-1', '强制回单', '2023-04-18 10:31:22', '0', 'N');
 INSERT INTO `m_menu` VALUES ('70202305241318253698000025', '数据统计', '802020101628950105', '/#/pages/report/dataReport', '5', '-1', '', '2023-05-24 13:18:25', '0', 'Y');
@@ -25425,9 +25422,7 @@ INSERT INTO `p_privilege` VALUES ('502021020233871128', '月考勤', '', '2021-0
 INSERT INTO `p_privilege` VALUES ('502021020357910021', '考勤记录', '', '2021-02-03 09:44:38', '0', '800900000003', '/admin.html#/pages/property/attendanceLogManage', '702021020311270020');
 INSERT INTO `p_privilege` VALUES ('502021020591840081', '问卷信息', '', '2021-02-05 17:31:57', '0', '800900000003', '/admin.html#/pages/property/questionAnswerManage', '702021020534720080');
 INSERT INTO `p_privilege` VALUES ('502021020644120134', '问卷题目', '', '2021-02-06 11:01:11', '0', '800900000003', '/admin.html#/pages/property/questionAnswerTitleManage', '702021020652750133');
-INSERT INTO `p_privilege` VALUES ('502021020700510274', '考核项目', '', '2021-02-07 21:46:39', '0', '800900000003', '/app/examine.listExamineProject', '702021020705710273');
 INSERT INTO `p_privilege` VALUES ('502021020724030228', '问卷答题', '', '2021-02-07 13:57:08', '0', '800900000003', '/admin.html#/pages/property/userQuestionAnswerManage', '702021020781610227');
-INSERT INTO `p_privilege` VALUES ('502021020744330251', '员工考核', '', '2021-02-07 16:34:28', '0', '800900000003', '/admin.html#/pages/property/staffAssessmentManage', '702021020778830250');
 INSERT INTO `p_privilege` VALUES ('502021020752750220', '我的问卷', '', '2021-02-07 11:22:10', '0', '800900000003', '/admin.html#/pages/property/myQuestionAnswerManage', '702021020740160219');
 INSERT INTO `p_privilege` VALUES ('502021020755580291', '最美员工', '', '2021-02-07 22:51:11', '0', '800900000003', '/admin.html#/pages/property/activitiesBeautifulStaffManage', '702021020768800290');
 INSERT INTO `p_privilege` VALUES ('502021022251710609', '报表专家', '', '2021-02-22 18:02:51', '0', '800900000003', '/admin.html#/pages/property/reportProficient', '702021022283800608');
@@ -25857,9 +25852,7 @@ INSERT INTO `p_privilege` VALUES ('502023022277420034', '考勤人员', '', '202
 INSERT INTO `p_privilege` VALUES ('502023022291280010', '智能水电表', '', '2023-02-22 23:14:27', '0', '800900000003', '/#/pages/machine/meterMachineManage', '702023022209360009');
 INSERT INTO `p_privilege` VALUES ('502023030292600451', '充电桩', '', '2023-03-02 01:44:18', '0', '800900000003', '/#/pages/machine/chargeMachineManage', '702023030221780450');
 INSERT INTO `p_privilege` VALUES ('502023030682970038', '业委会', '', '2023-03-06 12:23:52', '0', '800900000003', '/#/pages/owner/ownerCommitteeManage', '702023030667090037');
-INSERT INTO `p_privilege` VALUES ('502023030837020015', '考核人员', '', '2023-03-08 16:08:38', '0', '800900000003', '/#/pages/examine/examineStaffManage', '702023030845250014');
 INSERT INTO `p_privilege` VALUES ('502023030877300002', '充电订单', '', '2023-03-08 02:39:33', '0', '800900000003', '/#/pages/machine/chargeMachineOrder', '702023030869020001');
-INSERT INTO `p_privilege` VALUES ('502023030998690021', '考核评分', '', '2023-03-09 17:04:54', '0', '800900000003', '/#/pages/examine/examineStaffValue', '702023030973660020');
 INSERT INTO `p_privilege` VALUES ('502023031800040276', '充电规则', '', '2023-03-18 23:00:03', '0', '800900000003', '/#/pages/machine/chargeRule', '702023031818760275');
 INSERT INTO `p_privilege` VALUES ('502023032804261679', '修改车辆', '', '2023-03-28 00:21:13', '0', '800900000003', '/app/owner.editOwnerCar', '702020082881680068');
 INSERT INTO `p_privilege` VALUES ('502023032809021678', '续租车位', '续租车位', '2023-03-28 00:18:29', '0', '800900000003', '/app/owner.carAddParkingSpace', '702020082881680068');
