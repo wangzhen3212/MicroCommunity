@@ -322,7 +322,7 @@ public class PayFeeConfirmCmd extends Cmd {
                 // 现金账户扣款记录，生成抵扣明细记录
                 FeeAccountDetailPo feeAccountDetailPo = new FeeAccountDetailPo();
                 feeAccountDetailPo.setFadId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_fadId));
-                feeAccountDetailPo.setDetailId(paramObj.getString("detailId"));
+                feeAccountDetailPo.setDetailId(payFeeDetailPo.getDetailId());
                 feeAccountDetailPo.setCommunityId(paramObj.getString("communityId"));
                 feeAccountDetailPo.setState("1002"); //1001 无抵扣 1002 现金账户抵扣 1003 积分账户抵扣 1004 优惠券抵扣
                 feeAccountDetailPo.setAmount(String.valueOf(cashMoney)); //现金抵扣金额
