@@ -20,6 +20,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.java110.community.bmo.community.ICommunityBMO;
 import com.java110.core.annotation.Java110Cmd;
 import com.java110.core.annotation.Java110Transactional;
+import com.java110.core.context.Environment;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
@@ -119,6 +120,8 @@ public class UpdateCommunityCmd extends Cmd {
      */
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
+        // 检查当前运行环境，仅在开发环境下执行某些特殊逻辑
+        Environment.isDevEnv();
         // 验证必须参数是否存在
         Assert.hasKeyAndValue(reqJson, "communityId", "小区ID不能为空");
         Assert.hasKeyAndValue(reqJson, "name", "必填，请填写小区名称");
