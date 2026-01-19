@@ -54,6 +54,8 @@ public class GetPhoneRepairStaffsImpl implements IMallCommonApiBmo {
     public void doCmd(ICmdDataFlowContext context, JSONObject reqJson) {
         UserDto userDto = new UserDto();
         userDto.setTel(reqJson.getString("mallTel"));
+        userDto.setLevelCd(UserDto.LEVEL_CD_USER);
+
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
         // 验证用户登录状态，确保只有一个用户记录

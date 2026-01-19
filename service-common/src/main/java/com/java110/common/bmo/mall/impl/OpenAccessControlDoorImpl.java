@@ -36,6 +36,8 @@ public class OpenAccessControlDoorImpl  implements IMallCommonApiBmo {
 
         UserDto userDto = new UserDto();
         userDto.setTel(reqJson.getString("mallTel"));
+        userDto.setLevelCd(UserDto.LEVEL_CD_USER);
+
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
         Assert.listOnlyOne(userDtos, "用户未登录");

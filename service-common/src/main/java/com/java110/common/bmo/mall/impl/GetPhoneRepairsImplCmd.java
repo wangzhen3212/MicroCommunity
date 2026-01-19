@@ -59,6 +59,8 @@ public class GetPhoneRepairsImplCmd implements IMallCommonApiBmo {
 // 构建用户查询条件
         UserDto userDto = new UserDto();
         userDto.setTel(reqJson.getString("mallTel"));
+        userDto.setLevelCd(UserDto.LEVEL_CD_USER);
+
         // 查询用户信息
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 

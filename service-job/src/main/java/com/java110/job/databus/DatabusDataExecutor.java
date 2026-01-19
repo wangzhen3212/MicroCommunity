@@ -22,7 +22,7 @@ public class DatabusDataExecutor implements Runnable {
 
     private static final int MAX_ROW = 200;
 
-    private static final int DEFAULT_TIMEOUT_TIME = 5000; // 5秒超时
+    private static final int DEFAULT_TIMEOUT_TIME = 5*60*1000; // 5分钟超时
 
     //默认线程大小
     private static final int DEFAULT_EXPORT_POOL = 4;
