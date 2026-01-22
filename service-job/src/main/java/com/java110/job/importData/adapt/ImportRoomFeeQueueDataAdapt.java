@@ -134,9 +134,9 @@ public class ImportRoomFeeQueueDataAdapt extends DefaultImportData implements II
         for (ImportRoomFee tmpImportRoomFee : importRoomFees) {
             for (OwnerDto tmpOwnerDto : ownerDtos) {
                 if (tmpImportRoomFee.getRoomId().equals(tmpOwnerDto.getRoomId())) {
-                    importRoomFee.setOwnerId(tmpOwnerDto.getOwnerId());
-                    importRoomFee.setOwnerName(tmpOwnerDto.getName());
-                    importRoomFee.setOwnerLink(tmpOwnerDto.getLink());
+                    tmpImportRoomFee.setOwnerId(tmpOwnerDto.getOwnerId());
+                    tmpImportRoomFee.setOwnerName(tmpOwnerDto.getName());
+                    tmpImportRoomFee.setOwnerLink(tmpOwnerDto.getLink());
                 }
             }
         }
