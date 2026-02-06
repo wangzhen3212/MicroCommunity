@@ -37,7 +37,7 @@ import java.util.List;
  * 押金退费命令类
  * 负责处理押金退费业务逻辑，包括验证退费参数、更新缴费明细状态、
  * 创建退费记录、更新账户余额等操作
- * 
+ *
  * @author Java110
  * @version 1.0
  * @serviceCode fee.refundFeeDeposit
@@ -45,23 +45,33 @@ import java.util.List;
 @Java110Cmd(serviceCode = "fee.refundFeeDeposit")
 public class RefundFeeDepositCmd extends Cmd {
 
-    /** 费用明细内部服务接口 */
+    /**
+     * 费用明细内部服务接口
+     */
     @Autowired
     private IFeeDetailInnerServiceSMO feeDetailInnerServiceSMOImpl;
 
-    /** 缴费明细V1内部服务接口 */
+    /**
+     * 缴费明细V1内部服务接口
+     */
     @Autowired
     private IPayFeeDetailV1InnerServiceSMO payFeeDetailV1InnerServiceSMOImpl;
 
-    /** 用户V1内部服务接口 */
+    /**
+     * 用户V1内部服务接口
+     */
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
-    /** 费用计算服务接口 */
+    /**
+     * 费用计算服务接口
+     */
     @Autowired
     private IComputeFeeSMO computeFeeSMOImpl;
 
-    /** 账户内部服务接口 */
+    /**
+     * 账户内部服务接口
+     */
     @Autowired
     private IAccountInnerServiceSMO accountInnerServiceSMOImpl;
 
@@ -69,10 +79,10 @@ public class RefundFeeDepositCmd extends Cmd {
      * 验证退费请求参数
      * 检查必要的参数是否存在且有效
      *
-     * @param event 命令事件对象
+     * @param event   命令事件对象
      * @param context 命令数据流上下文
      * @param reqJson 请求JSON对象
-     * @throws CmdException 当参数验证失败时抛出
+     * @throws CmdException   当参数验证失败时抛出
      * @throws ParseException 当数据解析异常时抛出
      */
     @Override
@@ -86,10 +96,10 @@ public class RefundFeeDepositCmd extends Cmd {
      * 执行押金退费命令
      * 处理押金退费的核心业务逻辑，包括更新缴费状态、创建退费记录、更新账户余额等
      *
-     * @param event 命令事件对象
+     * @param event   命令事件对象
      * @param context 命令数据流上下文
      * @param reqJson 请求JSON对象
-     * @throws CmdException 当业务处理失败时抛出
+     * @throws CmdException   当业务处理失败时抛出
      * @throws ParseException 当数据解析异常时抛出
      */
     @Override
@@ -110,6 +120,7 @@ public class RefundFeeDepositCmd extends Cmd {
         feeDetailDto.setCommunityId(reqJson.getString("communityId"));
         feeDetailDto.setDetailId(reqJson.getString("detailId"));
         feeDetailDto.setFeeId(reqJson.getString("feeId"));
+        feeDetailDto.setState(FeeDetailDto.STATE_NORMAL);
         List<FeeDetailDto> feeDetailDtos = feeDetailInnerServiceSMOImpl.queryFeeDetails(feeDetailDto);
         // 验证缴费记录存在且唯一
         Assert.listOnlyOne(feeDetailDtos, "不存在该缴费记录");
