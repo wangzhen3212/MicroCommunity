@@ -101,11 +101,13 @@ public class ContractApplyUserInnerServiceSMOImpl extends BaseServiceSMO impleme
         query.taskAssignee(user.getUserId());
         query.orderByTaskCreateTime().desc();
         List<Task> list = null;
-        if (user.getPage() >= 1) {
-            user.setPage(user.getPage() - 1);
-        }
+//        if (user.getPage() >= 1) {
+//            user.setPage(user.getPage() - 1);
+//        }
         if (user.getPage() != PageDto.DEFAULT_PAGE) {
-            list = query.listPage(user.getPage(), user.getRow());
+            // 计算起始索引：页码从1开始，转换为0开始的索引
+            int firstResult = (user.getPage() - 1) * user.getRow();
+            list = query.listPage(firstResult, user.getRow());
         } else {
             list = query.list();
         }
