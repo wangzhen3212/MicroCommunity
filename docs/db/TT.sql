@@ -15510,6 +15510,7 @@ INSERT INTO `c_route` VALUES ('3026', '8000418004', '982025060676690009', 'D', '
 INSERT INTO `c_route` VALUES ('3027', '992020022270580001', '982025060676690009', 'D', '1000', 'S', '2025-06-06 17:31:46', '0');
 INSERT INTO `c_route` VALUES ('3029', '992024042871530002', '982020121555380166', 'D', '1000', 'S', '2026-01-14 11:46:37', '0');
 INSERT INTO `c_route` VALUES ('3030', '992024042871530002', '9820260114814723403', 'D', '1000', 'S', '2026-01-14 12:24:14', '0');
+INSERT INTO `c_route` VALUES ('3031', '8000418004', '9820260312398412439', 'D', '1000', 'S', '2026-03-12 16:47:37', '0');
 
 -- ----------------------------
 -- Table structure for c_service
@@ -17528,6 +17529,7 @@ INSERT INTO `c_service` VALUES ('2040', '982025060326690047', 'storeUser.listSto
 INSERT INTO `c_service` VALUES ('2041', '982025060386130048', 'storeUser.deleteStoreStaffLeader', 'API', '删除员工领导', '1', '', 'CMD', 'http://store-service', 'POST', '60', '3', '8000418002', '2025-06-03 18:08:54', '0');
 INSERT INTO `c_service` VALUES ('2042', '982025060676690009', 'ownerRepair.repairEnd', 'API', '结束工单', '1', '', 'CMD', 'http://community-service', 'POST', '60', '3', '8000418002', '2025-06-06 17:31:13', '0');
 INSERT INTO `c_service` VALUES ('2043', '9820260114814723403', 'payment.cashierForMall', 'API', '收银商城版', '1', NULL, 'CMD', 'http://acct-service', 'POST', '60', '3', '8000418002', '2026-01-14 12:24:03', '0');
+INSERT INTO `c_service` VALUES ('2044', '9820260312398412439', 'owner.changeCarOwner', 'API', '修改车辆业主', '1', NULL, 'CMD', 'http://user-service', 'POST', '60', '3', '8000418002', '2026-03-12 16:47:14', '0');
 
 -- ----------------------------
 -- Table structure for c_service_business
