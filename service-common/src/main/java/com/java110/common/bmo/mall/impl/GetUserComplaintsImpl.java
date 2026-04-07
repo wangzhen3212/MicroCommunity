@@ -16,6 +16,7 @@ import com.java110.intf.store.IComplaintTypeUserV1InnerServiceSMO;
 import com.java110.intf.store.IComplaintV1InnerServiceSMO;
 import com.java110.intf.user.IOwnerV1InnerServiceSMO;
 import com.java110.intf.user.IUserV1InnerServiceSMO;
+import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.ListUtil;
@@ -72,7 +73,10 @@ public class GetUserComplaintsImpl implements IMallCommonApiBmo {
 
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
-        Assert.listOnlyOne(userDtos, "用户未登录");
+        //Assert.listOnlyOne(userDtos, "用户未登录");
+        if(ListUtil.isNull(userDtos)){
+            throw new CmdException("物业系统用户不存在");
+        }
         // 将请求JSON转换为ComplaintDto对象
         ComplaintDto complaintDto = BeanConvertUtil.covertBean(reqJson, ComplaintDto.class);
         complaintDto.setStoreId("");
