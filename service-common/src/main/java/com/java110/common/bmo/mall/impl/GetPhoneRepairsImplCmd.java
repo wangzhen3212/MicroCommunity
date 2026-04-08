@@ -9,6 +9,7 @@ import com.java110.intf.community.IMenuInnerServiceSMO;
 import com.java110.intf.community.IRepairInnerServiceSMO;
 import com.java110.intf.community.IRepairUserInnerServiceSMO;
 import com.java110.intf.user.IUserV1InnerServiceSMO;
+import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.*;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,11 +62,12 @@ public class GetPhoneRepairsImplCmd implements IMallCommonApiBmo {
         userDto.setTel(reqJson.getString("mallTel"));
         userDto.setLevelCd(UserDto.LEVEL_CD_USER);
 
-        // 查询用户信息
         List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
 
-        // 验证用户信息，确保用户已登录且唯一
-        Assert.listOnlyOne(userDtos, "用户未登录");
+        //Assert.listOnlyOne(userDtos, "用户未登录");
+        if(ListUtil.isNull(userDtos)){
+            throw new CmdException("物业系统用户不存在");
+        }
 
         // 将请求参数转换为报修DTO对象
         RepairDto ownerRepairDto = BeanConvertUtil.covertBean(reqJson, RepairDto.class);
