@@ -71,7 +71,7 @@ public class ChangKRefundAdapt implements IRefundMoneyAdapt {
         String terminalTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 
         TreeMap<String, String> params = new TreeMap<>();
-        params.put("pay_type", "010");                    // 必填
+        params.put("pay_type", onlinePayDto.getMchId());                    // 必填
         params.put("merchant_no", merchantNo);
         params.put("terminal_id", terminalId);
         params.put("terminal_trace", tranNo);

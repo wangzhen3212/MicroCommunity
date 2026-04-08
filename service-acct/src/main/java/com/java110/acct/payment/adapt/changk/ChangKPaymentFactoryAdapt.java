@@ -3,6 +3,7 @@ package com.java110.acct.payment.adapt.changk;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.acct.payment.IPaymentFactoryAdapt;
 import com.java110.core.context.ICmdDataFlowContext;
+import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.core.log.LoggerFactory;
 import com.java110.dto.app.AppDto;
 import com.java110.dto.owner.OwnerAppUserDto;
@@ -104,35 +105,35 @@ public class ChangKPaymentFactoryAdapt implements IPaymentFactoryAdapt {
 
 
         resultMap = java110UnifieldOrder(paymentOrderDto, merchantNo, terminalId, accessToken,
-                payType, smallWeChatDto.getAppId(), openId, payAmount, notifyUrl, paymentPoolId,wechatMini);
+                payType, smallWeChatDto, openId, payAmount, notifyUrl, paymentPoolId,wechatMini,paymentPoolValueDtos.get(0));
 
         return resultMap;
     }
 
     private SortedMap<String, String> java110UnifieldOrder(PaymentOrderDto paymentOrderDto, String merchantNo,
                                                            String terminalId, String accessToken,
-                                                           String payType, String subAppId, String openId,
-                                                           double payAmount, String notifyUrl, String ppId,String wechatMini) throws Exception {
+                                                           String payType, SmallWeChatDto smallWeChatDto, String openId,
+                                                           double payAmount, String notifyUrl, String ppId,String wechatMini,
+                                                           PaymentPoolValueDto paymentPoolValueDto) throws Exception {
         TreeMap<String, String> params = new TreeMap<>();
         String orderId = paymentOrderDto.getOrderId();
-        String terminalTrace = generateTraceNo();
         String terminalTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 
         params.put("pay_type", payType);
         params.put("merchant_no", merchantNo);
         params.put("terminal_id", terminalId);
-        params.put("terminal_trace", terminalTrace);
+        params.put("terminal_trace", orderId);
         params.put("terminal_time", terminalTime);
         params.put("total_fee", String.valueOf((int) (payAmount * 100)));
-        params.put("sub_appid", subAppId);
+        params.put("sub_appid", smallWeChatDto.getAppId());
         params.put("open_id", openId);
 
 
-        String orderBody = paymentOrderDto.getName();
-        if (orderBody != null && orderBody.length() > 127) {
-            orderBody = orderBody.substring(0, 126);
+        String feeName = paymentOrderDto.getName();
+        if (feeName != null && feeName.length() > 127) {
+            feeName = feeName.substring(0, 126);
         }
-        params.put("order_body", orderBody);
+        params.put("order_body", feeName);
         params.put("notify_url", notifyUrl);
         params.put("attach", "");
 
@@ -154,10 +155,18 @@ public class ChangKPaymentFactoryAdapt implements IPaymentFactoryAdapt {
 
         logger.info("【畅快公众号支付】响应: " + response.getBody());
 
+
+
+        SortedMap<String, String> resultInfo  = null;
         if(OwnerAppUserDto.APP_TYPE_WECHAT_MINA.equals(wechatMini)) {
-            return parseMiniPayResponse(response.getBody(),orderId);
+            resultInfo = parseMiniPayResponse(response.getBody(),orderId);
+        }else {
+            resultInfo = parseJsPayResponse(response.getBody(), orderId, ppId);
         }
-        return parseJsPayResponse(response.getBody(), orderId, ppId);
+        smallWeChatDto.setMchId(payType);
+        doSaveOnlinePay(smallWeChatDto, openId, paymentOrderDto.getOrderId(), feeName, payAmount, OnlinePayDto.STATE_WAIT,
+                "待支付", paymentPoolValueDto.getPpId(),resultInfo.get("out_trade_no"));
+        return resultInfo;
     }
 
 
@@ -277,9 +286,6 @@ public class ChangKPaymentFactoryAdapt implements IPaymentFactoryAdapt {
         return payType;
     }
 
-    private String generateTraceNo() {
-        return System.currentTimeMillis() + "" + new Random().nextInt(10000);
-    }
 
     @Override
     public PaymentOrderDto java110NotifyPayment(NotifyPaymentOrderDto notifyPaymentOrderDto) {
@@ -307,7 +313,7 @@ public class ChangKPaymentFactoryAdapt implements IPaymentFactoryAdapt {
         String resultCode = params.getString("result_code");
 
         PaymentOrderDto paymentOrderDto = new PaymentOrderDto();
-        paymentOrderDto.setOrderId(params.getString("out_trade_no"));
+        paymentOrderDto.setOrderId(params.getString("terminal_trace"));
         paymentOrderDto.setTransactionId(params.getString("channel_trade_no"));
 
         if (ChangKConfig.RESULT_CODE_SUCCESS.equals(returnCode)
@@ -329,6 +335,24 @@ public class ChangKPaymentFactoryAdapt implements IPaymentFactoryAdapt {
         onlinePayPo.setOrderId(orderId);
         onlinePayPo.setState(state);
         onlinePayV1InnerServiceSMOImpl.updateOnlinePay(onlinePayPo);
+    }
+
+    private void doSaveOnlinePay(SmallWeChatDto smallWeChatDto, String openId, String orderId, String feeName,
+                                 double money, String state, String message, String ppId,String transactionId) {
+        OnlinePayPo onlinePayPo = new OnlinePayPo();
+        onlinePayPo.setAppId(smallWeChatDto.getAppId());
+        onlinePayPo.setMchId(smallWeChatDto.getMchId());
+        onlinePayPo.setMessage(message.length() > 1000 ? message.substring(0, 1000) : message);
+        onlinePayPo.setOpenId(openId);
+        onlinePayPo.setOrderId(orderId);
+        onlinePayPo.setPayId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_orderId));
+        onlinePayPo.setPayName(feeName);
+        onlinePayPo.setRefundFee("0");
+        onlinePayPo.setState(state);
+        onlinePayPo.setTotalFee(money + "");
+        onlinePayPo.setTransactionId(transactionId);
+        onlinePayPo.setPaymentPoolId(ppId);
+        onlinePayV1InnerServiceSMOImpl.saveOnlinePay(onlinePayPo);
     }
 
     private SmallWeChatDto getSmallWechat(JSONObject paramIn) {

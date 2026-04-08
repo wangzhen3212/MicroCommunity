@@ -92,7 +92,7 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
 
         logger.info("【畅快条码支付】响应: " + response.getBody());
 
-        return parseBarCodeResponse(response.getBody(), shopSmallWeChatDto, orderNum, feeName, payAmount, paymentPoolValueDtos.get(0).getPpId());
+        return parseBarCodeResponse(response.getBody(), shopSmallWeChatDto, orderNum, feeName, payAmount, paymentPoolValueDtos.get(0).getPpId(),payType);
     }
 
     @Override
@@ -148,7 +148,8 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
     }
 
     private ResultVo parseBarCodeResponse(String responseBody, SmallWeChatDto smallWeChatDto,
-                                          String orderNum, String feeName, double payAmount, String ppId) {
+                                          String orderNum, String feeName, double payAmount,
+                                          String ppId,String payType) {
         JSONObject result = JSONObject.parseObject(responseBody);
 
         String returnCode = result.getString("return_code");
@@ -162,11 +163,13 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
         if (ChangKConfig.RESULT_CODE_SUCCESS.equals(returnCode)
                 && ChangKConfig.RESULT_CODE_SUCCESS.equals(resultCode)) {
             // 支付成功（同步成功）
+            smallWeChatDto.setMchId(payType);
             doSaveOnlinePay(smallWeChatDto, "-1", orderNum, transactionId,
                     feeName, payAmount, OnlinePayDto.STATE_COMPILE, "支付成功", ppId);
             return new ResultVo(ResultVo.CODE_OK, "支付成功");
         } else {
             // 支付失败或处理中，保存畅快订单号以便后续查询
+            smallWeChatDto.setMchId(payType);
             doSaveOnlinePay(smallWeChatDto, "-1", orderNum, transactionId,
                     feeName, payAmount, OnlinePayDto.STATE_WAIT, returnMsg, ppId);
             return new ResultVo(ResultVo.CODE_WAIT_PAY, returnMsg);
@@ -178,10 +181,8 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
         String returnCode = result.getString("return_code");
         String resultCode = result.getString("result_code");
 
-        if (ChangKConfig.RESULT_CODE_SUCCESS.equals(returnCode)
-                && ChangKConfig.RESULT_CODE_SUCCESS.equals(resultCode)) {
-            String tradeStatus = result.getString("trade_state");   // ✅ 修正字段名
-            if ("SUCCESS".equalsIgnoreCase(tradeStatus)) {
+        if (ChangKConfig.RESULT_CODE_SUCCESS.equals(returnCode)){
+            if (ChangKConfig.RESULT_CODE_SUCCESS.equals(resultCode)) {
                 doUpdateOnlinePay(orderNum, OnlinePayDto.STATE_COMPILE, "支付成功");
                 return new ResultVo(ResultVo.CODE_OK, "支付成功");
             } else {
