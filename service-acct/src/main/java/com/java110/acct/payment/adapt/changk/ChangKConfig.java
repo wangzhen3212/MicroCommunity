@@ -31,7 +31,7 @@ public class ChangKConfig {
     public static final String PAY_TYPE_BEST = "100";
     public static final String PAY_TYPE_UNIONPAY = "110";
     public static final String PAY_TYPE_HEBAO = "140";
-    public static final String PAY_TYPE_AUTO = "000";
+    public static final String PAY_TYPE_AUTO = "010";
 
     public static final String RESULT_CODE_SUCCESS = "01";
     public static final String RESULT_CODE_FAIL = "02";
