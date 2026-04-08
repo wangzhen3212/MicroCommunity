@@ -22,7 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import com.java110.utils.util.ListUtil;
 
 import java.util.*;
@@ -106,16 +107,31 @@ public class ChangKPaymentFactoryAdapt implements IPaymentFactoryAdapt {
         TreeMap<String, String> params = new TreeMap<>();
         String orderId = paymentOrderDto.getOrderId();
         String terminalTrace = generateTraceNo();
+        String terminalTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+//        params.put("terminal_time", terminalTime);
+//        params.put("merchant_no", merchantNo);
+//        params.put("terminal_id", terminalId);
+//        params.put("terminal_trace", terminalTrace);
+////        params.put("terminal_time", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+//        params.put("pay_type", payType);
+//        params.put("total_fee", String.valueOf((int) (payAmount * 100)));
+//        params.put("out_trade_no", orderId);
+//        params.put("auth_no", authCode);
+////        params.put("notify_url", notifyUrl);
+
 
         params.put("merchant_no", merchantNo);
         params.put("terminal_id", terminalId);
         params.put("terminal_trace", terminalTrace);
-        params.put("terminal_time", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+        params.put("terminal_time", terminalTime);   // 已改为 yyyyMMddHHmmss
         params.put("pay_type", payType);
         params.put("total_fee", String.valueOf((int) (payAmount * 100)));
         params.put("out_trade_no", orderId);
-        params.put("auth_code", authCode);
-        params.put("notify_url", notifyUrl);
+        params.put("auth_no", authCode);
+// 补充缺失字段
+        params.put("pay_ver", "110");
+        params.put("service_id", "010");
+        params.put("attach", "");   // 可选，与文档示例保持一致
 
         String sign = ChangKSignature.generateSign(params, accessToken);
         params.put("key_sign", sign);
@@ -141,11 +157,12 @@ public class ChangKPaymentFactoryAdapt implements IPaymentFactoryAdapt {
         TreeMap<String, String> params = new TreeMap<>();
         String orderId = paymentOrderDto.getOrderId();
         String terminalTrace = generateTraceNo();
-
+        String terminalTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        params.put("terminal_time", terminalTime);
         params.put("merchant_no", merchantNo);
         params.put("terminal_id", terminalId);
         params.put("terminal_trace", terminalTrace);
-        params.put("terminal_time", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+//        params.put("terminal_time", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
         params.put("pay_type", payType);
         params.put("total_fee", String.valueOf((int) (payAmount * 100)));
         params.put("out_trade_no", orderId);

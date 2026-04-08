@@ -14,7 +14,6 @@ import com.java110.po.wechat.OnlinePayPo;
 import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.MappingConstant;
 import com.java110.utils.constant.WechatConstant;
-import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.ListUtil;
 import com.java110.utils.util.PayUtil;
 import com.java110.utils.util.StringUtil;
@@ -23,7 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service("changKQrCodePaymentAdapt")
@@ -45,7 +45,7 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
 
     @Override
     public ResultVo pay(String communityId, String orderNum, double money, String authCode, String feeName, String paymentPoolId) throws Exception {
-        logger.info("【畅快聚合支付-条码支付】 订单编号=" + orderNum + ", 金额=" + money + ", 授权码=" + authCode);
+        System.out.println("【畅快聚合支付-条码支付】 订单编号=" + orderNum + ", 金额=" + money + ", 授权码=" + authCode);
 
         double payAmount = PayUtil.getPayAmountByEnv(
                 MappingCache.getValue(MappingConstant.ENV_DOMAIN, "HC_ENV"), money);
@@ -67,17 +67,16 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
         String payType = determinePayTypeByAuthCode(authCode);
 
         TreeMap<String, String> params = new TreeMap<>();
-        String terminalTrace = generateTraceNo();
+        String terminalTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 
         params.put("merchant_no", merchantNo);
         params.put("terminal_id", terminalId);
-        params.put("terminal_trace", terminalTrace);
-        params.put("terminal_time", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+        params.put("terminal_trace", orderNum);   // 直接使用业务订单号
+        params.put("terminal_time", terminalTime);
         params.put("pay_type", payType);
         params.put("total_fee", String.valueOf((int) (payAmount * 100)));
-        params.put("out_trade_no", orderNum);
-        params.put("auth_code", authCode);
-        params.put("notify_url", "");
+        params.put("auth_no", authCode);
+        params.put("attach", "");
 
         String sign = ChangKSignature.generateSign(params, accessToken);
         params.put("key_sign", sign);
@@ -117,20 +116,19 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
         onlinePayDto.setOrderId(orderNum);
         List<OnlinePayDto> onlinePayDtos = onlinePayV1InnerServiceSMOImpl.queryOnlinePays(onlinePayDto);
 
-        String channelTradeNo = "";
+        String channelOutTradeNo = "";
         if (!ListUtil.isNull(onlinePayDtos)) {
-            channelTradeNo = onlinePayDtos.get(0).getTransactionId();
+            channelOutTradeNo = onlinePayDtos.get(0).getTransactionId();
         }
 
+        String terminalTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+
         TreeMap<String, String> params = new TreeMap<>();
+        params.put("terminal_time", terminalTime);
         params.put("merchant_no", merchantNo);
         params.put("terminal_id", terminalId);
-        params.put("terminal_trace", generateTraceNo());
-        params.put("terminal_time", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
-        params.put("out_trade_no", orderNum);
-        if (!StringUtil.isEmpty(channelTradeNo)) {
-            params.put("channel_trade_no", channelTradeNo);
-        }
+        params.put("terminal_trace", orderNum);
+        params.put("out_trade_no", StringUtil.isEmpty(channelOutTradeNo) ? orderNum : channelOutTradeNo);
 
         String sign = ChangKSignature.generateSign(params, accessToken);
         params.put("key_sign", sign);
@@ -150,34 +148,39 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
     }
 
     private ResultVo parseBarCodeResponse(String responseBody, SmallWeChatDto smallWeChatDto,
-                                         String orderNum, String feeName, double payAmount, String ppId) {
+                                          String orderNum, String feeName, double payAmount, String ppId) {
         JSONObject result = JSONObject.parseObject(responseBody);
 
         String returnCode = result.getString("return_code");
         String resultCode = result.getString("result_code");
         String returnMsg = result.getString("return_msg");
+        String outTradeNo = result.getString("out_trade_no");   // 畅快侧订单号
+
+        // 如果畅快返回了 out_trade_no 则保存，否则保存空字符串
+        String transactionId = StringUtil.isEmpty(outTradeNo) ? "" : outTradeNo;
 
         if (ChangKConfig.RESULT_CODE_SUCCESS.equals(returnCode)
                 && ChangKConfig.RESULT_CODE_SUCCESS.equals(resultCode)) {
-            doSaveOnlinePay(smallWeChatDto, "-1", orderNum, result.getString("channel_trade_no"),
-                    feeName, payAmount, OnlinePayDto.STATE_WAIT, "待支付", ppId);
+            // 支付成功（同步成功）
+            doSaveOnlinePay(smallWeChatDto, "-1", orderNum, transactionId,
+                    feeName, payAmount, OnlinePayDto.STATE_COMPILE, "支付成功", ppId);
             return new ResultVo(ResultVo.CODE_OK, "支付成功");
         } else {
-            doSaveOnlinePay(smallWeChatDto, "-1", orderNum, "",
-                    feeName, payAmount, OnlinePayDto.STATE_FAIL, returnMsg, ppId);
-            return new ResultVo(ResultVo.CODE_ERROR, returnMsg);
+            // 支付失败或处理中，保存畅快订单号以便后续查询
+            doSaveOnlinePay(smallWeChatDto, "-1", orderNum, transactionId,
+                    feeName, payAmount, OnlinePayDto.STATE_WAIT, returnMsg, ppId);
+            return new ResultVo(ResultVo.CODE_WAIT_PAY, returnMsg);
         }
     }
 
     private ResultVo parseQueryResponse(String responseBody, String orderNum) {
         JSONObject result = JSONObject.parseObject(responseBody);
-
         String returnCode = result.getString("return_code");
         String resultCode = result.getString("result_code");
 
         if (ChangKConfig.RESULT_CODE_SUCCESS.equals(returnCode)
                 && ChangKConfig.RESULT_CODE_SUCCESS.equals(resultCode)) {
-            String tradeStatus = result.getString("trade_status");
+            String tradeStatus = result.getString("trade_state");   // ✅ 修正字段名
             if ("SUCCESS".equalsIgnoreCase(tradeStatus)) {
                 doUpdateOnlinePay(orderNum, OnlinePayDto.STATE_COMPILE, "支付成功");
                 return new ResultVo(ResultVo.CODE_OK, "支付成功");
@@ -185,7 +188,6 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
                 return new ResultVo(ResultVo.CODE_WAIT_PAY, "等待用户支付中");
             }
         }
-
         return new ResultVo(ResultVo.CODE_ERROR, "查询失败");
     }
 
@@ -214,10 +216,6 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
         }
     }
 
-    private String generateTraceNo() {
-        return System.currentTimeMillis() + "" + new Random().nextInt(10000);
-    }
-
     private SmallWeChatDto getSmallWechat(String communityId) {
         SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
         smallWeChatDto.setObjId(communityId);
@@ -232,8 +230,8 @@ public class ChangKQrCodePaymentAdapt implements IQrCodePaymentSMO {
     }
 
     private void doSaveOnlinePay(SmallWeChatDto smallWeChatDto, String openId, String orderId,
-                                  String transactionId, String feeName, double money,
-                                  String state, String message, String ppId) {
+                                 String transactionId, String feeName, double money,
+                                 String state, String message, String ppId) {
         OnlinePayPo onlinePayPo = new OnlinePayPo();
         onlinePayPo.setAppId(smallWeChatDto.getAppId());
         onlinePayPo.setMchId(smallWeChatDto.getMchId());

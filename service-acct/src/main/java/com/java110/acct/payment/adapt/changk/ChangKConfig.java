@@ -2,7 +2,7 @@ package com.java110.acct.payment.adapt.changk;
 
 public class ChangKConfig {
 
-    public static final String BASE_URL = "https://gateway.changkPay.com";
+    public static final String BASE_URL = "https://trans.changkuaikeji.cn";
 
     public static final String BARCODE_PAY_URL = BASE_URL + "/pay/110/barcodepay";
 

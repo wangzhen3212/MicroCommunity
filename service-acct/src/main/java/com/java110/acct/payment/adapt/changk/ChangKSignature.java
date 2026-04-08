@@ -1,16 +1,20 @@
 package com.java110.acct.payment.adapt.changk;
 
 import com.alibaba.fastjson.JSONObject;
+import com.java110.core.log.LoggerFactory;
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.codec.digest.DigestUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.slf4j.Logger;
 public class ChangKSignature {
+    private static final Logger logger = LoggerFactory.getLogger(ChangKSignature.class);
 
     private static final Set<String> EXCLUDE_FIELDS = new HashSet<>(Arrays.asList(
             "key_sign", "channel_discount_info", "pay_trace", "pay_time"
@@ -20,12 +24,15 @@ public class ChangKSignature {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : params.entrySet()) {
             String value = entry.getValue();
-            if (value != null && !value.isEmpty()) {
+            if (value != null) {
                 sb.append(entry.getKey()).append("=").append(value).append("&");
             }
         }
         sb.append("access_token=").append(accessToken);
-        return DigestUtils.md5Hex(sb.toString()).toLowerCase();
+        String signStr = sb.toString();
+        // 直接输出到控制台，确保能看到
+        System.out.println("【签名原串】" + signStr);
+        return DigestUtils.md5Hex(signStr.getBytes(StandardCharsets.UTF_8)).toLowerCase();
     }
 
     public static boolean verifyNotifySign(JSONObject params, String accessToken) {

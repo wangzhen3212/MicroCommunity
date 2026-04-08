@@ -2,6 +2,7 @@ package com.java110.acct.payment.adapt.changk.refund;
 
 import com.alibaba.fastjson.JSONObject;
 import com.java110.acct.payment.IRefundMoneyAdapt;
+import com.java110.acct.payment.adapt.changk.ChangKSignature;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.core.log.LoggerFactory;
 import com.java110.dto.onlinePayRefund.OnlinePayRefundDto;
@@ -19,8 +20,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 @Service("changKRefundAdapt")
@@ -53,6 +55,7 @@ public class ChangKRefundAdapt implements IRefundMoneyAdapt {
         String terminalId = PaymentPoolValueDto.getValue(paymentPoolValueDtos, "CHANGK_TERMINAL_ID");
         String accessToken = PaymentPoolValueDto.getValue(paymentPoolValueDtos, "CHANGK_ACCESS_TOKEN");
 
+        // 生成或获取退款流水号
         String tranNo = GenerateCodeFactory.getGeneratorId("11");
         OnlinePayRefundDto onlinePayRefundDto = new OnlinePayRefundDto();
         onlinePayRefundDto.setPayId(onlinePayDto.getPayId());
@@ -62,17 +65,22 @@ public class ChangKRefundAdapt implements IRefundMoneyAdapt {
             tranNo = onlinePayRefundDtos.get(0).getRefundId();
         }
 
+        String channelOutTradeNo = onlinePayDto.getTransactionId(); // 畅快侧订单号
+
+        // 统一时间格式
+        String terminalTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+
         TreeMap<String, String> params = new TreeMap<>();
+        params.put("pay_type", "010");                    // 必填
         params.put("merchant_no", merchantNo);
         params.put("terminal_id", terminalId);
         params.put("terminal_trace", tranNo);
-        params.put("terminal_time", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
-        params.put("out_trade_no", onlinePayDto.getOrderId());
-        params.put("channel_trade_no", onlinePayDto.getTransactionId());
+        params.put("terminal_time", terminalTime);          // 格式 yyyyMMddHHmmss
         params.put("refund_fee", String.valueOf((int) (Double.parseDouble(onlinePayDto.getRefundFee()) * 100)));
-        params.put("refund_reason", "用户主动退款");
+        params.put("out_trade_no", channelOutTradeNo);
+//        params.put("refund_reason", "用户主动退款");
 
-        String sign = com.java110.acct.payment.adapt.changk.ChangKSignature.generateSign(params, accessToken);
+        String sign = ChangKSignature.generateSign(params, accessToken);
         params.put("key_sign", sign);
 
         logger.info("【畅快退款】请求参数: " + params);
@@ -91,7 +99,6 @@ public class ChangKRefundAdapt implements IRefundMoneyAdapt {
 
     private ResultVo parseRefundResponse(String responseBody) {
         JSONObject result = JSONObject.parseObject(responseBody);
-
         String returnCode = result.getString("return_code");
         String resultCode = result.getString("result_code");
         String returnMsg = result.getString("return_msg");
@@ -100,7 +107,6 @@ public class ChangKRefundAdapt implements IRefundMoneyAdapt {
                 && com.java110.acct.payment.adapt.changk.ChangKConfig.RESULT_CODE_SUCCESS.equals(resultCode)) {
             return new ResultVo(ResultVo.CODE_OK, "退款成功");
         }
-
         return new ResultVo(ResultVo.CODE_ERROR, returnMsg);
     }
 }
