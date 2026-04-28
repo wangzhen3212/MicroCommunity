@@ -33681,7 +33681,6 @@ INSERT INTO `task` VALUES ('522022041864580027', '202022042603170017', '预约�
 INSERT INTO `task` VALUES ('522022042008230001', '202022042008250002', '预约状态修改', '1026', '0 */5 * * * ?', '001', '0', '2022-04-20 14:01:45');
 INSERT INTO `task` VALUES ('522022042143200001', '202022042698910015', '预约车辆定时释放车位（依据访客预约结束时间）', '1027', '0 */20 * * * ?', '001', '0', '2022-04-21 10:41:52');
 INSERT INTO `task` VALUES ('522022051234100001', '202022051270490052', '员工任务提醒', '1024', '0 */20 * * * ?', '001', '0', '2022-05-12 17:21:59');
-INSERT INTO `task` VALUES ('522022071204780001', '202022071294700002', '业主年龄更新', '1028', '0 */5 * * * ?', '001', '0', '2022-07-12 14:23:25');
 INSERT INTO `task` VALUES ('522022110491330035', '-1', '考勤任务生成', '1029', '0 */5 * * * ?', '002', '0', '2022-11-04 22:22:37');
 INSERT INTO `task` VALUES ('522022110817280096', '-1', '设备保养任务生成', '1030', '0 */1 * * * ?', '001', '0', '2022-11-08 17:32:28');
 INSERT INTO `task` VALUES ('522023013155060050', '-1', '提醒员工考勤', '1032', '0 */5 * * * ?', '001', '0', '2023-01-31 02:49:00');
@@ -33754,7 +33753,6 @@ INSERT INTO `task_template` VALUES ('1024', '员工任务提醒', '员工任务�
 INSERT INTO `task_template` VALUES ('1025', '预约车辆定时释放车位（依据停车免费结束时间）', '预约车辆定时释放车位（依据停车免费结束时间）', '2022-04-18 13:59:56', '0', 'releaseParkingSpaceTemplate');
 INSERT INTO `task_template` VALUES ('1026', '预约状态修改', '预约状态修改', '2022-04-20 14:00:50', '0', 'editRecordStateTemplate');
 INSERT INTO `task_template` VALUES ('1027', '预约车辆定时释放车位（依据访客预约结束时间）', '预约车辆定时释放车位（依据访客预约结束时间）', '2022-04-21 09:30:22', '0', 'releaseCarParkingSpaceTemplate');
-INSERT INTO `task_template` VALUES ('1028', '业主年龄更新', '业主年龄更新', '2022-07-12 14:22:13', '0', 'editAgeTemplate');
 INSERT INTO `task_template` VALUES ('1029', '考勤任务生成', '考勤任务生成', '2020-06-17 14:11:34', '0', 'generatorAttendanceTaskTemplate');
 INSERT INTO `task_template` VALUES ('1030', '保养任务生成', '保养任务生成', '2020-06-17 14:11:34', '0', 'generatorMaintainanceTaskTemplate');
 INSERT INTO `task_template` VALUES ('1032', '考勤提醒', '考勤提醒', '2020-06-17 14:11:34', '0', 'publishStaffAttendanceTaskTemplate');
