@@ -19,6 +19,7 @@ public class FeePrintPageTemplateDto extends PageDto implements Serializable {
     private String templateName;
     private String templateId;
     private String url;
+    private String communityId;
 
 
     private Date createTime;
@@ -73,5 +74,13 @@ public class FeePrintPageTemplateDto extends PageDto implements Serializable {
 
     public void setTemplateName(String templateName) {
         this.templateName = templateName;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 }
