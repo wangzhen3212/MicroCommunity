@@ -29,6 +29,7 @@ public class UploadFileComponent {
      */
     public ResponseEntity<String> uploadImage(IPageData pd, MultipartFile uploadFile) throws Exception {
         JSONObject paramIn = JSONObject.parseObject(pd.getReqData());
+        // 强制设置图片后缀为jpeg，确保只能上传图片类型文件
         paramIn.put("suffix", "jpeg");
         IPageData newPd = PageData.newInstance().builder(pd.getUserId(), pd.getUserName(), pd.getToken(), paramIn.toJSONString(), pd.getComponentCode(), pd.getComponentMethod(), "",
                 pd.getSessionId(), pd.getAppId(), pd.getHeaders());
