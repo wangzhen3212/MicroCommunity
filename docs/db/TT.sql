@@ -12505,7 +12505,7 @@ CREATE TABLE `c_route` (
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `status_cd` varchar(2) NOT NULL DEFAULT '0' COMMENT '数据状态，详细参考c_status表，0在用，1失效，2 表示下线（当组件调用服务超过限制时自动下线）',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3028 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3035 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of c_route
@@ -15511,6 +15511,12 @@ INSERT INTO `c_route` VALUES ('3027', '992020022270580001', '982025060676690009'
 INSERT INTO `c_route` VALUES ('3029', '992024042871530002', '982020121555380166', 'D', '1000', 'S', '2026-01-14 11:46:37', '0');
 INSERT INTO `c_route` VALUES ('3030', '992024042871530002', '9820260114814723403', 'D', '1000', 'S', '2026-01-14 12:24:14', '0');
 INSERT INTO `c_route` VALUES ('3031', '8000418004', '9820260312398412439', 'D', '1000', 'S', '2026-03-12 16:47:37', '0');
+-- 自定义收据模板 - 保存接口路由（appId: 8000418004）
+INSERT INTO `c_route` VALUES ('3032', '8000418004', '982026061566580007', 'D', '1000', 'S', '2026-06-15 10:00:00', '0');
+-- 自定义收据模板 - 更新接口路由（appId: 8000418004）
+INSERT INTO `c_route` VALUES ('3033', '8000418004', '982026061579900008', 'D', '1000', 'S', '2026-06-15 10:00:00', '0');
+-- 自定义收据模板 - 删除接口路由（appId: 8000418004）
+INSERT INTO `c_route` VALUES ('3034', '8000418004', '982026061542850009', 'D', '1000', 'S', '2026-06-15 10:00:00', '0');
 
 -- ----------------------------
 -- Table structure for c_service
@@ -15535,7 +15541,7 @@ CREATE TABLE `c_service` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `service_code` (`service_code`) USING BTREE,
   UNIQUE KEY `service_id` (`service_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2043 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2048 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of c_service
@@ -17530,6 +17536,12 @@ INSERT INTO `c_service` VALUES ('2041', '982025060386130048', 'storeUser.deleteS
 INSERT INTO `c_service` VALUES ('2042', '982025060676690009', 'ownerRepair.repairEnd', 'API', '结束工单', '1', '', 'CMD', 'http://community-service', 'POST', '60', '3', '8000418002', '2025-06-06 17:31:13', '0');
 INSERT INTO `c_service` VALUES ('2043', '9820260114814723403', 'payment.cashierForMall', 'API', '收银商城版', '1', NULL, 'CMD', 'http://acct-service', 'POST', '60', '3', '8000418002', '2026-01-14 12:24:03', '0');
 INSERT INTO `c_service` VALUES ('2044', '9820260312398412439', 'owner.changeCarOwner', 'API', '修改车辆业主', '1', NULL, 'CMD', 'http://user-service', 'POST', '60', '3', '8000418002', '2026-03-12 16:47:14', '0');
+-- 自定义收据模板 - 保存服务
+INSERT INTO `c_service` VALUES ('2045', '982026061566580007', 'feePrintPageTemplate.saveFeePrintPageTemplate', 'API', '添加系统收据模板', '1', '', 'CMD', 'http://fee-service', 'POST', '60', '3', '8000418002', '2026-06-15 10:00:00', '0');
+-- 自定义收据模板 - 更新服务
+INSERT INTO `c_service` VALUES ('2046', '982026061579900008', 'feePrintPageTemplate.updateFeePrintPageTemplate', 'API', '更新系统收据模板', '1', '', 'CMD', 'http://fee-service', 'POST', '60', '3', '8000418002', '2026-06-15 10:00:00', '0');
+-- 自定义收据模板 - 删除服务
+INSERT INTO `c_service` VALUES ('2047', '982026061542850009', 'feePrintPageTemplate.deleteFeePrintPageTemplate', 'API', '删除系统收据模板', '1', '', 'CMD', 'http://fee-service', 'POST', '60', '3', '8000418002', '2026-06-15 10:00:00', '0');
 
 -- ----------------------------
 -- Table structure for c_service_business
@@ -19649,7 +19661,7 @@ DROP TABLE IF EXISTS `fee_print_page_template`;
 CREATE TABLE `fee_print_page_template` (
   `template_id` varchar(30) NOT NULL COMMENT '页面ID',
   `name` varchar(128) NOT NULL COMMENT '名称',
-  `url` varchar(512) NOT NULL COMMENT '收据页面',
+  `url` MEDIUMTEXT NOT NULL COMMENT '收据页面URL或压缩后的HTML内容',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `status_cd` varchar(2) NOT NULL DEFAULT '0' COMMENT '数据状态 1表示 失效 0 有效'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
