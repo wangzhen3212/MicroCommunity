@@ -50,6 +50,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.Resource;
+import java.io.File;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
@@ -198,8 +199,25 @@ public class BootApplicationStart {
         return ClientBuilder.build();
     }
 
+    private static void createLogDir() {
+        String logPath = System.getenv("LOG_PATH");
+        if (logPath == null || logPath.isEmpty()) {
+            logPath = "./logs";
+        }
+        File logDir = new File(logPath);
+        if (!logDir.exists()) {
+            boolean created = logDir.mkdirs();
+            if (created) {
+                System.out.println("日志目录创建成功: " + logDir.getAbsolutePath());
+            } else {
+                System.out.println("日志目录创建失败: " + logDir.getAbsolutePath());
+            }
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         try {
+            createLogDir();
             ServiceStartInit.preInitSystemConfig();
             ApplicationContext context = SpringApplication.run(BootApplicationStart.class, args);
             //服务启动加载
