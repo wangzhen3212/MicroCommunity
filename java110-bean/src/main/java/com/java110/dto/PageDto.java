@@ -1,5 +1,7 @@
 package com.java110.dto;
 
+import com.java110.vo.ResultVo;
+
 import java.io.Serializable;
 
 /**
@@ -51,5 +53,11 @@ public class PageDto extends Dto implements Serializable {
 
     public void setRecords(int records) {
         this.records = records;
+    }
+
+    public static ResultVo buildTotalRow(int total) {
+        ResultVo resultVo = new ResultVo();
+        resultVo.setTotal(total);
+        return resultVo;
     }
 }

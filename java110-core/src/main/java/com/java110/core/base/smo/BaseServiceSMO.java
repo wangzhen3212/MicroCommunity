@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -113,5 +114,11 @@ public class BaseServiceSMO extends AppBase {
     public static void main(String[] args) {
         String url = "https://www.xx.com";
         System.out.println(url.substring(0,url.indexOf("?")));
+    }
+
+    protected <T> void validateResult(int count, List<T> dataList) {
+        if (dataList == null || dataList.size() != count) {
+            throw new RuntimeException("数据总量校验失败");
+        }
     }
 }

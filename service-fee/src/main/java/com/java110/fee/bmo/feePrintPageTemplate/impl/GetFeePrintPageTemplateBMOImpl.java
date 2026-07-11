@@ -40,7 +40,8 @@ public class GetFeePrintPageTemplateBMOImpl extends BaseServiceSMO implements IG
         //总量校验
         validateResult(count, feePrintPageTemplateList);
 
-        return ResultVo.createResponseEntity(PageDto.buildTotalRow(count), BeanConvertUtil.beanCovertMap(feePrintPageTemplateList));
+        ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) feePrintPageTemplateDto.getRow()), count, BeanConvertUtil.beanCovertMap(feePrintPageTemplateList));
+        return ResultVo.createResponseEntity(resultVo);
     }
 
 }

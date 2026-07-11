@@ -7,7 +7,7 @@
     <groupId>com.java110</groupId>
     <artifactId>MicroCommunity</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.9.2</version>
     <modules>
         <module>java110-bean</module>
         <module>java110-interface</module>
@@ -48,7 +48,7 @@
         <sourceEncoding>UTF-8</sourceEncoding>
         <spring-boot>2.0.4.RELEASE</spring-boot>
         <mybatis.version>3.5.6</mybatis.version>
-        <microcommunity.version>1.0-SNAPSHOT</microcommunity.version>
+        <microcommunity.version>1.9.2</microcommunity.version>
         <dubbo.version>2.5.4-SNAPSHOT</dubbo.version>
         <logback.vaersion>1.2.9</logback.vaersion>
 

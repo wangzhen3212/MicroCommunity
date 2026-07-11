@@ -3,7 +3,29 @@ server:
   tomcat:
     uri-encoding: UTF-8
 
+# 日志配置 - 通过LOG_PATH注入到logback.xml
+logging:
+  file:
+    path: /www/wwwlogs/java/springboot
 
+# ========== sys-client 客户机模块配置 ==========
+# 通过环境变量覆盖: SYS_CLIENT_ENABLED, SYS_CLIENT_SERVER_URL 等
+sys:
+  client:
+    # 是否开启客户机功能（默认关闭，开启请改为 true）
+    enabled: true
+    # 上位机 WebSocket 服务端地址（必填，enabled=true 时生效）
+    server-url: ws://127.0.0.1:8080/ws/host
+    # 上位机管理员分配的认证 KEY（必填，enabled=true 时生效）
+    auth-key: a17c961232b4432e8fe0854783c477fe784c423047386a41b9257aff3d2449b6
+    # 心跳发送间隔（秒），默认30秒
+    heartbeat-interval: 30
+    # 断线重连最大间隔（秒），默认60秒
+    reconnect-max-interval: 60
+    # 上位机未上线时的注册重试间隔（秒），默认600秒（10分钟）
+    host-retry-interval: 600
+    # 上位机 HTTP 代理地址，如 http://host:8080/proxy/out（可选）
+    proxy-url: http://127.0.0.1:8080/proxy/out
 
 spring:
   servlet:
@@ -51,4 +73,3 @@ feign:
       default:
         connect-timeout: 10000
         read-timeout: 20000
-

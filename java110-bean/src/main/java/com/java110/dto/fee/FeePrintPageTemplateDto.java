@@ -15,6 +15,8 @@ import java.util.Date;
  **/
 public class FeePrintPageTemplateDto extends PageDto implements Serializable {
 
+    private String communityId;
+
     private String name;
     private String templateName;
     private String templateId;
@@ -25,6 +27,14 @@ public class FeePrintPageTemplateDto extends PageDto implements Serializable {
 
     private String statusCd = "0";
 
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
+    }
 
     public String getName() {
         return name;
