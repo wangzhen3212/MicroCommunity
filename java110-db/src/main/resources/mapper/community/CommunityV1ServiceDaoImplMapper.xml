@@ -269,5 +269,4 @@
         update s_work_order_user set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
     </update>
 
-
 </mapper>

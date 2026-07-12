@@ -16,7 +16,6 @@ import com.java110.intf.store.IStoreV1InnerServiceSMO;
 import com.java110.intf.store.ISmallWeChatInnerServiceSMO;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -103,10 +102,9 @@ public class SysWebSocketClient {
      * 应用启动完成后，检查配置是否有效
      * 连接逻辑由 CacheFlushCompleteEvent 触发
      */
-    @EventListener(ApplicationReadyEvent.class)
-    public void onApplicationReady() {
+    public void register() {
         if (!sysClientProperties.isEnabled()) {
-            logger.info("[客户机] sys.client.enabled=false，跳过启动");
+            logger.info("[客户机] sys.client.enabled=false，跳过注册");
             return;
         }
         if (!sysClientProperties.isValid()) {
@@ -305,9 +303,11 @@ public class SysWebSocketClient {
                 case MessageType.ACK:
                     break;
                 default:
+                    logger.warn("[客户机] 收到未知消息类型: type={}, message={}", msg.getType(), message);
                     break;
             }
         } catch (Exception e) {
+            logger.error("[客户机] 处理上位机消息失败: message={}, error={}", message, e.getMessage(), e);
         }
     }
 
@@ -403,23 +403,27 @@ public class SysWebSocketClient {
      * 处理上位机转发的入站业务请求
      */
     private void handleInboundRequest(WsMessage msg) {
-        Map<String, Object> payload = msg.getPayload();
-        if (payload == null) {
-            return;
-        }
-        String method = (String) payload.get("method");
-        String path = (String) payload.get("path");
-        @SuppressWarnings("unchecked")
-        Map<String, String> headers = (Map<String, String>) payload.get("headers");
-
-        logger.info("[上位机管理消息] INBOUND_REQUEST method={}, path={}, headers={}", method, path, headers);
-
-        Map<String, Object> result = inboundProxyHandler.handle(method, path, headers, null);
-
         try {
+            Map<String, Object> payload = msg.getPayload();
+            if (payload == null) {
+                logger.warn("[客户机] 入站请求 payload 为空: msgId={}", msg.getMsgId());
+                return;
+            }
+            String method = (String) payload.get("method");
+            String path = (String) payload.get("path");
+            @SuppressWarnings("unchecked")
+            Map<String, String> headers = (Map<String, String>) payload.get("headers");
+
+            logger.info("[上位机管理消息] INBOUND_REQUEST method={}, path={}, headers={}", method, path, headers);
+
+            Map<String, Object> result = inboundProxyHandler.handle(method, path, headers, null);
+
             WsMessage resp = new WsMessage(msg.getMsgId(), MessageType.INBOUND_RESPONSE, result);
             this.session.getBasicRemote().sendText(resp.toJsonString());
+            logger.debug("[客户机] 入站请求响应已发送: msgId={}, statusCode={}", msg.getMsgId(),
+                    result != null ? result.get("statusCode") : "null");
         } catch (Exception e) {
+            logger.error("[客户机] 处理入站请求失败: msgId={}, error={}", msg.getMsgId(), e.getMessage(), e);
         }
     }
 

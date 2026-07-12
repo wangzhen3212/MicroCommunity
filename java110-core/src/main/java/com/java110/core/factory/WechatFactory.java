@@ -1,11 +1,11 @@
 package com.java110.core.factory;
 
 import com.alibaba.fastjson.JSONObject;
-import com.java110.core.annotation.Java110Synchronized;
 import com.java110.utils.cache.JWTCache;
 import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.WechatConstant;
 import com.java110.utils.factory.ApplicationContextFactory;
+import com.java110.utils.lock.DistributedLock;
 import com.java110.utils.util.StringUtil;
 
 import org.apache.commons.codec.binary.Base64;
@@ -20,24 +20,25 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Date;
 
-/**
- * @ClassName WechatFactory
- * @Description TODO
- * @Author wuxw
- * @Date 2020/6/13 22:15
- * @Version 1.0
- * add by wuxw 2020/6/13
- **/
 public class WechatFactory {
 
     private static Logger logger = LoggerFactory.getLogger(WechatFactory.class);
 
     private static final String password = "you are bad boy!";
 
-
     private static final String WECHAT = "WECHAT";
 
+    private static final String WECHAT_TOKEN_LOCK = "WECHAT_TOKEN_LOCK:";
+
     private static final String SPLIT_STUB = "-";
+
+    private static final int MIN_EXPIRES_IN = 300;
+
+    private static final int LOCK_EXPIRE_TIME = 5000;
+
+    private static final int MAX_RETRY_COUNT = 10;
+
+    private static final int RETRY_INTERVAL_MS = 100;
 
     public static String formatText(String toUserName, String fromUserName, String content) {
         String str = "";
@@ -47,20 +48,47 @@ public class WechatFactory {
         return str;
     }
 
+    public static void invalidateAccessToken(String appId) {
+        JWTCache.removeValue(WECHAT + appId);
+    }
+
     /**
      * 获取accessToken
      *
      * @param appId     公众号ID
-     * @param appSecure
-     * @return
+     * @param appSecure 公众号秘钥
+     * @return access_token
      */
-    @Java110Synchronized(value = "appId")
     public static String getAccessToken(String appId, String appSecure) {
         String accessToken = JWTCache.getValue(WECHAT + appId);
-        if (StringUtil.isEmpty(accessToken)) {
-            return refreshAccessToken(appId, appSecure);
+        if (!StringUtil.isEmpty(accessToken)) {
+            return accessToken;
         }
-        return accessToken;
+
+        String lockKey = WECHAT_TOKEN_LOCK + appId;
+        int retryCount = 0;
+
+        while (retryCount < MAX_RETRY_COUNT) {
+            String requestId = DistributedLock.getLockUUID();
+            try {
+                if (DistributedLock.waitGetDistributedLock(lockKey, requestId, LOCK_EXPIRE_TIME)) {
+                    accessToken = JWTCache.getValue(WECHAT + appId);
+                    if (!StringUtil.isEmpty(accessToken)) {
+                        return accessToken;
+                    }
+                    return refreshAccessToken(appId, appSecure);
+                }
+                retryCount++;
+                Thread.sleep(RETRY_INTERVAL_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalArgumentException("获取access_token时线程被中断", e);
+            } finally {
+                DistributedLock.releaseDistributedLock(lockKey, requestId);
+            }
+        }
+
+        throw new IllegalArgumentException("获取access_token失败，重试" + MAX_RETRY_COUNT + "次后仍未获取到锁");
     }
 
     /**
@@ -68,7 +96,7 @@ public class WechatFactory {
      *
      * @param appId     应用ID
      * @param appSecure 应用秘钥
-     * @return
+     * @return access_token
      */
     private static String refreshAccessToken(String appId, String appSecure) {
         String getAccessToken = MappingCache.getRemark(WechatConstant.WECHAT_DOMAIN, WechatConstant.GET_ACCESS_TOKEN_URL);
@@ -78,26 +106,44 @@ public class WechatFactory {
         String url = getAccessToken.replace("APPID", appId)
                 .replace("SECRET", appSecure);
         RestTemplate outRestTemplate = ApplicationContextFactory.getBean("outRestTemplate", RestTemplate.class);
-        if(outRestTemplate == null){
-            throw new IllegalArgumentException("查询token 失败");
+        if (outRestTemplate == null) {
+            throw new IllegalArgumentException("获取access_token失败：outRestTemplate Bean不存在");
         }
         ResponseEntity<String> responseEntity = outRestTemplate.getForEntity(url, String.class);
-        logger.debug("获取access_token 入参：" + url + " 返回参数" + responseEntity);
+        logger.debug("获取access_token appId: {}, HTTP状态: {}", appId, responseEntity.getStatusCode());
 
         if (responseEntity.getStatusCode() != HttpStatus.OK) {
-            throw new IllegalArgumentException("查询token 失败");
+            throw new IllegalArgumentException("获取access_token失败，HTTP状态码: " + responseEntity.getStatusCode());
+        }
+
+        if (responseEntity.getBody() == null) {
+            throw new IllegalArgumentException("获取access_token失败，微信返回空响应");
         }
 
         JSONObject responseObj = JSONObject.parseObject(responseEntity.getBody());
 
-
-        if (responseObj.containsKey("access_token")) {
-            String accessToken = responseObj.getString("access_token");
-            int expiresIn = responseObj.getInteger("expires_in");
-            JWTCache.setValue(WECHAT + appId, accessToken, expiresIn - 200);
-            return accessToken;
+        if (responseObj.containsKey("errcode") && responseObj.getIntValue("errcode") != 0) {
+            throw new IllegalArgumentException("微信返回错误: errcode=" + responseObj.getIntValue("errcode")
+                    + ", errmsg=" + responseObj.getString("errmsg"));
         }
-        return "";
+
+        if (!responseObj.containsKey("access_token")) {
+            throw new IllegalArgumentException("获取access_token失败，微信返回数据不包含access_token字段");
+        }
+
+        String accessToken = responseObj.getString("access_token");
+        if (StringUtil.isEmpty(accessToken)) {
+            throw new IllegalArgumentException("获取access_token失败，access_token为空");
+        }
+
+        int expiresIn = responseObj.getInteger("expires_in");
+        if (expiresIn <= MIN_EXPIRES_IN) {
+            throw new IllegalArgumentException("获取access_token失败，微信返回的expires_in无效: " + expiresIn);
+        }
+
+        JWTCache.setValue(WECHAT + appId, accessToken, expiresIn - 200);
+        logger.debug("获取access_token成功 appId: {}, expires_in: {}", appId, expiresIn);
+        return accessToken;
     }
 
     /**
@@ -123,9 +169,6 @@ public class WechatFactory {
 
 
     public static String getPhoneNumberBeanS5(String decryptData, String key, String iv) {
-        /*
-         *这里你没必要非按照我的方式写，下面打代码主要是在一个自己的类中 放上decrypts5这个解密工具，工具在下方有代码
-         */
         String resultMessage = decryptS5(decryptData, "UTF-8", key, iv);
         return resultMessage;
     }

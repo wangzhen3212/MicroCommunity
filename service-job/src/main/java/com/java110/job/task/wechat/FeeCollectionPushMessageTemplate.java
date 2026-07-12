@@ -46,6 +46,7 @@ import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -283,13 +284,14 @@ public class FeeCollectionPushMessageTemplate extends TaskSystemQuartz {
             return new ResultVo(ResultVo.CODE_ERROR, "业主未绑定");
         }
         String templateId = paramInfo.get("templateId").toString();
-        String url = paramInfo.get("url").toString();
+        String sendUrl = paramInfo.get("url").toString();
         String oweRoomUrl = paramInfo.get("oweRoomUrl").toString();
         String oweCarUrl = paramInfo.get("oweCarUrl").toString();
         SmallWeChatDto weChatDto = (SmallWeChatDto) paramInfo.get("weChatDto");
         Miniprogram miniprogram = paramInfo.get("miniprogram") == null ? null : (Miniprogram) paramInfo.get("miniprogram");
         List<OwnerAppUserDto> ownerAppUserDtos = (List<OwnerAppUserDto>) paramInfo.get("ownerAppUserDtos");
 
+        boolean allSuccess = true;
         List<ReportOweFeeItemDto> itemDtos = reportOweFeeDo.getItems();
         String oweUrl = "";
         for (ReportOweFeeItemDto itemDto : itemDtos) {
@@ -301,7 +303,6 @@ public class FeeCollectionPushMessageTemplate extends TaskSystemQuartz {
             }
             for (OwnerAppUserDto appUserDto : ownerAppUserDtos) {
                 try {
-                    //获取用户缴费到期时间
                     Date endTime = itemDto.getEndTime();
                     Calendar calendar = Calendar.getInstance();
                     calendar.setTime(endTime);
@@ -336,10 +337,14 @@ public class FeeCollectionPushMessageTemplate extends TaskSystemQuartz {
                     }
                     templateMessage.setData(BeanConvertUtil.beanCovertJson(data));
 
-                    logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
-                    ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-                    logger.info("微信模板返回内容:{}", responseEntity);
+                    ResultVo resultVo = sendWechatTemplate(feeCollectionOrderDto.getCommunityId(),
+                            appUserDto.getOpenId(), templateId, templateMessage, sendUrl,
+                            weChatDto.getAppId(), weChatDto.getAppSecret());
+                    if (resultVo.getCode() != ResultVo.CODE_OK) {
+                        allSuccess = false;
+                    }
                 } catch (Exception e) {
+                    allSuccess = false;
                     LogSystemErrorPo logSystemErrorPo = new LogSystemErrorPo();
                     logSystemErrorPo.setErrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_errId));
                     logSystemErrorPo.setErrType(LogSystemErrorDto.ERR_TYPE_OWE_FEE);
@@ -350,7 +355,56 @@ public class FeeCollectionPushMessageTemplate extends TaskSystemQuartz {
             }
         }
 
-        return new ResultVo(ResultVo.CODE_OK, ResultVo.MSG_OK);
+        return allSuccess ? new ResultVo(ResultVo.CODE_OK, ResultVo.MSG_OK)
+                : new ResultVo(ResultVo.CODE_ERROR, "部分推送失败");
+    }
+
+    private ResultVo sendWechatTemplate(String communityId, String openId, String templateId,
+                                        PropertyFeeTemplateMessage templateMessage, String sendUrl,
+                                        String appId, String appSecret) {
+        logger.info("发送模板消息 openId:{}, templateId:{}", openId, templateId);
+
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(sendUrl,
+                JSON.toJSONString(templateMessage), String.class);
+
+        if (responseEntity.getStatusCode() != HttpStatus.OK) {
+            logger.error("微信推送失败 HTTP状态:{}, communityId:{}", responseEntity.getStatusCode(), communityId);
+            return new ResultVo(ResultVo.CODE_ERROR, "HTTP请求失败，状态码: " + responseEntity.getStatusCode());
+        }
+
+        if (responseEntity.getBody() == null) {
+            logger.error("微信推送失败，响应体为空, communityId:{}", communityId);
+            return new ResultVo(ResultVo.CODE_ERROR, "微信返回空响应");
+        }
+
+        logger.info("微信模板返回内容:{}", responseEntity.getBody());
+
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        int errcode = paramOut.getIntValue("errcode");
+
+        if (errcode != 0 && (errcode == 40001 || errcode == 42001)) {
+            logger.warn("access_token过期或无效(errcode={})，尝试刷新后重试, communityId:{}", errcode, communityId);
+            try {
+                WechatFactory.invalidateAccessToken(appId);
+                String newToken = WechatFactory.getAccessToken(appId, appSecret);
+                String newSendUrl = sendUrl.substring(0, sendUrl.lastIndexOf("=") + 1) + newToken;
+                responseEntity = outRestTemplate.postForEntity(newSendUrl,
+                        JSON.toJSONString(templateMessage), String.class);
+
+                if (responseEntity.getStatusCode() != HttpStatus.OK || responseEntity.getBody() == null) {
+                    logger.error("微信推送重试失败, communityId:{}", communityId);
+                    return new ResultVo(ResultVo.CODE_ERROR, "重试后仍失败");
+                }
+
+                paramOut = JSONObject.parseObject(responseEntity.getBody());
+                errcode = paramOut.getIntValue("errcode");
+            } catch (Exception e) {
+                logger.error("刷新access_token失败, communityId:{}", communityId, e);
+                return new ResultVo(ResultVo.CODE_ERROR, "刷新token失败: " + e.getMessage());
+            }
+        }
+
+        return new ResultVo(errcode, paramOut.getString("errmsg"));
     }
 
     /**
@@ -445,10 +499,11 @@ public class FeeCollectionPushMessageTemplate extends TaskSystemQuartz {
 
         String templateId = smallWechatAttrDtos.get(0).getValue();
 
-        String accessToken = WechatFactory.getAccessToken(weChatDto.getAppId(), weChatDto.getAppSecret());
-
-        if (StringUtil.isEmpty(accessToken)) {
-            logger.info("推送微信模板,获取accessToken失败:{}", accessToken);
+        String accessToken;
+        try {
+            accessToken = WechatFactory.getAccessToken(weChatDto.getAppId(), weChatDto.getAppSecret());
+        } catch (Exception e) {
+            logger.error("推送微信模板,获取accessToken失败:{}", e.getMessage());
             return null;
         }
 

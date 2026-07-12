@@ -3,7 +3,7 @@
 
     <!--<include resource="org.springframework/boot/logging/logback/base.xml"/>-->
 
-    <property name="LOG_PATH" value="${LOG_PATH:-./logs}"/>
+    <property name="LOG_PATH" value="${LOG_PATH}"/>
 
     <!-- 控制台输出 -->
     <appender name="STDOUT_FILE" class="ch.qos.logback.core.ConsoleAppender">
@@ -29,6 +29,9 @@
     </appender>
 
     <appender name="INFO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
         <File>${LOG_PATH}/info.log</File>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/info-%d{yyyyMMdd}.log.%i</fileNamePattern>
@@ -100,6 +103,11 @@
         <appender-ref ref="STDOUT_FILE"/>
     </logger>
 
-
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT_FILE"/>
+        <appender-ref ref="DEBUG_FILE"/>
+        <appender-ref ref="INFO_FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </root>
 
 </configuration>
