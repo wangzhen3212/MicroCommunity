@@ -27,6 +27,7 @@ import com.java110.doc.annotation.Java110ApiDocDiscovery;
 import com.java110.doc.annotation.Java110CmdDocDiscovery;
 import com.java110.doc.registrar.ApiDocCmdPublishing;
 import com.java110.doc.registrar.ApiDocPublishing;
+import com.java110.api.SYSclient.websocket.SysWebSocketClient;
 import com.java110.intf.dev.ICacheV1InnerServiceSMO;
 import com.java110.service.init.ServiceStartInit;
 import com.java110.utils.cache.MappingCache;
@@ -131,6 +132,10 @@ import java.util.concurrent.TimeUnit;
         cmdDocClass = ApiDocCmdPublishing.class)
 public class BootApplicationStart {
 
+    static {
+        createLogDir();
+    }
+
     private static Logger logger = LoggerFactory.getLogger(BootApplicationStart.class);
 
     @Resource
@@ -200,24 +205,76 @@ public class BootApplicationStart {
     }
 
     private static void createLogDir() {
-        String logPath = System.getenv("LOG_PATH");
-        if (logPath == null || logPath.isEmpty()) {
-            logPath = "./logs";
+        String envLogPath = System.getenv("LOG_PATH");
+        String appName = "MicroCommunityBoot";
+        String logPath;
+        if (envLogPath == null || envLogPath.isEmpty()) {
+            logPath = "./" + appName + "-logs";
+        } else {
+            logPath = envLogPath + "/" + appName + "-logs";
         }
+
+        File currentDir = new File(".");
+        checkDirectoryPermission(currentDir, "当前运行目录");
+
         File logDir = new File(logPath);
+        File parentDir = logDir.getParentFile();
+        if (parentDir != null) {
+            checkDirectoryPermission(parentDir, "日志父目录");
+        }
+
         if (!logDir.exists()) {
             boolean created = logDir.mkdirs();
             if (created) {
                 System.out.println("日志目录创建成功: " + logDir.getAbsolutePath());
             } else {
-                System.out.println("日志目录创建失败: " + logDir.getAbsolutePath());
+                System.err.println("ERROR: 日志目录创建失败，请检查目录权限: " + logDir.getAbsolutePath());
+                System.err.println("建议: 请确保当前用户对父目录有写入权限，或使用 chown/chmod 修改权限");
+                System.exit(1);
             }
+        } else {
+            checkDirectoryPermission(logDir, "日志目录");
+        }
+        System.setProperty("LOG_PATH", logPath);
+    }
+
+    private static void checkDirectoryPermission(File dir, String description) {
+        String absPath = dir.getAbsolutePath();
+        if (!dir.exists()) {
+            System.err.println("ERROR: " + description + "不存在: " + absPath);
+            System.exit(1);
+        }
+        if (!dir.isDirectory()) {
+            System.err.println("ERROR: " + description + "不是目录: " + absPath);
+            System.exit(1);
+        }
+        if (!dir.canRead()) {
+            System.err.println("ERROR: " + description + "没有读权限: " + absPath);
+            System.exit(1);
+        }
+        if (!dir.canWrite()) {
+            System.err.println("ERROR: " + description + "没有写权限: " + absPath);
+            System.err.println("当前用户: " + getCurrentUser());
+            System.err.println("建议: 执行 'chown -R www:www " + absPath + "' 或 'chmod 755 " + absPath + "'");
+            System.exit(1);
+        }
+        if (!dir.canExecute()) {
+            System.err.println("ERROR: " + description + "没有执行权限: " + absPath);
+            System.exit(1);
+        }
+    }
+
+    private static String getCurrentUser() {
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            return System.getenv("USERNAME");
+        } else {
+            return System.getenv("USER");
         }
     }
 
     public static void main(String[] args) throws Exception {
         try {
-            createLogDir();
             ServiceStartInit.preInitSystemConfig();
             ApplicationContext context = SpringApplication.run(BootApplicationStart.class, args);
             //服务启动加载
@@ -227,6 +284,9 @@ public class BootApplicationStart {
 
             //刷新缓存
             flushMainCache(args);
+
+            //缓存刷新完成后，启动客户机注册（确保业务数据已加载）
+            startSysClient();
 
             //服务启动完成
             ServiceStartInit.printStartSuccessInfo();
@@ -266,6 +326,24 @@ public class BootApplicationStart {
                 ICacheV1InnerServiceSMO devServiceCacheSMOImpl = (ICacheV1InnerServiceSMO) ApplicationContextFactory.getBean(ICacheV1InnerServiceSMO.class);
                 devServiceCacheSMOImpl.startFlush();
             }
+        }
+    }
+
+    /**
+     * 启动客户机注册（在缓存刷新完成后调用）
+     * 确保业务数据已加载到缓存后再进行客户机注册
+     */
+    private static void startSysClient() {
+        try {
+            SysWebSocketClient sysWebSocketClient = (SysWebSocketClient) ApplicationContextFactory.getBean(SysWebSocketClient.class);
+            if (sysWebSocketClient != null) {
+                logger.info("[启动时序] 缓存刷新完成，开始注册客户机...");
+                sysWebSocketClient.register();
+            } else {
+                logger.info("[启动时序] 客户机组件未找到，跳过注册");
+            }
+        } catch (Exception e) {
+            logger.warn("[启动时序] 客户机注册失败: {}", e.getMessage());
         }
     }
 

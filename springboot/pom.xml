@@ -183,6 +183,17 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.java110</groupId>
+            <artifactId>sys-client</artifactId>
+            <version>${hc.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>java110-service</artifactId>
+                    <groupId>com.java110</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
@@ -194,6 +205,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>java-dotenv</artifactId>
+            <version>5.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+            <version>3.0.16</version>
         </dependency>
     </dependencies>
 

@@ -6,18 +6,21 @@ import com.java110.utils.cache.MappingCache;
 import com.java110.utils.util.StringUtil;
 import org.slf4j.Logger;
 import org.springframework.http.HttpRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.io.IOException;
+import java.io.*;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
@@ -74,12 +77,22 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
             }
             String newUrl = proxyUrl + "?__url__=" + encodedUrl;
 
-            logger.info("[出站代理] 拦截请求: {} {} → {}", request.getMethod(), originalUrl, newUrl);
+            logger.info("[出站代理] 拦截请求: {} {} → {}, bodyLength={}", 
+                    request.getMethod(), originalUrl, newUrl, body != null ? body.length : 0);
 
             HttpRequest proxyRequest = new ProxyHttpRequest(request, URI.create(newUrl));
-            ClientHttpResponse response = execution.execute(proxyRequest, body);
+            ClientHttpResponse proxyResponse = execution.execute(proxyRequest, body);
 
-            return response;
+            byte[] responseBodyBytes = readResponseBodyBytes(proxyResponse);
+            String responseBody = new String(responseBodyBytes, StandardCharsets.UTF_8);
+
+            logger.info("[出站代理] 收到响应: {} {} → status={}, bodyLength={}, body={}", 
+                    request.getMethod(), originalUrl, 
+                    proxyResponse.getStatusCode().value(), 
+                    responseBodyBytes.length, 
+                    responseBody.length() > 500 ? responseBody.substring(0, 500) + "..." : responseBody);
+
+            return new CachedClientHttpResponse(proxyResponse, responseBodyBytes);
         } catch (Exception e) {
             logger.error("[出站代理] 拦截处理异常: {} → {}, error: {}",
                     request.getMethod(), originalUrl, e.getMessage());
@@ -225,6 +238,58 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
         @Override
         public org.springframework.http.HttpHeaders getHeaders() {
             return original.getHeaders();
+        }
+    }
+
+    private byte[] readResponseBodyBytes(ClientHttpResponse response) throws IOException {
+        InputStream is = response.getBody();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int len;
+        while ((len = is.read(buffer)) != -1) {
+            baos.write(buffer, 0, len);
+        }
+        return baos.toByteArray();
+    }
+
+    private static class CachedClientHttpResponse implements ClientHttpResponse {
+
+        private final ClientHttpResponse original;
+        private final byte[] bodyBytes;
+
+        public CachedClientHttpResponse(ClientHttpResponse original, byte[] bodyBytes) {
+            this.original = original;
+            this.bodyBytes = bodyBytes;
+        }
+
+        @Override
+        public HttpStatus getStatusCode() throws IOException {
+            return original.getStatusCode();
+        }
+
+        @Override
+        public int getRawStatusCode() throws IOException {
+            return original.getRawStatusCode();
+        }
+
+        @Override
+        public String getStatusText() throws IOException {
+            return original.getStatusText();
+        }
+
+        @Override
+        public void close() {
+            original.close();
+        }
+
+        @Override
+        public org.springframework.http.HttpHeaders getHeaders() {
+            return original.getHeaders();
+        }
+
+        @Override
+        public InputStream getBody() throws IOException {
+            return new ByteArrayInputStream(bodyBytes);
         }
     }
 }

@@ -33,7 +33,6 @@
         <dependency>
             <groupId>com.java110</groupId>
             <artifactId>java110-interface</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>

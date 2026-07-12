@@ -234,5 +234,9 @@
         </if>
     </select>
 
+    <update id="replaceCommunityId" parameterType="Map">
+        update s_community set community_id = #{newCommunityId}
+        where community_id = #{oldCommunityId}
+    </update>
 
 </mapper>

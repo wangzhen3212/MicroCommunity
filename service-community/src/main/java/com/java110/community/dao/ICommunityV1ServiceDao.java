@@ -71,4 +71,6 @@ public interface ICommunityV1ServiceDao {
     int queryCommunitysCount(Map info);
 
     List<Map> queryCommunityAndPropertys(Map info);
+
+    int replaceCommunityId(Map info) throws DAOException;
 }
