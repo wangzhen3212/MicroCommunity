@@ -55,5 +55,13 @@ public class ApplicationContextFactory {
         return applicationContext.getEnvironment().getActiveProfiles()[0];
     }
 
+    /**
+     * 获取 ApplicationContext
+     * @return ApplicationContext
+     */
+    public static ApplicationContext getApplicationContext() {
+        return applicationContext;
+    }
+
 
 }

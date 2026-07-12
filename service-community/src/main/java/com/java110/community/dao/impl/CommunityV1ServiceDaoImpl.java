@@ -117,5 +117,15 @@ public class CommunityV1ServiceDaoImpl extends BaseServiceDao implements ICommun
         return infos;
     }
 
+    @Override
+    @Transactional
+    public int replaceCommunityId(Map info) throws DAOException {
+        logger.debug("替换 communityId 入参 info : {}",info);
+
+        int updateFlag = sqlSessionTemplate.update("communityV1ServiceDaoImpl.replaceCommunityId", info);
+
+        return updateFlag;
+    }
+
 
 }

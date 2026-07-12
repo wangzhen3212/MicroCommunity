@@ -9,6 +9,8 @@ import java.io.Serializable;
  */
 public class PageDto extends Dto implements Serializable {
 
+    private static final long serialVersionUID = -898291058477641900L;
+
     public static final int DEFAULT_PAGE = -1;
 
     // 分页页数

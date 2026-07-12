@@ -19,6 +19,7 @@ import com.java110.core.annotation.Java110CmdDiscovery;
 import com.java110.core.client.OutRestTemplate;
 import com.java110.core.client.RestTemplate;
 import com.java110.core.context.Environment;
+import com.java110.core.event.CacheFlushCompleteEvent;
 import com.java110.core.event.cmd.ServiceCmdEventPublishing;
 import com.java110.core.log.LoggerFactory;
 import com.java110.core.trace.Java110FeignClientInterceptor;
@@ -254,6 +255,7 @@ public class BootApplicationStart {
         if (StringUtil.isEmpty(mapping)) {
             ICacheV1InnerServiceSMO devServiceCacheSMOImpl = (ICacheV1InnerServiceSMO) ApplicationContextFactory.getBean(ICacheV1InnerServiceSMO.class);
             devServiceCacheSMOImpl.startFlush();
+            publishCacheFlushCompleteEvent();
             return;
         }
 
@@ -265,8 +267,24 @@ public class BootApplicationStart {
                 logger.debug("开始刷新日志，入参为：{}", args[i]);
                 ICacheV1InnerServiceSMO devServiceCacheSMOImpl = (ICacheV1InnerServiceSMO) ApplicationContextFactory.getBean(ICacheV1InnerServiceSMO.class);
                 devServiceCacheSMOImpl.startFlush();
+                publishCacheFlushCompleteEvent();
             }
         }
     }
 
+    /**
+     * 发布缓存刷新完成事件
+     * 通知其他模块缓存已加载完成，可以执行需要业务数据的操作
+     */
+    private static void publishCacheFlushCompleteEvent() {
+        try {
+            org.springframework.context.ApplicationContext context = ApplicationContextFactory.getApplicationContext();
+            if (context != null) {
+                logger.info("[启动时序] 缓存刷新完成，发布 CacheFlushCompleteEvent 事件");
+                context.publishEvent(new CacheFlushCompleteEvent(context));
+            }
+        } catch (Exception e) {
+            logger.warn("[启动时序] 发布缓存刷新完成事件失败: {}", e.getMessage());
+        }
+    }
 }

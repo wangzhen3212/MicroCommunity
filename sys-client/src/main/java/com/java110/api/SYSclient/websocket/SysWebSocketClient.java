@@ -6,6 +6,7 @@ import com.java110.api.SYSclient.model.MessageType;
 import com.java110.api.SYSclient.model.WsMessage;
 import com.java110.api.SYSclient.proxy.InboundProxyHandler;
 import com.java110.api.SYSclient.service.LocalIdUpdater;
+import com.java110.core.event.CacheFlushCompleteEvent;
 import com.java110.core.log.LoggerFactory;
 import com.java110.dto.community.CommunityDto;
 import com.java110.dto.store.StoreDto;
@@ -99,7 +100,8 @@ public class SysWebSocketClient {
     // ==================== 生命周期 ====================
 
     /**
-     * 应用启动完成后，若配置开启则发起 WebSocket 连接
+     * 应用启动完成后，检查配置是否有效
+     * 连接逻辑由 CacheFlushCompleteEvent 触发
      */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
@@ -113,7 +115,18 @@ public class SysWebSocketClient {
                     sysClientProperties.getAuthKey() == null ? "null" : "***");
             return;
         }
-        logger.info("[客户机] 配置有效，准备连接上位机: {}", sysClientProperties.getServerUrl());
+        logger.info("[客户机] 配置有效，等待缓存加载完成事件...");
+    }
+
+    /**
+     * 监听缓存刷新完成事件，收到事件后连接上位机
+     */
+    @EventListener(CacheFlushCompleteEvent.class)
+    public void onCacheFlushComplete(CacheFlushCompleteEvent event) {
+        if (!sysClientProperties.isEnabled()) {
+            return;
+        }
+        logger.info("[客户机] 收到缓存刷新完成事件，准备连接上位机: {}", sysClientProperties.getServerUrl());
         connectToHost();
     }
 
