@@ -52,7 +52,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -204,63 +207,78 @@ public class BootApplicationStart {
         return ClientBuilder.build();
     }
 
+    private static final String APP_LOG_DIR_NAME = "MicroCommunityBoot-logs";
+
+    /**
+     * 多级降级的日志路径选择机制
+     * 按优先级依次尝试候选路径，第一个可写的路径作为日志目录：
+     * 1. 环境变量 LOG_PATH 指定的路径
+     * 2. /www/wwwlogs/java/ 下的路径（宝塔环境 www 用户有权限）
+     * 3. 当前运行目录下的路径
+     * 4. 系统临时目录（最后的降级方案）
+     */
     private static void createLogDir() {
-        String envLogPath = System.getenv("LOG_PATH");
-        String appName = "MicroCommunityBoot";
-        String logPath;
-        if (envLogPath == null || envLogPath.isEmpty()) {
-            logPath = "./" + appName + "-logs";
-        } else {
-            logPath = envLogPath + "/" + appName + "-logs";
-        }
+        List<String> candidatePaths = buildCandidateLogPaths();
 
-        File currentDir = new File(".");
-        checkDirectoryPermission(currentDir, "当前运行目录");
-
-        File logDir = new File(logPath);
-        File parentDir = logDir.getParentFile();
-        if (parentDir != null) {
-            checkDirectoryPermission(parentDir, "日志父目录");
-        }
-
-        if (!logDir.exists()) {
-            boolean created = logDir.mkdirs();
-            if (created) {
-                System.out.println("日志目录创建成功: " + logDir.getAbsolutePath());
-            } else {
-                System.err.println("ERROR: 日志目录创建失败，请检查目录权限: " + logDir.getAbsolutePath());
-                System.err.println("建议: 请确保当前用户对父目录有写入权限，或使用 chown/chmod 修改权限");
-                System.exit(1);
+        for (String path : candidatePaths) {
+            File logDir = new File(path);
+            String absPath = logDir.getAbsolutePath();
+            try {
+                if (!logDir.exists() && !logDir.mkdirs()) {
+                    System.err.println("[日志] 无法创建目录: " + absPath);
+                    continue;
+                }
+                if (isDirectoryWritable(logDir)) {
+                    System.setProperty("LOG_PATH", absPath);
+                    System.out.println("[日志] 日志目录: " + absPath);
+                    return;
+                }
+                System.err.println("[日志] 目录不可写: " + absPath);
+            } catch (Exception e) {
+                System.err.println("[日志] 访问目录失败: " + absPath + " - " + e.getMessage());
             }
-        } else {
-            checkDirectoryPermission(logDir, "日志目录");
         }
-        System.setProperty("LOG_PATH", logPath);
+
+        System.err.println("ERROR: 所有候选日志路径均不可用，请设置 LOG_PATH 环境变量或检查目录权限");
+        System.err.println("当前用户: " + getCurrentUser());
+        System.err.println("建议: mkdir -p /www/wwwlogs/java/" + APP_LOG_DIR_NAME
+                + " && chown -R www:www /www/wwwlogs/java/" + APP_LOG_DIR_NAME);
+        System.exit(1);
     }
 
-    private static void checkDirectoryPermission(File dir, String description) {
-        String absPath = dir.getAbsolutePath();
-        if (!dir.exists()) {
-            System.err.println("ERROR: " + description + "不存在: " + absPath);
-            System.exit(1);
+    private static List<String> buildCandidateLogPaths() {
+        List<String> paths = new ArrayList<>();
+
+        String envLogPath = System.getenv("LOG_PATH");
+        if (envLogPath != null && !envLogPath.isEmpty()) {
+            paths.add(envLogPath + "/" + APP_LOG_DIR_NAME);
         }
+
+        paths.add("/www/wwwlogs/java/" + APP_LOG_DIR_NAME);
+        paths.add("./" + APP_LOG_DIR_NAME);
+
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        if (tmpDir != null && !tmpDir.isEmpty()) {
+            paths.add(tmpDir + "/" + APP_LOG_DIR_NAME);
+        }
+
+        return paths;
+    }
+
+    private static boolean isDirectoryWritable(File dir) {
         if (!dir.isDirectory()) {
-            System.err.println("ERROR: " + description + "不是目录: " + absPath);
-            System.exit(1);
+            return false;
         }
-        if (!dir.canRead()) {
-            System.err.println("ERROR: " + description + "没有读权限: " + absPath);
-            System.exit(1);
-        }
-        if (!dir.canWrite()) {
-            System.err.println("ERROR: " + description + "没有写权限: " + absPath);
-            System.err.println("当前用户: " + getCurrentUser());
-            System.err.println("建议: 执行 'chown -R www:www " + absPath + "' 或 'chmod 755 " + absPath + "'");
-            System.exit(1);
-        }
-        if (!dir.canExecute()) {
-            System.err.println("ERROR: " + description + "没有执行权限: " + absPath);
-            System.exit(1);
+        File testFile = null;
+        try {
+            testFile = File.createTempFile("logtest_", ".tmp", dir);
+            return true;
+        } catch (IOException e) {
+            return false;
+        } finally {
+            if (testFile != null && testFile.exists()) {
+                testFile.delete();
+            }
         }
     }
 

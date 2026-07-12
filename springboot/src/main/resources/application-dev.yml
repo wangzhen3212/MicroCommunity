@@ -3,10 +3,8 @@ server:
   tomcat:
     uri-encoding: UTF-8
 
-# 日志配置 - 通过LOG_PATH注入到logback.xml
-logging:
-  file:
-    path: /www/wwwlogs/java/springboot
+# 日志路径由环境变量 LOG_PATH 控制（默认 ./MicroCommunityBoot-logs）
+# 不要在此设置 logging.file.path，否则会覆盖 BootApplicationStart.createLogDir() 的设置
 
 # ========== sys-client 客户机模块配置 ==========
 # 通过环境变量覆盖: SYS_CLIENT_ENABLED, SYS_CLIENT_SERVER_URL 等

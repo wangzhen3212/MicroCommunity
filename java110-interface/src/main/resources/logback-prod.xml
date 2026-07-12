@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="60 seconds">
 
-<!--    <include resource="org.springframework/boot/logging/logback/base.xml"/>-->
-
-    <property name="LOG_PATH" value="${LOG_PATH:-./logs}"/>
+    <!-- LOG_PATH 由 BootApplicationStart.createLogDir() 设置，未设置时默认 ./MicroCommunityBoot-logs -->
+    <property name="LOG_PATH" value="${LOG_PATH:-./MicroCommunityBoot-logs}"/>
 
     <!-- 控制台输出 -->
     <appender name="STDOUT_FILE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
         </encoder>
     </appender>
@@ -29,6 +27,9 @@
     </appender>
 
     <appender name="INFO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
         <File>${LOG_PATH}/info.log</File>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/info-%d{yyyyMMdd}.log.%i</fileNamePattern>
@@ -58,51 +59,28 @@
         </rollingPolicy>
         <layout class="ch.qos.logback.classic.PatternLayout">
             <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} -%msg%n
-
             </Pattern>
         </layout>
     </appender>
 
-    <logger name="org.springframework" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
+    <!-- 生产环境：第三方框架日志保持 ERROR 级别 -->
+    <logger name="org.springframework" level="ERROR"/>
+    <logger name="com.apache.ibatis" level="ERROR"/>
+    <logger name="org.mybatis" level="ERROR"/>
+    <logger name="druid.sql.Statement" level="ERROR"/>
+    <logger name="druid.sql.ResultSet" level="ERROR"/>
+    <logger name="io.shardingsphere" level="ERROR"/>
+    <logger name="org.thymeleaf" level="ERROR"/>
+    <logger name="org.apache.kafka" level="ERROR"/>
 
-    <!--myibatis log configure-->
-    <logger name="com.apache.ibatis" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
+    <!-- 业务日志：INFO 级别 -->
+    <logger name="com.java110" level="INFO"/>
 
-    <logger name="org.mybatis" level="ERROR">
+    <root level="INFO">
         <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-    <logger name="druid.sql.Statement" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-    <logger name="druid.sql.ResultSet" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-
-    <logger name="com.java110" level="DEBUG">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-    <logger name="io.shardingsphere" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-    <logger name="org.thymeleaf" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-    <logger name="org.apache.kafka" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-    <!-- 日志输出级别
-    <root level="DEBUG">
-        <appender-ref ref="STDOUT_FILE" />
-        <appender-ref ref="DEBUG_FILE" />
+        <appender-ref ref="DEBUG_FILE"/>
+        <appender-ref ref="INFO_FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
     </root>
-    -->
+
 </configuration>

@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="60 seconds">
 
-    <!--<include resource="org.springframework/boot/logging/logback/base.xml"/>-->
-
-    <property name="LOG_PATH" value="${LOG_PATH}"/>
+    <!-- LOG_PATH 由 BootApplicationStart.createLogDir() 设置，未设置时默认 ./MicroCommunityBoot-logs -->
+    <property name="LOG_PATH" value="${LOG_PATH:-./MicroCommunityBoot-logs}"/>
 
     <!-- 控制台输出 -->
     <appender name="STDOUT_FILE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
         </encoder>
     </appender>
@@ -61,49 +59,28 @@
         </rollingPolicy>
         <layout class="ch.qos.logback.classic.PatternLayout">
             <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} -%msg%n
-
             </Pattern>
         </layout>
     </appender>
 
-    <logger name="org.springframework" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-    <logger name="org.quartz" level="DEBUG">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-    <logger name="com.java110.order" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
+    <!-- 第三方框架日志：降低级别，减少控制台噪音 -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="com.java110.order" level="ERROR"/>
 
+    <!--myibatis log configure-->
+    <logger name="com.apache.ibatis" level="INFO"/>
+    <logger name="org.mybatis" level="INFO"/>
+    <logger name="druid.sql.Statement" level="INFO"/>
+    <logger name="druid.sql.ResultSet" level="INFO"/>
 
-    <logger name="org.mybatis" level="DEBUG">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-    <logger name="druid.sql.Statement" level="DEBUG" additivity="false">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-    <logger name="druid.sql.ResultSet" level="DEBUG" additivity="false">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-    <logger name="druid.sql.Connection" level="DEBUG" additivity="false">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
+    <!-- 业务日志：INFO 级别，关键流程用 logger.info 记录 -->
+    <logger name="com.java110" level="INFO"/>
 
+    <logger name="io.shardingsphere" level="ERROR"/>
+    <logger name="org.thymeleaf" level="ERROR"/>
+    <logger name="org.apache.kafka" level="ERROR"/>
 
-    <logger name="com.java110" level="DEBUG">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-    <logger name="org.thymeleaf" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-    <logger name="org.apache.kafka" level="ERROR">
-        <appender-ref ref="STDOUT_FILE"/>
-    </logger>
-
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="STDOUT_FILE"/>
         <appender-ref ref="DEBUG_FILE"/>
         <appender-ref ref="INFO_FILE"/>
