@@ -52,6 +52,10 @@ public class SendIotImpl implements ISendIot {
 
     @Override
     public ResultVo post(String url, JSONObject paramIn) {
+        String iotSwitch = MappingCache.getValue(IOT_DOMAIN, "IOT_SWITCH");
+        if (!"ON".equals(iotSwitch)) {
+            return new ResultVo(ResultVo.CODE_OK, "IOT系统关闭");
+        }
         url = getUrl(url);
         HttpHeaders header = getHeaders(url, paramIn.toJSONString(), HttpMethod.POST);
         HttpEntity<String> httpEntity = new HttpEntity<String>(paramIn.toJSONString(), header);
