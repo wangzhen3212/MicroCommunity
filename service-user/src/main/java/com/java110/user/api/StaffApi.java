@@ -147,7 +147,7 @@ public class StaffApi {
         smallWeChatDto.setObjType(SmallWeChatDto.OBJ_TYPE_COMMUNITY);
         smallWeChatDto.setWechatType(SmallWeChatDto.WECHAT_TYPE_PUBLIC);
         List<SmallWeChatDto> smallWeChatDtos = smallWeChatInnerServiceSMOImpl.querySmallWeChats(smallWeChatDto);
-        String ownerUrl = UrlCache.getOwnerUrl()
+        String ownerUrl = UrlCache.getPropertyPhoneUrl()
                 + "/app/staffAuth?storeId=" + storeId + "&staffId=" + userId
                 + "&communityId=" + communityId + "&appId=" + AppDto.WECHAT_OWNER_APP_ID;
 

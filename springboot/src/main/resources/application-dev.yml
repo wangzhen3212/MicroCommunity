@@ -1,21 +1,18 @@
 server:
-  port: 8008
+  port: ${SERVER_PORT:8008}
   tomcat:
     uri-encoding: UTF-8
 
-# 日志路径由环境变量 LOG_PATH 控制（默认 ./MicroCommunityBoot-logs）
-# 不要在此设置 logging.file.path，否则会覆盖 BootApplicationStart.createLogDir() 的设置
-
 # ========== sys-client 客户机模块配置 ==========
-# 通过环境变量覆盖: SYS_CLIENT_ENABLED, SYS_CLIENT_SERVER_URL 等
+# 通过环境变量覆盖: SYS_CLIENT_ENABLED, SYS_CLIENT_SERVER_URL, SYS_CLIENT_AUTH_KEY, SYS_CLIENT_PROXY_URL
 sys:
   client:
-    # 是否开启客户机功能（默认关闭，开启请改为 true）
-    enabled: true
+    # 是否开启客户机功能（默认关闭 false，开启请改为 true）
+    enabled: ${SYS_CLIENT_ENABLED:false}
     # 上位机 WebSocket 服务端地址（必填，enabled=true 时生效）
-    server-url: ws://106.53.19.207:8080/ws/host
+    server-url: ${SYS_CLIENT_SERVER_URL:ws://127.0.0.1:8080/ws/host}
     # 上位机管理员分配的认证 KEY（必填，enabled=true 时生效）
-    auth-key: 7ad1b8f83b94f1abb815ceccf4d3429e04a1848ae91c83bfd50c61115639448b
+    auth-key: ${SYS_CLIENT_AUTH_KEY:your-auth-key-here}
     # 心跳发送间隔（秒），默认30秒
     heartbeat-interval: 30
     # 断线重连最大间隔（秒），默认60秒
@@ -23,14 +20,10 @@ sys:
     # 上位机未上线时的注册重试间隔（秒），默认600秒（10分钟）
     host-retry-interval: 600
     # 上位机 HTTP 代理地址，如 http://host:8080/proxy/out（可选）
-    proxy-url: http://106.53.19.207:8080/proxy/out
+    proxy-url: ${SYS_CLIENT_PROXY_URL:http://127.0.0.1:8080/proxy/out}
 
 spring:
   servlet:
-    multipart:
-      maxFileSize: 50MB
-      maxRequestSize: 50MB
-  http:
     encoding:
       charset: UTF-8
       enabled: true
@@ -39,9 +32,9 @@ spring:
     name: boot-service
   redis:
     database: 0
-    host: 127.0.0.1
-    port: 6379
-    password: cszyzh
+    host: ${SPRING_REDIS_HOST:127.0.0.1}
+    port: ${SPRING_REDIS_PORT:6379}
+    password: ${SPRING_REDIS_PASSWORD:hc}
     pool:
       max-active: 300
       max-wait: 3000
@@ -52,9 +45,9 @@ spring:
   activiti:
     database-schema-update: false
   datasource:
-    url: jdbc:mysql://127.0.0.1:13306/TT?useUnicode=true&characterEncoding=utf-8&serverTimezone=GMT%2B8
-    username: TT
-    password: qq272730334
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/TT?useUnicode=true&characterEncoding=utf-8&serverTimezone=GMT%2B8}
+    username: ${SPRING_DATASOURCE_USERNAME:TT}
+    password: ${SPRING_DATASOURCE_PASSWORD:hc12345678}
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
     druid:

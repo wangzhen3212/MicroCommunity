@@ -31,3 +31,8 @@ logs
 *target/
 .txcode
 nul
+
+# Environment variables
+.env
+docs/.env
+*.env.local
