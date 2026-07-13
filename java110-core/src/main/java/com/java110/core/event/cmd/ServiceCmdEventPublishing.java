@@ -7,6 +7,7 @@ import com.java110.core.log.LoggerFactory;
 import com.java110.dto.CmdListenerDto;
 import com.java110.utils.constant.CommonConstant;
 import com.java110.utils.constant.ResponseConstant;
+import com.java110.utils.exception.CmdException;
 import com.java110.utils.exception.ListenerExecuteException;
 import com.java110.utils.factory.ApplicationContextFactory;
 import com.java110.utils.log.LoggerEngine;
@@ -133,6 +134,8 @@ public class ServiceCmdEventPublishing {
 
             //todo 发布事件
             multicastEvent(serviceCode, targetDataFlowEvent, asyn);
+        } catch (CmdException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("发布侦听失败，失败原因为：", e);
             //throw new BusinessException(ResponseConstant.RESULT_CODE_INNER_ERROR, e.getMessage());
@@ -216,6 +219,9 @@ public class ServiceCmdEventPublishing {
 
             //logger.debug("API服务 --- 返回报文信息：{}", dataFlowContext.getResponseEntity());
             //   listener.cmd(event);
+        } catch (CmdException e) {
+            logger.debug("业务校验失败：{}", e.getMessage());
+            throw e;
         } catch (Throwable e) {
             LoggerEngine.error("发布侦听失败" + e);
             throw e;

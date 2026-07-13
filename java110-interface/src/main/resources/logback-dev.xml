@@ -6,12 +6,20 @@
 
     <!-- 控制台输出 -->
     <appender name="STDOUT_FILE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
         </encoder>
     </appender>
 
     <appender name="DEBUG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>DEBUG</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
         <File>${LOG_PATH}/debug.log</File>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/debug-%d{yyyyMMdd}.log.%i</fileNamePattern>
@@ -74,13 +82,13 @@
     <logger name="druid.sql.ResultSet" level="INFO" additivity="false"/>
     <logger name="druid.sql.Connection" level="INFO" additivity="false"/>
 
-    <!-- 业务日志：INFO 级别，关键流程用 logger.info 记录 -->
-    <logger name="com.java110" level="INFO"/>
+    <!-- 业务日志：DEBUG 级别，debug.log 记录 DEBUG，info.log 记录 INFO+ -->
+    <logger name="com.java110" level="DEBUG"/>
 
     <logger name="org.thymeleaf" level="ERROR"/>
     <logger name="org.apache.kafka" level="ERROR"/>
 
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="STDOUT_FILE"/>
         <appender-ref ref="DEBUG_FILE"/>
         <appender-ref ref="INFO_FILE"/>
