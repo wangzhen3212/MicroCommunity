@@ -2,6 +2,7 @@ package com.java110.api.filter;
 
 import com.java110.core.factory.AuthenticationFactory;
 import com.java110.core.factory.DataTransactionFactory;
+import com.java110.utils.cache.CommonCache;
 import com.java110.utils.constant.CommonConstant;
 import com.java110.utils.constant.ResponseConstant;
 import com.java110.utils.exception.FilterException;
@@ -43,8 +44,13 @@ public class JwtFilter implements Filter {
 
         final HttpServletRequest request = (HttpServletRequest) req;
         final HttpServletResponse response = (HttpServletResponse) res;
+
+        String ip = getClientIp(request);
+        if (isIpBlacklisted(ip)) {
+            return;
+        }
+
         String uri = request.getServletPath();
-        //如果是 不能过滤的地址选择跳过
         if (isExcludedUri(uri)) {
             chain.doFilter(request, response);
             return;
@@ -61,13 +67,14 @@ public class JwtFilter implements Filter {
 
             } catch (Exception e) {
                 //Invalid signature/claims
-                logger.error("解析token 失败 ：", e);
+                logger.debug("解析token 失败 ：{}", e.getMessage());
                 throw new FilterException(ResponseConstant.RESULT_CODE_NO_AUTHORITY_ERROR, "您还没有登录，请先登录");
             }
 
             chain.doFilter(req, res);
         } catch (FilterException e) {
-            logger.error("业务处理失败", e);
+            logger.debug("未授权访问：{}，URI：{}", e.getMessage(), uri);
+            recordUnauthorizedAccess(request, uri);
             if ("POST".equals(request.getMethod())) {
                 writeJson(response,
                         DataTransactionFactory.pageResponseJson(ResponseConstant.RESULT_CODE_NO_AUTHORITY_ERROR, e.getMessage(), null),
@@ -139,6 +146,63 @@ public class JwtFilter implements Filter {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void recordUnauthorizedAccess(HttpServletRequest request, String uri) {
+        String ip = getClientIp(request);
+        String key = "UNAUTH_ACCESS_" + ip;
+        try {
+            String countStr = CommonCache.getValue(key);
+            int count = StringUtil.isEmpty(countStr) ? 0 : Integer.parseInt(countStr);
+            count++;
+            CommonCache.setValue(key, String.valueOf(count), 3600);
+            if (count >= 100) {
+                addIpToBlacklist(ip);
+            }
+        } catch (Exception e) {
+            logger.debug("记录未授权访问失败：{}", e.getMessage());
+        }
+    }
+
+    private boolean isIpBlacklisted(String ip) {
+        try {
+            String blacklisted = CommonCache.getValue("IP_BLACKLIST_" + ip);
+            return "true".equals(blacklisted);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void addIpToBlacklist(String ip) {
+        try {
+            CommonCache.setValue("IP_BLACKLIST_" + ip, "true", 7200);
+            logger.warn("IP {} 因未授权访问超过100次，已加入黑名单", ip);
+        } catch (Exception e) {
+            logger.debug("加入IP黑名单失败：{}", e.getMessage());
+        }
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (!StringUtil.isEmpty(ip) && !"unknown".equalsIgnoreCase(ip)) {
+            int index = ip.indexOf(',');
+            if (index != -1) {
+                ip = ip.substring(0, index);
+            }
+        }
+        if (StringUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (StringUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (StringUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (StringUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
     }
 
     private boolean isExcludedUri(String uri) {
