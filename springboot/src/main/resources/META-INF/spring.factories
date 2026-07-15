@@ -1,0 +1,2 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.java110.boot.DotenvEnvironmentPostProcessor

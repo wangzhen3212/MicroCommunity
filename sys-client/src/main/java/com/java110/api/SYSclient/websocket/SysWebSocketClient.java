@@ -5,6 +5,8 @@ import com.java110.api.SYSclient.SysClientProperties;
 import com.java110.api.SYSclient.model.MessageType;
 import com.java110.api.SYSclient.model.WsMessage;
 import com.java110.api.SYSclient.proxy.InboundProxyHandler;
+import com.java110.api.SYSclient.service.CommunityStatsHandler;
+import com.java110.api.SYSclient.service.DataPullHandler;
 import com.java110.api.SYSclient.service.LocalIdUpdater;
 import com.java110.core.event.CacheFlushCompleteEvent;
 import com.java110.core.log.LoggerFactory;
@@ -55,6 +57,12 @@ public class SysWebSocketClient {
 
     @Autowired
     private InboundProxyHandler inboundProxyHandler;
+
+    @Autowired
+    private DataPullHandler dataPullHandler;
+
+    @Autowired
+    private CommunityStatsHandler communityStatsHandler;
 
     @Autowired
     private LocalIdUpdater localIdUpdater;
@@ -300,6 +308,13 @@ public class SysWebSocketClient {
                 case MessageType.INBOUND_REQUEST:
                     handleInboundRequest(msg);
                     break;
+                case MessageType.DATA_PULL_REQ:
+                    // 统计数据拉取请求 —— 直接调用 CommunityStatsHandler，不走 API 管线
+                    handleDataPullRequest(msg);
+                    break;
+                case MessageType.CALLBACK_IN:
+                    handleCallback(msg);
+                    break;
                 case MessageType.ACK:
                     break;
                 default:
@@ -400,7 +415,11 @@ public class SysWebSocketClient {
     // ==================== 入站代理（节点二） ====================
 
     /**
-     * 处理上位机转发的入站业务请求
+     * 处理上位机转发的入站业务请求（含数据拉取）
+     *
+     * 优化点:
+     * - 修复 body 从 payload 中提取的 Bug（之前始终传 null）
+     * - 路由经 DataPullHandler，对计数类 API 提供本地缓存
      */
     private void handleInboundRequest(WsMessage msg) {
         try {
@@ -414,9 +433,14 @@ public class SysWebSocketClient {
             @SuppressWarnings("unchecked")
             Map<String, String> headers = (Map<String, String>) payload.get("headers");
 
-            logger.info("[上位机管理消息] INBOUND_REQUEST method={}, path={}, headers={}", method, path, headers);
+            // 修复: 从 payload 中提取 body（支持 String 和 Map 两种格式）
+            String body = extractBody(payload);
 
-            Map<String, Object> result = inboundProxyHandler.handle(method, path, headers, null);
+            logger.info("[上位机管理消息] INBOUND_REQUEST method={}, path={}, bodySize={}",
+                    method, path, body != null ? body.length() : 0);
+
+            // 通过 DataPullHandler 处理（计数类 API 带缓存，其他直接透传 InboundProxyHandler）
+            Map<String, Object> result = dataPullHandler.handle(method, path, headers, body);
 
             WsMessage resp = new WsMessage(msg.getMsgId(), MessageType.INBOUND_RESPONSE, result);
             this.session.getBasicRemote().sendText(resp.toJsonString());
@@ -425,6 +449,103 @@ public class SysWebSocketClient {
         } catch (Exception e) {
             logger.error("[客户机] 处理入站请求失败: msgId={}, error={}", msg.getMsgId(), e.getMessage(), e);
         }
+    }
+
+    /**
+     * 处理上位机统计数据拉取请求（DATA_PULL_REQ）
+     * 直接调用 CommunityStatsHandler，不走 API 管线，返回标准化统计数据
+     *
+     * 请求格式: {"communityId": "xxx", "pullTypes": ["room", "workorder", "complaint", "fee", "fund", "public", "camera"]}
+     */
+    private void handleDataPullRequest(WsMessage msg) {
+        try {
+            Map<String, Object> payload = msg.getPayload();
+            if (payload == null) {
+                logger.warn("[客户机] 数据拉取请求 payload 为空: msgId={}", msg.getMsgId());
+                return;
+            }
+
+            String communityId = (String) payload.get("communityId");
+            @SuppressWarnings("unchecked")
+            List<String> pullTypes = (List<String>) payload.get("pullTypes");
+
+            if (communityId == null || communityId.isEmpty()) {
+                logger.warn("[客户机] 数据拉取请求缺少 communityId: msgId={}", msg.getMsgId());
+                sendErrorResponse(msg.getMsgId(), "缺少 communityId 参数");
+                return;
+            }
+
+            logger.info("[上位机管理消息] DATA_PULL_REQ communityId={}, pullTypes={}",
+                    communityId, pullTypes);
+
+            Map<String, Object> stats = communityStatsHandler.handlePull(communityId, pullTypes);
+
+            WsMessage resp = new WsMessage(msg.getMsgId(), MessageType.DATA_PULL_ACK, stats);
+            this.session.getBasicRemote().sendText(resp.toJsonString());
+            logger.debug("[客户机] 数据拉取响应已发送: msgId={}, communityId={}", msg.getMsgId(), communityId);
+        } catch (Exception e) {
+            logger.error("[客户机] 处理数据拉取请求失败: msgId={}, error={}", msg.getMsgId(), e.getMessage(), e);
+            sendErrorResponse(msg.getMsgId(), "数据拉取失败: " + e.getMessage());
+        }
+    }
+
+    private void sendErrorResponse(String msgId, String error) {
+        try {
+            Map<String, Object> errorPayload = new java.util.HashMap<>();
+            errorPayload.put("success", false);
+            errorPayload.put("error", error);
+            WsMessage resp = new WsMessage(msgId, MessageType.DATA_PULL_ACK, errorPayload);
+            this.session.getBasicRemote().sendText(resp.toJsonString());
+        } catch (Exception e) {
+            logger.error("[客户机] 发送错误响应失败: msgId={}, error={}", msgId, e.getMessage());
+        }
+    }
+
+    /**
+     * 处理上位机转发的公网回调（CALLBACK_IN）
+     * 回调同样走 INBOUND_REQUEST 管线，透传到客户机 API 层
+     */
+    private void handleCallback(WsMessage msg) {
+        try {
+            Map<String, Object> payload = msg.getPayload();
+            if (payload == null) {
+                logger.warn("[客户机] 回调 payload 为空: msgId={}", msg.getMsgId());
+                return;
+            }
+            // CALLBACK_IN 携带原始 HTTP 请求信息，按 POST 转发到对应路径
+            String path = (String) payload.get("path");
+            @SuppressWarnings("unchecked")
+            Map<String, String> headers = (Map<String, String>) payload.get("headers");
+            String body = extractBody(payload);
+
+            logger.info("[上位机管理消息] CALLBACK_IN path={}, bodySize={}",
+                    path, body != null ? body.length() : 0);
+
+            Map<String, Object> result = inboundProxyHandler.handle(
+                    "POST", path, headers, body);
+
+            WsMessage resp = new WsMessage(msg.getMsgId(), MessageType.INBOUND_RESPONSE, result);
+            this.session.getBasicRemote().sendText(resp.toJsonString());
+        } catch (Exception e) {
+            logger.error("[客户机] 处理回调失败: msgId={}, error={}", msg.getMsgId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 从 payload 中提取请求体
+     * 支持 body 为 String（JSON字符串）或 Map（JSON对象，自动序列化为字符串）
+     */
+    private String extractBody(Map<String, Object> payload) {
+        Object bodyObj = payload.get("body");
+        if (bodyObj == null) {
+            return null;
+        }
+        if (bodyObj instanceof String) {
+            String body = (String) bodyObj;
+            return body.isEmpty() ? null : body;
+        }
+        // Map 类型 → 序列化为 JSON 字符串
+        return JSONObject.toJSONString(bodyObj);
     }
 
 }

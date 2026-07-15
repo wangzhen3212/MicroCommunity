@@ -263,7 +263,7 @@ public class NoticeStaffTaskTemplate extends TaskSystemQuartz {
 
             //还没有到时间
             if (startDate.getTime() > DateUtil.getCurrentDate().getTime()) {
-                return;
+                continue;
             }
 
             IMsgNotify msgNotify = MsgNotifyFactory.getMsgNotify(MsgNotifyFactory.NOTIFY_WAY_WECHAT);

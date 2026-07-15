@@ -13,7 +13,6 @@ import com.java110.utils.constant.CommonConstant;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.utils.factory.ApplicationContextFactory;
 import com.java110.utils.util.DateUtil;
-import com.java110.utils.util.StringUtil;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -68,51 +67,28 @@ public class InboundProxyHandler {
      */
     public Map<String, Object> handle(String method, String path,
                                        Map<String, String> headers, String body) {
-        Map<String, Object> result = new HashMap<>();
         try {
             String serviceCode = extractServiceCode(path);
             if (serviceCode == null || serviceCode.isEmpty()) {
-                result.put("statusCode", 400);
-                result.put("body", "{\"msg\":\"无法从路径提取 serviceCode: " + path + "\"}");
-                return result;
+                return errorResult(400, "无法从路径提取 serviceCode: " + path);
             }
 
             Map<String, String> apiHeaders = buildApiHeaders(method, serviceCode, headers, body);
 
+            ResponseEntity<String> responseEntity;
             String hostKey = headers != null ? headers.get(HEADER_HOST_KEY) : null;
             if (hostKey != null && hostKey.equals(sysClientProperties.getAuthKey())) {
-                ResponseEntity<String> responseEntity = invokeMicroservice(method, serviceCode, apiHeaders, body);
-                result.put("statusCode", responseEntity.getStatusCodeValue());
-                result.put("body", responseEntity.getBody());
-                if (responseEntity.getHeaders() != null) {
-                    Map<String, String> respHeaders = new HashMap<>();
-                    responseEntity.getHeaders().forEach((k, v) -> {
-                        if (v != null && !v.isEmpty()) {
-                            respHeaders.put(k, v.get(0));
-                        }
-                    });
-                    result.put("headers", respHeaders);
-                }
+                responseEntity = invokeMicroservice(method, serviceCode, apiHeaders, body);
             } else {
-                ResponseEntity<String> responseEntity = apiServiceSMOImpl.service(body, apiHeaders);
-                result.put("statusCode", responseEntity.getStatusCodeValue());
-                result.put("body", responseEntity.getBody());
-                if (responseEntity.getHeaders() != null) {
-                    Map<String, String> respHeaders = new HashMap<>();
-                    responseEntity.getHeaders().forEach((k, v) -> {
-                        if (v != null && !v.isEmpty()) {
-                            respHeaders.put(k, v.get(0));
-                        }
-                    });
-                    result.put("headers", respHeaders);
-                }
+                responseEntity = apiServiceSMOImpl.service(body, apiHeaders);
             }
 
+            return toResultMap(responseEntity);
+
         } catch (Exception e) {
-            result.put("statusCode", 500);
-            result.put("body", "{\"msg\":\"入站代理内部异常: " + e.getMessage() + "\"}");
+            logger.error("[入站代理] 处理请求失败: path={}, error={}", path, e.getMessage(), e);
+            return errorResult(500, "入站代理内部异常: " + e.getMessage());
         }
-        return result;
     }
 
     /**
@@ -300,5 +276,34 @@ public class InboundProxyHandler {
             sb.deleteCharAt(sb.length() - 1);
         }
         return sb.length() == 1 ? "" : sb.toString();
+    }
+
+    /**
+     * 将 ResponseEntity 转换为 InboundProxyHandler 标准响应 Map
+     */
+    private Map<String, Object> toResultMap(ResponseEntity<String> responseEntity) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("statusCode", responseEntity.getStatusCodeValue());
+        result.put("body", responseEntity.getBody());
+        if (responseEntity.getHeaders() != null) {
+            Map<String, String> respHeaders = new HashMap<>();
+            responseEntity.getHeaders().forEach((k, v) -> {
+                if (v != null && !v.isEmpty()) {
+                    respHeaders.put(k, v.get(0));
+                }
+            });
+            result.put("headers", respHeaders);
+        }
+        return result;
+    }
+
+    /**
+     * 构造错误响应
+     */
+    private Map<String, Object> errorResult(int statusCode, String message) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("statusCode", statusCode);
+        result.put("body", "{\"msg\":\"" + message + "\"}");
+        return result;
     }
 }

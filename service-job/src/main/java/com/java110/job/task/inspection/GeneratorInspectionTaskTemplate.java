@@ -165,6 +165,7 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
             inspectionTaskDetailPo.setPointEndTime(tmpInspectionRoutePointRelDto.getPointEndTime());
             inspectionTaskDetailPo.setSortNumber(tmpInspectionRoutePointRelDto.getSortNumber());
             inspectionTaskDetailPo.setTaskDetailId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_taskDetailId));
+            inspectionTaskDetailPo.setSendFlag("N");
             inspectionTaskDetailPos.add(inspectionTaskDetailPo);
         }
         inspectionTaskPos.add(inspectionTaskPo);

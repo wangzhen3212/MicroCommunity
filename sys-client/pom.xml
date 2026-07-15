@@ -56,6 +56,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.java110</groupId>
+            <artifactId>java110-db</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
