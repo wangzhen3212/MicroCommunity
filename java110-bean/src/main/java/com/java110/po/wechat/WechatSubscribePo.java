@@ -16,6 +16,7 @@
 package com.java110.po.wechat;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 类表述： Po 数据模型实体对象 基本保持与数据库模型一直 用于 增加修改删除 等时的数据载体
@@ -37,6 +38,12 @@ public class WechatSubscribePo implements Serializable {
     private String statusCd = "0";
     private String userId;
     private String openType;
+    // 微信用户备注（来自 batchget 接口 remark 字段）
+    private String remark;
+    // 微信用户标签ID列表（来自 batchget 接口 tagid_list 字段，存为 JSON 字符串）
+    private String tagidList;
+    // 同步时间，INSERT/UPDATE 均刷新为当前时间
+    private Date createTime;
 
     public String getSubId() {
         return subId;
@@ -108,5 +115,29 @@ public class WechatSubscribePo implements Serializable {
 
     public void setUnionId(String unionId) {
         this.unionId = unionId;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public String getTagidList() {
+        return tagidList;
+    }
+
+    public void setTagidList(String tagidList) {
+        this.tagidList = tagidList;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
     }
 }

@@ -98,6 +98,28 @@ public class StaffAuthSMOImpl extends DefaultAbstractComponentSMO implements ISt
             return ResultVo.redirectPage("/");
         }
         paramObj = JSONObject.parseObject(paramOut.getBody());
+
+        // 通用认证模式：staffId 为空时，不调用 updateStaffAppAuth，
+        // 而是带 openId 跳转员工端登录页，由员工登录成功后自动绑定
+        if (StringUtil.isEmpty(staffId)) {
+            String redirectUrl = UrlCache.getPropertyPhoneUrl();
+            if (redirectUrl.contains("/#/")) {
+                if (redirectUrl.contains("?")) {
+                    redirectUrl += ("&openId=" + openId + "&openName=" + urlEncode(paramObj.getString("nickname")));
+                } else {
+                    redirectUrl += ("?openId=" + openId + "&openName=" + urlEncode(paramObj.getString("nickname")));
+                }
+            } else {
+                redirectUrl += ("/#/?openId=" + openId + "&openName=" + urlEncode(paramObj.getString("nickname")));
+            }
+            if (redirectUrl.contains("wAppId")) {
+                // 已经带 wAppId 就不再追加
+            } else {
+                redirectUrl += ("&wAppId=" + smallWeChatDto.getAppId());
+            }
+            return ResultVo.redirectPage(redirectUrl);
+        }
+
         JSONObject paramAuth = new JSONObject();
         paramAuth.put("openId", openId);
         paramAuth.put("staffId", staffId);
@@ -108,7 +130,8 @@ public class StaffAuthSMOImpl extends DefaultAbstractComponentSMO implements ISt
 
         ResponseEntity<String> responseEntity = this.callCenterService(restTemplate, pd, paramAuth.toJSONString(),
                 "/staff/updateStaffAppAuth", HttpMethod.POST);
-        url = UrlCache.getOwnerUrl();
+        // 员工认证完成后重定向到员工端首页（STAFF_WECHAT_URL），不是业主端
+        url = UrlCache.getPropertyPhoneUrl();
         if(url.contains("/#/")){
             if(url.contains("?")){
                 url += ("&wAppId="+smallWeChatDto.getAppId());
@@ -120,6 +143,20 @@ public class StaffAuthSMOImpl extends DefaultAbstractComponentSMO implements ISt
         }
         return ResultVo.redirectPage(url);
 
+    }
+
+    /**
+     * URL 编码辅助方法
+     */
+    private String urlEncode(String value) {
+        if (StringUtil.isEmpty(value)) {
+            return "";
+        }
+        try {
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (Exception e) {
+            return value;
+        }
     }
 
     /**
@@ -147,11 +184,21 @@ public class StaffAuthSMOImpl extends DefaultAbstractComponentSMO implements ISt
         }
 
         String openUrl = "";
-        String url = UrlCache.getOwnerUrl();
-        url = url
-                + "/app/loginStaffWechatAuth?appId=992020061452450002&staffId="
-                + staffId + "&storeId=" + storeId + "&wId=" + WechatFactory.getWId(smallWeChatDto.getAppId())
-        + "&communityId=" + communityId;
+        // 员工认证回调地址必须使用员工端 URL（STAFF_WECHAT_URL），不能用业主端 URL
+        String url = UrlCache.getPropertyPhoneUrl();
+        // 通用认证模式（staffId 为空）：回调URL不带 staffId 和 storeId，
+        // getPageAccessToken 检测到 staffId 为空时，会跳转员工端登录页（带 openId）
+        if (StringUtil.isEmpty(staffId)) {
+            url = url
+                    + "/app/loginStaffWechatAuth?appId=992020061452450002"
+                    + "&wId=" + WechatFactory.getWId(smallWeChatDto.getAppId())
+                    + "&communityId=" + communityId;
+        } else {
+            url = url
+                    + "/app/loginStaffWechatAuth?appId=992020061452450002&staffId="
+                    + staffId + "&storeId=" + storeId + "&wId=" + WechatFactory.getWId(smallWeChatDto.getAppId())
+            + "&communityId=" + communityId;
+        }
 
         if (url.contains("?")) {
             url += ("&wAppId=" + smallWeChatDto.getAppId());

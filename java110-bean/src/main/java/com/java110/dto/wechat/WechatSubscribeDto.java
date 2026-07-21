@@ -28,10 +28,16 @@ public class WechatSubscribeDto extends PageDto implements Serializable {
     private String userId;
     private String openType;
 
+    private String communityId;
 
     private Date createTime;
 
     private String statusCd = "0";
+
+    // 微信用户备注（来自 batchget 接口 remark 字段）
+    private String remark;
+    // 微信用户标签ID列表（来自 batchget 接口 tagid_list 字段，存为 JSON 字符串）
+    private String tagidList;
 
 
     public String getSubId() {
@@ -90,6 +96,14 @@ public class WechatSubscribeDto extends PageDto implements Serializable {
         this.openType = openType;
     }
 
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
+    }
+
 
     public Date getCreateTime() {
         return createTime;
@@ -107,11 +121,57 @@ public class WechatSubscribeDto extends PageDto implements Serializable {
         this.statusCd = statusCd;
     }
 
+    private String userName;
+
+    private String phone;
+
+    private String identityType;
+
     public String getUnionId() {
         return unionId;
     }
 
     public void setUnionId(String unionId) {
         this.unionId = unionId;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getIdentityType() {
+        return identityType;
+    }
+
+    public void setIdentityType(String identityType) {
+        this.identityType = identityType;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public String getTagidList() {
+        return tagidList;
+    }
+
+    public void setTagidList(String tagidList) {
+        this.tagidList = tagidList;
     }
 }

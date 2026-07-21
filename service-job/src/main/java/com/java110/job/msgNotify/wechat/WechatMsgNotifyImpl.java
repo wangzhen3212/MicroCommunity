@@ -12,11 +12,9 @@ import com.java110.dto.privilege.RoleCommunityDto;
 import com.java110.dto.user.StaffAppAuthDto;
 import com.java110.dto.wechat.Content;
 import com.java110.dto.wechat.PropertyFeeTemplateMessage;
-import com.java110.dto.wechat.SmallWeChatDto;
 import com.java110.intf.user.IOwnerAppUserInnerServiceSMO;
 import com.java110.intf.user.IRoleCommunityV1InnerServiceSMO;
 import com.java110.intf.user.IStaffAppAuthInnerServiceSMO;
-import com.java110.core.factory.WechatFactory;
 import com.java110.job.msgNotify.IMsgNotify;
 import com.java110.job.msgNotify.IWechatTemplate;
 import com.java110.job.msgNotify.MsgNotifyFactory;
@@ -29,7 +27,6 @@ import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -43,24 +40,24 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
 
     private static final String sendMsgUrl = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=";
 
-    public static final String SPEC_CD_TOKEN = "33001";//token
-    public static final String SPEC_CD_OWE_FEE_TEMPLATE = "33002";//欠费推送模板
-    public static final String SPEC_CD_WECHAT_TEMPLATE = "33003";//欠费推送模板、装修跟踪记录通知
-    public static final String SPEC_CD_WECHAT_SUCCESS_TEMPLATE = "33004";//业主缴费成功推送模板
-    public static final String SPEC_CD_WECHAT_EXPIRE_TEMPLATE = "33005";//业主费用到期通知推送模板
-    public static final String SPEC_CD_WECHAT_PROCESS_TEMPLATE = "33006";//办公系统审批通知
-    public static final String SPEC_CD_WECHAT_ROOM_STATE_TEMPLATE = "33007";//空置房验房状态（通过和不通过）、审批状态（通过和不通过）模板
-    public static final String SPEC_CD_WECHAT_WORK_ORDER_REMIND_TEMPLATE = "33008";//报修工单提醒模板
-    public static final String SPEC_CD_WECHAT_DISPATCH_REMIND_TEMPLATE = "33009";//报修工单派单和转单提醒给维修师傅
-    public static final String SPEC_CD_WECHAT_SCHEDULE_TEMPLATE = "33010";//报修工单派单和抢单提醒给业主，安排师傅维修（进度提醒）
-    public static final String SPEC_CD_WECHAT_WORK_ORDER_END_TEMPLATE = "33011";//报修工单维修完成提醒给业主
-    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_APPLY_TEMPLATE = "33012";//装修申请提醒给业主
-    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_CHECK_TEMPLATE = "33013";//装修审核/完成提醒给物业管理人员
-    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_CHECK_RESULT_TEMPLATE = "33014";//装修审核结果提醒给业主
-    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_COMPLETED_TEMPLATE = "33015";//装修验收结果提醒给业主
-    public static final String SPEC_CD_WECHAT_REPAIR_CHARGE_SCENE_TEMPLATE = "33016";//报修通知-上门维修现场收费通知业主
-    public static final String SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_TEMPLATE = "33017";//流程待审批通知
-    public static final String SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_FINISH_TEMPLATE = "33018";//流程待审批完成通知
+    public static final String SPEC_CD_TOKEN = "33001";
+    public static final String SPEC_CD_OWE_FEE_TEMPLATE = "33002";
+    public static final String SPEC_CD_WECHAT_TEMPLATE = "33003";
+    public static final String SPEC_CD_WECHAT_SUCCESS_TEMPLATE = "33004";
+    public static final String SPEC_CD_WECHAT_EXPIRE_TEMPLATE = "33005";
+    public static final String SPEC_CD_WECHAT_PROCESS_TEMPLATE = "33006";
+    public static final String SPEC_CD_WECHAT_ROOM_STATE_TEMPLATE = "33007";
+    public static final String SPEC_CD_WECHAT_WORK_ORDER_REMIND_TEMPLATE = "33008";
+    public static final String SPEC_CD_WECHAT_DISPATCH_REMIND_TEMPLATE = "33009";
+    public static final String SPEC_CD_WECHAT_SCHEDULE_TEMPLATE = "33010";
+    public static final String SPEC_CD_WECHAT_WORK_ORDER_END_TEMPLATE = "33011";
+    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_APPLY_TEMPLATE = "33012";
+    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_CHECK_TEMPLATE = "33013";
+    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_CHECK_RESULT_TEMPLATE = "33014";
+    public static final String SPEC_CD_WECHAT_HOUSE_DECORATION_COMPLETED_TEMPLATE = "33015";
+    public static final String SPEC_CD_WECHAT_REPAIR_CHARGE_SCENE_TEMPLATE = "33016";
+    public static final String SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_TEMPLATE = "33017";
+    public static final String SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_FINISH_TEMPLATE = "33018";
 
     private static final Map<String, String[]> templateKeys = new HashMap<>();
 
@@ -74,8 +71,6 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateKeys.put(SPEC_CD_WECHAT_WORK_ORDER_END_TEMPLATE, new String[]{"房屋地址", "维修工程师", "维修完成时间"});
         templateKeys.put(SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_TEMPLATE, new String[]{"流程名称", "发起人", "发起时间"});
         templateKeys.put(SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_FINISH_TEMPLATE, new String[]{"流程名称", "流程状态"});
-
-
     }
 
     @Autowired
@@ -91,78 +86,10 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
     @Autowired
     private RestTemplate outRestTemplate;
 
-    private static final int ERR_CODE_TOKEN_INVALID = 40001;
-    private static final int ERR_CODE_TOKEN_EXPIRED = 42001;
-
-    private ResultVo sendTemplateMessage(String communityId, String accessToken, String openId,
-                                          String templateId, JSONObject data, String url,
-                                          String appId, String appSecret) {
-        String sendUrl = sendMsgUrl + accessToken;
-        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
-        templateMessage.setTemplate_id(templateId);
-        templateMessage.setTouser(openId);
-        templateMessage.setData(data);
-        templateMessage.setUrl(url);
-
-        logger.info("发送模板消息 openId:{}, templateId:{}, communityId:{}", openId, templateId, communityId);
-
-        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(sendUrl,
-                JSON.toJSONString(templateMessage), String.class);
-
-        if (responseEntity.getStatusCode() != HttpStatus.OK) {
-            logger.error("微信推送失败 HTTP状态:{}, communityId:{}, openId:{}", responseEntity.getStatusCode(), communityId, openId);
-            return new ResultVo(ResultVo.CODE_ERROR, "HTTP请求失败，状态码: " + responseEntity.getStatusCode());
-        }
-
-        if (responseEntity.getBody() == null) {
-            logger.error("微信推送失败，响应体为空, communityId:{}, openId:{}", communityId, openId);
-            return new ResultVo(ResultVo.CODE_ERROR, "微信返回空响应");
-        }
-
-        logger.info("微信模板返回内容:{}", responseEntity.getBody());
-
-        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        int errcode = paramOut.getIntValue("errcode");
-
-        if (errcode != 0 && (errcode == ERR_CODE_TOKEN_INVALID || errcode == ERR_CODE_TOKEN_EXPIRED)) {
-            logger.warn("access_token过期或无效(errcode={})，尝试刷新后重试, communityId:{}, appId:{}", errcode, communityId, appId);
-            try {
-                WechatFactory.invalidateAccessToken(appId);
-                String newToken = WechatFactory.getAccessToken(appId, appSecret);
-                sendUrl = sendMsgUrl + newToken;
-                responseEntity = outRestTemplate.postForEntity(sendUrl,
-                        JSON.toJSONString(templateMessage), String.class);
-
-                if (responseEntity.getStatusCode() != HttpStatus.OK || responseEntity.getBody() == null) {
-                    logger.error("微信推送重试失败, communityId:{}, openId:{}", communityId, openId);
-                    return new ResultVo(ResultVo.CODE_ERROR, "重试后仍失败");
-                }
-
-                paramOut = JSONObject.parseObject(responseEntity.getBody());
-                errcode = paramOut.getIntValue("errcode");
-                logger.info("微信推送重试结果: errcode={}, errmsg={}", errcode, paramOut.getString("errmsg"));
-            } catch (Exception e) {
-                logger.error("刷新access_token失败, communityId:{}, appId:{}", communityId, appId, e);
-                return new ResultVo(ResultVo.CODE_ERROR, "刷新token失败: " + e.getMessage());
-            }
-        }
-
-        return new ResultVo(errcode, paramOut.getString("errmsg"));
-    }
-
-    /**
-     * 发送退费申请
-     *
-     * @param communityId
-     * @param userId
-     * @param content
-     * @return
-     */
     @Override
     public ResultVo sendApplyReturnFeeMsg(String communityId, String userId, JSONObject content) {
 
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(userId);
@@ -179,30 +106,26 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_PROCESS_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
+
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing2", new Content("退费申请审批"));
         data.put("time10", new Content(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_B)));
         data.put("thing9", new Content(content.getString("name")));
+        templateMessage.setData(data);
         String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
+        templateMessage.setUrl(wechatUrl);
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, wechatUrl,
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * 欠费通知
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param contents    [{
-     *                    "feeTypeName",
-     *                    "payerObjName",
-     *                    "billAmountOwed",
-     *                    "date",
-     *                    url
-     *                    }]
-     * @return
-     */
     @Override
     public ResultVo sendOweFeeMsg(String communityId, String userId, String ownerId, List<JSONObject> contents) {
 
@@ -210,8 +133,7 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
             throw new IllegalArgumentException("业主未绑定，没有获取到微信openId");
         }
 
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         OwnerAppUserDto ownerAppUserDto = new OwnerAppUserDto();
         ownerAppUserDto.setCommunityId(communityId);
@@ -234,8 +156,13 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_OWE_FEE_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
+        JSONObject paramOut = null;
         for (JSONObject content : contents) {
             JSONObject data = new JSONObject();
+            PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+            templateMessage.setTemplate_id(templateId);
+            templateMessage.setTouser(openId);
             data.put("thing2", new Content(content.getString("feeTypeName")));
             String payerObjName = content.getString("payerObjName");
             if (!StringUtil.isEmpty(payerObjName) && payerObjName.length() > 20) {
@@ -244,12 +171,14 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
             data.put("thing12", new Content(payerObjName));
             data.put("amount3", new Content(content.getString("billAmountOwed")));
             data.put("time19", new Content(content.getString("date")));
-            String msgUrl = content.getString("url") + "&wAppId=" + smallWeChatDto.getAppId();
-
-            ResultVo resultVo = sendTemplateMessage(communityId, accessToken, openId, templateId, data, msgUrl,
-                    smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
-            if (resultVo.getCode() != 0) {
-                return resultVo;
+            templateMessage.setData(data);
+            templateMessage.setUrl(content.getString("url") + "&wAppId=" + wechatTemplateImpl.getAppId(communityId));
+            logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+            ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+            logger.info("微信模板返回内容:{}", responseEntity);
+            paramOut = JSONObject.parseObject(responseEntity.getBody());
+            if (paramOut.getIntValue("errcode") != 0) {
+                return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
             }
         }
         return new ResultVo(ResultVo.CODE_OK, "成功");
@@ -258,8 +187,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
     @Override
     public ResultVo sendPayFeeMsg(String communityId, String userId, JSONObject content, String role) {
 
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
+        String url = sendMsgUrl + accessToken;
         Mapping mapping = MappingCache.getMapping(MappingConstant.WECHAT_DOMAIN, SPEC_CD_WECHAT_SUCCESS_TEMPLATE);
 
         if (mapping == null) {
@@ -288,36 +217,30 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
             openId = staffAppAuthDtos.get(0).getOpenId();
         }
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         String thing10 = content.getString("payFeeRoom");
-        if (!StringUtil.isEmpty(thing10) && thing10.length() > 20) {
+        if (thing10.length() > 20) {
             thing10 = thing10.substring(0, 19);
         }
         data.put("thing2", new Content(content.getString("feeName")));
         data.put("thing10", new Content(thing10));
         data.put("time18", new Content(content.getString("payFeeTime")));
         data.put("amount6", new Content(content.getString("receivedAmount")));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * 业主报修时
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param content     {
-     *                    repairTypeName，
-     *                    repairObjName，
-     *                    repairName，
-     *                    url
-     *                    }
-     * @return
-     */
     @Override
     public ResultVo sendAddOwnerRepairMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(userId);
@@ -335,7 +258,11 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_WORK_ORDER_REMIND_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing8", new Content(content.getString("repairTypeName")));
         data.put("thing11", new Content(content.getString("repairObjName")));
         String context = content.getString("context");
@@ -343,28 +270,19 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
             context = context.substring(0, 20);
         }
         data.put("thing10", new Content(context));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * 派单给维修师傅
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param content     {
-     *                    repairName，
-     *                    tel，
-     *                    time，
-     *                    address
-     *                    }
-     * @return
-     */
     @Override
     public ResultVo sendDistributeRepairStaffMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(userId);
@@ -382,27 +300,29 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_DISPATCH_REMIND_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing7", new Content(content.getString("repairName")));
         data.put("phone_number3", new Content(content.getString("tel")));
         data.put("time13", new Content(content.getString("time")));
         data.put("thing9", new Content(content.getString("address")));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * 通知员工
-     *
-     * @param noticeStaffDto
-     * @return
-     */
     @Override
     public ResultVo sendStaffMsg(NoticeStaffDto noticeStaffDto) {
 
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(noticeStaffDto.getCommunityId());
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(noticeStaffDto.getCommunityId());
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(noticeStaffDto.getStaffId());
@@ -419,24 +339,33 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(noticeStaffDto.getCommunityId(), mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_PROCESS_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
+
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing2", new Content(noticeStaffDto.getTitle()));
         data.put("time10", new Content(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_B)));
         data.put("thing9", new Content(noticeStaffDto.getNotifyUserName()));
+        templateMessage.setData(data);
 
         String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
+        templateMessage.setUrl(wechatUrl);
         if (!StringUtil.isEmpty(noticeStaffDto.getUrl())) {
-            wechatUrl = noticeStaffDto.getUrl();
+            templateMessage.setUrl(noticeStaffDto.getUrl());
         }
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(noticeStaffDto.getCommunityId(), accessToken, openId, templateId, data, wechatUrl,
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
     @Override
     public ResultVo sendWechatMsg(NoticeWechatDto noticeWechatDto) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(noticeWechatDto.getCommunityId());
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(noticeWechatDto.getCommunityId());
 
 
         String openId = noticeWechatDto.getOpenId();
@@ -447,37 +376,34 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(noticeWechatDto.getCommunityId(), mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_PROCESS_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
+
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing2", new Content(noticeWechatDto.getTitle()));
         data.put("time10", new Content(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_B)));
         data.put("thing9", new Content(noticeWechatDto.getNotifyUserName()));
+        templateMessage.setData(data);
 
         String wechatUrl = UrlCache.getOwnerUrl();
+        templateMessage.setUrl(wechatUrl);
         if (!StringUtil.isEmpty(noticeWechatDto.getUrl())) {
-            wechatUrl = noticeWechatDto.getUrl();
+            templateMessage.setUrl(noticeWechatDto.getUrl());
         }
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(noticeWechatDto.getCommunityId(), accessToken, openId, templateId, data, wechatUrl,
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * 派单给业主通知
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param content     {
-     *                    name，
-     *                    tel，
-     *                    time，
-     *                    url
-     *                    }
-     * @return
-     */
     @Override
     public ResultVo sendDistributeRepairOwnerMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
+        String url = sendMsgUrl + accessToken;
         Mapping mapping = MappingCache.getMapping(MappingConstant.WECHAT_DOMAIN, SPEC_CD_WECHAT_SCHEDULE_TEMPLATE);
 
         if (mapping == null) {
@@ -497,32 +423,26 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         openId = ownerAppUserDtos.get(0).getOpenId();
 
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing6", new Content(content.getString("name")));
         data.put("phone_number9", new Content(content.getString("tel")));
         data.put("time3", new Content(content.getString("time")));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-
-    /**
-     * 报修完成给业主通知
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param content     {
-     *                    repairObjName，
-     *                    staffName，
-     *                    time，
-     *                    url
-     *                    }
-     * @return
-     */
     @Override
     public ResultVo sendFinishRepairOwnerMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
+        String url = sendMsgUrl + accessToken;
         Mapping mapping = MappingCache.getMapping(MappingConstant.WECHAT_DOMAIN, SPEC_CD_WECHAT_WORK_ORDER_END_TEMPLATE);
 
         if (mapping == null) {
@@ -542,18 +462,25 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         openId = ownerAppUserDtos.get(0).getOpenId();
 
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing9", new Content(content.getString("repairObjName")));
         data.put("thing10", new Content(content.getString("staffName")));
         data.put("time5", new Content(content.getString("time")));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
     @Override
     public ResultVo sendReturnRepairMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(userId);
@@ -571,32 +498,27 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_WORK_ORDER_REMIND_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing8", new Content(content.getString("repairTypeName")));
         data.put("thing11", new Content(content.getString("repairObjName")));
         data.put("thing10", new Content(content.getString("repairName")));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * oa 流程待审批通知
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param content     {
-     *                    flowName，
-     *                    create_user_name，
-     *                    create_time，
-     *                    url
-     *                    }
-     * @return
-     */
     @Override
     public ResultVo sendOaDistributeMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(userId);
@@ -614,31 +536,27 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing2", new Content(content.getString("flowName")));
         data.put("thing9", new Content(content.getString("create_user_name")));
         data.put("time10", new Content(content.getString("create_time")));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * oa 流程通知发起人
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param content     {
-     *                    flowName，
-     *                    staffName，
-     *                    url
-     *                    }
-     * @return
-     */
     @Override
     public ResultVo sendOaCreateStaffMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(userId);
@@ -656,28 +574,26 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_OA_WORKFLOW_AUDIT_FINISH_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing2", new Content(content.getString("flowName")));
         data.put("thing6", new Content(content.getString("staffName")));
+        templateMessage.setData(data);
+        templateMessage.setUrl(content.getString("url"));
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, content.getString("url"),
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 
-    /**
-     * 投诉通知员工
-     *
-     * @param communityId 小区
-     * @param userId      用户
-     * @param content     {
-     *                    complainName
-     *                    }
-     * @return
-     */
     @Override
     public ResultVo sendComplaintMsg(String communityId, String userId, JSONObject content) {
-        SmallWeChatDto smallWeChatDto = wechatTemplateImpl.getSmallWeChatDto(communityId);
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        String accessToken = wechatTemplateImpl.getAccessToken(communityId);
 
         StaffAppAuthDto staffAppAuthDto = new StaffAppAuthDto();
         staffAppAuthDto.setStaffId(userId);
@@ -694,13 +610,23 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_WECHAT_PROCESS_TEMPLATE));
 
+        String url = sendMsgUrl + accessToken;
+
         JSONObject data = new JSONObject();
+        PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
+        templateMessage.setTemplate_id(templateId);
+        templateMessage.setTouser(openId);
         data.put("thing2", new Content("投诉单处理流程"));
         data.put("time10", new Content(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_B)));
         data.put("thing9", new Content(content.getString("complaintName")));
+        templateMessage.setData(data);
         String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
+        templateMessage.setUrl(wechatUrl);
+        logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+        logger.info("微信模板返回内容:{}", responseEntity);
 
-        return sendTemplateMessage(communityId, accessToken, openId, templateId, data, wechatUrl,
-                smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
+        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
     }
 }

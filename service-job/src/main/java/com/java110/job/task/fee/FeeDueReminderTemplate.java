@@ -1,7 +1,6 @@
 package com.java110.job.task.fee;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.aliyuncs.CommonRequest;
 import com.aliyuncs.CommonResponse;
 import com.aliyuncs.DefaultAcsClient;
@@ -43,7 +42,6 @@ import com.java110.utils.util.StringUtil;
 import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -157,11 +155,9 @@ public class FeeDueReminderTemplate extends TaskSystemQuartz {
             return;
         }
         String templateId = smallWechatAttrDtos.get(0).getValue();
-        String accessToken;
-        try {
-            accessToken = WechatFactory.getAccessToken(weChatDto.getAppId(), weChatDto.getAppSecret());
-        } catch (Exception e) {
-            logger.error("推送微信模板,获取accessToken失败:{}", e.getMessage());
+        String accessToken = WechatFactory.getAccessToken(weChatDto.getAppId(), weChatDto.getAppSecret());
+        if (StringUtil.isEmpty(accessToken)) {
+            logger.info("推送微信模板,获取accessToken失败:{}", accessToken);
             return;
         }
         FeeDto feeDto = new FeeDto();
@@ -211,7 +207,7 @@ public class FeeDueReminderTemplate extends TaskSystemQuartz {
                 }
                 if (feeDay <= msgTime && feeDay > smallTime) {
                     try {
-                        doSentWechat(tmpFeeDto, templateId, accessToken, weChatDto.getAppId(), weChatDto.getAppSecret());
+                        doSentWechat(tmpFeeDto, templateId, accessToken);
                     } catch (Exception e) {
                         logger.error("通知异常", e);
                     }
@@ -222,7 +218,7 @@ public class FeeDueReminderTemplate extends TaskSystemQuartz {
         }
     }
 
-    private void doSentWechat(FeeDto feeDto, String templateId, String accessToken, String appId, String appSecret) {
+    private void doSentWechat(FeeDto feeDto, String templateId, String accessToken) {
         //获取付费对象类型(3333表示房屋；6666表示车辆)
         String payerObjType = feeDto.getPayerObjType();
         CommunityDto communityDto = new CommunityDto();
@@ -317,8 +313,11 @@ public class FeeDueReminderTemplate extends TaskSystemQuartz {
         ownerAppUserDto.setAppType("WECHAT");
         //查询绑定业主
         List<OwnerAppUserDto> ownerAppUserDtos = ownerAppUserInnerServiceSMO.queryOwnerAppUsers(ownerAppUserDto);
+        //用户绑定推送微信公众号信息
         if (ownerAppUserDtos.size() > 0) {
+            //获取openId
             String openId = ownerAppUserDtos.get(0).getOpenId();
+            String url = sendMsgUrl + accessToken;
             Data data = new Data();
             PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
             templateMessage.setTemplate_id(templateId);
@@ -329,11 +328,13 @@ public class FeeDueReminderTemplate extends TaskSystemQuartz {
             data.setKeyword3(new Content(finishTime));
             data.setRemark(new Content("请您及时续费，以免影响您的正常使用！"));
             templateMessage.setData(BeanConvertUtil.beanCovertJson(data));
+            //获取业主公众号地址
             String wechatUrl = UrlCache.getOwnerUrl();
             templateMessage.setUrl(wechatUrl);
-
-            sendWechatTemplate(feeDto.getCommunityId(), openId, templateId, templateMessage, accessToken, appId, appSecret);
-        } else {
+            logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
+            ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
+            logger.info("微信模板返回内容:{}", responseEntity);
+        } else {    //用户没绑定就发送短信
             //获取用户手机号
             String link = ownerDtos.get(0).getLink();
             DefaultProfile profile = DefaultProfile.getProfile(MappingCache.getValue(ALI_SMS_DOMAIN, "region"),
@@ -365,55 +366,6 @@ public class FeeDueReminderTemplate extends TaskSystemQuartz {
                 e.printStackTrace();
             } catch (ClientException e) {
                 e.printStackTrace();
-            }
-        }
-    }
-
-    private void sendWechatTemplate(String communityId, String openId, String templateId,
-                                    PropertyFeeTemplateMessage templateMessage, String accessToken,
-                                    String appId, String appSecret) {
-        logger.info("发送模板消息 openId:{}, templateId:{}", openId, templateId);
-        String sendUrl = sendMsgUrl + accessToken;
-
-        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(sendUrl,
-                JSON.toJSONString(templateMessage), String.class);
-
-        if (responseEntity.getStatusCode() != HttpStatus.OK) {
-            logger.error("微信推送失败 HTTP状态:{}, communityId:{}", responseEntity.getStatusCode(), communityId);
-            return;
-        }
-
-        if (responseEntity.getBody() == null) {
-            logger.error("微信推送失败，响应体为空, communityId:{}", communityId);
-            return;
-        }
-
-        logger.info("微信模板返回内容:{}", responseEntity.getBody());
-
-        JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        int errcode = paramOut.getIntValue("errcode");
-
-        if (errcode != 0 && (errcode == 40001 || errcode == 42001)) {
-            logger.warn("access_token过期或无效(errcode={})，尝试刷新后重试, communityId:{}", errcode, communityId);
-            try {
-                WechatFactory.invalidateAccessToken(appId);
-                String newToken = WechatFactory.getAccessToken(appId, appSecret);
-                sendUrl = sendMsgUrl + newToken;
-                responseEntity = outRestTemplate.postForEntity(sendUrl,
-                        JSON.toJSONString(templateMessage), String.class);
-
-                if (responseEntity.getStatusCode() != HttpStatus.OK || responseEntity.getBody() == null) {
-                    logger.error("微信推送重试失败, communityId:{}", communityId);
-                    return;
-                }
-
-                paramOut = com.alibaba.fastjson.JSONObject.parseObject(responseEntity.getBody());
-                errcode = paramOut.getIntValue("errcode");
-                if (errcode != 0) {
-                    logger.error("微信推送重试后仍失败 errcode={}, errmsg={}", errcode, paramOut.getString("errmsg"));
-                }
-            } catch (Exception e) {
-                logger.error("刷新access_token失败, communityId:{}", communityId, e);
             }
         }
     }

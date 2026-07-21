@@ -83,7 +83,7 @@ public class WechatGatewaySMOImpl extends DefaultAbstractComponentSMO implements
 
         WechatSubscribeDto wechatSubscribeDto = new WechatSubscribeDto();
         wechatSubscribeDto.setOpenId(fromUserName);
-        wechatSubscribeDto.setOpenId(appId);
+        wechatSubscribeDto.setAppId(appId);
         List<WechatSubscribeDto> wechatSubscribeDtos = wechatSubscribeV1InnerServiceSMOImpl.queryWechatSubscribes(wechatSubscribeDto);
         if (!ListUtil.isNull(wechatSubscribeDtos)) {
             return new ResponseEntity<>(responseStr, HttpStatus.OK);

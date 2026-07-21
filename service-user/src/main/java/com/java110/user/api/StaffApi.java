@@ -131,29 +131,42 @@ public class StaffApi {
     }
 
     /**
-     * 微信删除消息模板
+     * 生成员工认证二维码
+     * 支持两种模式：
+     * 1. 指定员工模式（默认）：URL 带 staffId + storeId，扫码后直接绑定当前员工
+     * 2. 通用认证模式（common=true）：URL 不带 staffId 和 storeId，
+     *    任何员工扫码后跳转员工端登录页，登录成功后自动绑定 openId
      *
-     * @param storeId 小区ID
-     * @return
      * @serviceCode /staff/generatorQrCode
      * @path /app/staff/generatorQrCode
      */
     @RequestMapping(value = "/generatorQrCode", method = RequestMethod.GET)
     public ResponseEntity<String> generatorQrCode(@RequestHeader(value = "store-id") String storeId,
                                                   @RequestHeader(value = "user-id") String userId,
-                                                  @RequestParam(value = "communityId") String communityId) {
+                                                  @RequestParam(value = "communityId") String communityId,
+                                                  @RequestParam(value = "common", required = false, defaultValue = "false") boolean common) {
         SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
         smallWeChatDto.setObjId(communityId);
         smallWeChatDto.setObjType(SmallWeChatDto.OBJ_TYPE_COMMUNITY);
         smallWeChatDto.setWechatType(SmallWeChatDto.WECHAT_TYPE_PUBLIC);
         List<SmallWeChatDto> smallWeChatDtos = smallWeChatInnerServiceSMOImpl.querySmallWeChats(smallWeChatDto);
-        String ownerUrl = UrlCache.getPropertyPhoneUrl()
-                + "/app/staffAuth?storeId=" + storeId + "&staffId=" + userId
-                + "&communityId=" + communityId + "&appId=" + AppDto.WECHAT_OWNER_APP_ID;
+        String staffAuthUrl;
+        if (common) {
+            // 通用认证模式：不带 staffId 和 storeId，回调后跳转员工端登录页（带 openId）
+            // 员工登录成功后由 PcUserLoginCmd 自动写入 staff_app_auth 绑定
+            staffAuthUrl = UrlCache.getPropertyPhoneUrl()
+                    + "/app/staffAuth?communityId=" + communityId
+                    + "&appId=" + AppDto.WECHAT_OWNER_APP_ID;
+        } else {
+            // 指定员工模式：URL 带 staffId + storeId，扫码后直接绑定当前员工
+            staffAuthUrl = UrlCache.getPropertyPhoneUrl()
+                    + "/app/staffAuth?storeId=" + storeId + "&staffId=" + userId
+                    + "&communityId=" + communityId + "&appId=" + AppDto.WECHAT_OWNER_APP_ID;
+        }
 
         if (smallWeChatDtos != null && smallWeChatDtos.size() > 0) {
-            ownerUrl += ("&wAppId=" + smallWeChatDtos.get(0).getAppId());
+            staffAuthUrl += ("&wAppId=" + smallWeChatDtos.get(0).getAppId());
         }
-        return ResultVo.createResponseEntity(ownerUrl);
+        return ResultVo.createResponseEntity(staffAuthUrl);
     }
 }

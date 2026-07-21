@@ -1,7 +1,5 @@
 package com.java110.job.msgNotify;
 
-import com.java110.dto.wechat.SmallWeChatDto;
-
 /**
  * 微信模板处理类
  */
@@ -26,6 +24,4 @@ public interface IWechatTemplate {
     String getAccessToken(String communityId);
 
     String getAppId(String communityId);
-
-    SmallWeChatDto getSmallWeChatDto(String communityId);
 }

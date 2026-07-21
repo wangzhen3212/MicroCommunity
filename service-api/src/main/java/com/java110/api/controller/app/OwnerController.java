@@ -209,19 +209,23 @@ public class OwnerController extends BaseController {
     /**
      * 微信公众号号鉴权
      * /app/staffAuth
+     * 通用认证模式：staffId 和 storeId 可选，为空时走通用认证流程（扫码后跳转登录页绑定）
      *
      * @param request
      */
     @RequestMapping(path = "/staffAuth")
     public ResponseEntity<String> staffAuth(@RequestParam(value = "communityId") String communityId,
-                                            @RequestParam(value = "staffId") String staffId,
-                                            @RequestParam(value = "storeId") String storeId,
+                                            @RequestParam(value = "staffId", required = false) String staffId,
+                                            @RequestParam(value = "storeId", required = false) String storeId,
                                             @RequestParam(value = "appId") String appId,
                                             HttpServletRequest request,
                                             HttpServletResponse response) {
         IPageData pd = PageData.newInstance().builder("", "", "", "",
                 "login", "", "", "", appId);
-        return staffAuthSMOImpl.refreshToken(pd, communityId, staffId, storeId, request, response);
+        return staffAuthSMOImpl.refreshToken(pd, communityId,
+                StringUtil.isEmpty(staffId) ? "" : staffId,
+                StringUtil.isEmpty(storeId) ? "" : storeId,
+                request, response);
 
     }
 

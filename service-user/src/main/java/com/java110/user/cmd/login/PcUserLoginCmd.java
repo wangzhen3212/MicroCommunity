@@ -13,11 +13,14 @@ import com.java110.core.log.LoggerFactory;
 import com.java110.doc.annotation.*;
 import com.java110.dto.app.AppDto;
 import com.java110.dto.store.StoreUserDto;
+import com.java110.dto.user.StaffAppAuthDto;
 import com.java110.dto.user.UserDto;
 import com.java110.dto.user.UserLoginDto;
 import com.java110.intf.store.IStoreInnerServiceSMO;
+import com.java110.intf.user.IStaffAppAuthInnerServiceSMO;
 import com.java110.intf.user.IUserInnerServiceSMO;
 import com.java110.intf.user.IUserLoginInnerServiceSMO;
+import com.java110.po.user.StaffAppAuthPo;
 import com.java110.po.user.UserLoginPo;
 import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.CommonConstant;
@@ -29,6 +32,7 @@ import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.ListUtil;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,6 +122,12 @@ public class PcUserLoginCmd extends Cmd {
      */
     @Autowired
     private IUserInnerServiceSMO userInnerServiceSMOImpl;
+
+    /**
+     * 员工微信认证接口（用于通用认证二维码登录后自动绑定 openId）
+     */
+    @Autowired
+    private IStaffAppAuthInnerServiceSMO staffAppAuthInnerServiceSMOImpl;
 
     /**
      * 参数验证方法
@@ -238,9 +248,69 @@ public class PcUserLoginCmd extends Cmd {
         userLoginPo.setUserName(userInfo.getString("userName"));
         userLoginInnerServiceSMOImpl.saveUserLogin(userLoginPo);
 
+        // 通用认证二维码登录后自动绑定 openId 到 staff_app_auth
+        // 仅当请求中携带 openId 参数时执行（其它登录入口不携带此参数，不受影响）
+        // 员工在多个商户下的身份都会绑定同一个 openId（唯一键：staff_id + store_id + app_type）
+        String openId = reqJson.getString("openId");
+        String openName = reqJson.getString("openName");
+        if (!StringUtil.isEmpty(openId) && !ListUtil.isNull(storeUserDtos)) {
+            String staffId = userInfo.getString("userId");
+            for (StoreUserDto suDto : storeUserDtos) {
+                if (StringUtil.isEmpty(suDto.getStoreId())) {
+                    continue;
+                }
+                bindStaffAppAuth(staffId, suDto.getStoreId(), openId, openName);
+            }
+        }
+
         // 返回登录成功响应
         responseEntity = ResultVo.createResponseEntity(data);
         cmdDataFlowContext.setResponseEntity(responseEntity);
+    }
+
+    /**
+     * 绑定员工微信认证信息
+     * 已存在则更新 openId/state/openName/createTime，不存在则新增
+     * 唯一键：staff_id + store_id + app_type
+     */
+    private void bindStaffAppAuth(String staffId, String storeId, String openId, String openName) {
+        try {
+            StaffAppAuthDto queryDto = new StaffAppAuthDto();
+            queryDto.setStaffId(staffId);
+            queryDto.setStoreId(storeId);
+            queryDto.setAppType("WECHAT");
+            int count = staffAppAuthInnerServiceSMOImpl.queryStaffAppAuthsCount(queryDto);
+            if (count > 0) {
+                List<StaffAppAuthDto> existList = staffAppAuthInnerServiceSMOImpl.queryStaffAppAuths(queryDto);
+                if (ListUtil.isNull(existList)) {
+                    return;
+                }
+                StaffAppAuthPo updatePo = new StaffAppAuthPo();
+                updatePo.setAuId(existList.get(0).getAuId());
+                updatePo.setOpenId(openId);
+                updatePo.setState("2002");
+                updatePo.setOpenName(openName);
+                updatePo.setAppType("WECHAT");
+                updatePo.setStaffId(staffId);
+                updatePo.setStoreId(storeId);
+                staffAppAuthInnerServiceSMOImpl.updateStaffAppAuth(updatePo);
+                logger.debug("通用认证：更新员工绑定 staffId={}, storeId={}, openId={}", staffId, storeId, openId);
+            } else {
+                StaffAppAuthPo savePo = new StaffAppAuthPo();
+                savePo.setAuId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_auId));
+                savePo.setStaffId(staffId);
+                savePo.setStoreId(storeId);
+                savePo.setAppType("WECHAT");
+                savePo.setOpenId(openId);
+                savePo.setState("2002");
+                savePo.setOpenName(openName);
+                staffAppAuthInnerServiceSMOImpl.saveStaffAppAuth(savePo);
+                logger.debug("通用认证：新增员工绑定 staffId={}, storeId={}, openId={}", staffId, storeId, openId);
+            }
+        } catch (Exception e) {
+            // 绑定失败不影响登录主流程，仅记录日志
+            logger.error("通用认证：自动绑定员工微信认证失败 staffId=" + staffId + ", storeId=" + storeId, e);
+        }
     }
 
 }

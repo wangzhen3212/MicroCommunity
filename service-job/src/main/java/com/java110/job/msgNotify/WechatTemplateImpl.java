@@ -273,10 +273,6 @@ public class WechatTemplateImpl implements IWechatTemplate {
 
     @Override
     public String getAppId(String communityId) {
-        return getSmallWeChatDto(communityId).getAppId();
-    }
-
-    public SmallWeChatDto getSmallWeChatDto(String communityId) {
         SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
         smallWeChatDto.setWeChatType(SmallWeChatDto.WECHAT_TYPE_PUBLIC);
         smallWeChatDto.setObjType(SmallWeChatDto.OBJ_TYPE_COMMUNITY);
@@ -296,6 +292,6 @@ public class WechatTemplateImpl implements IWechatTemplate {
         } else {
             smallWeChatDto = smallWeChatDtos.get(0);
         }
-        return smallWeChatDto;
+        return smallWeChatDto.getAppId();
     }
 }
