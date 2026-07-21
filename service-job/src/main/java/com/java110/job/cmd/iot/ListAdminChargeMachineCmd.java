@@ -15,6 +15,8 @@ import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.ListUtil;
 import com.java110.vo.ResultVo;
+import org.slf4j.Logger;
+import com.java110.core.log.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.text.ParseException;
@@ -22,6 +24,8 @@ import java.util.List;
 
 @Java110Cmd(serviceCode = "iot.listAdminChargeMachine")
 public class ListAdminChargeMachineCmd extends Cmd {
+
+    private static final Logger logger = LoggerFactory.getLogger(ListAdminChargeMachineCmd.class);
 
     @Autowired
     private ISendIot sendIotImpl;
@@ -36,10 +40,6 @@ public class ListAdminChargeMachineCmd extends Cmd {
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
         super.validatePageInfo(reqJson);
         super.validateAdmin(context);
-        String iotSwitch = MappingCache.getValue("IOT", "IOT_SWITCH");
-        if (!"ON".equals(iotSwitch)) {
-            throw new CmdException("物联网系统未部署");
-        }
 
         String userId = CmdContextUtils.getUserId(context);
 
@@ -57,6 +57,14 @@ public class ListAdminChargeMachineCmd extends Cmd {
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
+
+        String iotSwitch = MappingCache.getValue("IOT", "IOT_SWITCH");
+        if (!"ON".equals(iotSwitch)) {
+            logger.debug("IOT开关未开启，跳过执行iot.listAdminChargeMachine");
+            context.setResponseEntity(ResultVo.createResponseEntity(new ResultVo(ResultVo.CODE_OK, "未部署IOT系统")));
+            return;
+        }
+
         String staffId = CmdContextUtils.getUserId(context);
 
         List<String> communityIds = staffCommunityV1InnerServiceSMOImpl.queryStaffCommunityIds(staffId);

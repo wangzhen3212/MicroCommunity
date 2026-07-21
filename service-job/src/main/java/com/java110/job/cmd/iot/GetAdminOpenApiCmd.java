@@ -16,6 +16,8 @@ import com.java110.utils.cache.MappingCache;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.vo.ResultVo;
+import org.slf4j.Logger;
+import com.java110.core.log.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.text.ParseException;
@@ -23,6 +25,8 @@ import java.util.List;
 
 @Java110Cmd(serviceCode = "iot.getAdminOpenApi")
 public class GetAdminOpenApiCmd extends Cmd {
+
+    private static final Logger logger = LoggerFactory.getLogger(GetAdminOpenApiCmd.class);
 
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
@@ -39,11 +43,6 @@ public class GetAdminOpenApiCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
         Assert.hasKeyAndValue(reqJson, "iotApiCode", "未包含IOT接口编码");
-
-        String iotSwitch = MappingCache.getValue("IOT", "IOT_SWITCH");
-        if (!"ON".equals(iotSwitch)) {
-            throw new CmdException("物联网系统未部署");
-        }
 
         String userId = CmdContextUtils.getUserId(context);
 
@@ -65,6 +64,12 @@ public class GetAdminOpenApiCmd extends Cmd {
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException, ParseException {
 
+        String iotSwitch = MappingCache.getValue("IOT", "IOT_SWITCH");
+        if (!"ON".equals(iotSwitch)) {
+            logger.debug("IOT开关未开启，跳过执行iot.getAdminOpenApi");
+            context.setResponseEntity(ResultVo.createResponseEntity(new ResultVo(ResultVo.CODE_OK, "未部署IOT系统")));
+            return;
+        }
 
         ResultVo resultVo = sendIotImpl.post("/iot/api/common.openCommonApi", reqJson);
 

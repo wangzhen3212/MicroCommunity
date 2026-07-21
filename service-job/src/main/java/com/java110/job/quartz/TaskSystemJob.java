@@ -27,11 +27,19 @@ public class TaskSystemJob implements Job {
     private TaskSystemQuartz taskSystemQuartz;
 
     protected void executeInternal(JobExecutionContext context) {
+        TaskDto taskDto = null;
         try {
-            TaskDto taskDto = (TaskDto) (context.getJobDetail().getJobDataMap()
+            taskDto = (TaskDto) (context.getJobDetail().getJobDataMap()
                     .get(JOB_DATA_TASK));
-            taskSystemQuartz = (TaskSystemQuartz) ApplicationContextFactory.getBean(taskDto.getTaskTemplateDto().getClassBean());
+            String classBean = taskDto.getTaskTemplateDto().getClassBean();
+            taskSystemQuartz = (TaskSystemQuartz) ApplicationContextFactory.getBean(classBean);
             taskSystemQuartz.startTask(taskDto);
+        } catch (org.springframework.beans.factory.NoSuchBeanDefinitionException ex) {
+            String taskName = taskDto != null ? taskDto.getTaskName() : "unknown";
+            String classBean = taskDto != null && taskDto.getTaskTemplateDto() != null
+                    ? taskDto.getTaskTemplateDto().getClassBean() : "unknown";
+            logger.warn("定时任务[{}]对应的Bean[{}]不存在，已跳过执行。请在数据库中清理该任务或实现对应类。",
+                    taskName, classBean);
         } catch (Throwable ex) {
             logger.error("执行任务失败：", ex);
         }
