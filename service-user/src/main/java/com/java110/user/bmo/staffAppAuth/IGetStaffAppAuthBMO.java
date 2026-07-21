@@ -15,5 +15,12 @@ public interface IGetStaffAppAuthBMO {
      */
     ResponseEntity<String> get(StaffAppAuthDto staffAppAuthDto);
 
+    /**
+     * 查询商户下所有员工的微信认证信息
+     *
+     * @param staffAppAuthDto 包含 storeId, page, row
+     * @return
+     */
+    ResponseEntity<String> getList(StaffAppAuthDto staffAppAuthDto);
 
 }

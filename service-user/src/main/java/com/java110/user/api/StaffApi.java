@@ -123,11 +123,14 @@ public class StaffApi {
         staffAppAuthDto.setRow(row);
         staffAppAuthDto.setStoreId(storeId);
 
-        staffAppAuthDto.setStaffId(userId);
-        if(!StringUtil.isEmpty(staffId)){
+        if (!StringUtil.isEmpty(staffId)) {
+            // 查询指定员工认证信息
             staffAppAuthDto.setStaffId(staffId);
+            return getStaffAppAuthBMOImpl.get(staffAppAuthDto);
+        } else {
+            // 查询商户下所有员工认证信息
+            return getStaffAppAuthBMOImpl.getList(staffAppAuthDto);
         }
-        return getStaffAppAuthBMOImpl.get(staffAppAuthDto);
     }
 
     /**
@@ -144,7 +147,8 @@ public class StaffApi {
     public ResponseEntity<String> generatorQrCode(@RequestHeader(value = "store-id") String storeId,
                                                   @RequestHeader(value = "user-id") String userId,
                                                   @RequestParam(value = "communityId") String communityId,
-                                                  @RequestParam(value = "common", required = false, defaultValue = "false") boolean common) {
+                                                  @RequestParam(value = "common", required = false, defaultValue = "false") boolean common,
+                                                  @RequestParam(value = "staffId", required = false) String staffId) {
         SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
         smallWeChatDto.setObjId(communityId);
         smallWeChatDto.setObjType(SmallWeChatDto.OBJ_TYPE_COMMUNITY);
@@ -158,9 +162,11 @@ public class StaffApi {
                     + "/app/staffAuth?communityId=" + communityId
                     + "&appId=" + AppDto.WECHAT_OWNER_APP_ID;
         } else {
-            // 指定员工模式：URL 带 staffId + storeId，扫码后直接绑定当前员工
+            // 指定员工模式：URL 带 staffId + storeId
+            // 优先使用传入的 staffId，否则使用当前登录用户的 userId
+            String targetStaffId = StringUtil.isEmpty(staffId) ? userId : staffId;
             staffAuthUrl = UrlCache.getPropertyPhoneUrl()
-                    + "/app/staffAuth?storeId=" + storeId + "&staffId=" + userId
+                    + "/app/staffAuth?storeId=" + storeId + "&staffId=" + targetStaffId
                     + "&communityId=" + communityId + "&appId=" + AppDto.WECHAT_OWNER_APP_ID;
         }
 
