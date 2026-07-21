@@ -78,8 +78,9 @@ public class SynchronizeWechatSubscribeAdapt extends DatabusAdaptImpl {
 
         getAllOpenId(accessToken, "", smallWeChatDtos.get(0), existingMap);
 
+        // 删除已取关的用户（existingMap 中剩余的就是微信没返回的已取关 openId）
         for (WechatSubscribeDto existing : existingSubscribes) {
-            if (!existingMap.containsKey(existing.getOpenId())) {
+            if (existingMap.containsKey(existing.getOpenId())) {
                 WechatSubscribePo deletePo = new WechatSubscribePo();
                 deletePo.setSubId(existing.getSubId());
                 deletePo.setAppId(existing.getAppId());
