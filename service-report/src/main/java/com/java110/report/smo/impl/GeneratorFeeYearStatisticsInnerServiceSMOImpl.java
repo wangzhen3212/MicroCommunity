@@ -336,6 +336,10 @@ public class GeneratorFeeYearStatisticsInnerServiceSMOImpl implements IGenerator
             reportFeeYearCollectionPo.setOwnerLink(reportRoomDto.getLink());
 
             //reportFeeYearCollectionPo.setUpdateTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+            if (StringUtil.isEmpty(reportRoomDto.getOwnerId())) {
+                logger.debug("房屋[" + reportRoomDto.getRoomId() + "]无业主信息，跳过年度费用统计记录");
+                return;
+            }
             reportFeeYearCollectionServiceDaoImpl.saveReportFeeYearCollectionInfo(BeanConvertUtil.beanCovertMap(reportFeeYearCollectionPo));
         } else {
             BeanConvertUtil.covertBean(statistics.get(0), reportFeeYearCollectionPo);
