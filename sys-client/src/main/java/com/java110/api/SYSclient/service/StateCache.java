@@ -32,7 +32,7 @@ public class StateCache {
 
     private void loadAllDicts() {
         try {
-            String sql = "SELECT t.name, t.table_name, t.table_columns FROM t_dict t WHERE t.status_cd = '0' AND t.table_name IS NOT NULL AND t.table_columns IS NOT NULL";
+            String sql = "SELECT t.name, t.table_name, t.table_columns, t.status_cd FROM t_dict t WHERE t.table_name IS NOT NULL AND t.table_columns IS NOT NULL";
             List<Map<String, Object>> results = queryServiceDAO.executeSql(sql, new Object[]{});
 
             if (results != null) {

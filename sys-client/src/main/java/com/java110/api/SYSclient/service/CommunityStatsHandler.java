@@ -23,7 +23,7 @@ public class CommunityStatsHandler {
         Map<String, Object> data = new HashMap<>();
 
         if (pullTypes == null || pullTypes.isEmpty()) {
-            pullTypes = Arrays.asList("room", "workorder", "complaint", "fee");
+            pullTypes = Arrays.asList("room", "workorder", "complaint");
         }
 
         for (String pullType : pullTypes) {
@@ -38,17 +38,11 @@ public class CommunityStatsHandler {
                     case "complaint":
                         data.put("complaint", directSqlStatsHandler.pullComplaintStats(communityId));
                         break;
-                    case "fee":
-                        data.put("fee", directSqlStatsHandler.pullFeeStats(communityId));
-                        break;
                     case "fund":
                         data.put("fund", pullFundStats(communityId));
                         break;
                     case "public":
                         data.put("public", pullPublicProfitStats(communityId));
-                        break;
-                    case "camera":
-                        data.put("camera", directSqlStatsHandler.pullCameraStats(communityId));
                         break;
                     default:
                         logger.warn("[统计拉取] 未知拉取类型: {}", pullType);
@@ -62,6 +56,24 @@ public class CommunityStatsHandler {
 
         result.put("data", data);
         result.put("success", true);
+
+        // 调试日志：输出每种类型的数据摘要
+        StringBuilder summary = new StringBuilder();
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            String type = entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> typeMap = (Map<String, Object>) value;
+                summary.append(type).append("={total=").append(typeMap.get("total"))
+                        .append(", hasError=").append(typeMap.containsKey("error")).append("}, ");
+            } else {
+                summary.append(type).append("={raw=").append(value).append("}, ");
+            }
+        }
+        logger.info("[统计拉取] communityId={}, pullTypes={}, 返回数据摘要: {}", 
+                communityId, pullTypes, summary.toString());
+
         return result;
     }
 
