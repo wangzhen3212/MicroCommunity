@@ -14,8 +14,9 @@ import java.io.Serializable;
  **/
 public class InspectionTaskDetailDto extends PageDto implements Serializable {
 
-    public static final String SEND_FLAG_Y = "Y";//已经推送
+    public static final String SEND_FLAG_Y = "Y";//已经推送（时效内提醒）
     public static final String SEND_FLAG_N = "N";//未推送数据
+    public static final String SEND_FLAG_A = "A";//已提前推送
 
     private String inspectionId;
     private String inspectionName;
@@ -74,6 +75,8 @@ public class InspectionTaskDetailDto extends PageDto implements Serializable {
     private String itemId;
 
     private String sendFlag;
+
+    private String beforeTime;
 
     private String lng;
 
@@ -397,6 +400,14 @@ public class InspectionTaskDetailDto extends PageDto implements Serializable {
 
     public void setSendFlag(String sendFlag) {
         this.sendFlag = sendFlag;
+    }
+
+    public String getBeforeTime() {
+        return beforeTime;
+    }
+
+    public void setBeforeTime(String beforeTime) {
+        this.beforeTime = beforeTime;
     }
 
     public String getPointObjId() {

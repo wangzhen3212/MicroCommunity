@@ -31,8 +31,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 通知员工工单处理
@@ -85,10 +89,10 @@ public class NoticeStaffTaskTemplate extends TaskSystemQuartz {
 
         for (CommunityDto communityDto : communityDtos) {
             try {
-                //todo 巡检 任务生成提醒
-                publishStaffInspectionTask(taskDto, communityDto);
+                //todo 巡检 补推（GeneratorInspectionTaskTemplate 提前推送失败的补偿）
+                publishStaffInspectionTaskAdvance(taskDto, communityDto);
             } catch (Exception e) {
-                logger.error("巡检 任务生成提醒", e);
+                logger.error("巡检 补推失败", e);
             }
             try {
                 //todo 巡检情况通知
@@ -237,62 +241,90 @@ public class NoticeStaffTaskTemplate extends TaskSystemQuartz {
     }
 
     /**
-     * 巡检任务
-     *
-     * @param taskDto
-     * @param communityDto
+     * 巡检补推：补偿 GeneratorInspectionTaskTemplate 提前推送失败的情况
+     * 查询 sendFlag=N 且当前时间在提前窗口内的任务，进行补推
      */
-    private void publishStaffInspectionTask(TaskDto taskDto, CommunityDto communityDto) {
+    private void publishStaffInspectionTaskAdvance(TaskDto taskDto, CommunityDto communityDto) {
 
         InspectionTaskDetailDto inspectionTaskDetailDto = new InspectionTaskDetailDto();
         inspectionTaskDetailDto.setCommunityId(communityDto.getCommunityId());
         inspectionTaskDetailDto.setState(InspectionTaskDto.STATE_NO_START);
-        inspectionTaskDetailDto.setQrCodeTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
         inspectionTaskDetailDto.setSendFlag(InspectionTaskDetailDto.SEND_FLAG_N);
+        inspectionTaskDetailDto.setQueryTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_B));
         List<InspectionTaskDetailDto> inspectionTaskDetailDtos = inspectionTaskDetailInnerServiceSMOImpl.queryInspectionTaskDetails(inspectionTaskDetailDto);
-        for (InspectionTaskDetailDto tInspectionTaskDetailDto : inspectionTaskDetailDtos) {
-            String startTime = tInspectionTaskDetailDto.getPointStartTime();
-            startTime = DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_B) + " " + startTime + ":00";
-            Date startDate = null;
-            try {
-                startDate = DateUtil.getDateFromString(startTime, DateUtil.DATE_FORMATE_STRING_A);
-            } catch (ParseException e) {
-                e.printStackTrace();
-                startDate = new Date();
-            }
 
-            //还没有到时间
-            if (startDate.getTime() > DateUtil.getCurrentDate().getTime()) {
+        // 按 taskId 聚合
+        Map<String, List<InspectionTaskDetailDto>> taskGroup = new HashMap<>();
+        for (InspectionTaskDetailDto detail : inspectionTaskDetailDtos) {
+            taskGroup.computeIfAbsent(detail.getTaskId(), k -> new ArrayList<>()).add(detail);
+        }
+
+        Date now = DateUtil.getCurrentDate();
+        String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
+        if (wechatUrl.endsWith("#/")) {
+            wechatUrl += "pages/inspection/inspectionIndex";
+        } else if (wechatUrl.endsWith("/")) {
+            wechatUrl += "#/pages/inspection/inspectionIndex";
+        } else {
+            wechatUrl += "/#/pages/inspection/inspectionIndex";
+        }
+
+        for (Map.Entry<String, List<InspectionTaskDetailDto>> entry : taskGroup.entrySet()) {
+            List<InspectionTaskDetailDto> details = entry.getValue();
+            if (details.isEmpty()) {
                 continue;
             }
 
+            InspectionTaskDetailDto firstDetail = details.get(0);
+
+            // 检查是否已到提前推送时间：now >= plan_ins_time - beforeTime 且 now < plan_ins_time
+            int beforeTime;
+            try {
+                beforeTime = Integer.parseInt(firstDetail.getBeforeTime() == null ? "30" : firstDetail.getBeforeTime());
+            } catch (NumberFormatException e) {
+                beforeTime = 30;
+            }
+
+            Date planInsTime;
+            try {
+                planInsTime = DateUtil.getDateFromString(firstDetail.getPlanInsTime(), DateUtil.DATE_FORMATE_STRING_A);
+            } catch (ParseException e) {
+                logger.error("解析计划开始时间失败: " + firstDetail.getPlanInsTime(), e);
+                continue;
+            }
+
+            Calendar advanceTime = Calendar.getInstance();
+            advanceTime.setTime(planInsTime);
+            advanceTime.add(Calendar.MINUTE, -beforeTime);
+
+            // 还没到提前推送时间 或 已经过了任务开始时间
+            if (now.before(advanceTime.getTime()) || !now.before(planInsTime)) {
+                continue;
+            }
+
+            // 发送提前提醒（按任务聚合，一条消息）
             IMsgNotify msgNotify = MsgNotifyFactory.getMsgNotify(MsgNotifyFactory.NOTIFY_WAY_WECHAT);
-            String staffWechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
-            staffWechatUrl = staffWechatUrl
-                    + "pages/excuteOneQrCodeInspection/excuteOneQrCodeInspection?inspectionId="
-                    + tInspectionTaskDetailDto.getInspectionId()
-                    + "&inspectionName=" + tInspectionTaskDetailDto.getInspectionName()
-                    + "&itemId=" + tInspectionTaskDetailDto.getItemId();
             try {
                 msgNotify.sendStaffMsg(
                         new NoticeStaffDto(communityDto.getCommunityId(),
-                                tInspectionTaskDetailDto.getPlanUserId(),
-                                tInspectionTaskDetailDto.getInspectionName() + "未巡检，请及时巡检",
+                                firstDetail.getPlanUserId(),
+                                firstDetail.getInspectionPlanName() + "巡检任务即将在" + firstDetail.getPlanInsTime() + "开始，共" + details.size() + "个巡检点",
                                 "系统管理员",
-                                staffWechatUrl)
+                                wechatUrl)
                 );
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("提前推送失败: taskId=" + firstDetail.getTaskId(), e);
             }
 
-
-            InspectionTaskDetailDto inspectionTaskDetailPo = new InspectionTaskDetailDto();
-            inspectionTaskDetailPo.setTaskDetailId(tInspectionTaskDetailDto.getTaskDetailId());
-            inspectionTaskDetailPo.setSendFlag(InspectionTaskDetailDto.SEND_FLAG_Y);
-            inspectionTaskDetailPo.setStatusCd("0");
-            inspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(inspectionTaskDetailPo);
+            // 更新所有巡检点的 sendFlag 为 A（已提前推送）
+            for (InspectionTaskDetailDto detail : details) {
+                InspectionTaskDetailDto updateDto = new InspectionTaskDetailDto();
+                updateDto.setTaskDetailId(detail.getTaskDetailId());
+                updateDto.setSendFlag(InspectionTaskDetailDto.SEND_FLAG_A);
+                updateDto.setStatusCd("0");
+                inspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(updateDto);
+            }
         }
-
     }
 
 }

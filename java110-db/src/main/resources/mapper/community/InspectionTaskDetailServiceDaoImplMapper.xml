@@ -122,7 +122,7 @@
         inspectionStateName,
         ipl.inspection_plan_name,ipl.inspection_plan_name inspectionPlanName,ir.route_name,ir.route_name routeName,
         it.plan_user_name,it.plan_user_name planUserName,it.plan_user_id,it.plan_user_id planUserId,it.act_user_name,it.act_user_name actUserName,td4.name,td4.name
-        signTypeName,td5.name taskStateName,ip.item_id itemId,t.send_flag sendFlag,t.create_time createTime
+        signTypeName,td5.name taskStateName,ip.item_id itemId,t.send_flag sendFlag,t.create_time createTime,t.qr_code_time qrCodeTime,ipl.before_time beforeTime
         from inspection_task_detail t
         LEFT JOIN inspection_point ip on t.inspection_id = ip.inspection_id and ip.status_cd = '0'
         left join t_dict td1 on t.state = td1.status_cd and td1.table_name = 'inspection_task_detail' and

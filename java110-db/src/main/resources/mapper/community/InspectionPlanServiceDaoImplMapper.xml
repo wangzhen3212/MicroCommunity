@@ -25,12 +25,13 @@
          community_id,
          b_id,
          create_user_id,
-         create_user_name)
+         create_user_name,
+         before_time)
         values (#{inspectionPlanName}, #{inspectionRouteId}, #{inspectionPlanPeriod}, #{remark},
                 #{endTime}, #{startDate}, #{endDate}, #{inspectionMonth}, #{inspectionDay}, #{inspectionWorkday},
                 #{canReexamine}, #{operate}, #{signType}, #{startTime},
                 #{inspectionPlanId}, #{state}, #{communityId}, #{bId}, #{createUserId},
-                #{createUserName})
+                #{createUserName}, #{beforeTime})
     </insert>
 
     <!-- 查询巡检计划信息（Business） add by wuxw 2018-07-03 -->
@@ -94,12 +95,14 @@
         inspection_plan_name,inspection_route_id,
         inspection_plan_period,remark,status_cd,end_time,
         sign_type,start_time,create_user_id,create_user_name,
-        inspection_plan_id,state,community_id,b_id
+        inspection_plan_id,state,community_id,b_id,
+        inspection_month,inspection_day,inspection_workday,before_time,start_date,end_date,can_reexamine
         ) select
         t.inspection_plan_name,t.inspection_route_id,t.inspection_plan_period,t.remark,'0',
         t.end_time,t.sign_type,t.start_time,t.create_user_id,t.create_user_name,
         t.inspection_plan_id,t.state,
-        t.community_id,t.b_id
+        t.community_id,t.b_id,
+        t.inspection_month,t.inspection_day,t.inspection_workday,t.before_time,t.start_date,t.end_date,t.can_reexamine
         from business_inspection_plan t where 1=1
         <if test="inspectionPlanName !=null and inspectionPlanName != ''">
             and t.inspection_plan_name= #{inspectionPlanName}
@@ -207,8 +210,8 @@
             and t.start_date= #{startDate}
         </if>
         <if test="curTime !=null ">
-            and t.start_date &lt; #{curTime}
-            and t.end_date &gt; #{curTime}
+            and t.start_date &lt;= #{curTime}
+            and t.end_date &gt;= #{curTime}
         </if>
         <if test="createUserId !=null and createUserId != ''">
             and t.create_user_id= #{createUserId}

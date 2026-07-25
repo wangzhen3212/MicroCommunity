@@ -42,6 +42,8 @@ public class InspectionTaskDetailPo implements Serializable {
 
     private String sendFlag;
 
+    private String qrCodeTime;
+
     private String statusCd;
 
     public String getTaskDetailId() {
@@ -186,6 +188,14 @@ public class InspectionTaskDetailPo implements Serializable {
 
     public void setSendFlag(String sendFlag) {
         this.sendFlag = sendFlag;
+    }
+
+    public String getQrCodeTime() {
+        return qrCodeTime;
+    }
+
+    public void setQrCodeTime(String qrCodeTime) {
+        this.qrCodeTime = qrCodeTime;
     }
 
     public String getStatusCd() {

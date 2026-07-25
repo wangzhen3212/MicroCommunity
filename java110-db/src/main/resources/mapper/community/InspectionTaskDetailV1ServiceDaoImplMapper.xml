@@ -9,10 +9,10 @@
     <insert id="saveInspectionTaskDetailInfo" parameterType="Map">
         insert into inspection_task_detail(
         send_flag,point_end_time,latitude,inspection_time,sort_number,description,act_user_name,task_detail_id,inspection_id,
-        inspection_state,point_start_time,inspection_name,state,community_id,act_user_id,task_id,longitude
+        inspection_state,point_start_time,inspection_name,state,community_id,act_user_id,task_id,longitude,qr_code_time
         ) values (
         #{sendFlag},#{pointEndTime},#{latitude},#{inspectionTime},#{sortNumber},#{description},#{actUserName},#{taskDetailId},
-        #{inspectionId},#{inspectionState},#{pointStartTime},#{inspectionName},#{state},#{communityId},#{actUserId},#{taskId},#{longitude}
+        #{inspectionId},#{inspectionState},#{pointStartTime},#{inspectionName},#{state},#{communityId},#{actUserId},#{taskId},#{longitude},#{qrCodeTime}
         )
     </insert>
 
@@ -22,9 +22,11 @@
         select t.send_flag sendFlag,t.point_end_time pointEndTime,t.latitude,t.inspection_time inspectionTime,t.sort_number,t.sort_number
         sortNumber,t.description,t.status_cd statusCd,t.act_user_name actUserName,t.task_detail_id taskDetailId,t.inspection_id
         inspectionId,t.inspection_state inspectionState,t.point_start_time pointStartTime,t.inspection_name inspectionName,t.state,
-        t.community_id communityId,t.act_user_id actUserId,t.task_id taskId,t.longitude,ip.lng,ip.lat
+        t.community_id communityId,t.act_user_id actUserId,t.task_id taskId,t.longitude,ip.lng,ip.lat,
+        it.plan_ins_time planInsTime,it.plan_end_time planEndTime,t.qr_code_time qrCodeTime
         from inspection_task_detail t
         left join inspection_point ip on t.inspection_id = ip.inspection_id and ip.status_cd = '0'
+        left join inspection_task it on t.task_id = it.task_id and it.status_cd = '0'
         where 1 =1
         <if test="sendFlag !=null and sendFlag != ''">
             and t.send_flag= #{sendFlag}
@@ -79,6 +81,9 @@
         </if>
         <if test="longitude !=null and longitude != ''">
             and t.longitude= #{longitude}
+        </if>
+        <if test="qrCodeTime !=null and qrCodeTime != ''">
+            and t.qr_code_time= #{qrCodeTime}
         </if>
         order by t.create_time desc
         <if test="page != -1 and page != null ">
@@ -139,6 +144,9 @@
         </if>
         <if test="longitude !=null and longitude != ''">
             , t.longitude= #{longitude}
+        </if>
+        <if test="qrCodeTime !=null and qrCodeTime != ''">
+            , t.qr_code_time= #{qrCodeTime}
         </if>
         where 1=1
         <if test="taskDetailId !=null and taskDetailId != ''">

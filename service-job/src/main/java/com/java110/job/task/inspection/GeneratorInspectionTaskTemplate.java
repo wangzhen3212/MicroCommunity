@@ -5,14 +5,20 @@ import com.java110.dto.community.CommunityDto;
 import com.java110.dto.inspection.InspectionPlanDto;
 import com.java110.dto.inspection.InspectionPlanStaffDto;
 import com.java110.dto.inspection.InspectionRoutePointRelDto;
+import com.java110.dto.inspection.InspectionTaskDetailDto;
 import com.java110.dto.inspection.InspectionTaskDto;
 import com.java110.dto.classes.ScheduleClassesStaffDto;
+import com.java110.dto.notice.NoticeStaffDto;
 import com.java110.dto.task.TaskDto;
 import com.java110.intf.community.*;
 import com.java110.intf.store.IScheduleClassesStaffV1InnerServiceSMO;
+import com.java110.job.msgNotify.IMsgNotify;
+import com.java110.job.msgNotify.MsgNotifyFactory;
 import com.java110.job.quartz.TaskSystemQuartz;
 import com.java110.po.inspection.InspectionTaskDetailPo;
 import com.java110.po.inspection.InspectionTaskPo;
+import com.java110.utils.cache.MappingCache;
+import com.java110.utils.constant.MappingConstant;
 import com.java110.utils.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -107,6 +113,24 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
 
         inspectionTaskInnerServiceSMOImpl.saveInspectionTaskDetail(inspectionTaskDetailPos);
 
+        // 任务生成后立即进行提前推送
+        for (InspectionTaskPo taskPo : inspectionTaskPos) {
+            int detailCount = 0;
+            for (InspectionTaskDetailPo detailPo : inspectionTaskDetailPos) {
+                if (detailPo.getTaskId().equals(taskPo.getTaskId())) {
+                    detailCount++;
+                }
+            }
+            try {
+                sendAdvancePushMsg(communityDto, tmpInspectionPlanDto.getInspectionPlanName(),
+                        taskPo.getPlanUserId(), taskPo.getPlanInsTime(), detailCount);
+                // 推送成功，更新 sendFlag 为 A
+                updateDetailSendFlag(taskPo.getTaskId(), InspectionTaskDetailDto.SEND_FLAG_A, inspectionTaskDetailPos);
+            } catch (Exception e) {
+                logger.error("提前推送失败(taskId=" + taskPo.getTaskId() + "), 将交由补推任务重试", e);
+            }
+        }
+
     }
 
 
@@ -166,6 +190,7 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
             inspectionTaskDetailPo.setSortNumber(tmpInspectionRoutePointRelDto.getSortNumber());
             inspectionTaskDetailPo.setTaskDetailId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_taskDetailId));
             inspectionTaskDetailPo.setSendFlag("N");
+            inspectionTaskDetailPo.setQrCodeTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
             inspectionTaskDetailPos.add(inspectionTaskDetailPo);
         }
         inspectionTaskPos.add(inspectionTaskPo);
@@ -310,6 +335,46 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
 
         return true;
 
+    }
+
+    /**
+     * 发送提前推送消息
+     */
+    private void sendAdvancePushMsg(CommunityDto communityDto, String planName,
+                                     String planUserId, String planInsTime, int detailCount) {
+        IMsgNotify msgNotify = MsgNotifyFactory.getMsgNotify(MsgNotifyFactory.NOTIFY_WAY_WECHAT);
+        String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
+        if (wechatUrl.endsWith("#/")) {
+            wechatUrl += "pages/inspection/inspectionIndex";
+        } else if (wechatUrl.endsWith("/")) {
+            wechatUrl += "#/pages/inspection/inspectionIndex";
+        } else {
+            wechatUrl += "/#/pages/inspection/inspectionIndex";
+        }
+        msgNotify.sendStaffMsg(
+                new NoticeStaffDto(communityDto.getCommunityId(),
+                        planUserId,
+                        planName + "巡检任务即将在" + planInsTime + "开始，共" + detailCount + "个巡检点",
+                        "系统管理员",
+                        wechatUrl)
+        );
+    }
+
+    /**
+     * 更新任务下所有巡检点的 sendFlag
+     */
+    private void updateDetailSendFlag(String taskId, String sendFlag,
+                                       List<InspectionTaskDetailPo> inspectionTaskDetailPos) {
+        for (InspectionTaskDetailPo detailPo : inspectionTaskDetailPos) {
+            if (detailPo.getTaskId().equals(taskId)) {
+                com.java110.dto.inspection.InspectionTaskDetailDto updateDto =
+                        new com.java110.dto.inspection.InspectionTaskDetailDto();
+                updateDto.setTaskDetailId(detailPo.getTaskDetailId());
+                updateDto.setSendFlag(sendFlag);
+                updateDto.setStatusCd("0");
+                inspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(updateDto);
+            }
+        }
     }
 
 

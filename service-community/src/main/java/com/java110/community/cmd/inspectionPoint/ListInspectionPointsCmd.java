@@ -131,10 +131,17 @@ public class ListInspectionPointsCmd extends Cmd {
     private void refreshInspections(List<ApiInspectionPointDataVo> inspectionPoints) {
         // 从缓存中获取微信员工端URL
         String staffWechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN,"STAFF_WECHAT_URL");
+        String baseUrl;
+        if (staffWechatUrl.endsWith("#/")) {
+            baseUrl = staffWechatUrl + "pages/excuteOneQrCodeInspection/excuteOneQrCodeInspection?inspectionId=";
+        } else if (staffWechatUrl.endsWith("/")) {
+            baseUrl = staffWechatUrl + "#/pages/excuteOneQrCodeInspection/excuteOneQrCodeInspection?inspectionId=";
+        } else {
+            baseUrl = staffWechatUrl + "/#/pages/excuteOneQrCodeInspection/excuteOneQrCodeInspection?inspectionId=";
+        }
         for (ApiInspectionPointDataVo apiInspectionPointDataVo : inspectionPoints) {
             // 构建巡检点二维码访问URL
-            apiInspectionPointDataVo.setUrl(staffWechatUrl
-                    + "pages/excuteOneQrCodeInspection/excuteOneQrCodeInspection?inspectionId="
+            apiInspectionPointDataVo.setUrl(baseUrl
                     + apiInspectionPointDataVo.getInspectionId()
                     + "&inspectionName=" + apiInspectionPointDataVo.getInspectionName()
                     + "&itemId=" + apiInspectionPointDataVo.getItemId());
