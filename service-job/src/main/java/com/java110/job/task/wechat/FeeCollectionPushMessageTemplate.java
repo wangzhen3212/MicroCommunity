@@ -338,7 +338,15 @@ public class FeeCollectionPushMessageTemplate extends TaskSystemQuartz {
 
                     logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
                     ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-                    logger.info("微信模板返回内容:{}", responseEntity);
+                    JSONObject respObj = JSONObject.parseObject(responseEntity.getBody());
+                    int errcode = respObj.getIntValue("errcode");
+                    if (errcode == 0) {
+                        logger.info("模板消息发送成功, openId={}, extra={}", appUserDto.getOpenId(), itemDto.getPayerObjName());
+                    } else if (errcode == 43101) {
+                        logger.warn("用户拒收模板消息, openId={}, extra={}, 标记为已推送避免重复发送", appUserDto.getOpenId(), itemDto.getPayerObjName());
+                    } else {
+                        logger.warn("模板消息发送失败, openId={}, extra={}, errcode={}, errmsg={}", appUserDto.getOpenId(), itemDto.getPayerObjName(), errcode, respObj.getString("errmsg"));
+                    }
                 } catch (Exception e) {
                     LogSystemErrorPo logSystemErrorPo = new LogSystemErrorPo();
                     logSystemErrorPo.setErrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_errId));

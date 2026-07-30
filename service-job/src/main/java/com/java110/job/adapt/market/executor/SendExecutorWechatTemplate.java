@@ -2,6 +2,7 @@ package com.java110.job.adapt.market.executor;
 
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.java110.core.client.OutRestTemplate;
 import com.java110.core.factory.WechatFactory;
 import com.java110.core.log.LoggerFactory;
@@ -80,12 +81,18 @@ public class SendExecutorWechatTemplate extends DefaultSendExecutor {
         templateMessage.setTouser(openId);
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-        //if ("00".equals(result.getString("status"))) {
+        JSONObject respObj = JSONObject.parseObject(responseEntity.getBody());
+        int errcode = respObj.getIntValue("errcode");
+        if (errcode == 0) {
+            logger.info("模板消息发送成功, openId={}, extra={}", openId, marketTextDto.getName());
             return new ResultVo(ResultVo.CODE_OK, "成功", "2002");
-        //}
-
-
+        }
+        if (errcode == 43101) {
+            logger.warn("用户拒收模板消息, openId={}, extra={}, 标记为已推送避免重复发送", openId, marketTextDto.getName());
+            return new ResultVo(ResultVo.CODE_OK, "成功", "2002");
+        }
+        logger.warn("模板消息发送失败, openId={}, extra={}, errcode={}, errmsg={}", openId, marketTextDto.getName(), errcode, respObj.getString("errmsg"));
+        return new ResultVo(errcode, respObj.getString("errmsg"));
     }
 
 }

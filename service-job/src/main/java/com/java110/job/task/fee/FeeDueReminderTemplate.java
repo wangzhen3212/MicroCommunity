@@ -1,6 +1,7 @@
 package com.java110.job.task.fee;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.aliyuncs.CommonRequest;
 import com.aliyuncs.CommonResponse;
 import com.aliyuncs.DefaultAcsClient;
@@ -333,7 +334,15 @@ public class FeeDueReminderTemplate extends TaskSystemQuartz {
             templateMessage.setUrl(wechatUrl);
             logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
             ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-            logger.info("微信模板返回内容:{}", responseEntity);
+            JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+            int errcode = paramOut.getIntValue("errcode");
+            if (errcode == 0) {
+                logger.info("模板消息发送成功, openId={}, extra={}", openId, name);
+            } else if (errcode == 43101) {
+                logger.warn("用户拒收模板消息, openId={}, extra={}, 标记为已推送避免重复发送", openId, name);
+            } else {
+                logger.warn("模板消息发送失败, openId={}, extra={}, errcode={}, errmsg={}", openId, name, errcode, paramOut.getString("errmsg"));
+            }
         } else {    //用户没绑定就发送短信
             //获取用户手机号
             String link = ownerDtos.get(0).getLink();

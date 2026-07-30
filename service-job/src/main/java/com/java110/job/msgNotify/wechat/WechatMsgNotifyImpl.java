@@ -85,6 +85,25 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         return value;
     }
 
+    /**
+     * 处理微信模板消息发送响应
+     * 43101(用户拒收)时返回 CODE_OK，避免后续不断重试
+     */
+    private ResultVo handleSendResponse(JSONObject paramOut, String openId, String extraInfo) {
+        int errcode = paramOut.getIntValue("errcode");
+        String errmsg = paramOut.getString("errmsg");
+        if (errcode == 0) {
+            logger.info("模板消息发送成功, openId={}, extra={}", openId, extraInfo);
+            return new ResultVo(ResultVo.CODE_OK, errmsg);
+        }
+        if (errcode == 43101) {
+            logger.warn("用户拒收模板消息, openId={}, extra={}, 标记为已推送避免重复发送", openId, extraInfo);
+            return new ResultVo(ResultVo.CODE_OK, errmsg);
+        }
+        logger.warn("模板消息发送失败, openId={}, extra={}, errcode={}, errmsg={}", openId, extraInfo, errcode, errmsg);
+        return new ResultVo(errcode, errmsg);
+    }
+
     @Autowired
     private IWechatTemplate wechatTemplateImpl;
 
@@ -132,10 +151,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(wechatUrl);
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("name"));
     }
 
     @Override
@@ -169,7 +186,6 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         String templateId = wechatTemplateImpl.getTemplateId(communityId, mapping.getValue(), mapping.getName(), templateKeys.get(SPEC_CD_OWE_FEE_TEMPLATE));
 
         String url = sendMsgUrl + accessToken;
-        JSONObject paramOut = null;
         for (JSONObject content : contents) {
             JSONObject data = new JSONObject();
             PropertyFeeTemplateMessage templateMessage = new PropertyFeeTemplateMessage();
@@ -183,10 +199,10 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
             templateMessage.setUrl(content.getString("url") + "&wAppId=" + wechatTemplateImpl.getAppId(communityId));
             logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
             ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-            logger.info("微信模板返回内容:{}", responseEntity);
-            paramOut = JSONObject.parseObject(responseEntity.getBody());
-            if (paramOut.getIntValue("errcode") != 0) {
-                return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+            JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
+            ResultVo resultVo = handleSendResponse(paramOut, openId, content.getString("payerObjName"));
+            if (resultVo.getCode() != ResultVo.CODE_OK) {
+                return resultVo;
             }
         }
         return new ResultVo(ResultVo.CODE_OK, "成功");
@@ -236,10 +252,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("feeName"));
     }
 
     @Override
@@ -274,10 +288,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("repairObjName"));
     }
 
     @Override
@@ -313,10 +325,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("repairName"));
     }
 
     @Override
@@ -357,10 +367,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, noticeStaffDto.getStaffId());
     }
 
     @Override
@@ -394,10 +402,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         }
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, noticeWechatDto.getTitle());
     }
 
     @Override
@@ -433,10 +439,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("name"));
     }
 
     @Override
@@ -472,10 +476,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("repairObjName"));
     }
 
     @Override
@@ -510,10 +512,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("repairName"));
     }
 
     @Override
@@ -548,10 +548,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("flowName"));
     }
 
     @Override
@@ -585,10 +583,8 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(content.getString("url"));
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("flowName"));
     }
 
     @Override
@@ -624,9 +620,7 @@ public class WechatMsgNotifyImpl implements IMsgNotify {
         templateMessage.setUrl(wechatUrl);
         logger.info("发送模板消息内容:{}", JSON.toJSONString(templateMessage));
         ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, JSON.toJSONString(templateMessage), String.class);
-        logger.info("微信模板返回内容:{}", responseEntity);
-
         JSONObject paramOut = JSONObject.parseObject(responseEntity.getBody());
-        return new ResultVo(paramOut.getIntValue("errcode"), paramOut.getString("errmsg"));
+        return handleSendResponse(paramOut, openId, content.getString("complaintName"));
     }
 }
