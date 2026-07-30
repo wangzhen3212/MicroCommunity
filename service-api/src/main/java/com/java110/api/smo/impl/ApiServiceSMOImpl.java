@@ -288,6 +288,14 @@ public class ApiServiceSMOImpl extends LoggerEngine implements IApiServiceSMO {
         for (AppRoute appRoute : appRoutes) {
             dataFlow.addAppRoutes(appRoute);
         }
+        if (logger.isDebugEnabled()) {
+            int finalSize = dataFlow.getAppRoutes().size();
+            long contractCount = dataFlow.getAppRoutes().stream()
+                    .filter(r -> r.getAppService().getServiceCode().startsWith("/contract"))
+                    .count();
+            logger.debug("AppId={}, appRoutes总数={}, 包含/contract前缀={}条",
+                    dataFlow.getAppId(), finalSize, contractCount);
+        }
         //
         if ("-1".equals(dataFlow.getDataFlowId()) || StringUtil.isNullOrNone(dataFlow.getDataFlowId())) {
             dataFlow.setDataFlowId(GenerateCodeFactory.getDataFlowId());
