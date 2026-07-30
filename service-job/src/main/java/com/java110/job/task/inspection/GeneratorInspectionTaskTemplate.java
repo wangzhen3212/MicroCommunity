@@ -20,6 +20,7 @@ import com.java110.po.inspection.InspectionTaskPo;
 import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.MappingConstant;
 import com.java110.utils.util.DateUtil;
+import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -122,10 +123,14 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
                 }
             }
             try {
-                sendAdvancePushMsg(communityDto, tmpInspectionPlanDto.getInspectionPlanName(),
+                ResultVo resultVo = sendAdvancePushMsg(communityDto, tmpInspectionPlanDto.getInspectionPlanName(),
                         taskPo.getPlanUserId(), taskPo.getPlanInsTime(), detailCount);
-                // 推送成功，更新 sendFlag 为 A
-                updateDetailSendFlag(taskPo.getTaskId(), InspectionTaskDetailDto.SEND_FLAG_A, inspectionTaskDetailPos);
+                if (resultVo != null && resultVo.getCode() == ResultVo.CODE_OK) {
+                    // 推送成功，更新 sendFlag 为 A
+                    updateDetailSendFlag(taskPo.getTaskId(), InspectionTaskDetailDto.SEND_FLAG_A, inspectionTaskDetailPos);
+                } else {
+                    logger.error("提前推送失败(taskId=" + taskPo.getTaskId() + "), sendFlag保持N, 将交由补推任务重试");
+                }
             } catch (Exception e) {
                 logger.error("提前推送失败(taskId=" + taskPo.getTaskId() + "), 将交由补推任务重试", e);
             }
@@ -162,7 +167,20 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
         inspectionTaskPo.setCommunityId(tmpInspectionPlanDto.getCommunityId());
         inspectionTaskPo.setIpStaffId(tmpInspectionPlanStaffDto.getIpStaffId());
         inspectionTaskPo.setPlanInsTime(nowTime + tmpInspectionPlanStaffDto.getStartTime());
-        inspectionTaskPo.setPlanEndTime(nowTime + tmpInspectionPlanStaffDto.getEndTime());
+
+        // 处理跨天场景：如果结束时间小于开始时间（如 02:00 < 22:00），说明任务跨越到次日
+        String planEndTimeStr = nowTime + tmpInspectionPlanStaffDto.getEndTime();
+        if (tmpInspectionPlanStaffDto.getEndTime().compareTo(tmpInspectionPlanStaffDto.getStartTime()) < 0) {
+            try {
+                Date endDate = DateUtil.getDateFromStringA(planEndTimeStr + ":00");
+                endDate = DateUtil.stepDay(endDate, 1); // 整体日历加一天（包含时分秒）
+                planEndTimeStr = DateUtil.getFormatTimeString(endDate, DateUtil.DATE_FORMATE_STRING_A);
+                planEndTimeStr = planEndTimeStr.substring(0, 16); // 去掉 ":00" 秒数，保持 "yyyy-MM-dd HH:mm" 格式
+            } catch (Exception e) {
+                logger.error("跨天结束时间处理失败", e);
+            }
+        }
+        inspectionTaskPo.setPlanEndTime(planEndTimeStr);
         inspectionTaskPo.setPlanUserId(tmpInspectionPlanStaffDto.getStaffId());
         inspectionTaskPo.setPlanUserName(tmpInspectionPlanStaffDto.getStaffName());
         inspectionTaskPo.setSignType(tmpInspectionPlanDto.getSignType());
@@ -340,7 +358,7 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
     /**
      * 发送提前推送消息
      */
-    private void sendAdvancePushMsg(CommunityDto communityDto, String planName,
+    private ResultVo sendAdvancePushMsg(CommunityDto communityDto, String planName,
                                      String planUserId, String planInsTime, int detailCount) {
         IMsgNotify msgNotify = MsgNotifyFactory.getMsgNotify(MsgNotifyFactory.NOTIFY_WAY_WECHAT);
         String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
@@ -351,10 +369,10 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
         } else {
             wechatUrl += "/#/pages/inspection/inspectionIndex";
         }
-        msgNotify.sendStaffMsg(
+        return msgNotify.sendStaffMsg(
                 new NoticeStaffDto(communityDto.getCommunityId(),
                         planUserId,
-                        planName + "巡检任务即将在" + planInsTime + "开始，共" + detailCount + "个巡检点",
+                        "巡检任务将开始，共" + detailCount + "个巡检点",
                         "系统管理员",
                         wechatUrl)
         );

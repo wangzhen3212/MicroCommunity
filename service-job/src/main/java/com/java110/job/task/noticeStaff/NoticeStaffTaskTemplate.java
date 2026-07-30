@@ -26,6 +26,7 @@ import com.java110.utils.constant.MappingConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.ListUtil;
+import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -305,24 +306,27 @@ public class NoticeStaffTaskTemplate extends TaskSystemQuartz {
             // 发送提前提醒（按任务聚合，一条消息）
             IMsgNotify msgNotify = MsgNotifyFactory.getMsgNotify(MsgNotifyFactory.NOTIFY_WAY_WECHAT);
             try {
-                msgNotify.sendStaffMsg(
+                ResultVo resultVo = msgNotify.sendStaffMsg(
                         new NoticeStaffDto(communityDto.getCommunityId(),
                                 firstDetail.getPlanUserId(),
-                                firstDetail.getInspectionPlanName() + "巡检任务即将在" + firstDetail.getPlanInsTime() + "开始，共" + details.size() + "个巡检点",
+                                "巡检任务已开始，请尽快进行巡检",
                                 "系统管理员",
                                 wechatUrl)
                 );
+                if (resultVo != null && resultVo.getCode() == ResultVo.CODE_OK) {
+                    // 推送成功，更新 sendFlag 为 A
+                    for (InspectionTaskDetailDto detail : details) {
+                        InspectionTaskDetailDto updateDto = new InspectionTaskDetailDto();
+                        updateDto.setTaskDetailId(detail.getTaskDetailId());
+                        updateDto.setSendFlag(InspectionTaskDetailDto.SEND_FLAG_A);
+                        updateDto.setStatusCd("0");
+                        inspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(updateDto);
+                    }
+                } else {
+                    logger.error("补推失败(taskId=" + firstDetail.getTaskId() + "), sendFlag保持N, 等待下次重试");
+                }
             } catch (Exception e) {
-                logger.error("提前推送失败: taskId=" + firstDetail.getTaskId(), e);
-            }
-
-            // 更新所有巡检点的 sendFlag 为 A（已提前推送）
-            for (InspectionTaskDetailDto detail : details) {
-                InspectionTaskDetailDto updateDto = new InspectionTaskDetailDto();
-                updateDto.setTaskDetailId(detail.getTaskDetailId());
-                updateDto.setSendFlag(InspectionTaskDetailDto.SEND_FLAG_A);
-                updateDto.setStatusCd("0");
-                inspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(updateDto);
+                logger.error("补推失败: taskId=" + firstDetail.getTaskId(), e);
             }
         }
     }
