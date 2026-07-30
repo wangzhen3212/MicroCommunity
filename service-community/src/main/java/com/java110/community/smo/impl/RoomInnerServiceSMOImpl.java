@@ -93,10 +93,18 @@ public class RoomInnerServiceSMOImpl extends BaseServiceSMO implements IRoomInne
                 OwnerRoomRelDto ownerRoomRelDto = new OwnerRoomRelDto();
                 ownerRoomRelDto.setRoomId(room.getRoomId());
                 List<OwnerRoomRelDto> ownerRoomRelDtos = ownerRoomRelV1InnerServiceSMOImpl.queryOwnerRoomRels(ownerRoomRelDto);
-                Assert.listOnlyOne(ownerRoomRelDtos, "查询业主房屋关系表错误！");
-                room.setApartmentName(MappingCache.getValue(room.getApartment().substring(0, 2).toString()) + MappingCache.getValue(room.getApartment().substring(2, 5).toString()));
-                room.setOwnerId(ownerRoomRelDtos.get(0).getOwnerId());
-                room.setOwnerName(ownerRoomRelDtos.get(0).getOwnerName());
+                if (ownerRoomRelDtos != null && !ownerRoomRelDtos.isEmpty()) {
+                    // 取最新一条业主关系记录（按创建时间倒序）
+                    OwnerRoomRelDto relDto = ownerRoomRelDtos.get(0);
+                    room.setApartmentName(MappingCache.getValue(room.getApartment().substring(0, 2).toString()) + MappingCache.getValue(room.getApartment().substring(2, 5).toString()));
+                    room.setOwnerId(relDto.getOwnerId());
+                    room.setOwnerName(relDto.getOwnerName());
+                    if (ownerRoomRelDtos.size() > 1) {
+                        logger.warn("查询业主房屋关系表返回多条记录，将取最新一条 roomId={}, relCount={}", room.getRoomId(), ownerRoomRelDtos.size());
+                    }
+                } else {
+                    logger.debug("查询业主房屋关系表无数据 roomId={}", room.getRoomId());
+                }
             } catch (Exception e) {
                 logger.error("设置房屋户型失败", e);
             }

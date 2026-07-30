@@ -63,6 +63,10 @@
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
         </if>
+        <!-- 按roomId查询时限制返回最新1条，防止程序未正确设置statusCd导致取到多条 -->
+        <if test="page == -1 and roomId != null and roomId != ''">
+            limit 1
+        </if>
     </select>
 
     <!-- 修改业主房屋关系表信息 add by wuxw 2018-07-03 -->

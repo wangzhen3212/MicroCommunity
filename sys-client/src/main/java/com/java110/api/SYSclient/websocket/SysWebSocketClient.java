@@ -5,6 +5,7 @@ import com.java110.api.SYSclient.SysClientProperties;
 import com.java110.api.SYSclient.model.MessageType;
 import com.java110.api.SYSclient.model.WsMessage;
 import com.java110.api.SYSclient.proxy.InboundProxyHandler;
+import com.java110.api.SYSclient.proxy.OutboundProxyInterceptor;
 import com.java110.api.SYSclient.service.CommunityStatsHandler;
 import com.java110.api.SYSclient.service.DataPullHandler;
 import com.java110.api.SYSclient.service.LocalIdUpdater;
@@ -16,10 +17,12 @@ import com.java110.dto.wechat.SmallWeChatDto;
 import com.java110.intf.community.ICommunityV1InnerServiceSMO;
 import com.java110.intf.store.IStoreV1InnerServiceSMO;
 import com.java110.intf.store.ISmallWeChatInnerServiceSMO;
+import com.java110.utils.factory.ApplicationContextFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PreDestroy;
 import javax.websocket.*;
@@ -76,6 +79,9 @@ public class SysWebSocketClient {
     @Autowired
     private ISmallWeChatInnerServiceSMO smallWeChatInnerServiceSMO;
 
+    @Autowired
+    private OutboundProxyInterceptor outboundProxyInterceptor;
+
     /** WebSocket 会话（连接保持期间有效） */
     private Session session;
 
@@ -91,7 +97,7 @@ public class SysWebSocketClient {
     /** 是否曾成功建立过 WebSocket 连接。用于区分"上位机从未上线"和"临时断线"两种重连策略 */
     private volatile boolean wasEverOpened = false;
 
-    /** 重连计数器（成功后归零） */
+    /** 重连计数器（成功后归零），上限100防止溢出 */
     private int reconnectCount = 0;
 
     /** 心跳定时器句柄 */
@@ -168,6 +174,9 @@ public class SysWebSocketClient {
         this.registered = false;
         stopHeartbeat();
 
+        // 出站代理注销（断开支线后外部请求不再走代理）
+        unregisterOutboundProxy();
+
         // INVALID_KEY: 不自动重连，等待人工介入
         if (invalidKey) {
             logger.error("[客户机] KEY 无效，不再自动重连。请修正配置后重启服务");
@@ -198,6 +207,11 @@ public class SysWebSocketClient {
     @OnError
     public void onError(Session session, Throwable error) {
         logger.error("[客户机] WebSocket 连接异常: {}", error.getMessage());
+        this.session = null;
+        this.registered = false;
+        stopHeartbeat();
+        unregisterOutboundProxy();
+        scheduleReconnect();
     }
 
     @PreDestroy
@@ -205,6 +219,7 @@ public class SysWebSocketClient {
         logger.info("[客户机] 服务关闭，清理资源");
         stopHeartbeat();
         scheduler.shutdownNow();
+        unregisterOutboundProxy();
         closeQuietly();
     }
 
@@ -338,6 +353,8 @@ public class SysWebSocketClient {
             this.invalidKey = false;
             this.conflictPayload = null;
             logger.info("[客户机] 注册成功，启动心跳（数据由上位机通过KEY拉取）");
+            // 注册成功后将出站代理注入 outRestTemplate
+            registerOutboundProxy();
             startHeartbeat();
         } else if ("CONFLICT".equals(status)) {
             logger.warn("[客户机] 注册冲突: {}", JSONObject.toJSONString(payload));
@@ -383,7 +400,7 @@ public class SysWebSocketClient {
         }
 
         long delay;
-        reconnectCount++;
+        reconnectCount = Math.min(reconnectCount + 1, 100);
 
         if (wasEverOpened) {
             // 瞬断恢复场景：使用指数退避快速重连
@@ -409,6 +426,32 @@ public class SysWebSocketClient {
             }
         } catch (IOException e) {
             logger.warn("[客户机] 关闭会话时异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 注册出站代理：将 OutboundProxyInterceptor 注入 outRestTemplate
+     * 由上位机注册成功（REGISTER_ACK/OK）后触发
+     */
+    private void registerOutboundProxy() {
+        try {
+            RestTemplate restTemplate = ApplicationContextFactory.getBean("outRestTemplate", RestTemplate.class);
+            outboundProxyInterceptor.register(restTemplate);
+        } catch (Exception e) {
+            logger.warn("[客户机] 注册出站代理失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 注销出站代理：将 OutboundProxyInterceptor 从 outRestTemplate 移除
+     * 由 WebSocket 断开后触发
+     */
+    private void unregisterOutboundProxy() {
+        try {
+            RestTemplate restTemplate = ApplicationContextFactory.getBean("outRestTemplate", RestTemplate.class);
+            outboundProxyInterceptor.unregister(restTemplate);
+        } catch (Exception e) {
+            logger.warn("[客户机] 注销出站代理失败: {}", e.getMessage());
         }
     }
 
