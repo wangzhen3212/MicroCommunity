@@ -128,6 +128,19 @@ public class WechatTemplateImpl implements IWechatTemplate {
         }
 
         String templateList = responseEntity.getBody();
+
+        // 校验微信响应是否为有效的模板列表，避免将错误响应缓存
+        JSONObject templateListObj = JSONObject.parseObject(templateList);
+        if (templateListObj == null || !templateListObj.containsKey("template_list")) {
+            // 如果 token 过期导致返回错误，清除模板缓存，让下次重新获取
+            CommonCache.removeValue(WECHAT_TEMPLATE + communityId);
+            // 记录微信返回的错误信息
+            String errCode = templateListObj != null ? templateListObj.getString("errcode") : null;
+            String errMsg = templateListObj != null ? templateListObj.getString("errmsg") : "未知错误";
+            logger.error("获取微信模板列表失败, communityId={}, errcode={}, errmsg={}", communityId, errCode, errMsg);
+            throw new IllegalArgumentException("获取微信模板列表失败, errcode=" + errCode + ", errmsg=" + errMsg);
+        }
+
         CommonCache.setValue(WECHAT_TEMPLATE + communityId, templateList, CommonCache.TOKEN_EXPIRE_TIME);
         return templateList;
     }

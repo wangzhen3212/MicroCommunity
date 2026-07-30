@@ -88,7 +88,12 @@ public class WechatFactory {
             JWTCache.setValue(WECHAT + appId, accessToken, expiresIn - 200);
             return accessToken;
         }
-        return "";
+
+        // 微信返回错误，记录真实错误信息
+        String errCode = responseObj.getString("errcode");
+        String errMsg = responseObj.getString("errmsg");
+        logger.error("获取微信access_token失败, appId={}, errcode={}, errmsg={}", appId, errCode, errMsg);
+        throw new IllegalArgumentException("获取微信access_token失败, errcode=" + errCode + ", errmsg=" + errMsg);
     }
 
     /**

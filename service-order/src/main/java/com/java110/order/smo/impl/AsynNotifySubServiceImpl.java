@@ -241,7 +241,9 @@ public class AsynNotifySubServiceImpl implements IAsynNotifySubService {
                 keySql += (key + ",");
                 valueSql += (keyValue.getString(key) + ",");
 
-                updateSql += (" and " + key + "=" + keyValue.getString(key));
+                if (!"''".equals(keyValue.getString(key))) {
+                    updateSql += (" and " + key + "=" + keyValue.getString(key));
+                }
             }
             keySql += "operate,b_id";
             valueSql += "'ADD','" + orderItemDto.getbId() + "'";
