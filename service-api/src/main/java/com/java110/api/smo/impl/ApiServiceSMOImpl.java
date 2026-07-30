@@ -113,7 +113,7 @@ public class ApiServiceSMOImpl extends LoggerEngine implements IApiServiceSMO {
             logger.error("内部异常：", e);
             responseEntity = ResultVo.error(e.getMessage());
         } catch (NoAuthorityException e) {
-            logger.error("内部异常：", e);
+            logger.debug("内部异常：", e);
             responseEntity = ResultVo.error("鉴权失败：" + e.getMessage());
         } catch (InitConfigDataException e) {
             logger.error("内部异常：", e);
