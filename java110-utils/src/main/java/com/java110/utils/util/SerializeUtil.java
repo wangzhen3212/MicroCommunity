@@ -3,9 +3,13 @@ package com.java110.utils.util;
 /**
  * Created by wuxw on 2017/7/23.
  */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
@@ -16,6 +20,8 @@ import java.util.List;
  *
  */
 public class SerializeUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(SerializeUtil.class);
 
     /**
      * 序列化
@@ -92,7 +98,7 @@ public class SerializeUtil {
             }
             bytes = baos.toByteArray();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("序列化列表失败", e);
         } finally {
             close(oos);
             close(baos);
@@ -118,15 +124,16 @@ public class SerializeUtil {
             // 反序列化
             bais = new ByteArrayInputStream(bytes);
             ois = new ObjectInputStream(bais);
-            while (bais.available() > 0) {
-                T obj = (T) ois.readObject();
-                if (obj == null) {
-                    break;
+            while (true) {
+                try {
+                    T obj = (T) ois.readObject();
+                    list.add(obj);
+                } catch (EOFException e) {
+                    break; // 正常读取完毕
                 }
-                list.add(obj);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("反序列化列表失败", e);
         } finally {
             close(bais);
             close(ois);
