@@ -55,32 +55,36 @@ public class WechatFactory {
     }
 
     /**
-     * 刷新 access_token
+     * 刷新 access_token（使用 stable_token 接口，防止多进程相互刷新导致旧 token 失效）
      *
      * @param appId     应用ID
      * @param appSecure 应用秘钥
      * @return
      */
     private static String refreshAccessToken(String appId, String appSecure) {
-        String getAccessToken = MappingCache.getRemark(WechatConstant.WECHAT_DOMAIN, WechatConstant.GET_ACCESS_TOKEN_URL);
-        if (StringUtil.isEmpty(getAccessToken)) {
-            getAccessToken = WechatConstant.GET_ACCESS_TOKEN;
+        // 优先使用 DB 配置的 stable_token URL，如未配置则使用默认稳定版接口
+        String url = MappingCache.getRemark(WechatConstant.WECHAT_DOMAIN, WechatConstant.STABLE_ACCESS_TOKEN_URL);
+        if (StringUtil.isEmpty(url)) {
+            url = WechatConstant.STABLE_ACCESS_TOKEN;
         }
-        String url = getAccessToken.replace("APPID", appId)
-                .replace("SECRET", appSecure);
         RestTemplate outRestTemplate = ApplicationContextFactory.getBean("outRestTemplate", RestTemplate.class);
-        if(outRestTemplate == null){
+        if (outRestTemplate == null) {
             throw new IllegalArgumentException("查询token 失败");
         }
-        ResponseEntity<String> responseEntity = outRestTemplate.getForEntity(url, String.class);
-        logger.debug("获取access_token 入参：" + url + " 返回参数" + responseEntity);
+
+        JSONObject paramIn = new JSONObject();
+        paramIn.put("grant_type", "client_credential");
+        paramIn.put("appid", appId);
+        paramIn.put("secret", appSecure);
+
+        ResponseEntity<String> responseEntity = outRestTemplate.postForEntity(url, paramIn.toJSONString(), String.class);
+        logger.debug("获取stable_access_token 入参：" + paramIn.toJSONString() + " 返回参数" + responseEntity);
 
         if (responseEntity.getStatusCode() != HttpStatus.OK) {
             throw new IllegalArgumentException("查询token 失败");
         }
 
         JSONObject responseObj = JSONObject.parseObject(responseEntity.getBody());
-
 
         if (responseObj.containsKey("access_token")) {
             String accessToken = responseObj.getString("access_token");
@@ -94,6 +98,14 @@ public class WechatFactory {
         String errMsg = responseObj.getString("errmsg");
         logger.error("获取微信access_token失败, appId={}, errcode={}, errmsg={}", appId, errCode, errMsg);
         throw new IllegalArgumentException("获取微信access_token失败, errcode=" + errCode + ", errmsg=" + errMsg);
+    }
+
+    /**
+     * 清除缓存的 access_token（当调用方收到 40001 时可调用此方法，下次 getAccessToken 将重新获取）
+     */
+    public static void clearAccessTokenCache(String appId) {
+        JWTCache.removeValue(WECHAT + appId);
+        logger.info("已清除微信access_token缓存, appId={}", appId);
     }
 
     /**

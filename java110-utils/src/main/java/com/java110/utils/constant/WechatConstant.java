@@ -16,6 +16,7 @@ public class WechatConstant {
     public static final String GET_USER_URL = "GET_USER_URL";
     public static final String SEND_TEMPLATE_URL = "SEND_TEMPLATE_URL";
     public static final String GET_ACCESS_TOKEN_URL = "GET_ACCESS_TOKEN_URL";
+    public static final String STABLE_ACCESS_TOKEN_URL = "STABLE_ACCESS_TOKEN_URL";
 
     //微信ID
     public static final String PAGE_WECHAT_APP_ID = "wId";//微信id 一般是appId
@@ -49,6 +50,7 @@ public class WechatConstant {
 
 
     public static final String GET_ACCESS_TOKEN = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=SECRET";
+    public static final String STABLE_ACCESS_TOKEN = "https://api.weixin.qq.com/cgi-bin/stable_token";
 
     public static final String APP_GET_ACCESS_TOKEN_URL = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code";
     public static final String APP_GET_USER_INFO_URL = "https://api.weixin.qq.com/sns/userinfo?access_token=ACCESS_TOKEN&openid=OPENID&lang=zh_CN";
