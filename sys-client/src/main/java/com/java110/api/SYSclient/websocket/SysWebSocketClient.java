@@ -17,12 +17,10 @@ import com.java110.dto.wechat.SmallWeChatDto;
 import com.java110.intf.community.ICommunityV1InnerServiceSMO;
 import com.java110.intf.store.IStoreV1InnerServiceSMO;
 import com.java110.intf.store.ISmallWeChatInnerServiceSMO;
-import com.java110.utils.factory.ApplicationContextFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PreDestroy;
 import javax.websocket.*;
@@ -97,7 +95,7 @@ public class SysWebSocketClient {
     /** 是否曾成功建立过 WebSocket 连接。用于区分"上位机从未上线"和"临时断线"两种重连策略 */
     private volatile boolean wasEverOpened = false;
 
-    /** 重连计数器（成功后归零），上限100防止溢出 */
+    /** 重连计数器（成功后归零） */
     private int reconnectCount = 0;
 
     /** 心跳定时器句柄 */
@@ -173,9 +171,7 @@ public class SysWebSocketClient {
         this.session = null;
         this.registered = false;
         stopHeartbeat();
-
-        // 出站代理注销（断开支线后外部请求不再走代理）
-        unregisterOutboundProxy();
+        outboundProxyInterceptor.setRegistered(false);
 
         // INVALID_KEY: 不自动重连，等待人工介入
         if (invalidKey) {
@@ -210,7 +206,7 @@ public class SysWebSocketClient {
         this.session = null;
         this.registered = false;
         stopHeartbeat();
-        unregisterOutboundProxy();
+        outboundProxyInterceptor.setRegistered(false);
         scheduleReconnect();
     }
 
@@ -218,8 +214,8 @@ public class SysWebSocketClient {
     public void onDestroy() {
         logger.info("[客户机] 服务关闭，清理资源");
         stopHeartbeat();
+        outboundProxyInterceptor.setRegistered(false);
         scheduler.shutdownNow();
-        unregisterOutboundProxy();
         closeQuietly();
     }
 
@@ -352,9 +348,8 @@ public class SysWebSocketClient {
             this.registered = true;
             this.invalidKey = false;
             this.conflictPayload = null;
+            outboundProxyInterceptor.setRegistered(true);
             logger.info("[客户机] 注册成功，启动心跳（数据由上位机通过KEY拉取）");
-            // 注册成功后将出站代理注入 outRestTemplate
-            registerOutboundProxy();
             startHeartbeat();
         } else if ("CONFLICT".equals(status)) {
             logger.warn("[客户机] 注册冲突: {}", JSONObject.toJSONString(payload));
@@ -426,32 +421,6 @@ public class SysWebSocketClient {
             }
         } catch (IOException e) {
             logger.warn("[客户机] 关闭会话时异常: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * 注册出站代理：将 OutboundProxyInterceptor 注入 outRestTemplate
-     * 由上位机注册成功（REGISTER_ACK/OK）后触发
-     */
-    private void registerOutboundProxy() {
-        try {
-            RestTemplate restTemplate = ApplicationContextFactory.getBean("outRestTemplate", RestTemplate.class);
-            outboundProxyInterceptor.register(restTemplate);
-        } catch (Exception e) {
-            logger.warn("[客户机] 注册出站代理失败: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * 注销出站代理：将 OutboundProxyInterceptor 从 outRestTemplate 移除
-     * 由 WebSocket 断开后触发
-     */
-    private void unregisterOutboundProxy() {
-        try {
-            RestTemplate restTemplate = ApplicationContextFactory.getBean("outRestTemplate", RestTemplate.class);
-            outboundProxyInterceptor.unregister(restTemplate);
-        } catch (Exception e) {
-            logger.warn("[客户机] 注销出站代理失败: {}", e.getMessage());
         }
     }
 

@@ -10,8 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
 import java.io.*;
@@ -43,7 +43,6 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
 
     private static final long HOST_CACHE_TTL_MS = 60000;
 
-    /** 是否已注册到 outRestTemplate（由 SysWebSocketClient 在连接上位机后控制） */
     private volatile boolean registered = false;
 
     private volatile String cachedIotHost;
@@ -55,54 +54,13 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
     @Resource
     private SysClientProperties sysClientProperties;
 
-    /**
-     * 由 SysWebSocketClient 在注册成功（REGISTER_ACK/OK）后调用，将本拦截器注入 outRestTemplate
-     */
-    public void register(RestTemplate restTemplate) {
-        if (restTemplate == null) {
-            return;
-        }
-        boolean alreadyPresent = false;
-        for (ClientHttpRequestInterceptor interceptor : restTemplate.getInterceptors()) {
-            if (interceptor == this) {
-                alreadyPresent = true;
-                break;
-            }
-        }
-        if (!alreadyPresent) {
-            restTemplate.getInterceptors().add(0, this);
-        }
-        this.registered = true;
-        logger.info("[出站代理] 已注册到 outRestTemplate（上位机连接就绪）");
-    }
-
-    /**
-     * 由 SysWebSocketClient 在 WebSocket 断开后调用，将本拦截器从 outRestTemplate 移除
-     */
-    public void unregister(RestTemplate restTemplate) {
-        if (restTemplate == null) {
-            return;
-        }
-        this.registered = false;
-        restTemplate.getInterceptors().remove(this);
-        logger.warn("[出站代理] 已从 outRestTemplate 注销（上位机连接断开）");
+    public void setRegistered(boolean registered) {
+        this.registered = registered;
     }
 
     @Override
     public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-
-        URI originalUri = request.getURI();
-        String originalUrl = originalUri.toString();
-
-        // 未注册到上位机时直连（不代理也不输出日志）
-        if (!registered) {
-            return execution.execute(request, body);
-        }
-
-        if (!sysClientProperties.isEnabled()) {
-            return execution.execute(request, body);
-        }
-        if (!sysClientProperties.isProxyEnabled()) {
+        if (!sysClientProperties.isEnabled() || !sysClientProperties.isProxyEnabled()) {
             return execution.execute(request, body);
         }
 
@@ -111,40 +69,40 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
             return execution.execute(request, body);
         }
 
+        URI originalUri = request.getURI();
+        String originalUrl = originalUri.toString();
         String host = extractHost(originalUrl);
 
         if (!shouldProxy(originalUrl, host)) {
             return execution.execute(request, body);
         }
 
-        try {
-            String encodedUrl = URLEncoder.encode(originalUrl, StandardCharsets.UTF_8.name());
-            if (proxyUrl.endsWith("/")) {
-                proxyUrl = proxyUrl.substring(0, proxyUrl.length() - 1);
-            }
-            String newUrl = proxyUrl + "?__url__=" + encodedUrl;
-
-            logger.info("[出站代理] 拦截请求: {} {} → {}, bodyLength={}", 
-                    request.getMethod(), originalUrl, newUrl, body != null ? body.length : 0);
-
-            HttpRequest proxyRequest = new ProxyHttpRequest(request, URI.create(newUrl));
-            ClientHttpResponse proxyResponse = execution.execute(proxyRequest, body);
-
-            byte[] responseBodyBytes = readResponseBodyBytes(proxyResponse);
-            String responseBody = new String(responseBodyBytes, StandardCharsets.UTF_8);
-
-            logger.info("[出站代理] 收到响应: {} {} → status={}, bodyLength={}, body={}", 
-                    request.getMethod(), originalUrl, 
-                    proxyResponse.getStatusCode().value(), 
-                    responseBodyBytes.length, 
-                    responseBody.length() > 500 ? responseBody.substring(0, 500) + "..." : responseBody);
-
-            return new CachedClientHttpResponse(proxyResponse, responseBodyBytes);
-        } catch (Exception e) {
-            logger.error("[出站代理] 拦截处理异常: {} → {}, error: {}",
-                    request.getMethod(), originalUrl, e.getMessage());
-            return execution.execute(request, body);
+        if (!registered) {
+            logger.error("[出站代理] 上位机注册失败或连接异常");
+            return new ProxyErrorResponse(
+                    HttpStatus.NOT_FOUND,
+                    "上位机注册失败或连接异常",
+                    "上位机注册失败或连接异常".getBytes(StandardCharsets.UTF_8),
+                    new HttpHeaders());
         }
+
+        String encodedUrl = URLEncoder.encode(originalUrl, StandardCharsets.UTF_8.name());
+        if (proxyUrl.endsWith("/")) {
+            proxyUrl = proxyUrl.substring(0, proxyUrl.length() - 1);
+        }
+        String newUrl = proxyUrl + "?__url__=" + encodedUrl;
+
+        logger.info("[出站代理] 拦截请求: {} {} → {}, bodyLength={}", 
+                request.getMethod(), originalUrl, newUrl, body != null ? body.length : 0);
+
+        HttpRequest proxyRequest = new ProxyHttpRequest(request, URI.create(newUrl));
+        ClientHttpResponse proxyResponse = execution.execute(proxyRequest, body);
+
+        logger.info("[出站代理] 收到响应: {} {} → status={}", 
+                request.getMethod(), originalUrl, 
+                proxyResponse.getStatusCode().value());
+
+        return proxyResponse;
     }
 
     private boolean shouldProxy(String url, String host) {
@@ -187,12 +145,7 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
             boolean inWhitelist = false;
             for (String allowedHost : whitelist.split(",")) {
                 String trimmed = allowedHost.trim().toLowerCase();
-                if (trimmed.isEmpty()) {
-                    continue;
-                }
-                // 精确匹配: api.weixin.qq.com == api.weixin.qq.com
-                // 子域名通配: mp.weixin.qq.com 的 .endsWith(".weixin.qq.com") 匹配 weixin.qq.com
-                if (host.equals(trimmed) || host.endsWith("." + trimmed)) {
+                if (!trimmed.isEmpty() && (host.equals(trimmed) || host.endsWith("." + trimmed))) {
                     inWhitelist = true;
                     break;
                 }
@@ -206,16 +159,12 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
         if (blacklist != null && !blacklist.trim().isEmpty()) {
             for (String blockedHost : blacklist.split(",")) {
                 String trimmed = blockedHost.trim().toLowerCase();
-                if (trimmed.isEmpty()) {
-                    continue;
-                }
-                if (host.equals(trimmed) || host.endsWith("." + trimmed)) {
+                if (!trimmed.isEmpty() && (host.equals(trimmed) || host.endsWith("." + trimmed))) {
                     return false;
                 }
             }
         }
 
-        // 未命中任何排除规则 → 走代理
         return true;
     }
 
@@ -297,54 +246,46 @@ public class OutboundProxyInterceptor implements ClientHttpRequestInterceptor {
         }
     }
 
-    private byte[] readResponseBodyBytes(ClientHttpResponse response) throws IOException {
-        InputStream is = response.getBody();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        int len;
-        while ((len = is.read(buffer)) != -1) {
-            baos.write(buffer, 0, len);
-        }
-        return baos.toByteArray();
-    }
+    private static class ProxyErrorResponse implements ClientHttpResponse {
 
-    private static class CachedClientHttpResponse implements ClientHttpResponse {
-
-        private final ClientHttpResponse original;
+        private final HttpStatus status;
+        private final String statusText;
         private final byte[] bodyBytes;
+        private final HttpHeaders headers;
 
-        public CachedClientHttpResponse(ClientHttpResponse original, byte[] bodyBytes) {
-            this.original = original;
+        public ProxyErrorResponse(HttpStatus status, String statusText, byte[] bodyBytes, HttpHeaders headers) {
+            this.status = status;
+            this.statusText = statusText;
             this.bodyBytes = bodyBytes;
+            this.headers = headers;
         }
 
         @Override
-        public HttpStatus getStatusCode() throws IOException {
-            return original.getStatusCode();
+        public HttpStatus getStatusCode() {
+            return status;
         }
 
         @Override
-        public int getRawStatusCode() throws IOException {
-            return original.getRawStatusCode();
+        public int getRawStatusCode() {
+            return status.value();
         }
 
         @Override
-        public String getStatusText() throws IOException {
-            return original.getStatusText();
+        public String getStatusText() {
+            return statusText;
         }
 
         @Override
         public void close() {
-            original.close();
         }
 
         @Override
-        public org.springframework.http.HttpHeaders getHeaders() {
-            return original.getHeaders();
+        public HttpHeaders getHeaders() {
+            return headers;
         }
 
         @Override
-        public InputStream getBody() throws IOException {
+        public InputStream getBody() {
             return new ByteArrayInputStream(bodyBytes);
         }
     }
