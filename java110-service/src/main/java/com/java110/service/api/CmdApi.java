@@ -8,6 +8,7 @@ import com.java110.po.log.LogSystemErrorPo;
 import com.java110.service.smo.ICmdServiceSMO;
 import com.java110.service.smo.ISaveSystemErrorSMO;
 import com.java110.utils.constant.CommonConstant;
+import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.ExceptionUtil;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -64,6 +65,10 @@ public class CmdApi extends BaseController {
             logger.debug("api：{} 请求报文为：{},header信息为：{}", service, postInfo, headers);
             //todo 开始调用 cmd 类
             responseEntity = cmdServiceSMOImpl.cmd(postInfo, headers);
+        } catch (CmdException e) {
+            // 业务校验异常：仅记 DEBUG，不入错误日志表，保持返回结构不变(前端兼容)
+            logger.debug("业务校验失败[{}]：{}", service, e.getMessage());
+            responseEntity = new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Throwable e) {
             //todo 异常信息进行记录
             LogSystemErrorPo logSystemErrorPo = new LogSystemErrorPo();
@@ -105,6 +110,10 @@ public class CmdApi extends BaseController {
             headers.put(CommonConstant.HTTP_METHOD, CommonConstant.HTTP_METHOD_POST);
             logger.debug("api：{} 请求报文为：{},header信息为：{}", action, postInfo, headers);
             responseEntity = cmdServiceSMOImpl.cmd(postInfo, headers);
+        } catch (CmdException e) {
+            // 业务校验异常：仅记 DEBUG，不入错误日志表，保持返回结构不变(前端兼容)
+            logger.debug("业务校验失败[{}]：{}", action, e.getMessage());
+            responseEntity = new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Throwable e) {
             logger.error("请求post 方法[" + action + "]失败：" + postInfo, e);
             responseEntity = new ResponseEntity<String>("请求发生异常，" + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

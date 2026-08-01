@@ -3,7 +3,6 @@ package com.java110.api.SYSclient.service;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.factory.GenerateCodeFactory;
-import com.java110.intf.community.ICommunityV1InnerServiceSMO;
 import com.java110.intf.dev.ICacheV1InnerServiceSMO;
 import com.java110.core.log.LoggerFactory;
 import org.slf4j.Logger;
@@ -20,12 +19,12 @@ import java.util.*;
  * 处理流程（UPDATE 方式，不会破坏外键关联）:
  * 1. 解析冲突列表，提取冲突的 communityId
  * 2. 使用 GenerateCodeFactory 生成新 ID
- * 3. 通过 Feign replaceCommunityId 直接 UPDATE 所有关联表中的 community_id
+ * 3. 先全量备份数据库(DbBackupService)作为保底，再通过 CommunityIdReplacer 全表 UPDATE community_id
  * 4. 调用 ICacheV1InnerServiceSMO.startFlush() 刷新缓存使新ID立即生效
  * 5. 返回成功/失败，调用方随后全量重新注册（sendRegister 重新查询 DB）
  *
  * 注意: 上位机只通知社区ID冲突，不涉及商户ID修改。
- *       replaceCommunityId 使用 UPDATE 方式，s_community.store_id 保持不变。
+ *       CommunityIdReplacer 使用 UPDATE 方式，s_community.store_id 保持不变。
  *
  * @author SYS-client
  */
@@ -35,10 +34,13 @@ public class LocalIdUpdater {
     private static final Logger logger = LoggerFactory.getLogger(LocalIdUpdater.class);
 
     @Autowired
-    private ICommunityV1InnerServiceSMO communityV1InnerServiceSMO;
+    private ICacheV1InnerServiceSMO cacheV1InnerServiceSMO;
 
     @Autowired
-    private ICacheV1InnerServiceSMO cacheV1InnerServiceSMO;
+    private DbBackupService dbBackupService;
+
+    @Autowired
+    private CommunityIdReplacer communityIdReplacer;
 
     /**
      * 处理 CONFLICT，生成新 ID 并通过 UPDATE 替换数据库中的旧 ID
@@ -66,10 +68,10 @@ public class LocalIdUpdater {
                 String newCommunityId = GenerateCodeFactory.getCommunityId();
                 logger.info("[ID更新] 小区ID冲突，UPDATE: {} → {}", localCommunityId, newCommunityId);
 
-                Map<String, String> params = new HashMap<>();
-                params.put("oldCommunityId", localCommunityId);
-                params.put("newCommunityId", newCommunityId);
-                if (communityV1InnerServiceSMO.replaceCommunityId(params) < 1) {
+                // 保底措施：执行全表 community_id 替换前，先将整库备份到日志目录(LOG_PATH)，确保异常时可回滚
+                dbBackupService.backup("replaceCommunityId_" + localCommunityId);
+
+                if (communityIdReplacer.replace(localCommunityId, newCommunityId) < 1) {
                     logger.error("[ID更新] UPDATE 小区ID失败: old={}, new={}", localCommunityId, newCommunityId);
                     return false;
                 }

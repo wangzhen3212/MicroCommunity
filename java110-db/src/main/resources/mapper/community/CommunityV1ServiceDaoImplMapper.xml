@@ -234,39 +234,5 @@
         </if>
     </select>
 
-    <update id="replaceCommunityId" parameterType="Map">
-        update s_community set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_community_member set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_building set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_unit set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_room set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_owner set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_owner_app_user set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_staff set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_store set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_wechat_menu set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_wechat_template set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_wechat_config set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_fee_config set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_fee_config_attr set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_fee_bill set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_fee_collection set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_repair set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_repair_user set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_notice set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_notice_user set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_parking_space set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_parking_space_attr set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_parking_area set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_parking_coupon set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_ad set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_activity set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_activity_user set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_complaint set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_complaint_user set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_work_order set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_work_order_attr set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-        update s_work_order_user set community_id = #{newCommunityId} where community_id = #{oldCommunityId};
-    </update>
 
 </mapper>

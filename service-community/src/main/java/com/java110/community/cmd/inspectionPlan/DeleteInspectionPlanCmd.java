@@ -65,9 +65,12 @@ public class DeleteInspectionPlanCmd extends Cmd {
         
         // 根据巡检计划ID查询是否存在关联的巡检任务
         List<InspectionTaskDto> inspectionTaskDtos = inspectionTaskInnerServiceSMOImpl.queryInspectionTasks(inspectionTaskDto);
-        
+
         // 如果存在关联的巡检任务，则不允许删除巡检计划
-        Assert.listIsNull(inspectionTaskDtos, "该巡检计划正在使用，不能删除！");
+        // 抛出 CmdException(而非 Assert.listIsNull 的 IllegalArgumentException)，框架按业务校验处理(仅记 DEBUG)，避免污染 ERROR 日志
+        if (inspectionTaskDtos != null && !inspectionTaskDtos.isEmpty()) {
+            throw new CmdException("该巡检计划正在使用，不能删除！");
+        }
     }
 
     /**

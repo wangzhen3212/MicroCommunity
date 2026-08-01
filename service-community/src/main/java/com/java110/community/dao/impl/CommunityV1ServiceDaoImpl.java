@@ -24,7 +24,6 @@ import com.java110.community.dao.ICommunityV1ServiceDao;
 import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -115,16 +114,6 @@ public class CommunityV1ServiceDaoImpl extends BaseServiceDao implements ICommun
         List<Map> infos = sqlSessionTemplate.selectList("communityV1ServiceDaoImpl.queryCommunityAndPropertys",info);
 
         return infos;
-    }
-
-    @Override
-    @Transactional
-    public int replaceCommunityId(Map info) throws DAOException {
-        logger.debug("替换 communityId 入参 info : {}",info);
-
-        int updateFlag = sqlSessionTemplate.update("communityV1ServiceDaoImpl.replaceCommunityId", info);
-
-        return updateFlag;
     }
 
 
