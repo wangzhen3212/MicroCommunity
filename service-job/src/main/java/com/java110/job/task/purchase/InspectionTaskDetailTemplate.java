@@ -29,6 +29,26 @@ public class InspectionTaskDetailTemplate extends TaskSystemQuartz {
 
     private static Logger logger = LoggerFactory.getLogger(InspectionTaskDetailTemplate.class);
 
+    /**
+     * 超时状态码
+     */
+    private static final String STATE_TIMEOUT = "20200408";
+
+    /**
+     * 缺勤状态码（有部分打卡但未完成）
+     */
+    private static final String STATE_ABSENCE = "20200409";
+
+    /**
+     * 明细签到状态：未到
+     */
+    private static final String INSPECTION_STATE_NOT_ARRIVE = "70000";
+
+    /**
+     * 超时清理天数：超过该天数后软删除
+     */
+    private static final int EXPIRED_DAYS = 3;
+
     @Autowired
     private IInspectionTaskDetailInnerServiceSMO iInspectionTaskDetailInnerServiceSMOImpl;
 
@@ -37,113 +57,153 @@ public class InspectionTaskDetailTemplate extends TaskSystemQuartz {
 
     @Override
     protected void process(TaskDto taskDto) {
-        logger.debug("开始执行微信模板信息推送" + taskDto.toString());
+        logger.debug("开始执行巡检任务状态校准" + taskDto.toString());
         // 获取小区
         List<CommunityDto> communityDtos = getAllCommunity();
         for (CommunityDto communityDto : communityDtos) {
             try {
-                //签到状态修改
-                generatorTask(taskDto, communityDto);
-                //当天巡检任务状态修改
-                changeToadyTask(taskDto, communityDto);
+                // 1. 校准超时任务状态：未完成任务比对planEndTime，超时置为超时
+                updateTimeoutTask(communityDto);
+                // 2. 校准超时明细状态：未完成明细比对planEndTime，超时置为超时
+                updateTimeoutTaskDetail(communityDto);
+                // 3. 清理超时3天后的任务和巡检明细（软删除）
+                cleanExpiredTask(communityDto);
             } catch (Exception e) {
-                logger.error("推送消息失败", e);
+                logger.error("巡检任务状态校准失败", e);
             }
         }
     }
 
-    //签到状态修改
-    private void generatorTask(TaskDto taskDto, CommunityDto communityDto) {
-        //取出三天前的日期
-        Calendar cal = Calendar.getInstance(Locale.CHINA);
-        cal.add(Calendar.DAY_OF_MONTH,-3);
-        String today = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
-        String nowTime = today + " 00:00:00";
-        InspectionTaskDetailDto inspectionTaskDetailDto = new InspectionTaskDetailDto();
-        inspectionTaskDetailDto.setCommunityId(communityDto.getCommunityId());
-        inspectionTaskDetailDto.setNowTime(nowTime);
-        inspectionTaskDetailDto.setInspectionTimeFlag("1");
-        List<InspectionTaskDetailDto> inspectionTaskDetailDtos = iInspectionTaskDetailInnerServiceSMOImpl.queryInspectionTaskDetails(inspectionTaskDetailDto);
-        if (ListUtil.isNull(inspectionTaskDetailDtos)) {
+    /**
+     * 步骤1：查询所有未完成任务（未开始、巡检中），比对planEndTime与当前时间，超时置为超时状态
+     *
+     * @param communityDto 小区信息
+     */
+    private void updateTimeoutTask(CommunityDto communityDto) throws ParseException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date now = new Date();
+
+        // 查询所有未完成的巡检任务（未开始 + 巡检中）
+        InspectionTaskDto queryTaskDto = new InspectionTaskDto();
+        queryTaskDto.setCommunityId(communityDto.getCommunityId());
+        queryTaskDto.setStates(new String[]{InspectionTaskDto.STATE_NO_START, InspectionTaskDto.STATE_DOING});
+        List<InspectionTaskDto> tasks = iInspectionTaskInnerServiceSMOImpl.queryInspectionTasks(queryTaskDto);
+
+        if (ListUtil.isNull(tasks)) {
             return;
         }
-        String taskId = "";
-        List<InspectionTaskDetailDto> taskDetailDtos = new ArrayList<>();
-        for (InspectionTaskDetailDto inspectionTaskDetail : inspectionTaskDetailDtos) {
-            //巡检任务明细表签到状态改为未到
-            inspectionTaskDetail.setInspectionState("70000");
-            if (!taskId.equals(inspectionTaskDetail.getTaskId())) {
-                //获取巡检任务id
-                taskId = inspectionTaskDetail.getTaskId();
-                InspectionTaskDetailDto taskDetail = new InspectionTaskDetailDto();
-                taskDetail.setTaskId(taskId);
-                taskDetail.setInspectionTimeFlag("2");
-                taskDetailDtos = iInspectionTaskDetailInnerServiceSMOImpl.queryInspectionTaskDetails(taskDetail);
+
+        for (InspectionTaskDto task : tasks) {
+            String planEndTimeStr = task.getPlanEndTime();
+            if (StringUtil.isEmpty(planEndTimeStr)) {
+                continue;
             }
-            iInspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(inspectionTaskDetail);
-            if (!ListUtil.isNull(taskDetailDtos)) { //如果查询结果不为空且有数据，说明该任务id下的巡检计划有过打卡的数据，该条巡检任务状态就变为缺勤
-                InspectionTaskDto inspectionTaskDto = new InspectionTaskDto();
-                inspectionTaskDto.setTaskId(taskId);
-                //巡检任务表巡检状态变为缺勤
-                inspectionTaskDto.setState("20200409");
-                iInspectionTaskInnerServiceSMOImpl.updateInspectionTask(inspectionTaskDto);
-            } else { //如果查询数据为空，说明该任务id下的巡检计划没有打卡的数据，该条巡检任务状态就变为已超时
-                InspectionTaskDto inspectionTaskDto = new InspectionTaskDto();
-                inspectionTaskDto.setTaskId(taskId);
-                //巡检任务表巡检状态变为已超时
-                inspectionTaskDto.setState("20200408");
-                iInspectionTaskInnerServiceSMOImpl.updateInspectionTask(inspectionTaskDto);
+            Date planEndTime = sdf.parse(planEndTimeStr);
+            // 计划结束时间早于当前时间，说明已超时
+            if (now.after(planEndTime)) {
+                InspectionTaskDto updateTask = new InspectionTaskDto();
+                updateTask.setTaskId(task.getTaskId());
+                updateTask.setState(STATE_TIMEOUT);
+                iInspectionTaskInnerServiceSMOImpl.updateInspectionTask(updateTask);
             }
         }
-
     }
 
-    private void changeToadyTask(TaskDto taskDto, CommunityDto communityDto) throws ParseException {
-        //取出今天的日期
+    /**
+     * 步骤2：查询所有未完成的巡检明细，比对关联任务的planEndTime与当前时间，超时置为超时状态
+     *
+     * @param communityDto 小区信息
+     */
+    private void updateTimeoutTaskDetail(CommunityDto communityDto) throws ParseException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date now = new Date();
+
+        // 查询未打卡的巡检明细（inspection_time IS NULL AND inspection_state IS NULL）
+        InspectionTaskDetailDto queryDetail = new InspectionTaskDetailDto();
+        queryDetail.setCommunityId(communityDto.getCommunityId());
+        queryDetail.setInspectionTimeFlag("1");
+        List<InspectionTaskDetailDto> details = iInspectionTaskDetailInnerServiceSMOImpl.queryInspectionTaskDetails(queryDetail);
+
+        if (ListUtil.isNull(details)) {
+            return;
+        }
+
+        for (InspectionTaskDetailDto detail : details) {
+            // 已是超时状态的明细跳过，避免重复更新
+            if (STATE_TIMEOUT.equals(detail.getState())) {
+                continue;
+            }
+            String planEndTimeStr = detail.getPlanEndTime();
+            if (StringUtil.isEmpty(planEndTimeStr)) {
+                continue;
+            }
+            Date planEndTime = sdf.parse(planEndTimeStr);
+            // 计划结束时间早于当前时间，说明已超时
+            if (now.after(planEndTime)) {
+                detail.setState(STATE_TIMEOUT);
+                iInspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(detail);
+            }
+        }
+    }
+
+    /**
+     * 步骤3：清理超时3天后的任务和巡检明细（软删除，status_cd置为1）
+     *
+     * @param communityDto 小区信息
+     */
+    private void cleanExpiredTask(CommunityDto communityDto) throws ParseException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Calendar cal = Calendar.getInstance(Locale.CHINA);
-        String today = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
-        String toadyStartTime = today + " 00:00:00";
-        String todayEndTime = today + " 23:59:59";
-        InspectionTaskDetailDto inspectionTaskDetailDto = new InspectionTaskDetailDto();
-        inspectionTaskDetailDto.setCommunityId(communityDto.getCommunityId());
-        inspectionTaskDetailDto.setQrCodeTime(toadyStartTime);
-        inspectionTaskDetailDto.setNowTime(todayEndTime);
-        inspectionTaskDetailDto.setInspectionTimeFlag("1");
-        List<InspectionTaskDetailDto> inspectionTaskDetailDtos = iInspectionTaskDetailInnerServiceSMOImpl.queryInspectionTaskDetails(inspectionTaskDetailDto);
-        if (inspectionTaskDetailDtos != null && inspectionTaskDetailDtos.size() > 0) {
-            String taskId = "";
-            for (InspectionTaskDetailDto inspectionTaskDetail : inspectionTaskDetailDtos) {
-                InspectionTaskDto inspectionTaskDto = new InspectionTaskDto();
-                if (!StringUtil.isEmpty(inspectionTaskDetail.getState()) && !inspectionTaskDetail.getState().equals("20200407")) { //不是巡检完成状态
-                    //获取当前时间
-                    Date date = new Date();
-                    if (!StringUtil.isEmpty(inspectionTaskDetail.getPlanInsTime()) && !StringUtil.isEmpty(inspectionTaskDetail.getPlanEndTime())) {
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                        //获取巡检计划开始时间
-                        Date planInsTime = sdf.parse(inspectionTaskDetail.getPlanInsTime());
-                        //获取巡检计划结束时间
-                        Date planEndTime = sdf.parse(inspectionTaskDetail.getPlanEndTime());
-                        if (date.before(planInsTime)) { //如果当前时间在计划开始时间之前，任务状态就为未开始
-                            inspectionTaskDetail.setState("20200405"); // 20200405 未开始  20200406 巡检中  20200407 巡检完成  20200408 巡检未完成
-                            inspectionTaskDto.setState("20200405"); //20200405 未开始  20200406 巡检中  20200407 巡检完成  20200408 已超时  20200409 缺勤
-                        } else if (date.after(planEndTime)) { //如果当前时间在计划结束时间之后，任务状态为巡检未完成
-                            inspectionTaskDetail.setState("20200408");
-                            inspectionTaskDto.setState("20200408");
-                        } else {
-                            inspectionTaskDetail.setState("20200406");
-                            inspectionTaskDto.setState("20200406");
+        cal.add(Calendar.DAY_OF_MONTH, -EXPIRED_DAYS);
+        Date expiredDate = cal.getTime();
+
+        // 查询所有超时任务，在Java中过滤超过3天的
+        InspectionTaskDto queryTask = new InspectionTaskDto();
+        queryTask.setCommunityId(communityDto.getCommunityId());
+        queryTask.setState(STATE_TIMEOUT);
+        List<InspectionTaskDto> timeoutTasks = iInspectionTaskInnerServiceSMOImpl.queryInspectionTasks(queryTask);
+
+        if (ListUtil.isNull(timeoutTasks)) {
+            return;
+        }
+
+        for (InspectionTaskDto task : timeoutTasks) {
+            String planEndTimeStr = task.getPlanEndTime();
+            if (StringUtil.isEmpty(planEndTimeStr)) {
+                continue;
+            }
+            Date planEndTime = sdf.parse(planEndTimeStr);
+            // 超时超过3天的，软删除任务和明细
+            if (planEndTime.before(expiredDate)) {
+                // 查询该任务下是否有打卡记录，区分缺勤和超时
+                InspectionTaskDetailDto checkDetail = new InspectionTaskDetailDto();
+                checkDetail.setTaskId(task.getTaskId());
+                checkDetail.setInspectionTimeFlag("2"); // 已打卡明细
+                List<InspectionTaskDetailDto> checkedDetails = iInspectionTaskDetailInnerServiceSMOImpl.queryInspectionTaskDetails(checkDetail);
+
+                String finalState = ListUtil.isNull(checkedDetails) ? STATE_TIMEOUT : STATE_ABSENCE;
+
+                // 更新任务状态并软删除
+                InspectionTaskDto updateTask = new InspectionTaskDto();
+                updateTask.setTaskId(task.getTaskId());
+                updateTask.setState(finalState);
+                updateTask.setStatusCd("1");
+                iInspectionTaskInnerServiceSMOImpl.updateInspectionTask(updateTask);
+
+                // 查询该任务下的所有明细，未打卡的标记为未到，全部软删除
+                InspectionTaskDetailDto queryDetail = new InspectionTaskDetailDto();
+                queryDetail.setTaskId(task.getTaskId());
+                queryDetail.setCommunityId(communityDto.getCommunityId());
+                List<InspectionTaskDetailDto> details = iInspectionTaskDetailInnerServiceSMOImpl.queryInspectionTaskDetails(queryDetail);
+                if (!ListUtil.isNull(details)) {
+                    for (InspectionTaskDetailDto detail : details) {
+                        // 未打卡明细标记为未到
+                        if (StringUtil.isEmpty(detail.getInspectionTime())) {
+                            detail.setInspectionState(INSPECTION_STATE_NOT_ARRIVE);
                         }
-                    } else {
-                        inspectionTaskDetail.setState("20200405");
-                        inspectionTaskDto.setState("20200405");
+                        detail.setStatusCd("1");
+                        iInspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(detail);
                     }
-                    iInspectionTaskDetailInnerServiceSMOImpl.updateInspectionTaskDetail(inspectionTaskDetail);
-                }
-                if (!taskId.equals(inspectionTaskDetail.getTaskId())) {
-                    //获取巡检任务id
-                    taskId = inspectionTaskDetail.getTaskId();
-                    inspectionTaskDto.setTaskId(taskId);
-                    iInspectionTaskInnerServiceSMOImpl.updateInspectionTask(inspectionTaskDto);
                 }
             }
         }

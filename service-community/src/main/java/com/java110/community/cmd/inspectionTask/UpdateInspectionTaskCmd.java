@@ -15,16 +15,24 @@ import com.java110.core.annotation.Java110Cmd;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
+import com.java110.core.log.LoggerFactory;
+import com.java110.dto.inspection.InspectionPlanStaffDto;
 import com.java110.dto.inspection.InspectionTaskDto;
+import com.java110.dto.notice.NoticeStaffDto;
 import com.java110.intf.common.IFileInnerServiceSMO;
+import com.java110.intf.community.IInspectionPlanStaffV1InnerServiceSMO;
 import com.java110.intf.community.IInspectionTaskInnerServiceSMO;
 import com.java110.intf.community.IInspectionTaskV1InnerServiceSMO;
+import com.java110.intf.job.IMsgNotifyInnerServiceSMO;
+import com.java110.po.inspection.InspectionPlanStaffPo;
 import com.java110.po.inspection.InspectionTaskPo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.ListUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 
@@ -32,6 +40,8 @@ import java.util.List;
 
 @Java110Cmd(serviceCode = "inspectionTask.updateInspectionTask")
 public class UpdateInspectionTaskCmd extends Cmd {
+
+    private static Logger logger = LoggerFactory.getLogger(UpdateInspectionTaskCmd.class);
 
     /**
      * 文件内部服务接口
@@ -50,6 +60,18 @@ public class UpdateInspectionTaskCmd extends Cmd {
      */
     @Autowired
     private IInspectionTaskV1InnerServiceSMO inspectionTaskV1InnerServiceSMOImpl;
+
+    /**
+     * 巡检计划员工V1版本内部服务接口
+     */
+    @Autowired
+    private IInspectionPlanStaffV1InnerServiceSMO inspectionPlanStaffV1InnerServiceSMOImpl;
+
+    /**
+     * 消息通知接口（通过 Feign 调用 job-service 推送微信消息）
+     */
+    @Autowired
+    private IMsgNotifyInnerServiceSMO msgNotifyInnerServiceSMOImpl;
 
     /**
      * 请求参数验证方法
@@ -124,22 +146,81 @@ public class UpdateInspectionTaskCmd extends Cmd {
         inspectionTaskPo.setState(reqJson.getString("state"));
         
         // 处理任务转派逻辑
+        String originalPlanUserId = null;
+        String inspectionPlanId = null;
         if(!StringUtil.isEmpty(reqJson.getString("taskType")) && reqJson.getString("taskType").equals("2000") ){
-            // 如果是任务转派类型（2000），更新计划执行人员信息和转派描述
-//            inspectionTaskPo.setOriginalPlanUserId(inspectionTaskPo.getPlanUserId());
-//            inspectionTaskPo.setOriginalPlanUserName(inspectionTaskPo.getPlanUserName());
+            // 从任务数据中获取巡检计划ID（不依赖前端传入）
+            inspectionPlanId = inspectionTaskDtos.get(0).getInspectionPlanId();
+
+            // 1. 判断流转员工是否已在同一巡检计划内（只查有效记录 statusCd=0）
+            InspectionPlanStaffDto checkPlanStaffDto = new InspectionPlanStaffDto();
+            checkPlanStaffDto.setInspectionPlanId(inspectionPlanId);
+            checkPlanStaffDto.setStaffId(reqJson.getString("staffId"));
+            checkPlanStaffDto.setCommunityId(reqJson.getString("communityId"));
+            checkPlanStaffDto.setStatusCd("0");
+            List<InspectionPlanStaffDto> existPlanStaffs = inspectionPlanStaffV1InnerServiceSMOImpl.queryInspectionPlanStaffs(checkPlanStaffDto);
+            if (!ListUtil.isNull(existPlanStaffs)) {
+                throw new CmdException("流转员工已在相同巡检计划内，不能流转");
+            }
+
+            // 保存原员工ID（在更新前）
+            originalPlanUserId = inspectionTaskPo.getPlanUserId();
+
+            // 2. 设置当前任务的流转信息
             inspectionTaskPo.setPlanUserId(reqJson.getString("staffId"));
             inspectionTaskPo.setPlanUserName(reqJson.getString("staffName"));
             inspectionTaskPo.setTaskType(reqJson.getString("taskType"));
             inspectionTaskPo.setTransferDesc(reqJson.getString("transferDesc"));
         }
 
-        // 执行更新操作
+        // 执行更新操作（流转当前任务）
         int flag = inspectionTaskV1InnerServiceSMOImpl.updateInspectionTask(inspectionTaskPo);
-        
+
         // 检查更新结果，如果更新失败则抛出异常
         if (flag < 1) {
             throw new CmdException("删除数据失败");
+        }
+
+        // 流转成功后：判断是否修改计划员工关系表，再推送
+        if (!StringUtil.isEmpty(reqJson.getString("taskType")) && "2000".equals(reqJson.getString("taskType"))) {
+            // allTransfer=Y 时修改计划员工关系表，后续生成的任务也分配给新员工
+            if ("Y".equals(reqJson.getString("allTransfer"))) {
+                InspectionPlanStaffDto originalStaffDto = new InspectionPlanStaffDto();
+                originalStaffDto.setInspectionPlanId(inspectionPlanId);
+                originalStaffDto.setStaffId(originalPlanUserId);
+                originalStaffDto.setCommunityId(reqJson.getString("communityId"));
+                originalStaffDto.setStatusCd("0");
+                List<InspectionPlanStaffDto> originalStaffDtos = inspectionPlanStaffV1InnerServiceSMOImpl.queryInspectionPlanStaffs(originalStaffDto);
+                if (!ListUtil.isNull(originalStaffDtos)) {
+                    InspectionPlanStaffDto originalStaff = originalStaffDtos.get(0);
+                    InspectionPlanStaffPo planStaffPo = new InspectionPlanStaffPo();
+                    planStaffPo.setIpStaffId(originalStaff.getIpStaffId());
+                    planStaffPo.setInspectionPlanId(originalStaff.getInspectionPlanId());
+                    planStaffPo.setCommunityId(originalStaff.getCommunityId());
+                    planStaffPo.setStaffId(reqJson.getString("staffId"));
+                    planStaffPo.setStaffName(reqJson.getString("staffName"));
+                    planStaffPo.setStartTime(originalStaff.getStartTime());
+                    planStaffPo.setEndTime(originalStaff.getEndTime());
+                    int updateFlag = inspectionPlanStaffV1InnerServiceSMOImpl.updateInspectionPlanStaff(planStaffPo);
+                    if (updateFlag < 1) {
+                        throw new CmdException("修改计划员工关系失败");
+                    }
+                }
+            }
+
+            // 推送微信通知给新员工
+            try {
+                NoticeStaffDto noticeStaffDto = new NoticeStaffDto(
+                        reqJson.getString("communityId"),
+                        reqJson.getString("staffId"),
+                        "您有一个巡检任务已流转给您，请及时处理",
+                        "系统管理员"
+                );
+                msgNotifyInnerServiceSMOImpl.sendStaffMsg(noticeStaffDto);
+            } catch (Exception e) {
+                // 推送失败不阻断流转业务，仅记录日志
+                logger.error("流转后推送微信通知失败，staffId=" + reqJson.getString("staffId"), e);
+            }
         }
     }
 }
