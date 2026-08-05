@@ -82,7 +82,11 @@ public class QueryReportFeeSummaryCmd extends Cmd {
         // 验证必须包含小区信息
         Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区信息");
         // 验证必须包含查询类型
-        Assert.hasKeyAndValue(reqJson, "queryType", "未包含查询类型");
+        // 抛 CmdException 由 CmdApi 统一返回 HTTP 200+业务码，避免 Assert 抛 IllegalArgumentException 落 catch(Throwable) 记 ERROR/500
+        String queryType = reqJson.getString("queryType");
+        if (queryType == null || "".equals(queryType)) {
+            throw new CmdException("未包含查询类型");
+        }
     }
 
     /**

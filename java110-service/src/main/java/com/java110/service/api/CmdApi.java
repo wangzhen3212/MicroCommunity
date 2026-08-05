@@ -10,6 +10,7 @@ import com.java110.service.smo.ISaveSystemErrorSMO;
 import com.java110.utils.constant.CommonConstant;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.ExceptionUtil;
+import com.java110.vo.ResultVo;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
@@ -66,9 +67,11 @@ public class CmdApi extends BaseController {
             //todo 开始调用 cmd 类
             responseEntity = cmdServiceSMOImpl.cmd(postInfo, headers);
         } catch (CmdException e) {
-            // 业务校验异常：仅记 DEBUG，不入错误日志表，保持返回结构不变(前端兼容)
+            // 业务校验异常：返回 HTTP 200 + ResultVo(5010)，仅记 DEBUG，不入错误日志表
+            // 必须返回 HTTP 200：dealCmd 用 RestTemplate 调用本接口，HTTP 5xx 会抛 HttpServerErrorException 并在 dealCmd 记 ERROR
+            // 前端兼容：原 catch(Throwable) 经 dealCmd 转换后也是 HTTP 200 + ResultVo(CODE_ERROR)，前端只看 code!=0
             logger.debug("业务校验失败[{}]：{}", service, e.getMessage());
-            responseEntity = new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_BUSINESS_VERIFICATION, e.getMessage());
         } catch (Throwable e) {
             //todo 异常信息进行记录
             LogSystemErrorPo logSystemErrorPo = new LogSystemErrorPo();
@@ -111,9 +114,11 @@ public class CmdApi extends BaseController {
             logger.debug("api：{} 请求报文为：{},header信息为：{}", action, postInfo, headers);
             responseEntity = cmdServiceSMOImpl.cmd(postInfo, headers);
         } catch (CmdException e) {
-            // 业务校验异常：仅记 DEBUG，不入错误日志表，保持返回结构不变(前端兼容)
+            // 业务校验异常：返回 HTTP 200 + ResultVo(5010)，仅记 DEBUG，不入错误日志表
+            // 必须返回 HTTP 200：dealCmd 用 RestTemplate 调用本接口，HTTP 5xx 会抛 HttpServerErrorException 并在 dealCmd 记 ERROR
+            // 前端兼容：原 catch(Throwable) 经 dealCmd 转换后也是 HTTP 200 + ResultVo(CODE_ERROR)，前端只看 code!=0
             logger.debug("业务校验失败[{}]：{}", action, e.getMessage());
-            responseEntity = new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_BUSINESS_VERIFICATION, e.getMessage());
         } catch (Throwable e) {
             logger.error("请求post 方法[" + action + "]失败：" + postInfo, e);
             responseEntity = new ResponseEntity<String>("请求发生异常，" + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

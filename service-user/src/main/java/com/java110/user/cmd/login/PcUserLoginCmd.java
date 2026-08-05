@@ -36,7 +36,6 @@ import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.HashMap;
@@ -186,7 +185,8 @@ public class PcUserLoginCmd extends Cmd {
         
         // 用户不存在或密码错误
         if (ListUtil.isNull(userDtos)) {
-            responseEntity = new ResponseEntity<String>("用户或密码错误", HttpStatus.UNAUTHORIZED);
+            // 业务错误返回 HTTP 200 + 业务码，避免 dealCmd 层 4xx 抛异常记 ERROR 日志
+            responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_UNAUTHORIZED, "用户或密码错误");
             // 记录登录错误次数
             AuthenticationFactory.userLoginError(reqJson.getString("username"));
             cmdDataFlowContext.setResponseEntity(responseEntity);
@@ -202,7 +202,8 @@ public class PcUserLoginCmd extends Cmd {
             String state = storeUserDtos.get(0).getState();
             // 商户状态为48002表示限制登录
             if ("48002".equals(state)) {
-                responseEntity = new ResponseEntity<String>("当前商户限制登录，请联系管理员", HttpStatus.UNAUTHORIZED);
+                // 业务错误返回 HTTP 200 + 业务码，避免 dealCmd 层 4xx 抛异常记 ERROR 日志
+                responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_UNAUTHORIZED, "当前商户限制登录，请联系管理员");
                 cmdDataFlowContext.setResponseEntity(responseEntity);
                 return;
             }

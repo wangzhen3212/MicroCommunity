@@ -34,6 +34,7 @@ import com.java110.utils.exception.CmdException;
 import com.java110.utils.exception.SMOException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.DateUtil;
+import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -126,7 +127,8 @@ public class UserServiceLoginCmd extends Cmd{
         // 检查返回结果中是否包含必要的用户信息
         if (!resultInfo.containsKey("user") || !resultInfo.getJSONObject("user").containsKey("userPwd")
                 || !resultInfo.getJSONObject("user").containsKey("userId")) {
-            responseEntity = new ResponseEntity<String>("用户或密码错误", HttpStatus.UNAUTHORIZED);
+            // 业务错误返回 HTTP 200 + 业务码，避免 dealCmd 层 4xx 抛异常记 ERROR 日志
+            responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_UNAUTHORIZED, "用户或密码错误");
             context.setResponseEntity(responseEntity);
             return;
         }
@@ -136,7 +138,8 @@ public class UserServiceLoginCmd extends Cmd{
         String userPwd = userInfo.getString("userPwd");
         // 比较输入的密码和数据库中的密码
         if (!userPwd.equals(reqJson.getString("passwd"))) {
-            responseEntity = new ResponseEntity<String>("密码错误", HttpStatus.UNAUTHORIZED);
+            // 业务错误返回 HTTP 200 + 业务码，避免 dealCmd 层 4xx 抛异常记 ERROR 日志
+            responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_UNAUTHORIZED, "密码错误");
             context.setResponseEntity(responseEntity);
             return;
         }
@@ -151,7 +154,8 @@ public class UserServiceLoginCmd extends Cmd{
             String state = storeUserDtos.get(0).getState();
             // 检查商户是否被限制登录（状态码48002表示限制登录）
             if ("48002".equals(state)) {
-                responseEntity = new ResponseEntity<String>("当前商户限制登录，请联系管理员", HttpStatus.UNAUTHORIZED);
+                // 业务错误返回 HTTP 200 + 业务码，避免 dealCmd 层 4xx 抛异常记 ERROR 日志
+                responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_UNAUTHORIZED, "当前商户限制登录，请联系管理员");
                 context.setResponseEntity(responseEntity);
                 return;
             }

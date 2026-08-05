@@ -202,7 +202,7 @@ public class OIdServiceSMOImpl implements IOIdServiceSMO {
             String valueSql = " values (";
             for (String key : keyValue.keySet()) {
                 keySql += (key + ",");
-                valueSql += (keyValue.getString(key) + ",");
+                valueSql += (dealSqlValue(key, keyValue.getString(key)) + ",");
             }
             if (keySql.endsWith(",")) {
                 keySql = keySql.substring(0, keySql.length() - 1);
@@ -238,7 +238,7 @@ public class OIdServiceSMOImpl implements IOIdServiceSMO {
             }
             String whereSql = " where 1=1 ";
             for (String key : keyValue.keySet()) {
-                sql += (key + "=" + keyValue.getString(key) + ",");
+                sql += (key + "=" + dealSqlValue(key, keyValue.getString(key)) + ",");
                 if ("''".equals(afterKeyValue.getString(key))) { //条件中不拼写 为空的结果
                     continue;
                 }
@@ -447,5 +447,21 @@ public class OIdServiceSMOImpl implements IOIdServiceSMO {
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, ResultVo.MSG_OK);
     }
 
+    /**
+     * 处理拼接到 SQL 中的值
+     * 库中时间列为 NULL 时，事务日志（logText）中会被 Java110MybatisInterceptor 转为 ''，
+     * 直接拼接会在 MySQL 严格模式下对 datetime/timestamp 列报 Data truncation 错误，
+     * 因此时间列空串需要转回 NULL
+     *
+     * @param key   列名
+     * @param value 事务日志中的值（已带引号，空值为 ''）
+     * @return 可安全拼接的值
+     */
+    private String dealSqlValue(String key, String value) {
+        if ("''".equals(value) && (key.endsWith("_time") || "timeout".equals(key))) {
+            return "NULL";
+        }
+        return value;
+    }
 
 }

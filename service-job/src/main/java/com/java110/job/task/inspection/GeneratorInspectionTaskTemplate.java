@@ -363,11 +363,11 @@ public class GeneratorInspectionTaskTemplate extends TaskSystemQuartz {
         IMsgNotify msgNotify = MsgNotifyFactory.getMsgNotify(MsgNotifyFactory.NOTIFY_WAY_WECHAT);
         String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
         if (wechatUrl.endsWith("#/")) {
-            wechatUrl += "pages/inspection/inspectionIndex";
+            wechatUrl += "pages/inspection/inspection";
         } else if (wechatUrl.endsWith("/")) {
-            wechatUrl += "#/pages/inspection/inspectionIndex";
+            wechatUrl += "#/pages/inspection/inspection";
         } else {
-            wechatUrl += "/#/pages/inspection/inspectionIndex";
+            wechatUrl += "/#/pages/inspection/inspection";
         }
         return msgNotify.sendStaffMsg(
                 new NoticeStaffDto(communityDto.getCommunityId(),

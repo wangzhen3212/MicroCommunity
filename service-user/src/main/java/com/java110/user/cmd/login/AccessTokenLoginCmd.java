@@ -27,7 +27,6 @@ import com.java110.utils.util.*;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.io.IOException;
@@ -184,9 +183,10 @@ public class AccessTokenLoginCmd extends Cmd {
         // 如果用户有关联商户，检查商户状态
         if (storeUserDtos != null && storeUserDtos.size() > 0) {
             String state = storeUserDtos.get(0).getState();
-            // 如果商户状态为限制登录（48002），返回未授权响应
+            // 如果商户状态为限制登录（48002），返回业务码响应
             if ("48002".equals(state)) {
-                responseEntity = new ResponseEntity<String>("当前商户限制登录，请联系管理员", HttpStatus.UNAUTHORIZED);
+                // 业务错误返回 HTTP 200 + 业务码，避免 dealCmd 层 4xx 抛异常记 ERROR 日志
+                responseEntity = ResultVo.createResponseEntity(ResultVo.CODE_UNAUTHORIZED, "当前商户限制登录，请联系管理员");
                 context.setResponseEntity(responseEntity);
                 return;
             }

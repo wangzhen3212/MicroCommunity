@@ -239,7 +239,7 @@ public class AsynNotifySubServiceImpl implements IAsynNotifySubService {
                     continue;
                 }
                 keySql += (key + ",");
-                valueSql += (keyValue.getString(key) + ",");
+                valueSql += (dealSqlValue(key, keyValue.getString(key)) + ",");
 
                 if (!"''".equals(keyValue.getString(key))) {
                     updateSql += (" and " + key + "=" + keyValue.getString(key));
@@ -292,7 +292,7 @@ public class AsynNotifySubServiceImpl implements IAsynNotifySubService {
                     continue;
                 }
                 keySql += (key + ",");
-                valueSql += (keyValue.getString(key) + ",");
+                valueSql += (dealSqlValue(key, keyValue.getString(key)) + ",");
             }
             keySql += "operate,b_id";
             valueSql += "'DEL','" + orderItemDto.getbId() + "'";
@@ -308,6 +308,23 @@ public class AsynNotifySubServiceImpl implements IAsynNotifySubService {
         }
 
         return params;
+    }
+
+    /**
+     * 处理拼接到 SQL 中的值
+     * 库中时间列为 NULL 时，事务日志（logText）中会被 Java110MybatisInterceptor 转为 ''，
+     * 直接拼接会在 MySQL 严格模式下对 datetime/timestamp 列报 Data truncation 错误，
+     * 因此时间列空串需要转回 NULL
+     *
+     * @param key   列名
+     * @param value 事务日志中的值（已带引号，空值为 ''）
+     * @return 可安全拼接的值
+     */
+    private String dealSqlValue(String key, String value) {
+        if ("''".equals(value) && (key.endsWith("_time") || "timeout".equals(key))) {
+            return "NULL";
+        }
+        return value;
     }
 
 }

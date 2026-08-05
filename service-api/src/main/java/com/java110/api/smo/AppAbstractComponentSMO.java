@@ -139,7 +139,10 @@ public abstract class AppAbstractComponentSMO extends AbstractComponentSMO {
         Map<String, String> headers = new HashMap<String, String>();
         if (pd.getHeaders() != null) {
             for (String key : pd.getHeaders().keySet()) {
-                headers.put(key, pd.getHeaders().get(key).toString());
+                Object headerValue = pd.getHeaders().get(key);
+                if (headerValue != null) {
+                    headers.put(key, headerValue.toString());
+                }
             }
         }
         if (!headers.containsKey(CommonConstant.HTTP_USER_ID)) {

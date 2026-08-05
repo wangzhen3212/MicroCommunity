@@ -1,5 +1,7 @@
 package com.java110.api.configuration;
 
+import java.io.File;
+
 import com.java110.api.filter.JwtFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.MultipartConfigFactory;
@@ -21,8 +23,26 @@ public class ServiceConfiguration {
         factory.setMaxFileSize(1024*1024*50); //KB,MB
         /// 设置总上传数据总大小
         factory.setMaxRequestSize(1024*1024*50);
+        // 指定上传临时目录，避免使用 Tomcat 默认 /tmp 下临时目录被系统清理后导致上传失败
+        factory.setLocation(getUploadTempLocation());
         return factory.createMultipartConfig();
     }
+
+    /**
+     * 上传临时目录：优先使用 LOG_PATH（持久可写），否则回退到 ./MicroCommunityBoot-logs
+     */
+    private String getUploadTempLocation() {
+        String basePath = System.getProperty("LOG_PATH");
+        if (basePath == null || basePath.trim().isEmpty()) {
+            basePath = "./MicroCommunityBoot-logs";
+        }
+        File uploadDir = new File(basePath, "upload");
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
+        }
+        return uploadDir.getAbsolutePath();
+    }
+
     @Bean
     public FilterRegistrationBean jwtFilter() {
         StringBuffer exclusions = new StringBuffer();

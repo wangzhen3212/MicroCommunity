@@ -260,7 +260,7 @@ public class ImportRoomFeeImpl implements IImportRoomFee {
             importFeeDetailPo.setCommunityId(communityId);
             importFeeDetailPo.setEndTime(importRoomFee.getEndTime());
             importFeeDetailPo.setFeeId(payFeePo.getFeeId());
-            importFeeDetailPo.setFeeName(importRoomFee.getFeeName());
+            importFeeDetailPo.setFeeName(StringUtil.isEmpty(importRoomFee.getFeeName()) ? feeConfigDtos.get(0).getFeeName() : importRoomFee.getFeeName());
             importFeeDetailPo.setFloorNum(importRoomFee.getFloorNum());
             importFeeDetailPo.setUnitNum(importRoomFee.getUnitNum());
             importFeeDetailPo.setRoomNum(importRoomFee.getRoomNum());
@@ -448,7 +448,7 @@ public class ImportRoomFeeImpl implements IImportRoomFee {
             importFeeDetailPo.setCommunityId(communityId);
             importFeeDetailPo.setEndTime(importCarFee.getEndTime());
             importFeeDetailPo.setFeeId(payFeePo.getFeeId());
-            importFeeDetailPo.setFeeName(importCarFee.getFeeName());
+            importFeeDetailPo.setFeeName(StringUtil.isEmpty(importCarFee.getFeeName()) ? feeName : importCarFee.getFeeName());
             importFeeDetailPo.setFloorNum("-");
             importFeeDetailPo.setUnitNum("-");
             importFeeDetailPo.setRoomNum("-");
@@ -584,7 +584,7 @@ public class ImportRoomFeeImpl implements IImportRoomFee {
             feeAttrPo.setCommunityId(communityId);
             feeAttrPo.setAttrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_attrId));
             feeAttrPo.setSpecCd(FeeAttrDto.SPEC_CD_IMPORT_FEE_NAME);
-            feeAttrPo.setValue(importCarFee.getFeeName());
+            feeAttrPo.setValue(StringUtil.isEmpty(importCarFee.getFeeName()) ? feeName : importCarFee.getFeeName());
             feeAttrPo.setFeeId(payFeePo.getFeeId());
             feeAttrPos.add(feeAttrPo);
 
@@ -629,7 +629,7 @@ public class ImportRoomFeeImpl implements IImportRoomFee {
             importFeeDetailPo.setCommunityId(communityId);
             importFeeDetailPo.setEndTime(importCarFee.getEndTime());
             importFeeDetailPo.setFeeId(payFeePo.getFeeId());
-            importFeeDetailPo.setFeeName(importCarFee.getFeeName());
+            importFeeDetailPo.setFeeName(StringUtil.isEmpty(importCarFee.getFeeName()) ? feeName : importCarFee.getFeeName());
             importFeeDetailPo.setFloorNum("-");
             importFeeDetailPo.setUnitNum("-");
             importFeeDetailPo.setRoomNum("-");

@@ -5,6 +5,7 @@ import com.java110.dto.owner.OwnerDto;
 import com.java110.po.owner.OwnerPo;
 import com.java110.user.bmo.owner.*;
 import com.java110.utils.util.Assert;
+import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -100,5 +101,18 @@ public class OwnerApi {
         ownerDto.setCommunityId(communityId);
         ownerDto.setRoomId(roomId);
         return queryShopsHireLogImpl.query(ownerDto);
+    }
+
+    /**
+     * 业务校验异常统一返回 HTTP 200 + 业务码
+     * 综合查询等接口查无结果/查询参数格式错误属正常业务提示，
+     * 返回 200+ResultVo 业务码而非 500，避免 dealCmd 层记 ERROR 日志
+     *
+     * @param e 业务校验异常
+     * @return HTTP 200 + ResultVo 业务码
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
+        return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, e.getMessage());
     }
 }

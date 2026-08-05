@@ -263,11 +263,11 @@ public class NoticeStaffTaskTemplate extends TaskSystemQuartz {
         Date now = DateUtil.getCurrentDate();
         String wechatUrl = MappingCache.getValue(MappingConstant.URL_DOMAIN, "STAFF_WECHAT_URL");
         if (wechatUrl.endsWith("#/")) {
-            wechatUrl += "pages/inspection/inspectionIndex";
+            wechatUrl += "pages/inspection/inspection";
         } else if (wechatUrl.endsWith("/")) {
-            wechatUrl += "#/pages/inspection/inspectionIndex";
+            wechatUrl += "#/pages/inspection/inspection";
         } else {
-            wechatUrl += "/#/pages/inspection/inspectionIndex";
+            wechatUrl += "/#/pages/inspection/inspection";
         }
 
         for (Map.Entry<String, List<InspectionTaskDetailDto>> entry : taskGroup.entrySet()) {

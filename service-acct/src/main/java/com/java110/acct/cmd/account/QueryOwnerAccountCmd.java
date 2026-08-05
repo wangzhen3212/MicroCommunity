@@ -93,7 +93,9 @@ public class QueryOwnerAccountCmd extends Cmd {
         // 检查用户认证状态：未认证或认证失败
         if (ListUtil.isNull(ownerAppUserDtos)
                 || OwnerAppUserDto.STATE_AUDIT_ERROR.equals(ownerAppUserDtos.get(0).getState())) {
-            throw new CmdException("用户未认证,请先认证");
+            // 未认证属于业务提示，不抛异常中断流程，返回业务校验结果
+            context.setResponseEntity(ResultVo.createResponseEntity(ResultVo.CODE_BUSINESS_VERIFICATION, "用户未认证,请先认证", null));
+            return;
         }
 
         // 检查用户认证状态：认证审核中

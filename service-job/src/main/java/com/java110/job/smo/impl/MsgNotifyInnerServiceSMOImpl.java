@@ -27,11 +27,11 @@ public class MsgNotifyInnerServiceSMOImpl extends BaseServiceSMO implements IMsg
                 wechatUrl = "";
             }
             if (wechatUrl.endsWith("#/")) {
-                wechatUrl += "pages/inspection/inspectionIndex";
+                wechatUrl += "pages/inspection/inspection";
             } else if (wechatUrl.endsWith("/")) {
-                wechatUrl += "#/pages/inspection/inspectionIndex";
+                wechatUrl += "#/pages/inspection/inspection";
             } else {
-                wechatUrl += "/#/pages/inspection/inspectionIndex";
+                wechatUrl += "/#/pages/inspection/inspection";
             }
             noticeStaffDto.setUrl(wechatUrl);
         }

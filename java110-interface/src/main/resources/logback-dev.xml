@@ -74,6 +74,8 @@
     <!-- 第三方框架日志：降低级别，减少控制台噪音 -->
     <logger name="org.springframework" level="WARN"/>
     <logger name="org.quartz" level="WARN"/>
+    <!-- 屏蔽 Apache HttpClient 的 wire/headers 日志（原始二进制字节流，不可读且含敏感信息） -->
+    <logger name="org.apache.http" level="ERROR"/>
     <logger name="com.java110.order" level="ERROR"/>
 
     <!--myibatis log configure-->
@@ -88,7 +90,9 @@
     <logger name="org.thymeleaf" level="ERROR"/>
     <logger name="org.apache.kafka" level="ERROR"/>
 
-    <root level="DEBUG">
+    <!-- root 保持 INFO：MyBatis statement logger 无包前缀、druid.sql.Connection、org.quartz 等均继承 root，
+         设为 DEBUG 会输出海量 SQL(Preparing/Parameters)/连接池/调度日志(每天1G+)，需要排查时临时改回 DEBUG -->
+    <root level="INFO">
         <appender-ref ref="STDOUT_FILE"/>
         <appender-ref ref="DEBUG_FILE"/>
         <appender-ref ref="INFO_FILE"/>
