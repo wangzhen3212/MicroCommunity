@@ -109,4 +109,23 @@ public class CommunitySpaceConfirmOrderV1ServiceDaoImpl extends BaseServiceDao i
     }
 
 
+    /**
+     * 查询场地预约核销统计（今日核销笔数/今日核销金额/累计已核销）
+     *
+     * @param info 场地预约核销信息
+     * @return 统计信息
+     */
+    @Override
+    public Map queryCommunitySpaceConfirmOrderSummary(Map info) {
+        logger.debug("查询 queryCommunitySpaceConfirmOrderSummary 入参 info : {}", info);
+
+        List<Map> businessCommunitySpaceConfirmOrderInfos = sqlSessionTemplate.selectList("communitySpaceConfirmOrderV1ServiceDaoImpl.queryCommunitySpaceConfirmOrderSummary", info);
+        if (businessCommunitySpaceConfirmOrderInfos.size() < 1) {
+            return null;
+        }
+
+        return businessCommunitySpaceConfirmOrderInfos.get(0);
+    }
+
+
 }

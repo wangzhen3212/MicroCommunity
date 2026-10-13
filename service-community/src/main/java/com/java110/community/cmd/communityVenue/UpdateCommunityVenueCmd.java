@@ -21,15 +21,21 @@ import com.java110.core.annotation.Java110Transactional;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
+import com.java110.dto.community.CommunitySpaceOpenTimeDto;
+import com.java110.intf.community.ICommunitySpaceOpenTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunityVenueV1InnerServiceSMO;
+import com.java110.po.communitySpace.CommunitySpaceOpenTimePo;
 import com.java110.po.communitySpace.CommunityVenuePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 
 /**
@@ -45,11 +51,16 @@ import org.slf4j.LoggerFactory;
 @Java110Cmd(serviceCode = "communityVenue.updateCommunityVenue")
 public class UpdateCommunityVenueCmd extends Cmd {
 
-  private static Logger logger = LoggerFactory.getLogger(UpdateCommunityVenueCmd.class);
+    private static Logger logger = LoggerFactory.getLogger(UpdateCommunityVenueCmd.class);
 
+    public static final String WEEK_DAY_ALL = "0";
 
     @Autowired
     private ICommunityVenueV1InnerServiceSMO communityVenueV1InnerServiceSMOImpl;
+
+    @Autowired
+    private ICommunitySpaceOpenTimeV1InnerServiceSMO communitySpaceOpenTimeV1InnerServiceSMOImpl;
+
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
@@ -69,6 +80,69 @@ Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
             throw new CmdException("更新数据失败");
         }
 
+        refreshOpenTimes(communityVenuePo);
+
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
+    }
+
+    private void refreshOpenTimes(CommunityVenuePo communityVenuePo) {
+
+        if (StringUtil.isEmpty(communityVenuePo.getStartTime()) || StringUtil.isEmpty(communityVenuePo.getEndTime())) {
+            return;
+        }
+
+        int startHour = getHour(communityVenuePo.getStartTime(), 0);
+        int endHour = getHour(communityVenuePo.getEndTime(), 24);
+
+        CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
+        communitySpaceOpenTimeDto.setCommunityId(communityVenuePo.getCommunityId());
+        communitySpaceOpenTimeDto.setVenueId(communityVenuePo.getVenueId());
+        communitySpaceOpenTimeDto.setWeekDay(WEEK_DAY_ALL);
+        communitySpaceOpenTimeDto.setStatusCd("0");
+        List<CommunitySpaceOpenTimeDto> communitySpaceOpenTimeDtos
+                = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimes(communitySpaceOpenTimeDto);
+
+        if (communitySpaceOpenTimeDtos == null || communitySpaceOpenTimeDtos.size() < 1) {
+            return;
+        }
+
+        String isOpen = null;
+        CommunitySpaceOpenTimePo communitySpaceOpenTimePo = null;
+        int hours = 0;
+        for (CommunitySpaceOpenTimeDto tmpCommunitySpaceOpenTimeDto : communitySpaceOpenTimeDtos) {
+            if (StringUtil.isEmpty(tmpCommunitySpaceOpenTimeDto.getHours())) {
+                continue;
+            }
+            hours = Integer.parseInt(tmpCommunitySpaceOpenTimeDto.getHours());
+            isOpen = (hours >= startHour && hours < endHour) ? "Y" : "N";
+            if (isOpen.equals(tmpCommunitySpaceOpenTimeDto.getIsOpen())) {
+                continue;
+            }
+            communitySpaceOpenTimePo = new CommunitySpaceOpenTimePo();
+            communitySpaceOpenTimePo.setStatusCd("0");
+            communitySpaceOpenTimePo.setTimeId(tmpCommunitySpaceOpenTimeDto.getTimeId());
+            communitySpaceOpenTimePo.setCommunityId(communityVenuePo.getCommunityId());
+            communitySpaceOpenTimePo.setVenueId(communityVenuePo.getVenueId());
+            communitySpaceOpenTimePo.setWeekDay(WEEK_DAY_ALL);
+            communitySpaceOpenTimePo.setHours(tmpCommunitySpaceOpenTimeDto.getHours());
+            communitySpaceOpenTimePo.setIsOpen(isOpen);
+            communitySpaceOpenTimeV1InnerServiceSMOImpl.updateCommunitySpaceOpenTime(communitySpaceOpenTimePo);
+        }
+    }
+
+    private int getHour(String time, int defaultValue) {
+        if (StringUtil.isEmpty(time) || time.indexOf(":") < 1) {
+            return defaultValue;
+        }
+        try {
+            int hour = Integer.parseInt(time.substring(0, time.indexOf(":")).trim());
+            if (hour < 0 || hour > 24) {
+                return defaultValue;
+            }
+            return hour;
+        } catch (NumberFormatException e) {
+            logger.error("解析时间失败", e);
+            return defaultValue;
+        }
     }
 }

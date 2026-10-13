@@ -15,6 +15,11 @@ import java.util.Date;
  **/
 public class CommunitySpaceConfirmOrderDto extends PageDto implements Serializable {
 
+    public static final String VERIFY_METHOD_SCAN = "1"; //扫码盒子核销
+
+    public static final String VERIFY_METHOD_HAND = "2"; //手动核销
+
+
     private String spaceId;
     private String spaceName;
     private String cspId;
@@ -26,6 +31,25 @@ public class CommunitySpaceConfirmOrderDto extends PageDto implements Serializab
     private String receivedAmount;
     private String payWay;
     private String payTime;
+
+    private String verifyMethod;
+    private String verifierId;
+    private String verifierName;
+
+    private String receivableAmount;
+    private String receivedAmountPerson;
+    private String payWayPerson;
+    private String state;
+    private String stateName;
+
+    private String cspOrderId;
+
+
+    private String keyword;
+    private String beginTime;
+    private String endTime;
+
+
 
 
     private String personName;
@@ -180,5 +204,102 @@ public class CommunitySpaceConfirmOrderDto extends PageDto implements Serializab
 
     public void setPayTime(String payTime) {
         this.payTime = payTime;
+    }
+
+    public String getVerifyMethod() {
+        return verifyMethod;
+    }
+
+    public void setVerifyMethod(String verifyMethod) {
+        this.verifyMethod = verifyMethod;
+    }
+
+    public String getVerifierId() {
+        return verifierId;
+    }
+
+    public void setVerifierId(String verifierId) {
+        this.verifierId = verifierId;
+    }
+
+    public String getVerifierName() {
+        return verifierName;
+    }
+
+    public void setVerifierName(String verifierName) {
+        this.verifierName = verifierName;
+    }
+
+    public String getReceivableAmount() {
+        return receivableAmount;
+    }
+
+    public void setReceivableAmount(String receivableAmount) {
+        this.receivableAmount = receivableAmount;
+    }
+
+    public String getReceivedAmountPerson() {
+        return receivedAmountPerson;
+    }
+
+    public void setReceivedAmountPerson(String receivedAmountPerson) {
+        this.receivedAmountPerson = receivedAmountPerson;
+    }
+
+    public String getPayWayPerson() {
+        return payWayPerson;
+    }
+
+    public void setPayWayPerson(String payWayPerson) {
+        this.payWayPerson = payWayPerson;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getStateName() {
+        return stateName;
+    }
+
+    public void setStateName(String stateName) {
+        this.stateName = stateName;
+    }
+
+    public String getCspOrderId() {
+        return cspOrderId;
+    }
+
+    public void setCspOrderId(String cspOrderId) {
+        this.cspOrderId = cspOrderId;
+    }
+
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+
+    public String getBeginTime() {
+        return beginTime;
+    }
+
+    public void setBeginTime(String beginTime) {
+        this.beginTime = beginTime;
+    }
+
+    public String getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(String endTime) {
+        this.endTime = endTime;
     }
 }

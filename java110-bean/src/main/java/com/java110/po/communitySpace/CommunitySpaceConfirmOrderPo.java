@@ -37,6 +37,9 @@ public class CommunitySpaceConfirmOrderPo implements Serializable {
     private String receivedAmount;
     private String payWay;
     private String payTime;
+    private String verifyMethod;
+    private String verifierId;
+    private String verifierName;
 
     public String getSpaceId() {
         return spaceId;
@@ -117,6 +120,31 @@ public class CommunitySpaceConfirmOrderPo implements Serializable {
     public void setPayTime(String payTime) {
         this.payTime = payTime;
     }
+
+    public String getVerifyMethod() {
+        return verifyMethod;
+    }
+
+    public void setVerifyMethod(String verifyMethod) {
+        this.verifyMethod = verifyMethod;
+    }
+
+    public String getVerifierId() {
+        return verifierId;
+    }
+
+    public void setVerifierId(String verifierId) {
+        this.verifierId = verifierId;
+    }
+
+    public String getVerifierName() {
+        return verifierName;
+    }
+
+    public void setVerifierName(String verifierName) {
+        this.verifierName = verifierName;
+    }
+
 
 
 }

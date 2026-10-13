@@ -37,6 +37,7 @@ import com.java110.po.communitySpace.CommunitySpacePersonTimePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
@@ -45,7 +46,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 
@@ -104,6 +108,8 @@ public class SaveCommunitySpacePersonCmd extends Cmd {
 
     public static final String DEFAULT_AMOUNT = "0.00";
 
+    public static final String WEEK_DAY_ALL = "0";
+
     private static final Pattern DATE_PATTERN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
 
     @Autowired
@@ -154,17 +160,29 @@ public class SaveCommunitySpacePersonCmd extends Cmd {
             throw new CmdException("请选择预约时段");
         }
 
-        CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = null;
+        //开放时段校验按场地所属场馆 + 日期星期（week_day 优先，其次全周通用配置）
+        String venueId = communitySpaceDtos.get(0).getVenueId();
+        String weekDay = getWeekDay(appointmentTime);
+
+        CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
+        communitySpaceOpenTimeDto.setCommunityId(reqJson.getString("communityId"));
+        communitySpaceOpenTimeDto.setVenueId(venueId);
+        communitySpaceOpenTimeDto.setWeekDays(new String[]{weekDay, WEEK_DAY_ALL});
+        communitySpaceOpenTimeDto.setStatusCd("0");
+        List<CommunitySpaceOpenTimeDto> communitySpaceOpenTimeDtos = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimes(communitySpaceOpenTimeDto);
+
+        Map<String, String> openTimeMap = new HashMap<>();
+        for (CommunitySpaceOpenTimeDto tmpCommunitySpaceOpenTimeDto : communitySpaceOpenTimeDtos) {
+            if (weekDay.equals(tmpCommunitySpaceOpenTimeDto.getWeekDay()) || !openTimeMap.containsKey(tmpCommunitySpaceOpenTimeDto.getHours())) {
+                openTimeMap.put(tmpCommunitySpaceOpenTimeDto.getHours(), tmpCommunitySpaceOpenTimeDto.getIsOpen());
+            }
+        }
+
         CommunitySpacePersonTimeDto communitySpacePersonTimeDto = null;
         int flag = 0;
         for (JSONObject appointmentTimeObj : appointmentTimes) {
             String hours = appointmentTimeObj.getString("hours");
-            communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
-            communitySpaceOpenTimeDto.setSpaceId(reqJson.getString("spaceId"));
-            communitySpaceOpenTimeDto.setHours(hours);
-            communitySpaceOpenTimeDto.setIsOpen("Y");
-            flag = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimesCount(communitySpaceOpenTimeDto);
-            if (flag < 1) {
+            if (!"Y".equals(openTimeMap.get(hours))) {
                 throw new CmdException(hours + ":00 时段未开放预约");
             }
 
@@ -193,7 +211,7 @@ public class SaveCommunitySpacePersonCmd extends Cmd {
         communitySpacePersonPo.setCspId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         communitySpacePersonPo.setOrderId(GenerateCodeFactory.getGeneratorId("11"));
         if (StringUtil.isEmpty(communitySpacePersonPo.getState())) {
-            communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_WP);
+            communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_S);
         }
         if (StringUtil.isEmpty(communitySpacePersonPo.getPayWay())) {
             communitySpacePersonPo.setPayWay(DEFAULT_PAY_WAY);
@@ -223,6 +241,19 @@ public class SaveCommunitySpacePersonCmd extends Cmd {
         }
 
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
+    }
+
+    /**
+     * 日期转星期（1~7 周一~周日）
+     *
+     * @param date 日期 YYYY-MM-DD
+     * @return 星期
+     */
+    private String getWeekDay(String date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(DateUtil.getDateFromStringB(date));
+        int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+        return (dayOfWeek == Calendar.SUNDAY ? 7 : dayOfWeek - 1) + "";
     }
 
     /**

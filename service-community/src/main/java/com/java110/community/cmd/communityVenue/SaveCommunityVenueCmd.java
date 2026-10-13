@@ -22,16 +22,22 @@ import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.core.factory.GenerateCodeFactory;
+import com.java110.intf.community.ICommunitySpaceOpenTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunityVenueV1InnerServiceSMO;
 import com.java110.intf.user.IUserV1InnerServiceSMO;
+import com.java110.po.communitySpace.CommunitySpaceOpenTimePo;
 import com.java110.po.communitySpace.CommunityVenuePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 类表述：保存
@@ -50,8 +56,13 @@ public class SaveCommunityVenueCmd extends Cmd {
 
     public static final String CODE_PREFIX_ID = "10";
 
+    public static final String WEEK_DAY_ALL = "0";
+
     @Autowired
     private ICommunityVenueV1InnerServiceSMO communityVenueV1InnerServiceSMOImpl;
+
+    @Autowired
+    private ICommunitySpaceOpenTimeV1InnerServiceSMO communitySpaceOpenTimeV1InnerServiceSMOImpl;
 
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
@@ -77,6 +88,46 @@ public class SaveCommunityVenueCmd extends Cmd {
             throw new CmdException("保存数据失败");
         }
 
+        saveDefaultOpenTimes(communityVenuePo);
+
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
+    }
+
+    private void saveDefaultOpenTimes(CommunityVenuePo communityVenuePo) {
+
+        int startHour = getHour(communityVenuePo.getStartTime(), 0);
+        int endHour = getHour(communityVenuePo.getEndTime(), 24);
+
+        List<CommunitySpaceOpenTimePo> communitySpaceOpenTimePos = new ArrayList<>();
+        CommunitySpaceOpenTimePo communitySpaceOpenTimePo = null;
+        for (int hours = 0; hours < 24; hours++) {
+            communitySpaceOpenTimePo = new CommunitySpaceOpenTimePo();
+            communitySpaceOpenTimePo.setCommunityId(communityVenuePo.getCommunityId());
+            communitySpaceOpenTimePo.setVenueId(communityVenuePo.getVenueId());
+            communitySpaceOpenTimePo.setWeekDay(WEEK_DAY_ALL);
+            communitySpaceOpenTimePo.setSpaceId("");
+            communitySpaceOpenTimePo.setHours(hours + "");
+            communitySpaceOpenTimePo.setIsOpen(hours >= startHour && hours < endHour ? "Y" : "N");
+            communitySpaceOpenTimePo.setTimeId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+            communitySpaceOpenTimePos.add(communitySpaceOpenTimePo);
+        }
+
+        communitySpaceOpenTimeV1InnerServiceSMOImpl.saveCommunitySpaceOpenTimes(communitySpaceOpenTimePos);
+    }
+
+    private int getHour(String time, int defaultValue) {
+        if (StringUtil.isEmpty(time) || time.indexOf(":") < 1) {
+            return defaultValue;
+        }
+        try {
+            int hour = Integer.parseInt(time.substring(0, time.indexOf(":")).trim());
+            if (hour < 0 || hour > 24) {
+                return defaultValue;
+            }
+            return hour;
+        } catch (NumberFormatException e) {
+            logger.error("解析时间失败", e);
+            return defaultValue;
+        }
     }
 }

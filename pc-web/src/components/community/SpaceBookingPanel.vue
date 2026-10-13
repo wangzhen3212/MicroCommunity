@@ -31,13 +31,19 @@
         </div>
       </div>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="small">
-        <el-form-item :label="$t('reportCommunitySpace.personName')" prop="personName">
-          <el-input v-model="form.personName" :placeholder="$t('reportCommunitySpace.personNamePlaceholder')" clearable />
-        </el-form-item>
-        <el-form-item :label="$t('reportCommunitySpace.personTel')" prop="personTel">
-          <el-input v-model="form.personTel" :placeholder="$t('reportCommunitySpace.personTelPlaceholder')" clearable />
-        </el-form-item>
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="small" class="booking-form">
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item :label="$t('reportCommunitySpace.personName')" prop="personName">
+              <el-input v-model="form.personName" :placeholder="$t('reportCommunitySpace.personNamePlaceholder')" clearable />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item :label="$t('reportCommunitySpace.personTel')" prop="personTel">
+              <el-input v-model="form.personTel" :placeholder="$t('reportCommunitySpace.personTelPlaceholder')" clearable />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item :label="$t('reportCommunitySpace.remark')" prop="remark">
           <el-input v-model="form.remark" type="textarea" :rows="2"
             :placeholder="$t('reportCommunitySpace.remarkPlaceholder')" />
@@ -254,6 +260,14 @@ export default {
   justify-content: space-between;
   padding-top: 4px;
   margin-bottom: 12px;
+}
+
+.booking-form ::v-deep .el-form-item__label {
+  text-align: left;
+}
+
+.booking-form ::v-deep .el-form-item {
+  margin-bottom: 14px;
 }
 
 .amount-label {

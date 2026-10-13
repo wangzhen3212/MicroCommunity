@@ -101,6 +101,7 @@ import { messages as communitySpaceManageMessages } from '../../views/community/
 import { messages as reportCommunitySpaceMessages } from '../../views/community/reportCommunitySpaceLang'
 import { messages as communitySpacePersonManageMessages } from '../../views/community/communitySpacePersonManageLang'
 import { messages as communitySpaceConfirmMessages } from '../../views/community/communitySpaceConfirmLang'
+import { messages as communityVenueOpenTimeMessages } from '../../views/community/communityVenueOpenTimeLang'
 import { messages as addOwnerCommitteeMessages } from '../../views/owner/addOwnerCommitteeLang'
 import { messages as editOwnerCommitteeMessages } from '../../views/owner/editOwnerCommitteeLang'
 import { messages as ownerCommitteeDetailMessages } from '../../views/owner/ownerCommitteeDetailLang'
@@ -245,6 +246,7 @@ export default {
   ...reportCommunitySpaceMessages['zh-TW'],
   ...communitySpacePersonManageMessages['zh-TW'],
   ...communitySpaceConfirmMessages['zh-TW'],
+  ...communityVenueOpenTimeMessages['zh-TW'],
   ...addOwnerCommitteeMessages['zh-TW'],
   ...editOwnerCommitteeMessages['zh-TW'],
   ...ownerCommitteeDetailMessages['zh-TW'],

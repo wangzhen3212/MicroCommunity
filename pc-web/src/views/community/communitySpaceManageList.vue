@@ -62,6 +62,9 @@
           <span v-if="currentVenue" class="open-pill">
             {{ $t('communitySpaceManage.openTimePill', { start: currentVenue.startTime, end: currentVenue.endTime }) }}
           </span>
+          <el-button v-if="currentVenue" type="text" class="link-button" @click="handleOpenTimeConfig">
+            {{ $t('communitySpaceManage.openTimeConfigLink') }}
+          </el-button>
           <div class="header-actions">
             <el-input v-model="conditions.name" size="small" clearable class="search-input"
               :placeholder="$t('communitySpaceManage.searchSpacePlaceholder')" @keyup.enter.native="handleQuery" />
@@ -99,13 +102,10 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column :label="$t('communitySpaceManage.operation')" align="right" width="260">
+          <el-table-column :label="$t('communitySpaceManage.operation')" align="right" width="220">
             <template slot-scope="scope">
               <el-button type="text" @click="handleEditSpace(scope.row)">
                 {{ $t('communitySpaceManage.edit') }}
-              </el-button>
-              <el-button type="text" @click="handleOpenTime(scope.row)">
-                {{ $t('communitySpaceManage.openTime') }}
               </el-button>
               <el-button type="text" @click="handleToggleState(scope.row)">
                 {{ scope.row.state === '1001' ? $t('communitySpaceManage.disableAction')
@@ -131,7 +131,6 @@
     <add-community-space ref="addSpaceModal" @success="refreshAll" />
     <edit-community-space ref="editSpaceModal" @success="refreshAll" />
     <delete-community-space ref="deleteSpaceModal" @success="refreshAll" />
-    <edit-community-space-open-time ref="openTimeModal" @success="refreshAll" />
   </div>
 </template>
 
@@ -147,7 +146,6 @@ import DeleteCommunityVenue from '@/components/community/DeleteCommunityVenue'
 import AddCommunitySpace from '@/components/community/AddCommunitySpace'
 import EditCommunitySpace from '@/components/community/EditCommunitySpace'
 import DeleteCommunitySpace from '@/components/community/DeleteCommunitySpace'
-import EditCommunitySpaceOpenTime from '@/components/community/EditCommunitySpaceOpenTime'
 
 export default {
   name: 'CommunitySpaceManageList',
@@ -157,8 +155,7 @@ export default {
     DeleteCommunityVenue,
     AddCommunitySpace,
     EditCommunitySpace,
-    DeleteCommunitySpace,
-    EditCommunitySpaceOpenTime
+    DeleteCommunitySpace
   },
   data() {
     return {
@@ -300,8 +297,8 @@ export default {
     handleEditSpace(row) {
       this.$refs.editSpaceModal.open(row, this.venues)
     },
-    handleOpenTime(row) {
-      this.$refs.openTimeModal.open(row)
+    handleOpenTimeConfig() {
+      this.$router.push('/pages/property/communityVenueOpenTime')
     },
     handleDeleteSpace(row) {
       this.$refs.deleteSpaceModal.open(row)

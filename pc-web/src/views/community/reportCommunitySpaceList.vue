@@ -148,7 +148,7 @@ export default {
         const hours = Number(item.hours)
         return {
           hours: hours,
-          label: this.formatHour(hours),
+          label: this.formatHourRange(hours),
           status: this.getSlotStatus(item)
         }
       })
@@ -189,15 +189,17 @@ export default {
       this.loading = true
       try {
         const configRes = await listCommunitySpaceOpenTime({
-          spaceId: this.currentSpaceId,
+          venueId: this.currentVenueId,
+          appointmentTime: this.appointmentDate,
           communityId: this.communityId
         })
         this.openTimeConfig = configRes || []
 
         const availableRes = await listCommunitySpaceOpenTime({
+          venueId: this.currentVenueId,
           spaceId: this.currentSpaceId,
-          communityId: this.communityId,
-          appointmentTime: this.appointmentDate
+          appointmentTime: this.appointmentDate,
+          communityId: this.communityId
         })
         const hours = []
         const openTimeList = availableRes || []
@@ -303,8 +305,8 @@ export default {
     formatMonthDay(date) {
       return this.pad(date.getMonth() + 1) + '-' + this.pad(date.getDate())
     },
-    formatHour(hours) {
-      return this.pad(hours) + ':00'
+    formatHourRange(hours) {
+      return this.pad(hours) + ':00~' + this.pad(Number(hours) + 1) + ':00'
     },
     pad(value) {
       return value < 10 ? '0' + value : '' + value
@@ -508,8 +510,8 @@ export default {
 
 .slot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
   padding: 16px;
   min-height: 120px;
 }
@@ -518,8 +520,9 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 6px;
-  border-radius: 10px;
+  max-width: 132px;
+  padding: 8px 4px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
   cursor: pointer;
   transition: all 0.15s;
@@ -531,14 +534,15 @@ export default {
 }
 
 .slot-hour {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #334155;
+  white-space: nowrap;
 }
 
 .slot-state {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 10px;
   color: #94a3b8;
 }
 

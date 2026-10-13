@@ -26,9 +26,11 @@ import com.java110.doc.annotation.*;
 import com.java110.dto.community.CommunitySpaceConfirmOrderDto;
 import com.java110.dto.community.CommunitySpacePersonDto;
 import com.java110.dto.community.CommunitySpacePersonTimeDto;
+import com.java110.dto.user.UserDto;
 import com.java110.intf.community.ICommunitySpaceConfirmOrderV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpacePersonTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpacePersonV1InnerServiceSMO;
+import com.java110.intf.user.IUserInnerServiceSMO;
 import com.java110.po.communitySpace.CommunitySpaceConfirmOrderPo;
 import com.java110.po.communitySpace.CommunitySpacePersonPo;
 import com.java110.po.communitySpace.CommunitySpacePersonTimePo;
@@ -108,6 +110,10 @@ public class SaveCommunitySpaceConfirmOrderCmd extends Cmd {
     @Autowired
     private ICommunitySpacePersonV1InnerServiceSMO communitySpacePersonV1InnerServiceSMOImpl;
 
+    @Autowired
+    private IUserInnerServiceSMO userInnerServiceSMOImpl;
+
+
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
         Assert.hasKeyAndValue(reqJson, "timeId", "请求报文中未包含timeId");
@@ -118,17 +124,24 @@ public class SaveCommunitySpaceConfirmOrderCmd extends Cmd {
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        String communityId = reqJson.getString("communityId");
+
         CommunitySpacePersonTimeDto communitySpacePersonTimeDto = new CommunitySpacePersonTimeDto();
         communitySpacePersonTimeDto.setTimeId(reqJson.getString("timeId"));
-        communitySpacePersonTimeDto.setCommunityId(reqJson.getString("communityId"));
-        communitySpacePersonTimeDto.setState(CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM);
+        communitySpacePersonTimeDto.setCommunityId(communityId);
+        communitySpacePersonTimeDto.setStatusCd("0");
         List<CommunitySpacePersonTimeDto> communitySpacePersonTimeDtos = communitySpacePersonTimeV1InnerServiceSMOImpl.queryCommunitySpacePersonTimes(communitySpacePersonTimeDto);
 
-        Assert.listOnlyOne(communitySpacePersonTimeDtos, "未包含预约记录");
+        Assert.listOnlyOne(communitySpacePersonTimeDtos, "未找到该预约记录");
+
+        CommunitySpacePersonTimeDto matchedTimeDto = communitySpacePersonTimeDtos.get(0);
+
+        //核销前分级校验：已取消 / 未支付 / 已核销
+        checkConfirmState(matchedTimeDto, communityId);
 
         //将 时间修改 核销中
         CommunitySpacePersonTimePo communitySpacePersonTimePo = new CommunitySpacePersonTimePo();
-        communitySpacePersonTimePo.setTimeId(communitySpacePersonTimeDtos.get(0).getTimeId());
+        communitySpacePersonTimePo.setTimeId(matchedTimeDto.getTimeId());
         communitySpacePersonTimePo.setState(CommunitySpacePersonTimeDto.STATE_FINISH);
         int flag = communitySpacePersonTimeV1InnerServiceSMOImpl.updateCommunitySpacePersonTime(communitySpacePersonTimePo);
         if (flag < 1) {
@@ -137,8 +150,18 @@ public class SaveCommunitySpaceConfirmOrderCmd extends Cmd {
 
         CommunitySpaceConfirmOrderPo communitySpaceConfirmOrderPo = BeanConvertUtil.covertBean(reqJson, CommunitySpaceConfirmOrderPo.class);
         communitySpaceConfirmOrderPo.setOrderId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
-        communitySpaceConfirmOrderPo.setSpaceId(communitySpacePersonTimeDtos.get(0).getSpaceId());
-        communitySpaceConfirmOrderPo.setCspId(communitySpacePersonTimeDtos.get(0).getCspId());
+        communitySpaceConfirmOrderPo.setSpaceId(matchedTimeDto.getSpaceId());
+        communitySpaceConfirmOrderPo.setCspId(matchedTimeDto.getCspId());
+        communitySpaceConfirmOrderPo.setTimeId(matchedTimeDto.getTimeId());
+        communitySpaceConfirmOrderPo.setCommunityId(communityId);
+
+        //核销方式/核销人留痕
+        if (StringUtil.isEmpty(communitySpaceConfirmOrderPo.getVerifyMethod())) {
+            communitySpaceConfirmOrderPo.setVerifyMethod(CommunitySpaceConfirmOrderDto.VERIFY_METHOD_SCAN);
+        }
+        communitySpaceConfirmOrderPo.setVerifierId(cmdDataFlowContext.getReqHeaders().get("user-id"));
+        communitySpaceConfirmOrderPo.setVerifierName(getVerifierName(communitySpaceConfirmOrderPo.getVerifierId()));
+
         if (!StringUtil.isEmpty(communitySpaceConfirmOrderPo.getReceivedAmount())
                 || !StringUtil.isEmpty(communitySpaceConfirmOrderPo.getPayWay())) {
             communitySpaceConfirmOrderPo.setPayTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
@@ -150,15 +173,78 @@ public class SaveCommunitySpaceConfirmOrderCmd extends Cmd {
         }
 
         //所有时段核销完成后，预约订单状态置为已完成
-        refreshPersonState(communitySpacePersonTimeDtos.get(0).getCspId(), reqJson.getString("communityId"));
+        refreshPersonState(matchedTimeDto.getCspId(), communityId);
 
         CommunitySpaceConfirmOrderDto communitySpaceConfirmOrderDto = new CommunitySpaceConfirmOrderDto();
         communitySpaceConfirmOrderDto.setOrderId(communitySpaceConfirmOrderPo.getOrderId());
+        communitySpaceConfirmOrderDto.setStatusCd("0");
         List<CommunitySpaceConfirmOrderDto> communitySpaceConfirmOrderDtos = communitySpaceConfirmOrderV1InnerServiceSMOImpl.queryCommunitySpaceConfirmOrders(communitySpaceConfirmOrderDto);
 
 
         cmdDataFlowContext.setResponseEntity(ResultVo.createResponseEntity(communitySpaceConfirmOrderDtos));
     }
+
+    /**
+     * 核销前分级校验
+     *
+     * @param matchedTimeDto 预约时段
+     * @param communityId    小区ID
+     */
+    private void checkConfirmState(CommunitySpacePersonTimeDto matchedTimeDto, String communityId) {
+
+        CommunitySpacePersonDto communitySpacePersonDto = new CommunitySpacePersonDto();
+        communitySpacePersonDto.setCspId(matchedTimeDto.getCspId());
+        communitySpacePersonDto.setCommunityId(communityId);
+        communitySpacePersonDto.setStatusCd("0");
+        List<CommunitySpacePersonDto> communitySpacePersonDtos = communitySpacePersonV1InnerServiceSMOImpl.queryCommunitySpacePersons(communitySpacePersonDto);
+
+        if (communitySpacePersonDtos != null && communitySpacePersonDtos.size() > 0) {
+            String personState = communitySpacePersonDtos.get(0).getState();
+            if (CommunitySpacePersonDto.STATE_CL.equals(personState)) {
+                throw new CmdException("订单已取消，不可核销");
+            }
+            if (CommunitySpacePersonDto.STATE_WP.equals(personState)) {
+                throw new CmdException("订单尚未支付，请先收款后再核销");
+            }
+        }
+
+        if (CommunitySpacePersonTimeDto.STATE_FINISH.equals(matchedTimeDto.getState())) {
+            throw new CmdException("该预约已核销，请勿重复核销");
+        }
+
+        if (CommunitySpacePersonTimeDto.STATE_CL.equals(matchedTimeDto.getState())) {
+            throw new CmdException("订单已取消，不可核销");
+        }
+
+        if (!CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM.equals(matchedTimeDto.getState())) {
+            throw new CmdException("未找到该预约记录");
+        }
+    }
+
+    /**
+     * 反查核销人姓名
+     *
+     * @param userId 核销人用户ID
+     * @return 核销人姓名
+     */
+    private String getVerifierName(String userId) {
+        if (StringUtil.isEmpty(userId)) {
+            return "";
+        }
+        try {
+            UserDto userDto = new UserDto();
+            userDto.setUserId(userId);
+            List<UserDto> userDtos = userInnerServiceSMOImpl.getUsers(userDto);
+            if (userDtos == null || userDtos.size() < 1) {
+                return "";
+            }
+            return userDtos.get(0).getName();
+        } catch (Exception e) {
+            logger.error("查询核销人失败", e);
+            return "";
+        }
+    }
+
 
     /**
      * 预约订单下所有时段核销完成后，将预约订单状态置为已完成

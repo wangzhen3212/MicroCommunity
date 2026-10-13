@@ -5,45 +5,60 @@
 <mapper namespace="communitySpaceOpenTimeV1ServiceDaoImpl">
 
 
-    <!-- 保存场地开放时间信息 add by wuxw 2018-07-03 -->
+    <!-- 保存场馆开放时间信息 add by wuxw 2018-07-03 -->
     <insert id="saveCommunitySpaceOpenTimeInfo" parameterType="Map">
         insert into community_space_open_time(
-        space_id,hours,is_open,time_id,community_id
+        space_id,venue_id,week_day,hours,is_open,time_id,community_id
         ) values (
-        #{spaceId},#{hours},#{isOpen},#{timeId},#{communityId}
+        #{spaceId},#{venueId},#{weekDay},#{hours},#{isOpen},#{timeId},#{communityId}
         )
     </insert>
 
 
-    <!-- 保存场地开放时间信息 add by wuxw 2018-07-03 -->
+    <!-- 批量保存场馆开放时间信息 add by wuxw 2018-07-03 -->
     <insert id="saveCommunitySpaceOpenTimesInfo" parameterType="Map">
         insert into community_space_open_time(
-        space_id,hours,is_open,time_id,community_id
+        space_id,venue_id,week_day,hours,is_open,time_id,community_id
         ) values
         <foreach collection="openTimes" item="item" separator=",">
-            (#{item.spaceId},#{item.hours},#{item.isOpen},#{item.timeId},#{item.communityId})
+            (#{item.spaceId},#{item.venueId},#{item.weekDay},#{item.hours},#{item.isOpen},#{item.timeId},#{item.communityId})
         </foreach>
     </insert>
 
 
-    <!-- 查询场地开放时间信息 add by wuxw 2018-07-03 -->
+    <!-- 查询场馆开放时间信息 add by wuxw 2018-07-03 -->
     <select id="getCommunitySpaceOpenTimeInfo" parameterType="Map" resultType="Map">
-        select t.space_id,t.space_id spaceId,t.hours,t.is_open,t.is_open isOpen,t.time_id,t.time_id
+        select t.space_id,t.space_id spaceId,t.venue_id,t.venue_id venueId,t.week_day,t.week_day weekDay,
+        t.hours,t.is_open,t.is_open isOpen,t.time_id,t.time_id
         timeId,t.status_cd,t.status_cd statusCd,t.community_id,t.community_id communityId
         from community_space_open_time t
-        left join community_space cs on t.space_id = cs.space_id and cs.status_cd = '0'
-        <if test="appointmentTime !=null and appointmentTime != ''">
-        left join community_space_person_time cspt on t.space_id = cspt.space_id and cspt.status_cd = '0' and cspt.hours = t.hours and cspt.appointment_date = #{appointmentTime} and cspt.state &lt;&gt; 'CL'
+        <if test="appointmentTime !=null and appointmentTime != '' and spaceId !=null and spaceId != ''">
+        left join community_space_person_time cspt on cspt.space_id = #{spaceId} and cspt.status_cd = '0' and cspt.hours = t.hours and cspt.appointment_date = #{appointmentTime} and cspt.state &lt;&gt; 'CL'
         </if>
         where 1 =1
-        <if test="appointmentTime !=null and appointmentTime != ''">
+        <if test="appointmentTime !=null and appointmentTime != '' and spaceId !=null and spaceId != ''">
         and cspt.csp_id is null
         </if>
-        <if test="spaceId !=null and spaceId != ''">
+        <if test="spaceId !=null and spaceId != '' and (venueId == null or venueId == '')">
             and t.space_id= #{spaceId}
         </if>
         <if test="venueId !=null and venueId != ''">
-            and cs.venue_id= #{venueId}
+            and t.venue_id= #{venueId}
+        </if>
+        <if test="venueIds != null">
+            and t.venue_id in
+            <foreach collection="venueIds" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        <if test="weekDay !=null and weekDay != ''">
+            and t.week_day= #{weekDay}
+        </if>
+        <if test="weekDays != null">
+            and t.week_day in
+            <foreach collection="weekDays" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
         </if>
         <if test="hours !=null and hours != ''">
             and t.hours= #{hours}
@@ -60,7 +75,7 @@
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
         </if>
-        order by t.hours
+        order by t.week_day,t.hours
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
         </if>
@@ -68,7 +83,7 @@
     </select>
 
 
-    <!-- 修改场地开放时间信息 add by wuxw 2018-07-03 -->
+    <!-- 修改场馆开放时间信息 add by wuxw 2018-07-03 -->
     <update id="updateCommunitySpaceOpenTimeInfo" parameterType="Map">
         update community_space_open_time t set t.status_cd = #{statusCd}
         <if test="newBId != null and newBId != ''">
@@ -76,6 +91,12 @@
         </if>
         <if test="spaceId !=null and spaceId != ''">
             , t.space_id= #{spaceId}
+        </if>
+        <if test="venueId !=null and venueId != ''">
+            , t.venue_id= #{venueId}
+        </if>
+        <if test="weekDay !=null and weekDay != ''">
+            , t.week_day= #{weekDay}
         </if>
         <if test="hours !=null and hours != ''">
             , t.hours= #{hours}
@@ -90,16 +111,46 @@
         <if test="timeId !=null and timeId != ''">
             and t.time_id= #{timeId}
         </if>
+        <if test="venueId !=null and venueId != ''">
+            and t.venue_id= #{venueId}
+        </if>
+        <if test="weekDay !=null and weekDay != ''">
+            and t.week_day= #{weekDay}
+        </if>
+        <if test="spaceId !=null and spaceId != ''">
+            and t.space_id= #{spaceId}
+        </if>
+        <if test="hours !=null and hours != ''">
+            and t.hours= #{hours}
+        </if>
 
     </update>
 
-    <!-- 查询场地开放时间数量 add by wuxw 2018-07-03 -->
+    <!-- 查询场馆开放时间数量 add by wuxw 2018-07-03 -->
     <select id="queryCommunitySpaceOpenTimesCount" parameterType="Map" resultType="Map">
         select count(1) count
         from community_space_open_time t
         where 1 =1
-        <if test="spaceId !=null and spaceId != ''">
+        <if test="spaceId !=null and spaceId != '' and (venueId == null or venueId == '')">
             and t.space_id= #{spaceId}
+        </if>
+        <if test="venueId !=null and venueId != ''">
+            and t.venue_id= #{venueId}
+        </if>
+        <if test="venueIds != null">
+            and t.venue_id in
+            <foreach collection="venueIds" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        <if test="weekDay !=null and weekDay != ''">
+            and t.week_day= #{weekDay}
+        </if>
+        <if test="weekDays != null">
+            and t.week_day in
+            <foreach collection="weekDays" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
         </if>
         <if test="hours !=null and hours != ''">
             and t.hours= #{hours}

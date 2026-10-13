@@ -1,330 +1,584 @@
-﻿<template>
-  <div class="community-space-confirm-container">
-    <el-row :gutter="20">
-      <el-col :span="6">
-        <el-card class="write-off-card">
-          <el-row :gutter="10" class="mb-10">
-            <el-col :span="18">
-              <el-input 
-                v-model="communitySpaceConfirmInfo.timeId"
-                :placeholder="$t('communitySpaceConfirm.writeOffPlaceholder')"
-                @keyup.enter.native="confirmCommunitySpace"
-                clearable
-              />
-            </el-col>
-            <el-col :span="6">
-              <el-button 
-                type="primary" 
-                @click="confirmCommunitySpace"
-                class="full-width-btn"
-              >
-                {{ $t('communitySpaceConfirm.writeOff') }}
-              </el-button>
-            </el-col>
-          </el-row>
+<template>
+  <div class="space-confirm">
+    <div class="stat-row">
+      <div class="stat-card stat-emerald">
+        <div class="stat-label">{{ $t('communitySpaceConfirm.statTodayCount') }}</div>
+        <div class="stat-value">{{ summary.todayCount }}</div>
+      </div>
+      <div class="stat-card stat-primary">
+        <div class="stat-label">{{ $t('communitySpaceConfirm.statTodayAmount') }}</div>
+        <div class="stat-value">￥{{ summary.todayAmount }}</div>
+      </div>
+      <div class="stat-card stat-amber">
+        <div class="stat-label">{{ $t('communitySpaceConfirm.statWaitCount') }}</div>
+        <div class="stat-value">{{ summary.waitCount }}</div>
+      </div>
+      <div class="stat-card stat-slate">
+        <div class="stat-label">{{ $t('communitySpaceConfirm.statTotalCount') }}</div>
+        <div class="stat-value">{{ summary.totalCount }}</div>
+      </div>
+    </div>
 
-          <div class="result-card">
-            <div class="result-item">
-              <span class="label">{{ $t('communitySpaceConfirm.writeOffResult') }}:</span>
-              <span>{{ communitySpaceConfirmInfo.order.remark || '-' }}</span>
-            </div>
-            <div class="result-item">
-              <span class="label">{{ $t('communitySpaceConfirm.writeOffTime') }}:</span>
-              <span>{{ communitySpaceConfirmInfo.order.createTime || '-' }}</span>
-            </div>
-            <div class="result-item">
-              <span class="label">{{ $t('communitySpaceConfirm.space') }}:</span>
-              <span>{{ communitySpaceConfirmInfo.order.spaceName || '-' }}</span>
-            </div>
-            <div class="result-item">
-              <span class="label">{{ $t('communitySpaceConfirm.appointmentDate') }}:</span>
-              <span>{{ communitySpaceConfirmInfo.order.appointmentTime || '-' }}</span>
-            </div>
-            <div class="result-item">
-              <span class="label">{{ $t('communitySpaceConfirm.appointmentHours') }}:</span>
-              <span>{{ communitySpaceConfirmInfo.order.hours || '-' }}</span>
-            </div>
-            <div class="result-item">
-              <span class="label">{{ $t('communitySpaceConfirm.appointmentPerson') }}:</span>
-              <span>{{ communitySpaceConfirmInfo.order.personName || '-' }}</span>
-            </div>
-            <div class="result-item">
-              <span class="label">{{ $t('communitySpaceConfirm.appointmentPhone') }}:</span>
-              <span>{{ communitySpaceConfirmInfo.order.personTel || '-' }}</span>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
+    <div class="main-row">
+      <space-scan-box-panel
+        ref="scanBox"
+        :auto-verify.sync="verify.auto"
+        :scan-count="verify.count"
+        @scan="handleScan"
+      />
+      <space-confirm-info-panel
+        ref="infoPanel"
+        :current="verify.current"
+        :done="verify.done"
+        :not-found="verify.notFound"
+        :auto-verify="verify.auto"
+        :verifying="verifying"
+        :wait-count="summary.waitCount"
+        @confirm="handleConfirm(false)"
+        @reset="handleReset"
+        @view-order="handleViewOrder"
+      />
+    </div>
 
-      <el-col :span="18">
-        <el-card class="search-card">
-          <div slot="header" class="flex justify-between">
-            <span>{{ $t('communitySpaceConfirm.searchCondition') }}</span>
-          </div>
-          <el-row :gutter="20">
-            <el-col :span="6">
-              <el-input 
-                v-model="communitySpaceConfirmInfo.conditions.personName"
-                :placeholder="$t('communitySpaceConfirm.personNamePlaceholder')"
-                clearable
-              />
-            </el-col>
-            <el-col :span="6">
-              <el-input 
-                v-model="communitySpaceConfirmInfo.conditions.personTel"
-                :placeholder="$t('communitySpaceConfirm.personTelPlaceholder')"
-                clearable
-              />
-            </el-col>
-            <el-col :span="6">
-              <el-date-picker
-                v-model="communitySpaceConfirmInfo.conditions.appointmentTime"
-                type="datetime" value-format="yyyy-MM-dd HH:mm:ss"                :placeholder="$t('communitySpaceConfirm.appointmentTimePlaceholder')"
-                
-                class="full-width"
-              />
-            </el-col>
-            <el-col :span="6">
-              <el-button type="primary" @click="queryCommunitySpaceConfirm">
-                <i class="el-icon-search"></i>
-                {{ $t('communitySpaceConfirm.search') }}
-              </el-button>
-              <el-button @click="resetCommunitySpaceConfirm">
-                <i class="el-icon-refresh"></i>
-                {{ $t('communitySpaceConfirm.reset') }}
-              </el-button>
-            </el-col>
-          </el-row>
-        </el-card>
+    <div class="panel record-panel">
+      <div class="panel-header">
+        <span class="panel-title">{{ $t('communitySpaceConfirm.recordTitle') }}</span>
+        <el-input
+          v-model="condition.keyword"
+          size="small"
+          class="keyword-input"
+          :placeholder="$t('communitySpaceConfirm.recordKeywordPlaceholder')"
+          clearable
+          @input="handleConditionChange"
+        />
+        <el-date-picker
+          v-model="condition.verifyDate"
+          size="small"
+          type="date"
+          value-format="yyyy-MM-dd"
+          class="date-picker"
+          :placeholder="$t('communitySpaceConfirm.recordDate')"
+          @change="handleSearch"
+        />
+        <el-button type="text" class="reset-link" @click="handleConditionReset">
+          {{ $t('common.reset') }}
+        </el-button>
+        <span class="record-count">
+          {{ $t('communitySpaceConfirm.recordCount', { count: pagination.total }) }}
+        </span>
+      </div>
 
-        <el-card class="table-card">
-          <el-table 
-            :data="communitySpaceConfirmInfo.orders"
-            border
-            style="width: 100%"
-            v-loading="loading"
-          >
-            <el-table-column 
-              prop="orderId" 
-              :label="$t('communitySpaceConfirm.writeOffOrder')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="venueName" 
-              :label="$t('communitySpaceConfirm.venue')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="spaceName" 
-              :label="$t('communitySpaceConfirm.space')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="appointmentTime" 
-              :label="$t('communitySpaceConfirm.appointmentDate')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="hours" 
-              :label="$t('communitySpaceConfirm.appointmentTime')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="personName" 
-              :label="$t('communitySpaceConfirm.appointmentPerson')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="personTel" 
-              :label="$t('communitySpaceConfirm.appointmentPhone')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="createTime" 
-              :label="$t('communitySpaceConfirm.writeOffTime')" 
-              align="center"
-            />
-            <el-table-column 
-              prop="remark" 
-              :label="$t('communitySpaceConfirm.remark')" 
-              align="center"
-            />
-          </el-table>
-          
-          <el-pagination
-            class="mt-20"
-            :current-page="pagination.current"
-            :page-sizes="[10, 20, 30, 50]"
-            :page-size="pagination.size"
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="pagination.total"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-          />
-        </el-card>
-      </el-col>
-    </el-row>
+      <el-table v-loading="loading" :data="records" class="record-table">
+        <el-table-column prop="createTime" :label="$t('communitySpaceConfirm.recordVerifyTime')" width="150" />
+        <el-table-column prop="orderId" :label="$t('communitySpaceConfirm.orderId')" width="180">
+          <template slot-scope="scope">{{ scope.row.cspOrderId || scope.row.orderId }}</template>
+        </el-table-column>
+        <el-table-column prop="venueName" :label="$t('communitySpaceConfirm.venue')" width="120" />
+        <el-table-column prop="spaceName" :label="$t('communitySpaceConfirm.space')" width="120" />
+        <el-table-column prop="personName" :label="$t('communitySpaceConfirm.personName')" width="100" />
+        <el-table-column prop="personTel" :label="$t('communitySpaceConfirm.personTel')" width="120" />
+        <el-table-column prop="appointmentTime" :label="$t('communitySpaceConfirm.appointDate')" width="110" />
+        <el-table-column :label="$t('communitySpaceConfirm.appointHours')" width="130">
+          <template slot-scope="scope">{{ formatHours(scope.row) }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('communitySpaceConfirm.receivableAmount')" width="110" align="right">
+          <template slot-scope="scope">￥{{ scope.row.receivableAmount || '0.00' }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('communitySpaceConfirm.recordVerifyMethod')" width="130">
+          <template slot-scope="scope">
+            <span class="method-tag" :class="scope.row.verifyMethod === '2' ? 'method-manual' : 'method-scan'">
+              {{ formatVerifyMethod(scope.row.verifyMethod) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('communitySpaceConfirm.recordVerifier')" width="110">
+          <template slot-scope="scope">{{ scope.row.verifierName || '-' }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('communitySpaceConfirm.recordOperation')" width="100" align="right">
+          <template slot-scope="scope">
+            <el-button type="text" class="revoke-button" @click="handleRevoke(scope.row)">
+              {{ $t('communitySpaceConfirm.revokeVerify') }}
+            </el-button>
+          </template>
+        </el-table-column>
+        <template slot="empty">
+          <span>{{ $t('communitySpaceConfirm.recordEmpty') }}</span>
+        </template>
+      </el-table>
+
+      <el-pagination
+        class="record-pagination"
+        :current-page="pagination.current"
+        :page-sizes="[10, 20, 30, 50]"
+        :page-size="pagination.size"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="pagination.total"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
+    </div>
   </div>
 </template>
 
 <script>
-import { 
-  listCommunitySpaceConfirmOrder, 
-  saveCommunitySpaceConfirmOrder 
+import SpaceScanBoxPanel from '@/components/community/SpaceScanBoxPanel.vue'
+import SpaceConfirmInfoPanel from '@/components/community/SpaceConfirmInfoPanel.vue'
+import {
+  listCommunitySpaceConfirmOrder,
+  saveCommunitySpaceConfirmOrder,
+  getCommunitySpaceConfirmOrder,
+  deleteCommunitySpaceConfirmOrder,
+  listCommunitySpaceConfirmOrderSummary
 } from '@/api/community/communitySpaceConfirmApi'
 import { getCommunityId } from '@/api/community/communityApi'
 
+const AUTO_VERIFY_DELAY = 600
+const SEARCH_DELAY = 400
+const VERIFY_METHOD_SCAN = '1'
+const VERIFY_METHOD_HAND = '2'
+
 export default {
   name: 'CommunitySpaceConfirmList',
+  components: {
+    SpaceScanBoxPanel,
+    SpaceConfirmInfoPanel
+  },
   data() {
     return {
-      loading: false,
-      communitySpaceConfirmInfo: {
-        orders: [],
-        order: {
-          remark: '',
-          appointmentTime: '',
-          createTime: '',
-          hours: '',
-          spaceName: '',
-          personName: '',
-          personTel: '',
-        },
-        timeId: '',
-        conditions: {
-          spaceId: '',
-          personName: '',
-          personTel: '',
-          appointmentTime: '',
-          communityId: ''
-        }
+      communityId: getCommunityId(),
+      summary: {
+        todayCount: 0,
+        todayAmount: '0.00',
+        waitCount: 0,
+        totalCount: 0
       },
+      verify: {
+        current: null,
+        done: null,
+        notFound: '',
+        auto: true,
+        count: 0,
+        method: VERIFY_METHOD_SCAN
+      },
+      condition: {
+        keyword: '',
+        verifyDate: ''
+      },
+      records: [],
       pagination: {
         current: 1,
         size: 10,
         total: 0
-      }
+      },
+      loading: false,
+      verifying: false,
+      autoVerifyTimer: null,
+      searchTimer: null
+    }
+  },
+  watch: {
+    'verify.auto': function (value) {
+      this.$message.info(value ? this.$t('communitySpaceConfirm.autoVerifyOn') : this.$t('communitySpaceConfirm.autoVerifyOff'))
     }
   },
   created() {
-    this.communitySpaceConfirmInfo.conditions.communityId = getCommunityId()
-    this.listCommunitySpaceConfirms()
+    this.loadSummary()
+    this.loadRecords()
+  },
+  beforeDestroy() {
+    this.clearAutoVerifyTimer()
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer)
+      this.searchTimer = null
+    }
   },
   methods: {
-    async listCommunitySpaceConfirms() {
+    async loadSummary() {
+      try {
+        const data = await listCommunitySpaceConfirmOrderSummary({ communityId: this.communityId })
+        if (data) {
+          this.summary = {
+            todayCount: data.todayCount || 0,
+            todayAmount: data.todayAmount || '0.00',
+            waitCount: data.waitCount || 0,
+            totalCount: data.totalCount || 0
+          }
+        }
+      } catch (error) {
+        this.$message.error(error.message || this.$t('communitySpaceConfirm.loadFailed'))
+      }
+    },
+    async loadRecords() {
       this.loading = true
       try {
         const params = {
-          ...this.communitySpaceConfirmInfo.conditions,
+          communityId: this.communityId,
+          statusCd: '0',
           page: this.pagination.current,
           row: this.pagination.size
         }
-        
-        const { data, total } = await listCommunitySpaceConfirmOrder(params)
-        this.communitySpaceConfirmInfo.orders = data || []
-        this.pagination.total = total
+        if (this.condition.keyword) {
+          params.keyword = this.condition.keyword
+        }
+        if (this.condition.verifyDate) {
+          params.beginTime = this.condition.verifyDate
+          params.endTime = this.condition.verifyDate
+        }
+        const res = await listCommunitySpaceConfirmOrder(params)
+        this.records = res.data || []
+        this.pagination.total = res.total || 0
       } catch (error) {
-        console.error('获取核销列表失败:', error)
+        this.$message.error(error.message || this.$t('communitySpaceConfirm.loadFailed'))
       } finally {
         this.loading = false
       }
     },
-    async confirmCommunitySpace() {
-      if (!this.communitySpaceConfirmInfo.timeId) {
-        this.$message.warning(this.$t('communitySpaceConfirm.scanTip'))
-        return
+    handleConditionChange() {
+      if (this.searchTimer) {
+        clearTimeout(this.searchTimer)
+        this.searchTimer = null
       }
-      
-      try {
-        const data = {
-          timeId: this.communitySpaceConfirmInfo.timeId,
-          communityId: this.communitySpaceConfirmInfo.conditions.communityId
-        }
-        
-        const result = await saveCommunitySpaceConfirmOrder(data)
-        if (result.code == 0) {
-          this.$message.success(this.$t('common.operationSuccess'))
-          this.communitySpaceConfirmInfo.timeId = ''
-          
-          // 更新核销结果
-          if (result.data && result.data.length > 0) {
-            this.communitySpaceConfirmInfo.order = { 
-              ...result.data[0],
-              remark: result.data[0].remark || this.$t('communitySpaceConfirm.writeOffSuccess')
-            }
-          }
-          
-          // 刷新列表
-          this.pagination.current = 1
-          this.listCommunitySpaceConfirms()
-        } else {
-          this.$message.error(result)
-        }
-      } catch (error) {
-        console.error('核销失败:', error)
-        this.$message.error(error)
-      }
+      this.searchTimer = setTimeout(this.handleSearch, SEARCH_DELAY)
     },
-    queryCommunitySpaceConfirm() {
+    handleSearch() {
+      if (this.searchTimer) {
+        clearTimeout(this.searchTimer)
+        this.searchTimer = null
+      }
       this.pagination.current = 1
-      this.listCommunitySpaceConfirms()
+      this.loadRecords()
     },
-    resetCommunitySpaceConfirm() {
-      this.communitySpaceConfirmInfo.conditions.personName = ''
-      this.communitySpaceConfirmInfo.conditions.personTel = ''
-      this.communitySpaceConfirmInfo.conditions.appointmentTime = ''
-      this.queryCommunitySpaceConfirm()
+    handleConditionReset() {
+      this.condition.keyword = ''
+      this.condition.verifyDate = ''
+      this.handleSearch()
     },
     handleSizeChange(size) {
       this.pagination.size = size
-      this.listCommunitySpaceConfirms()
+      this.pagination.current = 1
+      this.loadRecords()
     },
     handleCurrentChange(current) {
       this.pagination.current = current
-      this.listCommunitySpaceConfirms()
+      this.loadRecords()
+    },
+    async handleScan(code, isManual) {
+      if (!code) {
+        return
+      }
+      this.clearAutoVerifyTimer()
+      this.verify.count += 1
+      this.verify.done = null
+      this.verify.method = isManual ? VERIFY_METHOD_HAND : VERIFY_METHOD_SCAN
+      try {
+        const data = await getCommunitySpaceConfirmOrder({
+          communityId: this.communityId,
+          code: code
+        })
+        if (!data || !data.cspId) {
+          this.verify.current = null
+          this.verify.notFound = code
+          this.$message.warning(this.$t('communitySpaceConfirm.notFoundTip', { code: code }))
+          this.focusScanBox()
+          return
+        }
+        this.verify.current = data
+        this.verify.notFound = ''
+        if (data.multiHit) {
+          this.$message.warning(this.$t('communitySpaceConfirm.multiHitTip'))
+        }
+        const level = this.getVerifyLevel(data)
+        if (level !== 'ok') {
+          this.$message.warning(this.getVerifyTitle(data))
+          this.focusScanBox()
+          return
+        }
+        if (this.verify.auto) {
+          const snapshot = data
+          this.autoVerifyTimer = setTimeout(() => {
+            if (this.verify.current === snapshot) {
+              this.handleConfirm(true)
+            }
+          }, AUTO_VERIFY_DELAY)
+        } else {
+          this.$message.info(this.$t('communitySpaceConfirm.confirmVerifyTip'))
+          this.focusScanBox()
+        }
+      } catch (error) {
+        this.verify.current = null
+        this.verify.notFound = code
+        this.$message.error(error.message || this.$t('communitySpaceConfirm.loadFailed'))
+        this.focusScanBox()
+      }
+    },
+    async handleConfirm(isAuto) {
+      this.clearAutoVerifyTimer()
+      const current = this.verify.current
+      if (!current) {
+        this.$message.warning(this.$t('communitySpaceConfirm.confirmTip'))
+        return
+      }
+      if (this.getVerifyLevel(current) !== 'ok') {
+        this.$message.warning(this.getVerifyTitle(current))
+        return
+      }
+      this.verifying = true
+      try {
+        const res = await saveCommunitySpaceConfirmOrder({
+          communityId: this.communityId,
+          timeId: current.timeId,
+          verifyMethod: this.verify.method || VERIFY_METHOD_SCAN
+        })
+        const data = res.data && res.data.length > 0 ? res.data[0] : null
+        this.verify.done = data ? Object.assign({}, data, { times: current.times }) : current
+        this.verify.current = null
+        this.verify.notFound = ''
+        this.$message.success(isAuto ? this.$t('communitySpaceConfirm.verifySuccessTip') : this.$t('communitySpaceConfirm.verifySuccess'))
+        this.focusScanBox()
+        this.pagination.current = 1
+        this.loadRecords()
+        this.loadSummary()
+      } catch (error) {
+        this.$message.error(error.message || this.$t('common.operateFailed'))
+      } finally {
+        this.verifying = false
+      }
+    },
+    handleReset() {
+      this.clearAutoVerifyTimer()
+      this.verify.current = null
+      this.verify.done = null
+      this.verify.notFound = ''
+      const scanBox = this.$refs.scanBox
+      if (scanBox) {
+        scanBox.clear()
+      }
+    },
+    handleViewOrder() {
+      this.$router.push('/pages/property/communitySpacePersonManage')
+    },
+    handleRevoke(row) {
+      this.$confirm(
+        this.$t('communitySpaceConfirm.revokeConfirmTip', {
+          venue: row.venueName || '-',
+          space: row.spaceName || '-',
+          date: row.appointmentTime || '-',
+          hours: this.formatHours(row)
+        }),
+        this.$t('communitySpaceConfirm.revokeConfirmTitle'),
+        {
+          confirmButtonText: this.$t('common.confirm'),
+          cancelButtonText: this.$t('common.cancel'),
+          type: 'warning'
+        }
+      ).then(() => {
+        this.doRevoke(row)
+      }).catch(() => {})
+    },
+    async doRevoke(row) {
+      try {
+        await deleteCommunitySpaceConfirmOrder({
+          communityId: this.communityId,
+          orderId: row.orderId
+        })
+        this.$message.success(this.$t('communitySpaceConfirm.revokeSuccess'))
+        this.loadRecords()
+        this.loadSummary()
+      } catch (error) {
+        this.$message.error(error.message || this.$t('communitySpaceConfirm.revokeFailed'))
+      }
+    },
+    focusScanBox() {
+      const scanBox = this.$refs.scanBox
+      if (scanBox) {
+        scanBox.focus()
+      }
+    },
+    clearAutoVerifyTimer() {
+      if (this.autoVerifyTimer) {
+        clearTimeout(this.autoVerifyTimer)
+        this.autoVerifyTimer = null
+      }
+    },
+    getVerifyLevel(order) {
+      const infoPanel = this.$refs.infoPanel
+      if (infoPanel) {
+        return infoPanel.getLevel(order)
+      }
+      return 'ok'
+    },
+    getVerifyTitle(order) {
+      const infoPanel = this.$refs.infoPanel
+      if (infoPanel) {
+        return infoPanel.getCheckTitle(order)
+      }
+      return order.title || order.desc || ''
+    },
+    formatHours(row) {
+      if (row.hours === null || row.hours === undefined || row.hours === '') {
+        return '-'
+      }
+      const hours = Number(row.hours)
+      if (isNaN(hours)) {
+        return '-'
+      }
+      return this.pad(hours) + ':00~' + this.pad(hours + 1) + ':00'
+    },
+    pad(value) {
+      return value < 10 ? '0' + value : '' + value
+    },
+    formatVerifyMethod(method) {
+      if (method === VERIFY_METHOD_HAND) {
+        return this.$t('communitySpaceConfirm.verifyMethodManual')
+      }
+      return this.$t('communitySpaceConfirm.verifyMethodScan')
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.community-space-confirm-container {
-  padding: 20px;
-  
-  .write-off-card, .search-card, .table-card {
-    margin-bottom: 20px;
+.space-confirm {
+  padding: 16px;
+  background: #f1f5f9;
+  min-height: calc(100vh - 90px);
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  padding: 14px 16px;
+  background: #fff;
+  border-radius: 12px;
+  border-left: 4px solid #cbd5e1;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.12);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.stat-value {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-emerald {
+  border-left-color: #10b981;
+}
+
+.stat-emerald .stat-value {
+  color: #059669;
+}
+
+.stat-primary {
+  border-left-color: #2563eb;
+}
+
+.stat-primary .stat-value {
+  color: #2563eb;
+}
+
+.stat-amber {
+  border-left-color: #fbbf24;
+}
+
+.stat-amber .stat-value {
+  color: #d97706;
+}
+
+.main-row {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.12);
+}
+
+.panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.keyword-input {
+  width: 200px;
+}
+
+.date-picker {
+  width: 150px;
+}
+
+.reset-link {
+  padding: 0;
+  color: #64748b;
+}
+
+.record-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.record-table {
+  width: 100%;
+}
+
+.method-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.method-scan {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.method-manual {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.revoke-button {
+  color: #f43f5e;
+}
+
+.record-pagination {
+  padding: 12px 16px;
+  text-align: right;
+}
+
+@media (max-width: 1200px) {
+  .main-row {
+    grid-template-columns: minmax(0, 1fr);
   }
-  
-  .result-card {
-    margin-top: 15px;
-    
-    .result-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 14px;
-      
-      .label {
-        font-weight: bold;
-        color: #606266;
-      }
-    }
-  }
-  
-  .full-width {
-    width: 100%;
-  }
-  
-  .full-width-btn {
-    width: 100%;
-  }
-  
-  .mb-10 {
-    margin-bottom: 10px;
-  }
-  
-  .mt-20 {
-    margin-top: 20px;
+
+  .stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

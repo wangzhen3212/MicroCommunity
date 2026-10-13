@@ -22,10 +22,8 @@ import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.core.factory.GenerateCodeFactory;
-import com.java110.intf.community.ICommunitySpaceOpenTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpaceV1InnerServiceSMO;
 import com.java110.po.communitySpace.CommunitySpacePo;
-import com.java110.po.communitySpace.CommunitySpaceOpenTimePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
@@ -33,9 +31,6 @@ import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 类表述：保存
@@ -56,9 +51,6 @@ public class SaveCommunitySpaceCmd extends Cmd {
 
     @Autowired
     private ICommunitySpaceV1InnerServiceSMO communitySpaceV1InnerServiceSMOImpl;
-
-    @Autowired
-    private ICommunitySpaceOpenTimeV1InnerServiceSMO communitySpaceOpenTimeV1InnerServiceSMOImpl;
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
@@ -83,23 +75,7 @@ public class SaveCommunitySpaceCmd extends Cmd {
             throw new CmdException("保存数据失败");
         }
 
-        List<CommunitySpaceOpenTimePo> communitySpaceOpenTimePos = new ArrayList<>();
-        CommunitySpaceOpenTimePo communitySpaceOpenTimePo = null;
-        for (int hours = 0; hours < 24; hours++) {
-
-            communitySpaceOpenTimePo = new CommunitySpaceOpenTimePo();
-            communitySpaceOpenTimePo.setCommunityId(reqJson.getString("communityId"));
-            communitySpaceOpenTimePo.setSpaceId(communitySpacePo.getSpaceId());
-            communitySpaceOpenTimePo.setIsOpen("N");
-            communitySpaceOpenTimePo.setTimeId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
-            communitySpaceOpenTimePo.setHours(hours + "");
-            communitySpaceOpenTimePos.add(communitySpaceOpenTimePo);
-
-        }
-        flag = communitySpaceOpenTimeV1InnerServiceSMOImpl.saveCommunitySpaceOpenTimes(communitySpaceOpenTimePos);
-        if (flag < 1) {
-            throw new CmdException("保存数据失败");
-        }
+        //开放时间按场馆维度配置（见 community_space_open_time.venue_id），场地新增时不再生成场地维度时段
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

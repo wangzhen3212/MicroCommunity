@@ -584,6 +584,12 @@ const routes = [
         meta: { title: '场地管理' }
       },
       {
+        path: '/pages/property/communityVenueOpenTime',
+        name: '/pages/property/communityVenueOpenTime',
+        component: () => import('@/views/community/communityVenueOpenTimeList.vue'),
+        meta: { title: '开放时间配置' }
+      },
+      {
         path: '/pages/property/reportCommunitySpace',
         name: '/pages/property/reportCommunitySpace',
         component: () => import('@/views/community/reportCommunitySpaceList.vue'),
@@ -599,6 +605,7 @@ const routes = [
         path: '/pages/property/communitySpaceConfirm',
         name: '/pages/property/communitySpaceConfirm',
         component: () => import('@/views/community/communitySpaceConfirmList.vue'),
+        meta: { title: '场地核销' }
       },
 
       {

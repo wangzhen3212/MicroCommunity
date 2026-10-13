@@ -15238,12 +15238,18 @@ CREATE TABLE `community_space_confirm_order` (
   `received_amount` decimal(10,2) DEFAULT '0.00' COMMENT '实收金额',
   `pay_way` varchar(12) DEFAULT NULL COMMENT '支付方式 1 现金 2 微信 3 支付宝',
   `pay_time` datetime DEFAULT NULL COMMENT '收款时间',
+  `verify_method` varchar(2) DEFAULT '1' COMMENT '核销方式 1 扫码盒子核销 2 手动核销',
+  `verifier_id` varchar(30) DEFAULT NULL COMMENT '核销人用户ID',
+  `verifier_name` varchar(64) DEFAULT NULL COMMENT '核销人姓名',
   `b_id` varchar(30) DEFAULT NULL COMMENT '业务ID',
   `community_id` varchar(30) NOT NULL COMMENT '小区ID',
   `remark` varchar(512) DEFAULT NULL COMMENT '备注',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `status_cd` varchar(2) NOT NULL DEFAULT '0' COMMENT '数据状态，详细参考c_status表，S 保存，0, 在用 1失效',
-  PRIMARY KEY (`order_id`)
+  PRIMARY KEY (`order_id`),
+  KEY `idx_csco_community_time` (`community_id`,`create_time`),
+  KEY `idx_csco_csp` (`csp_id`),
+  KEY `idx_csco_time` (`time_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -15256,14 +15262,17 @@ CREATE TABLE `community_space_confirm_order` (
 DROP TABLE IF EXISTS `community_space_open_time`;
 CREATE TABLE `community_space_open_time` (
   `time_id` varchar(30) NOT NULL COMMENT '预约时间ID',
-  `space_id` varchar(30) NOT NULL COMMENT '场地ID',
+  `space_id` varchar(30) NOT NULL DEFAULT '' COMMENT '场地ID（场馆维度下为空）',
+  `venue_id` varchar(30) NOT NULL DEFAULT '' COMMENT '场馆ID',
+  `week_day` varchar(2) NOT NULL DEFAULT '0' COMMENT '星期 0 全周通用 1~7 周一~周日',
   `hours` int(11) NOT NULL COMMENT '小时',
   `is_open` varchar(12) NOT NULL DEFAULT 'Y' COMMENT '是否开放 Y 是 N 否',
   `b_id` varchar(30) DEFAULT NULL COMMENT '业务ID',
   `community_id` varchar(30) NOT NULL COMMENT '小区ID',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `status_cd` varchar(2) NOT NULL DEFAULT '0' COMMENT '数据状态，详细参考c_status表，S 保存，0, 在用 1失效',
-  PRIMARY KEY (`time_id`)
+  PRIMARY KEY (`time_id`),
+  KEY `idx_csot_venue_week_hours` (`venue_id`,`week_day`,`hours`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -20417,6 +20426,11 @@ INSERT INTO `c_route` VALUES ('3094', '8000418004', '982026090800000012', 'D', '
 INSERT INTO `c_route` VALUES ('3095', '8000418004', '982026090800000013', 'Q', '1000', 'S', '2026-09-15 18:00:00', '0');
 -- 2026-10-13 场地预约订单汇总(Q=GET)
 INSERT INTO `c_route` VALUES ('3096', '8000418004', '982026101315180001', 'Q', '1000', 'S', '2026-10-13 15:18:00', '0');
+-- 2026-10-13 场地预约二次改版: 场馆开放时间批量保存(D=POST) + 扫码解析(Q=GET) + 撤销核销(D=POST) + 核销统计(Q=GET)
+INSERT INTO `c_route` VALUES ('3097', '8000418004', '982026101316310001', 'D', '1000', 'S', '2026-10-13 16:31:05', '0');
+INSERT INTO `c_route` VALUES ('3098', '8000418004', '982026101316310002', 'Q', '1000', 'S', '2026-10-13 16:31:05', '0');
+INSERT INTO `c_route` VALUES ('3099', '8000418004', '982026101316310003', 'D', '1000', 'S', '2026-10-13 16:31:05', '0');
+INSERT INTO `c_route` VALUES ('3100', '8000418004', '982026101316310004', 'Q', '1000', 'S', '2026-10-13 16:31:05', '0');
 
 -- ----------------------------
 -- Table structure for c_service
@@ -22505,6 +22519,11 @@ INSERT INTO `c_service` VALUES ('2108', '982026090800000012', 'invoice.saveInvoi
 INSERT INTO `c_service` VALUES ('2109', '982026090800000013', 'invoice.listInvoiceReds', 'API', '查询发票红冲', '1', null, 'CMD', 'http://acct-service', 'GET', '60', '3', '8000418002', '2026-09-15 18:00:00', '0');
 -- 2026-10-13 场地预约订单汇总(统计卡)
 INSERT INTO `c_service` VALUES ('2110', '982026101315180001', 'communitySpace.listCommunitySpacePersonSummary', 'API', '场地预约订单汇总', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', '2026-10-13 15:18:00', '0');
+-- 2026-10-13 场地预约二次改版: 场馆开放时间批量保存 + 扫码解析/撤销核销/核销统计（PC app 8000418004）
+INSERT INTO `c_service` VALUES ('2111', '982026101316310001', 'communitySpaceOpenTime.saveCommunitySpaceOpenTimeBatch', 'API', '批量保存场馆开放时间', '1', null, 'CMD', 'http://community-service', 'POST', '60', '3', '8000418002', '2026-10-13 16:31:05', '0');
+INSERT INTO `c_service` VALUES ('2112', '982026101316310002', 'communitySpace.getCommunitySpaceConfirmOrder', 'API', '扫码解析预约核销', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', '2026-10-13 16:31:05', '0');
+INSERT INTO `c_service` VALUES ('2113', '982026101316310003', 'communitySpace.deleteCommunitySpaceConfirmOrder', 'API', '撤销预约核销', '1', null, 'CMD', 'http://community-service', 'POST', '60', '3', '8000418002', '2026-10-13 16:31:05', '0');
+INSERT INTO `c_service` VALUES ('2114', '982026101316310004', 'communitySpace.listCommunitySpaceConfirmOrderSummary', 'API', '预约核销统计', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', '2026-10-13 16:31:05', '0');
 
 -- ----------------------------
 -- Table structure for c_service_business
@@ -28213,6 +28232,9 @@ INSERT INTO `m_menu` VALUES ('702022092217820001', '盘点管理', '800201906011
 INSERT INTO `m_menu` VALUES ('702022093080200002', '场地管理', '800201904006', '/#/pages/property/communitySpaceManage', '11', '-1', '', '2022-09-30 10:35:43', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702022093094080002', '场地预约订单', '800201904006', '/#/pages/property/communitySpacePersonManage', '13', '-1', '', '2022-09-30 12:49:11', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702022100457270039', '场地预约', '800201904006', '/#/pages/property/reportCommunitySpace', '12', '-1', '', '2022-10-04 02:33:51', '0', 'Y');
+-- 2026-10-13 场地预约二次改版: 开放时间配置(seq 14) + 场地核销(seq 15)
+INSERT INTO `m_menu` VALUES ('702026101316310002', '开放时间配置', '800201904006', '/#/pages/property/communityVenueOpenTime', '14', '502026101316310002', '场馆维度开放时间配置', '2026-10-13 16:31:05', '0', 'Y');
+INSERT INTO `m_menu` VALUES ('702026101316310001', '场地核销', '800201904006', '/#/pages/property/communitySpaceConfirm', '15', '502026101316310001', '场地预约二维码核销', '2026-10-13 16:31:05', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702022101940580022', '下载中心', '802019091604450001', '/#/pages/property/downloadTempFile', '20', '-1', '', '2022-10-19 20:24:53', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702022102370300115', '营销配置', '802020101497090051', '/#/pages/admin/marketSmsManage', '1', '-1', '', '2022-10-23 21:37:27', '0', 'Y');
 INSERT INTO `m_menu` VALUES ('702022102449210017', '营销方式', '802020101497090051', '/#/pages/admin/marketWay', '2', '-1', '', '2022-10-24 10:41:58', '0', 'Y');
@@ -31811,6 +31833,9 @@ INSERT INTO `p_privilege` VALUES ('502022092283880005', '删除组织信息权�
 INSERT INTO `p_privilege` VALUES ('502022092288890002', '盘点管理', '', '2022-09-22 14:52:44', '0', '800900000003', '/#/pages/property/assetInventoryManage', '702022092217820001');
 INSERT INTO `p_privilege` VALUES ('502022093003970003', '场地预约', '', '2022-09-30 12:49:11', '0', '800900000003', '/#/pages/property/communitySpacePersonManage', '702022093094080002');
 INSERT INTO `p_privilege` VALUES ('502022093035580003', '场地管理', '', '2022-09-30 10:35:43', '0', '800900000003', '/#/pages/property/communitySpaceManage', '702022093080200002');
+-- 2026-10-13 场地预约二次改版: 开放时间配置 + 场地核销
+INSERT INTO `p_privilege` VALUES ('502026101316310002', '开放时间配置', '场馆维度开放时间配置', '2026-10-13 16:31:05', '0', '800900000003', '/#/pages/property/communityVenueOpenTime', '702026101316310002');
+INSERT INTO `p_privilege` VALUES ('502026101316310001', '场地核销', '场地预约二维码核销', '2026-10-13 16:31:05', '0', '800900000003', '/#/pages/property/communitySpaceConfirm', '702026101316310001');
 INSERT INTO `p_privilege` VALUES ('502022100103010004', '修改停车场', '', '2022-10-01 01:23:57', '0', '800900000003', '/app/parkingArea.updateParkingArea', '702020012324610003');
 INSERT INTO `p_privilege` VALUES ('502022100112510006', '控制台', '', '2022-10-01 01:26:58', '0', '800900000003', '/#/pages/property/parkingAreaTotalControl', '702020012324610003');
 INSERT INTO `p_privilege` VALUES ('502022100117490005', '删除停车场', '', '2022-10-01 01:24:55', '0', '800900000003', '/app/parkingArea.deleteParkingArea', '702020012324610003');
@@ -32124,7 +32149,7 @@ CREATE TABLE `p_privilege_rel` (
   UNIQUE KEY `rel_id` (`rel_id`) USING BTREE,
   KEY `i_pr_p_id` (`p_id`) USING BTREE,
   KEY `i_pr_pg_id` (`pg_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=87821 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=87885 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of p_privilege_rel
@@ -45787,6 +45812,72 @@ INSERT INTO `p_privilege_rel` VALUES ('87817', '502021052111240007', '6002026083
 INSERT INTO `p_privilege_rel` VALUES ('87818', '502021052177980003', '6002026083012090804', '2026-08-30 21:47:33', '0');
 INSERT INTO `p_privilege_rel` VALUES ('87819', '502021052180090005', '6002026083012090804', '2026-08-30 21:47:33', '0');
 INSERT INTO `p_privilege_rel` VALUES ('87820', '502023122673500003', '6002026083012090804', '2026-08-30 21:47:34', '0');
+-- 2026-10-13 场地预约二次改版: 开放时间配置(502026101316310002) 按「场地管理」(502022093035580003) 的权限组授权复制
+INSERT INTO `p_privilege_rel` VALUES ('87821', '502026101316310002', '600201904002', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87822', '502026101316310002', '6002024022119187609', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87823', '502026101316310002', '6002024022341370805', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87824', '502026101316310002', '6002023052371720005', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87825', '502026101316310002', '6002024022749410318', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87826', '502026101316310002', '60020260417620111231', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87827', '502026101316310002', '6002026042063000382', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87828', '502026101316310002', '6002026042158603470', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87829', '502026101316310002', '6002026041259040270', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87830', '502026101316310002', '6002026050650723301', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87831', '502026101316310002', '6002026050762655622', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87832', '502026101316310002', '6002026050930418895', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87833', '502026101316310002', '6002026052031619349', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87834', '502026101316310002', '60020260521614714703', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87835', '502026101316310002', '6002026060759822099', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87836', '502026101316310002', '6002026051891006270', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87837', '502026101316310002', '60020260625993427226', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87838', '502026101316310002', '60020260626226524493', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87839', '502026101316310002', '60020260629982311332', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87840', '502026101316310002', '6002026070179845535', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87841', '502026101316310002', '6002026070156815528', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87842', '502026101316310002', '6002026070104775522', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87843', '502026101316310002', '60020260708315222620', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87844', '502026101316310002', '60020260708558322806', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87845', '502026101316310002', '6002026070942711949', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87846', '502026101316310002', '6002026070967351984', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87847', '502026101316310002', '6002026071342272251', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87848', '502026101316310002', '6002026073110490870', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87849', '502026101316310002', '6002026081295041724', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87850', '502026101316310002', '6002026080822041723', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87851', '502026101316310002', '6002026083046240798', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87852', '502026101316310002', '6002026083012090804', '2026-10-13 16:31:05', '0');
+-- 2026-10-13 场地预约二次改版: 场地核销(502026101316310001) 按「场地管理」(502022093035580003) 的权限组授权复制
+INSERT INTO `p_privilege_rel` VALUES ('87853', '502026101316310001', '600201904002', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87854', '502026101316310001', '6002024022119187609', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87855', '502026101316310001', '6002024022341370805', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87856', '502026101316310001', '6002023052371720005', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87857', '502026101316310001', '6002024022749410318', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87858', '502026101316310001', '60020260417620111231', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87859', '502026101316310001', '6002026042063000382', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87860', '502026101316310001', '6002026042158603470', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87861', '502026101316310001', '6002026041259040270', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87862', '502026101316310001', '6002026050650723301', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87863', '502026101316310001', '6002026050762655622', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87864', '502026101316310001', '6002026050930418895', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87865', '502026101316310001', '6002026052031619349', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87866', '502026101316310001', '60020260521614714703', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87867', '502026101316310001', '6002026060759822099', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87868', '502026101316310001', '6002026051891006270', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87869', '502026101316310001', '60020260625993427226', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87870', '502026101316310001', '60020260626226524493', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87871', '502026101316310001', '60020260629982311332', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87872', '502026101316310001', '6002026070179845535', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87873', '502026101316310001', '6002026070156815528', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87874', '502026101316310001', '6002026070104775522', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87875', '502026101316310001', '60020260708315222620', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87876', '502026101316310001', '60020260708558322806', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87877', '502026101316310001', '6002026070942711949', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87878', '502026101316310001', '6002026070967351984', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87879', '502026101316310001', '6002026071342272251', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87880', '502026101316310001', '6002026073110490870', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87881', '502026101316310001', '6002026081295041724', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87882', '502026101316310001', '6002026080822041723', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87883', '502026101316310001', '6002026083046240798', '2026-10-13 16:31:05', '0');
+INSERT INTO `p_privilege_rel` VALUES ('87884', '502026101316310001', '6002026083012090804', '2026-10-13 16:31:05', '0');
 
 -- ----------------------------
 -- Table structure for p_privilege_user
@@ -50882,7 +50973,7 @@ CREATE TABLE `t_dict` (
   PRIMARY KEY (`id`),
   KEY `td_table_name` (`table_name`) USING BTREE,
   KEY `i_td_status_cd` (`status_cd`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=626361 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=626363 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of t_dict
@@ -52017,6 +52108,9 @@ INSERT INTO `t_dict` VALUES ('626357', 'CL', '已取消', '已取消', '2026-10-
 INSERT INTO `t_dict` VALUES ('626358', '1', '现金', '现金', '2026-10-13 15:18:00', 'community_space_confirm_order', 'pay_way');
 INSERT INTO `t_dict` VALUES ('626359', '2', '微信', '微信', '2026-10-13 15:18:00', 'community_space_confirm_order', 'pay_way');
 INSERT INTO `t_dict` VALUES ('626360', '3', '支付宝', '支付宝', '2026-10-13 15:18:00', 'community_space_confirm_order', 'pay_way');
+-- 2026-10-13 场地预约二次改版: 核销方式字典, 见 docs/sql/community/20261013_community_space_confirm_optimize.sql
+INSERT INTO `t_dict` VALUES ('626361', '1', '扫码盒子核销', '扫码盒子核销', '2026-10-13 16:31:05', 'community_space_confirm_order', 'verify_method');
+INSERT INTO `t_dict` VALUES ('626362', '2', '手动核销', '手动核销', '2026-10-13 16:31:05', 'community_space_confirm_order', 'verify_method');
 
 -- ----------------------------
 -- Table structure for t_dict_spec

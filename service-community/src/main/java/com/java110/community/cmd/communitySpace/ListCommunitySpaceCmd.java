@@ -27,6 +27,7 @@ import com.java110.intf.community.ICommunitySpaceOpenTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpaceV1InnerServiceSMO;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,6 +90,9 @@ import java.util.List;
 public class ListCommunitySpaceCmd extends Cmd {
 
     private static Logger logger = LoggerFactory.getLogger(ListCommunitySpaceCmd.class);
+
+    public static final String WEEK_DAY_ALL = "0";
+
     @Autowired
     private ICommunitySpaceV1InnerServiceSMO communitySpaceV1InnerServiceSMOImpl;
 
@@ -130,23 +134,33 @@ public class ListCommunitySpaceCmd extends Cmd {
             return;
         }
 
-        List<String> spaceIds = new ArrayList<>();
+        List<String> venueIds = new ArrayList<>();
 
         for (CommunitySpaceDto communitySpaceDto : communitySpaceDtos) {
-            spaceIds.add(communitySpaceDto.getSpaceId());
+            if (StringUtil.isEmpty(communitySpaceDto.getVenueId()) || venueIds.contains(communitySpaceDto.getVenueId())) {
+                continue;
+            }
+            venueIds.add(communitySpaceDto.getVenueId());
         }
 
-        CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
-        communitySpaceOpenTimeDto.setSpaceIds(spaceIds.toArray(new String[spaceIds.size()]));
-        List<CommunitySpaceOpenTimeDto> communitySpaceOpenTimeDtos = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimes(communitySpaceOpenTimeDto);
+        List<CommunitySpaceOpenTimeDto> communitySpaceOpenTimeDtos = new ArrayList<>();
+
+        if (venueIds.size() > 0) {
+            CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
+            communitySpaceOpenTimeDto.setVenueIds(venueIds.toArray(new String[venueIds.size()]));
+            communitySpaceOpenTimeDto.setWeekDay(WEEK_DAY_ALL);
+            communitySpaceOpenTimeDtos = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimes(communitySpaceOpenTimeDto);
+        }
 
         List<CommunitySpaceOpenTimeDto> tmpCommunitySpaceOpenTimeDtos = null;
         for (CommunitySpaceDto communitySpaceDto : communitySpaceDtos) {
             tmpCommunitySpaceOpenTimeDtos = new ArrayList<>();
             for (CommunitySpaceOpenTimeDto tmpCommunitySpaceOpenTimeDto : communitySpaceOpenTimeDtos) {
-                if (tmpCommunitySpaceOpenTimeDto.getSpaceId().equals(communitySpaceDto.getSpaceId())) {
-                    tmpCommunitySpaceOpenTimeDtos.add(tmpCommunitySpaceOpenTimeDto);
+                if (StringUtil.isEmpty(communitySpaceDto.getVenueId())
+                        || !communitySpaceDto.getVenueId().equals(tmpCommunitySpaceOpenTimeDto.getVenueId())) {
+                    continue;
                 }
+                tmpCommunitySpaceOpenTimeDtos.add(tmpCommunitySpaceOpenTimeDto);
             }
             communitySpaceDto.setOpenTimes(tmpCommunitySpaceOpenTimeDtos);
         }

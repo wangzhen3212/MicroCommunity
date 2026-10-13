@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 类表述： 服务之前调用的接口类，不对外提供接口能力 只用于接口建调用
@@ -65,4 +66,13 @@ public interface ICommunitySpaceConfirmOrderV1InnerServiceSMO {
      */
     @RequestMapping(value = "/queryCommunitySpaceConfirmOrdersCount", method = RequestMethod.POST)
     int queryCommunitySpaceConfirmOrdersCount(@RequestBody CommunitySpaceConfirmOrderDto communitySpaceConfirmOrderDto);
+
+    /**
+     * 查询核销统计（今日核销笔数/今日核销金额/累计已核销）
+     *
+     * @param communitySpaceConfirmOrderDto 数据对象分享
+     * @return 统计信息
+     */
+    @RequestMapping(value = "/queryCommunitySpaceConfirmOrderSummary", method = RequestMethod.POST)
+    Map queryCommunitySpaceConfirmOrderSummary(@RequestBody CommunitySpaceConfirmOrderDto communitySpaceConfirmOrderDto);
 }

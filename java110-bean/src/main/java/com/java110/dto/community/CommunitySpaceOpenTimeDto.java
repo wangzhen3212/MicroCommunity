@@ -17,6 +17,9 @@ public class CommunitySpaceOpenTimeDto extends PageDto implements Serializable {
 
     private String spaceId;
     private String venueId;
+    private String[] venueIds;
+    private String weekDay;
+    private String[] weekDays;
     private String[] spaceIds;
     private String hours;
     private String isOpen;
@@ -111,5 +114,29 @@ public class CommunitySpaceOpenTimeDto extends PageDto implements Serializable {
 
     public void setVenueId(String venueId) {
         this.venueId = venueId;
+    }
+
+    public String[] getVenueIds() {
+        return venueIds;
+    }
+
+    public void setVenueIds(String[] venueIds) {
+        this.venueIds = venueIds;
+    }
+
+    public String getWeekDay() {
+        return weekDay;
+    }
+
+    public void setWeekDay(String weekDay) {
+        this.weekDay = weekDay;
+    }
+
+    public String[] getWeekDays() {
+        return weekDays;
+    }
+
+    public void setWeekDays(String[] weekDays) {
+        this.weekDays = weekDays;
     }
 }

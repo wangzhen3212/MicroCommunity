@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <div class="panel filter-panel">
+    <div class="panel manage-panel">
       <div class="filter-row">
         <el-input v-model="conditions.keyword" size="small" class="filter-input" clearable
           :placeholder="$t('communitySpacePersonManage.keywordPlaceholder')" @keyup.enter.native="handleQuery" />
@@ -53,9 +53,7 @@
           {{ $t('communitySpacePersonManage.export') }}
         </el-button>
       </div>
-    </div>
 
-    <div class="panel table-panel">
       <el-table v-loading="loading" :data="orders" style="width: 100%">
         <el-table-column prop="orderId" :label="$t('communitySpacePersonManage.orderId')" min-width="170" />
         <el-table-column prop="venueName" :label="$t('communitySpacePersonManage.venue')" min-width="120" />
@@ -283,7 +281,7 @@ export default {
       return (value < 10 ? '0' + value : '' + value) + ':00'
     },
     canCollect(row) {
-      return row.state === 'WP' || row.state === 'W'
+      return row.state === 'WP' || row.state === 'W' || row.state === 'S'
     },
     canCancel(row) {
       return row.state === 'S' || row.state === 'WP' || row.state === 'W'
@@ -439,9 +437,8 @@ export default {
   box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.12);
 }
 
-.filter-panel {
-  padding: 14px 16px;
-  margin-bottom: 16px;
+.manage-panel {
+  overflow: hidden;
 }
 
 .filter-row {
@@ -449,6 +446,8 @@ export default {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .filter-input {

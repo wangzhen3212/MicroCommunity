@@ -28,6 +28,8 @@ import java.util.Date;
 public class CommunitySpaceOpenTimePo implements Serializable {
 
     private String spaceId;
+private String venueId;
+private String weekDay;
 private String hours;
 private String isOpen;
 private String timeId;
@@ -38,6 +40,18 @@ public String getSpaceId() {
     }
 public void setSpaceId(String spaceId) {
         this.spaceId = spaceId;
+    }
+public String getVenueId() {
+        return venueId;
+    }
+public void setVenueId(String venueId) {
+        this.venueId = venueId;
+    }
+public String getWeekDay() {
+        return weekDay;
+    }
+public void setWeekDay(String weekDay) {
+        this.weekDay = weekDay;
     }
 public String getHours() {
         return hours;

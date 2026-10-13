@@ -21,7 +21,9 @@ import com.java110.core.annotation.Java110Transactional;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
+import com.java110.intf.community.ICommunitySpaceOpenTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunityVenueV1InnerServiceSMO;
+import com.java110.po.communitySpace.CommunitySpaceOpenTimePo;
 import com.java110.po.communitySpace.CommunityVenuePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
@@ -47,6 +49,10 @@ public class DeleteCommunityVenueCmd extends Cmd {
     @Autowired
     private ICommunityVenueV1InnerServiceSMO communityVenueV1InnerServiceSMOImpl;
 
+    @Autowired
+    private ICommunitySpaceOpenTimeV1InnerServiceSMO communitySpaceOpenTimeV1InnerServiceSMOImpl;
+
+
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
         Assert.hasKeyAndValue(reqJson, "venueId", "venueId不能为空");
@@ -64,6 +70,13 @@ Assert.hasKeyAndValue(reqJson, "communityId", "communityId不能为空");
         if (flag < 1) {
             throw new CmdException("删除数据失败");
         }
+
+        //级联逻辑删除场馆开放时段
+        CommunitySpaceOpenTimePo communitySpaceOpenTimePo = new CommunitySpaceOpenTimePo();
+        communitySpaceOpenTimePo.setStatusCd("1");
+        communitySpaceOpenTimePo.setCommunityId(communityVenuePo.getCommunityId());
+        communitySpaceOpenTimePo.setVenueId(communityVenuePo.getVenueId());
+        communitySpaceOpenTimeV1InnerServiceSMOImpl.updateCommunitySpaceOpenTime(communitySpaceOpenTimePo);
 
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }

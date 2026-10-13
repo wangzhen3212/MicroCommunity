@@ -70,4 +70,13 @@ public interface ICommunitySpaceConfirmOrderV1ServiceDao {
      */
     int queryCommunitySpaceConfirmOrdersCount(Map info);
 
+
+    /**
+     * 查询场地预约核销统计（今日核销笔数/今日核销金额/累计已核销）
+     *
+     * @param info 场地预约核销信息
+     * @return 统计信息
+     */
+    Map queryCommunitySpaceConfirmOrderSummary(Map info);
+
 }

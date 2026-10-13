@@ -473,34 +473,55 @@ INSERT INTO `c_service` VALUES ('2110', '982026101315180001', 'communitySpace.li
 INSERT INTO `c_route` VALUES ('3096', '8000418004', '982026101315180001', 'Q', '1000', 'S', NOW(), '0');
 ```
 
-### 状态口径
+## 2026-10-13 — 场地预约二次改版：开放时间配置独立页（场馆维度）· 场地预约页交互修正 · 预约订单页筛选表格合并 · PC 核销页按原型实现
 
-| person.state | 含义 | 触发 |
-| --- | --- | --- |
-| `WP` | 待支付 | PC 端生成预约（未收款） |
-| `S` | 已预约 / 进行中 | 收款成功 / 移动端在线支付成功 |
-| `C` | 已完成 | 全部时段核销完成 |
-| `CL` | 已取消 | 取消预约（释放时段） |
-| `W` / `F` | 待审核 / 预约失败 | 兼容存量，不再产生 |
+> 迁移脚本：`docs/sql/community/20261013_community_venue_open_time.sql`、`docs/sql/community/20261013_community_space_confirm_optimize.sql`（均已同步合入 `docs/db/TT.sql`）
 
-`person_time.state`：`W` 待核销 / `C` 已核销 / `CL` 已取消。占用判定统一为 `space_id + appointment_date + hours + state <> 'CL'`。
+### 数据库变更
 
-### 后端变更（service-community / service-acct）
+```sql
+-- ① community_space_open_time：开放时间维度由场地(space_id)升级为场馆(venue_id) + 星期(week_day)
+ALTER TABLE `community_space_open_time`
+  ADD COLUMN `venue_id` varchar(30) NOT NULL DEFAULT '' COMMENT '场馆ID' AFTER `space_id`,
+  ADD COLUMN `week_day` varchar(2) NOT NULL DEFAULT '0' COMMENT '星期 0 全周通用 1~7 周一~周日' AFTER `venue_id`,
+  MODIFY COLUMN `space_id` varchar(30) NOT NULL DEFAULT '' COMMENT '场地ID（场馆维度下为空）',
+  ADD INDEX `idx_csot_venue_week_hours` (`venue_id`, `week_day`, `hours`);
+-- 存量数据：按 community_space.venue_id 回填 → 同场馆任一场地该小时为 Y 则场馆开放 → 为存量场馆按 start_time/end_time 补 24 行
+-- week_day='0' → 逻辑删除场地维度行（空间维度配置不再参与判定）
 
-- `SaveCommunitySpacePersonCmd`：日期格式校验、开放时段校验、占用校验、服务端算费 `receivableAmount = feeMoney × 时段数`、默认 `state=WP`、落 `person_time(appointment_date)`
-- `ListCommunitySpacePersonCmd`：支持 `keyword`（预约人/电话/订单号 like）、`beginDate`/`endDate` 日期区间、`venueId`
-- 新增 `ListCommunitySpacePersonSummaryCmd`：`total/pending/active/finished/canceled/receivableTotal/receivedTotal`
-- `UpdateCommunitySpacePersonCmd`：收款（`receivedAmount/payWay/state=S/payTime`）与状态流转校验
-- `DeleteCommunitySpacePersonCmd`：`state in (S, WP)` 可取消、`C` 拒绝取消、写 `cancel_time`、关联时段置 `CL`
-- `SaveCommunitySpaceConfirmOrderCmd`：全部时段核销完成后置 `person.state=C`，可选写收款字段
-- Mapper：`CommunitySpacePersonV1`/`CommunitySpacePersonTimeV1`/`CommunitySpaceOpenTimeV1` 占用判定改用 `appointment_date` 并排除 `CL`；字典 join 输出 `payWayName`/`stateName`
-- Mapper：`CommunitySpaceV1` 场地列表 `name` 条件兼容场地名/管理员模糊匹配（场地管理页搜索框）
-- `VenueReservationPaymentBusiness`：移动端回调写 `appointment_date`、默认 `state=S`
+-- ② community_space_confirm_order：核销留痕（核销方式/核销人）+ 索引
+ALTER TABLE `community_space_confirm_order`
+  ADD COLUMN `verify_method` varchar(2) DEFAULT '1' COMMENT '核销方式 1 扫码盒子核销 2 手动核销' AFTER `pay_time`,
+  ADD COLUMN `verifier_id` varchar(30) DEFAULT NULL COMMENT '核销人用户ID' AFTER `verify_method`,
+  ADD COLUMN `verifier_name` varchar(64) DEFAULT NULL COMMENT '核销人姓名' AFTER `verifier_id`,
+  ADD INDEX `idx_csco_community_time` (`community_id`, `create_time`),
+  ADD INDEX `idx_csco_csp` (`csp_id`),
+  ADD INDEX `idx_csco_time` (`time_id`);
+UPDATE `community_space_confirm_order` SET `verify_method` = '1' WHERE `verify_method` IS NULL OR `verify_method` = '';
 
-### 前端变更（pc-web）
+-- ③ 字典：核销方式（id 626361~626362）
+INSERT INTO `t_dict` (`id`,`status_cd`,`name`,`description`,`create_time`,`table_name`,`table_columns`) VALUES
+  ('626361', '1', '扫码盒子核销', '扫码盒子核销', NOW(), 'community_space_confirm_order', 'verify_method'),
+  ('626362', '2', '手动核销', '手动核销', NOW(), 'community_space_confirm_order', 'verify_method');
 
-- 三个页面按原型改版：场地管理（统计卡/场馆卡片/场地区/开放时间弹窗）、场地预约（场馆/场地 tab + 7 天日期条 + 四态时段格 + 右侧预约面板）、预约订单（5 统计卡/筛选/详情/收款/取消/导出）
-- 新增组件 `SpaceBookingPanel.vue`、`CommunitySpacePersonDetail.vue`、`CollectCommunitySpacePerson.vue`；删除 `addCommunitySpacePerson.vue`
-- 三语文案同步（`communitySpaceManageLang.js` / `reportCommunitySpaceLang.js` / `communitySpacePersonManageLang.js`）
+-- ④ 服务注册：场馆开放时间批量保存 + 扫码解析/撤销核销/核销统计（c_service 2111~2114 / c_route 3097~3100）
+INSERT INTO `c_service` VALUES ('2114', '982026101316310001', 'communitySpaceOpenTime.saveCommunitySpaceOpenTimeBatch', 'API', '批量保存场馆开放时间', '1', null, 'CMD', 'http://community-service', 'POST', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_service` VALUES ('2115', '982026101316310002', 'communitySpace.getCommunitySpaceConfirmOrder', 'API', '扫码解析预约核销', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_service` VALUES ('2116', '982026101316310003', 'communitySpace.deleteCommunitySpaceConfirmOrder', 'API', '撤销预约核销', '1', null, 'CMD', 'http://community-service', 'POST', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_service` VALUES ('2117', '982026101316310004', 'communitySpace.listCommunitySpaceConfirmOrderSummary', 'API', '预约核销统计', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3101', '8000418004', '982026101316310001', 'D', '1000', 'S', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3102', '8000418004', '982026101316310002', 'Q', '1000', 'S', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3103', '8000418004', '982026101316310003', 'D', '1000', 'S', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3104', '8000418004', '982026101316310004', 'Q', '1000', 'S', NOW(), '0');
 
-
+-- ⑤ 菜单/权限/授权（房产组 800201904006）：开放时间配置 seq=14、场地核销 seq=15
+INSERT INTO `m_menu` VALUES ('702026101316310002', '开放时间配置', '800201904006', '/#/pages/property/communityVenueOpenTime', '14', '502026101316310002', '场馆维度开放时间配置', NOW(), '0', 'Y');
+INSERT INTO `m_menu` VALUES ('702026101316310001', '场地核销', '800201904006', '/#/pages/property/communitySpaceConfirm', '15', '502026101316310001', '场地预约二维码核销', NOW(), '0', 'Y');
+INSERT INTO `p_privilege` VALUES ('502026101316310002', '开放时间配置', '场馆维度开放时间配置', NOW(), '0', '800900000003', '/#/pages/property/communityVenueOpenTime', '702026101316310002');
+INSERT INTO `p_privilege` VALUES ('502026101316310001', '场地核销', '场地预约二维码核销', NOW(), '0', '800900000003', '/#/pages/property/communitySpaceConfirm', '702026101316310001');
+-- 授权：两个新权限均按「场地管理」(502022093035580003) 的权限组授权复制（queryMenus 需授权行才可见）
+INSERT INTO `p_privilege_rel` (`p_id`, `pg_id`, `create_time`, `status_cd`)
+SELECT DISTINCT '502026101316310002', r.pg_id, NOW(), '0' FROM `p_privilege_rel` r WHERE r.p_id = '502022093035580003' AND r.status_cd = '0';
+INSERT INTO `p_privilege_rel` (`p_id`, `pg_id`, `create_time`, `status_cd`)
+SELECT DISTINCT '502026101316310001', r.pg_id, NOW(), '0' FROM `p_privilege_rel` r WHERE r.p_id = '502022093035580003' AND r.status_cd = '0';
+```
