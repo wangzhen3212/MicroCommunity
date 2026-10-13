@@ -34,12 +34,12 @@ export function listCommunitySpace(params) {
 
 // 获取场地开放时段，传 appointmentTime 时仅返回该日期可预约（未开放/已占用已排除）的时段
 // 传 spaceId 时返回小时维度的开放明细，供扫码前只读复核；返回完整响应，便于判断 code
-export function listCommunitySpaceOpenTime(data) {
+export function listCommunitySpaceOpenTime(params) {
   return new Promise((resolve, reject) => {
     request({
       url: '/communitySpace.listCommunitySpaceOpenTime',
-      method: 'post',
-      data
+      method: 'get',
+      params
     }).then(response => {
       const res = response.data
       resolve(res)
