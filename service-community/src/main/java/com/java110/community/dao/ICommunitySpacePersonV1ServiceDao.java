@@ -70,4 +70,12 @@ public interface ICommunitySpacePersonV1ServiceDao {
      */
     int queryCommunitySpacePersonsCount(Map info);
 
+    /**
+     * 查询小区场地预约订单汇总（总数/待支付/进行中/已完成/已取消/应收合计/实收合计）
+     *
+     * @param info 小区场地预约信息
+     * @return 汇总信息
+     */
+    Map queryCommunitySpacePersonSummary(Map info) throws DAOException;
+
 }

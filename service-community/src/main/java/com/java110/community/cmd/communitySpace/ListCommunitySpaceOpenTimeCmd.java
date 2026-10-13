@@ -60,8 +60,8 @@ public class ListCommunitySpaceOpenTimeCmd extends Cmd{
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
 
-        Assert.hasKeyAndValue(reqJson,"appointmentTime","预约时间");
         Assert.hasKeyAndValue(reqJson,"communityId","小区ID");
+        Assert.hasKeyAndValue(reqJson,"spaceId","场地ID");
     }
 
     @Override
@@ -70,6 +70,8 @@ public class ListCommunitySpaceOpenTimeCmd extends Cmd{
         CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
         communitySpaceOpenTimeDto.setSpaceId(reqJson.getString("spaceId"));
         communitySpaceOpenTimeDto.setVenueId(reqJson.getString("venueId"));
+        communitySpaceOpenTimeDto.setCommunityId(reqJson.getString("communityId"));
+        //不传预约日期时返回场地全部时段配置，传日期时仅返回该日期可预约（未被占用且开放）的时段
         communitySpaceOpenTimeDto.setAppointmentTime(reqJson.getString("appointmentTime"));
         List<CommunitySpaceOpenTimeDto> communitySpaceOpenTimeDtos = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimes(communitySpaceOpenTimeDto);
 

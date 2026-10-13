@@ -277,37 +277,6 @@ ALTER TABLE `apply_room_discount` DROP COLUMN `fee_id`;
 
 > 说明：新库（TT.sql 重建）中 apply_room_discount 已不含 fee_id 列，仅存量库需要执行上述迁移；申请时间由前端默认传值（startTime=当前时间、endTime=2050-01-01 23:59:59，长期有效），批量缴费与单费用缴费命中口径统一为 state='4' and in_use='0' and end_time >= 当前时间 and feeId 命中子表。
 
-## 2026-09-03 — 修复：批量缴费优惠申请折扣同 discountId 重复展示与金额重复计算
-
-### 代码变更（无 DDL）
-
-`service-fee/src/main/java/com/java110/fee/bill/ComputeFeeDiscountImpl.java` 的 `computeApplyRoomDiscount()`：
-
-- 同一优惠申请（discountId）命中多个缴费费用时，原先返回多条重复折扣记录，导致前端折扣面板重复展示、勾选错乱、应付金额重复累加（翻倍）。
-- 现按 discountId 合并：discountPrice 使用 BigDecimal 累加（保留首条记录的其余字段），接口只返回一条折扣行。
-- 影响链路：`feeDiscount.computeFeeDiscount`（批量缴费页展示）与 `BatchPayFeeImpl.computeFeesDiscount()`（缴费重算）共用 `compute()`，自动受益；合并前后各费用减免总额不变，不影响实际扣减。
-
-## 2026-09-03 — 修复：房屋缴费历史界面缺失 pay_fee_detail 金额字段
-
-### 根因
-
-service-fee cmd `fee.queryFeeDetail`（`service-fee/.../cmd/fee/QueryFeeDetailCmd.java:103`）调用 `BeanConvertUtil.covertBeanList(feeDetailList, ApiFeeDetailDataVo.class)`，目标 VO 类 `ApiFeeDetailDataVo` 缺少 `acctAmount / discountAmount / deductionAmount / lateAmount / giftAmount / payableAmount / feeTime / feeStartTime / feeEndTime / importFeeName / bId / configId / payerObjType` 共 13 个字段，导致响应 JSON 不含上述字段。`BeanConvertUtil.objectFieldsPutMap()` 按目标类的字段反射迭代拷贝，目标类未声明的字段被丢弃。
-
-数据库 / SQL / DTO / Mapper 均无需改动（`docs/db/TT.sql:30367-30398`、`java110-db/.../fee/FeeDetailServiceDaoImplMapper.xml:114-129`、`java110-bean/.../dto/fee/FeeDetailDto.java`、`java110-bean/.../po/fee/PayFeeDetailPo.java` 已含全部字段），仅 VO 类缺失。
-
-### 代码变更
-
-- `java110-bean/src/main/java/com/java110/vo/api/ApiFeeDetailDataVo.java`：新增 13 个字段及 getter/setter，字段顺序与 `FeeDetailDto` 对齐；`fee.queryFeeDetail` 与 `fee.queryAdminFeeDetail` 两个 Cmd 自动受益，无需改动。
-- `pc-web/src/components/fee/simplifyHisFee.vue`：表格列改造
-  - "应收/实收"列移除 `v-if="scope.row.acctAmount > 0"` 判断（账户抵扣挪到独立列）。
-  - 在"应收/实收"列后新增 5 个金额列：账户抵扣 `acctAmount`、打折金额 `discountAmount`（保留 `payFeeDetailDiscountDtoList` 子项）、减免金额 `deductionAmount`、滞纳金 `lateAmount`、赠送金额 `giftAmount`。
-  - 全部金额使用 `|| '-'` 兜底（禁止 `?.` 可选链 / `??` 空值合并）。
-- `pc-web/src/views/fee/roomCreateFeeLang.js`：i18n 三语（en/zh/zh-TW）的 `simplifyHisFee` 子段新增 6 个键：`acctAmount` / `discountAmount` / `deductionAmount` / `lateAmount` / `giftAmount` / `discountDetail`。
-- `CHANGE_LOG.md`：登记本次根因定位与变更内容。
-
-### 数据库变更
-
-无。
 ```
 
 ## 2026-09-08 — 发票抬头统一由商城管理（物业端下线 owner_invoice）
@@ -335,23 +304,6 @@ INSERT INTO `c_route` VALUES ('3084', '8000418004', '982026090800000002', 'Q', '
 ```
 
 ## 2026-09-09 — 撤销发票相关冗余接口注册（保留 queryInvoiceHeadings）
-
-### 背景
-
-物业端按房屋开票页(`pc-web/src/views/fee/ownerApplyInvoiceList.vue`)仅实际调用 `invoice.queryInvoiceHeadings`（选房后回填商城抬头）；抬头保存/更新由提交开票 `invoice.saveInvoiceApply` 内部 `syncInvoiceHeadingToMall()` 统一同步商城，无需独立接口。其余 5 个接口在本仓库内无调用方，属冗余注册。
-
-### 变更内容
-
-1. **删除 5 个 CMD 类**（无历史调用方）：
-   - `service-user/src/main/java/com/java110/user/cmd/owner/QueryOwnerByRoomCmd.java`（前端选房用 `room.queryRooms` 已含业主）
-   - `service-acct/src/main/java/com/java110/acct/cmd/invoice/SaveInvoiceHeadingCmd.java`（开票时已同步）
-   - `service-acct/src/main/java/com/java110/acct/cmd/invoice/DeleteInvoiceHeadingCmd.java`（无调用方）
-   - `service-acct/src/main/java/com/java110/acct/cmd/invoice/SetInvoiceHeadingDefaultCmd.java`（无调用方）
-   - `service-acct/src/main/java/com/java110/acct/cmd/invoice/GetMyInvoiceHeadingCmd.java`（当前无调用方，原为 IoT 对齐预留）
-2. **保留**：`QueryInvoiceHeadingsCmd.java`（`invoice.queryInvoiceHeadings` c_service 2098 = 982026090800000002，c_route 3084）与 `SaveInvoiceApplyCmd.java`（syncInvoiceHeadingToMall 为抬头保存/更新单一通道）。
-3. **数据库基线脚本**：`docs/db/TT.sql` 已同步，删除 c_service 2097/2099/2100/2101/2102 与 c_route 3083/3085/3086/3087/3088 注册，仅保留 2098/3084；`docs/sql/invoice/register_invoice_service.sql` 精简为仅注册 `invoice.queryInvoiceHeadings`。
-
-> 注意：c_route 主键 id 存在跨历史自增占用（如 2097/2099/2100/2101/2102 在 c_route 表中曾为 2022 年其他服务使用），**执行撤销 SQL 时按 service_id 精确匹配删除**，避免误删历史路由。模板如下：
 
 ```sql
 -- 撤销 5 个冗余接口注册（目标库执行，执行后刷新 AppRouteCache 或重启 service-api）
@@ -397,35 +349,6 @@ ALTER TABLE `parking_space_apply`
 
 ## 2026-09-15 — 商城为开票/审核权威源：物业端零状态、只提交 + 只读展示
 
-### 背景
-
-物业端提交开票后状态被写成“审核失败（F）”、商城 `/pages/admin/invoiceList` 审核页签无数据。原因为：① 商城 `PropertyInvoiceBmoImpl` 强制 `state='WAIT'` 直接开票（不读 `audit_switch`），商城审核页（查 `state='AUDIT'`）永远为空；② 物业端自建 `W/U/F/G/C` 状态机并用小区配置 `INVOICE_AUTO_SWITCH` 自判是否开票；③ 商城失败原因被丢弃；④ 无商城状态回读通道。
-
-### 目标架构（已落地）
-
-- **商城**：开票单落库方 + 审核开关（`invoice_setting.audit_switch`）唯一仲裁者 + 开票执行者 + 状态权威源；
-- **物业**：只保留“提交开票申请”（提交结果 `S` 已提交 / `F` 提交失败，可重新提交）+ 只读展示商城状态、发票号、失败原因；**不维护发票状态机，不落发票业务状态**。
-
-### 变更内容
-
-**商城仓库（MicroCommunityMall）**
-
-1. `PropertyInvoiceBmoImpl`：按 `audit_switch` 置 `AUDIT`（等商城审核，不调开票）/ `WAIT`（直接开票）；销方未配置时**先落单** `state='FAIL'+fail_reason`（保证商城开票单列表可见可追溯，不再抛异常）；幂等分支支持 `FAIL` 置回 `WAIT` 重试（重提）、`AUDIT/DONE/RED` 直接回传。
-2. 新增 `QueryInvoiceStatusBatchBmoImpl`（`mallApiCode=queryInvoiceStatusBatchBmoImpl`，入参 `invoiceIds[]`/逗号串）供物业端批量回读状态。
-3. `InvoiceV1ServiceDaoImplMapper.xml` 的 `getInvoiceInfo`/`queryInvoicesCount` 增加 `invoiceIds` IN 条件；`InvoiceDto` 增加 `invoiceIds`。
-4. `mall-webvue` 开票单列表新增 `FAIL` 页签与“来源(source)”列（`invoiceList.vue` + `lang/admin/invoiceLang.js` 中英）。
-
-**物业仓库（MicroCommunityV2）**
-
-1. `SaveInvoiceApplyCmd`：删除 `INVOICE_AUTO_SWITCH` 判定与自动开票分支；保存申请后提交商城，写 `state=S/F`、`oi_id=商城单号`，失败原因入 `remark`，响应返回 `{applyId,state,oiId,mallState,failReason}`。
-2. `IIssueMallInvoiceBmo/IssueMallInvoiceBmoImpl` → 重构为 `IPropertyInvoiceSubmitBmo/PropertyInvoiceSubmitBmoImpl`（只提交 + 结果透传 + 明细按商城即时结果回写，删除本地 `G/F` 状态写入与发票事件写入）。
-3. 新增 `IInvoiceStateSyncBmo/InvoiceStateSyncBmoImpl`：批量取商城状态（`fillMallState` 只读展示 / `syncMallState` 展示 + 回写 `pay_fee_detail.open_invoice`）；`ListInvoiceApplyCmd` 列表实时填充商城状态。
-4. 新增 CMD：`SyncInvoiceApplyStateCmd`（`invoice.syncInvoiceApplyState`）、`ReSubmitInvoiceApplyCmd`（`invoice.reSubmitInvoiceApply`）；新增 DTO `InvoiceMallStateDto`；`InvoiceApplyDto` 仅保留 `STATE_SUBMIT='S'`、`STATE_SUBMIT_FAIL='F'`（旧 `W/U/G/C` 标 `@Deprecated`），新增 `mallState/failReason/oiIdNotEqual/applyIds`。
-5. 新增定时兜底 `service-job` `InvoiceStateSyncJob`（每 5 分钟，扫 `oi_id != '-1'`，按商城结果回写明细与发票号）。
-6. **删除发票办理功能**：CMD `AuditInvoiceApplyCmd`/`UploadInvoicePhotoCmd`/`WriteInvoiceApplyCmd`/`ListInvoiceEventCmd`/`Save,Update,DeleteInvoiceApplyItemCmd`/`cmd/invoiceEvent/*`；前端组件 `components/fee/uploadInvoicePhoto.vue`/`wirteInvoiceEvent.vue`/`invoiceApplyDetailEvent.vue`；api 精简（`invoiceApplyApi.js` 移除 audit/upload/write 并新增 sync/reSubmit，`invoiceApplyDetailApi.js` 移除事件查询）。
-   > **偏差说明**：方案原列删除 `components/fee/audit.vue`，但该组件为通用审核弹窗，`payFeeBatchList.vue`/`returnPayFeeManageList.vue` 仍在引用，删除会导致构建失败，故**保留**并仅移除 `invoiceApplyList.vue` 中的引入与 `invoiceApplyLang.js` 中的 `audit/uploadInvoicePhoto/wirteInvoiceEvent` 文案键（同名键由 `feeI18n` 提供）。
-7. 前端页面：`invoiceApplyList.vue` 去状态树、列为“提交结果/商城状态/失败原因/发票号”、操作仅“详情/同步状态/重新提交/删除”；`invoiceApplyDetailList.vue` 去事件页签（保留费用明细 + 发票只读下载）；`ownerApplyInvoiceList.vue` 按 `state/failReason` 提示；`invoiceApplyLang.js`/`invoiceApplyDetailLang.js`/`ownerApplyInvoiceLang.js` 三语文案同步。
-
 ### 数据库变更（物业库 TT）
 
 ```sql
@@ -451,42 +374,8 @@ INSERT INTO `task_template` VALUES ('1036', '商城开票状态同步', '兜底�
 INSERT INTO `task` VALUES ('522026091512293800', '-1', '商城开票状态同步', '1036', '0 */5 * * * ?', '002', '0', '2026-09-15 12:29:38');
 ```
 
-> 增量脚本：`docs/sql/invoice/register_invoice_sync_service.sql`（①②④）、`docs/sql/invoice/unregister_invoice_action_service.sql`（②）、`docs/sql/invoice/migrate_invoice_apply_state.sql`（③）、`docs/sql/invoice/invoice_precheck.sql`（开票前置配置自检）。执行后需刷新 `AppRouteCache` 或重启 `service-api`。
-> 基线同步：上述 ①②③④ 已同步 `docs/db/TT.sql`（新增 `c_service` 2106/2107、`c_route` 3092/3093、`t_dict` 626311(S=已提交)、`task_template` 1036 + `task` 522026091512293800；1791/1792/1793/1794 及其路由已注释下线）。
-> 开关收敛：物业端 `INVOICE_AUTO_SWITCH` 已废弃，审核开关统一由商城 `invoice_setting.audit_switch` 决定（`docs/db/invoice/invoice_auto_setting.sql` 已加废弃说明）。
-
-### 未实现（P2，待确认）
-
-- F10 物业端删除申请单时同步撤销商城单（`CancelInvoiceBmoImpl`）：商城仓库暂无撤销/作废开票单接口，本次未实现；当前物业端删除申请单仅释放缴费明细 `open_invoice='N'`。
 
 ## 2026-09-15 — 物业开票单归并：单接口提交（抬头随开票 upsert）· ext_apply_id 关联 · 查询即取商城状态/PDF
-
-### 背景
-
-上一版实现仍有偏差：物业端提交开票时**先调"保存抬头"再调"开票"两跳跨系统调用**（抬头同步失败被 `logger.warn` 吞掉）；商城侧无物业 `applyId` 一等字段，幂等与状态查询靠 `remark` 拼串/`oi_id` 匹配；物业端把商城 PDF 落到本地 `file_rel(29000)` 再读回；列表/详情外挂一个"同步状态"接口与按钮。
-
-本轮收敛为：**物业 → 商城只保留一个开票接口（抬头字段随开票报文）**，商城**先按 `phone+headingType` upsert 抬头、再落开票单（`ext_apply_id`=物业 `applyId`）**，物业端**只在查询时按 `applyId` 实时取商城状态/失败原因/发票号/发票 PDF**，本地不落状态、不落 PDF、无"同步"动作。
-
-### 变更内容
-
-**商城仓库（MicroCommunityMall）**
-
-1. DDL：`invoice_order` 新增 `ext_apply_id VARCHAR(32)`（`AFTER source`）+ 索引 `idx_ext_apply`；同步 `docs/sql/invoice/invoice_ddl.sql` 建表语句。
-2. `InvoicePo` 新增 `extApplyId`；`InvoiceDto` 新增 `extApplyId`/`extApplyIds[]`；`InvoiceV1ServiceDaoImplMapper.xml` 的 `saveInvoiceInfo` 插列、`updateInvoiceInfo` 可更新、`getInvoiceInfo`/`queryInvoicesCount` 支持 `extApplyId` 与 `extApplyIds IN`。
-3. 新增 `bmo/support/InvoiceHeadingUpsertService`（`phone+headingType` 存在改、不存在增；空串可选字段归一化为 `null`，避免随单 upsert 误清已维护的抬头邮箱/地址/开户行）；`SaveInvoiceHeadingBmoImpl`（IoT `SaveInvoiceCmd` 仍在使用）重构为调用同一实现，对外入参/出参不变。
-4. `PropertyInvoiceBmoImpl`：`doCmd` 顺序改为 **① upsert 抬头 → ② 幂等（`ext_apply_id` 命中复用/重试，`remark` 降级为兜底摘要并对无 `ext_apply_id` 的存量单补写） → ③ 查销方 → ④ 落单写 `ext_apply_id` → ⑤ 按 `audit_switch` 开票**；返回值增加 `extApplyId`；`validate` 增加 `headingType` 必填（`applyId` 保持非必填，兼容 IoT 侧不传 `applyId` 的调用）。
-5. `QueryInvoiceStatusBatchBmoImpl`：支持 `applyIds`（按 `ext_apply_id IN` 查，与 `invoiceIds` 可同时传，结果按开票单号去重），返回体新增 `applyId`。
-
-**物业仓库（MicroCommunityV2）**
-
-1. `SaveInvoiceApplyCmd`：**删除 `syncInvoiceHeadingToMall()` 与 `IMallInnerServiceSMO` 依赖**（提交仅一次跨系统调用）；抬头字段（`headingType/buyerName/buyerTaxNo/buyerAddress/buyerTel/email/buyerBankNo`）随开票报文传给商城。
-2. `IPropertyInvoiceSubmitBmo.submit(...)` 签名扩展为传入抬头全量字段（含 `headingType/email/bankNo`）；`PropertyInvoiceSubmitBmoImpl` 报文增加 `applyId`（商城 `ext_apply_id`）与抬头字段，**删除 `saveInvoicePdf()` 与 `IFileRelInnerServiceSMO` 依赖**（不再写 `file_rel 29000`）；保留提交结果 `S/F` 与明细即时回写。
-3. `ReSubmitInvoiceApplyCmd` 适配新签名（抬头由 apply 记录重建，`email/bankNo` 物业库无对应列传空，由商城保留原抬头值）。
-4. `InvoiceStateSyncBmoImpl`：改为**按 `applyIds`（商城 `ext_apply_id`）批量取状态**并对有商城单号的存量单兼容 `invoiceIds` 查询；回填 `mallState/failReason/invoiceCode/mallPdfUrl/oiId`（**只读不写库**，不再写 `remark` 摘要）；删除 `syncMallState`。
-5. `InvoiceApplyDto` 新增 `mallPdfUrl`；`InvoiceMallStateDto` 新增 `applyId`；`ListInvoiceApplyCmd.queryInvoicePhoto()` 优先用商城 `mallPdfUrl` 组装展示地址，`file_rel(29000)` 仅历史存量兜底。
-6. **删除"同步状态"**：CMD `SyncInvoiceApplyStateCmd`、服务注册 `c_service 2106`/`c_route 3092`（注释下线 + 存量库注销脚本）、前端"同步状态"按钮与 `syncInvoiceApplyState` api。
-7. `service-job InvoiceStateSyncJob`（决策 A 保留）：入参由 `invoiceIds` 改为 `applyIds`，用途降级为**仅回写缴费明细 `open_invoice` 兜底**（去掉发票号回填等状态展示语义）。
-8. 前端：`invoiceApplyList.vue` 删除同步按钮、新增"发票 PDF"列（有值显示"下载发票"，`window.open` 直连商城 PDF）；`invoiceApplyDetailList.vue` 发票页签改用 `mallPdfUrl`（无则"暂无发票"）；`invoiceApplyLang.js`/`invoiceApplyDetailLang.js` 删同步文案键、增 `downloadInvoice`/`noInvoicePdf` 三语文案。
 
 ### 数据库变更
 
@@ -509,67 +398,7 @@ DELETE FROM `c_route` WHERE `service_id` = '982026090800000010';
 DELETE FROM `c_service` WHERE `service_id` = '982026090800000010';
 ```
 
-> 执行后需刷新 `AppRouteCache` 或重启 `service-api`；`invoice_setting(setting_id='global').audit_switch`、`invoice_seller`/`invoice_platform`/`invoice_category_map` 需已配置。
-> 物业 `invoice_apply` 表结构不变（`oi_id` 继续存商城单号，关联以商城 `ext_apply_id` 为准；该表无 email/invoice_account 列，重提时对应抬头字段传空）。
-
-## 2026-09-15 — 开票提交顺序反转：先调商城开票、商城建单后才落物业库 + remark 统一截断
-
-### 背景
-
-物业端提交/重新提交发票申请报 `code=404` + `Data too long for column 'remark'`。原因：`SaveInvoiceApplyCmd` 先把 `invoice_apply`+items 落库、并在**算钱阶段**就把 `pay_fee_detail.open_invoice` 置 `D`，之后才调商城开票；商城失败时 `PropertyInvoiceSubmitBmoImpl.updateSubmitFail()` 把商城返回的**整段 MyBatis/SQL 异常文本**原样写入 `invoice_apply.remark`（`varchar(200)`）→ `MysqlDataTruncation` → 事务回滚（**丢单**）、明细卡在 `D`（"未开票"列表查不到、无法再提交）、商城真实失败原因被异常文本覆盖。
-
-### 变更内容
-
-**后端（service-acct）**
-
-1. `IPropertyInvoiceSubmitBmo`：删除 `submit(...)`；新增 `submitMall(applyPo, items, headingType, email, bankNo)`（纯商城调用，不读写物业库）与 `reSubmit(applyPo, items)`（申请单已存在场景），均返回 `InvoiceMallStateDto`（复用，无新增 DTO / 表）。
-2. `PropertyInvoiceSubmitBmoImpl`：`submitMall()` 组装报文（`applyId`=商城 `ext_apply_id`、抬头字段、多明细）后调商城，**异常 / `ResultVo≠OK` / `data==null`(MALL_SWITCH) / 无 `invoiceId` 一律转 `failReason` 返回、不抛异常**；新增 `safeRemark()`（压缩连续空白 + `StringUtil.truncateMessage(…,200)`）与 `safeFailReason()`（原文 `logger.warn`（关键字"商城开票失败原因(原文)"）入日志；含 `### Error updating database`/`### SQL:`/`nested exception` 时按 `###` 分段取首个可读片段，兜底 `商城开票调用失败(详见服务日志)`）；`reSubmit()` 无 `invoiceId` → `updateSubmitFail`（`state=F` + remark 摘要，内部 try/catch 只记日志），有 `invoiceId` → 写 `oi_id`/`state=S`（`DONE` 且有 `invoiceNo` 才写 `invoice_code`）并按 `DONE→Y / FAIL→N / 其他→D` 回写明细。
-3. `SaveInvoiceApplyCmd`：顺序反转为「生成 `applyId`（先于商城调用，但不落库）→ 组装明细/金额（**只算不写**，删除原先把 `pay_fee_detail.open_invoice` 置 `D` 的写库代码）→ `submitMall()` → **无 `invoiceId` 时零写入**并直接返回 `{applyId,state:F,oiId,mallState,failReason}` → 有 `invoiceId` 才保存 apply+items，再按商城结果回写明细开票状态」；`invoice_apply.remark` 与 `invoice_apply_item.remark` 写入前均按 200 字符截断。`@Java110Transactional` 保留（商城调用发生在所有写库动作之前，失败无数据可回滚）。
-4. `ReSubmitInvoiceApplyCmd`：适配 `reSubmit()`（`BeanConvertUtil` DTO→PO），响应补 `mallState/failReason`，`state` 按有无 `invoiceId` 取 `S`/`F`。
-
-**前端（pc-web）**
-
-5. `ownerApplyInvoiceList.vue`：提交返回 `state==='F'` 时提示"提交失败（未保存申请单）+ 失败原因"并**停留当前页面**（不再 `goBack()`，此时库中无记录）；备注输入框加 `maxlength="200" show-word-limit`。
-6. `invoiceApplyList.vue`：失败原因列固定宽度 + `.text-ellipsis` 截断展示、`el-tooltip` 悬浮展示全文。
-7. `ownerApplyInvoiceLang.js`：简/繁/英三语新增 `remarkMaxLength`、`submitFailedNotSaved` 文案键。
-
-### 数据库变更
-
-无。`invoice_apply.remark` / `invoice_apply_item.remark` 保持 `varchar(200)`（截断在代码侧完成，不扩列），Mapper 与表结构不变。
-
-> 历史"卡死"明细排查（一次性，非必须）：`SELECT detail_id, open_invoice FROM pay_fee_detail WHERE open_invoice = 'D' AND status_cd = '0';` —— 老版本商城失败时曾被提前置 `D`，可按申请单核对后手工恢复为 `N`。
-
-### 未实现（P2，本次跳过）
-
-- `SendMallImpl`（service-job）HTTP 4xx/5xx 分支补 `saveTranslateError` 落 `machine_translate_error`：该实现是 **service-job 全局商城调用出口**，改动影响面超出本次开票范围，**跳过**（已评估并确认）；商城真实失败原因仍可通过 service-acct 日志（warn"商城开票失败原因(原文)"）与响应 `failReason` 追溯。
-
 ## 2026-09-15 — 开票中心改造：申请单落房屋（room_id/room_name）· 页面左右布局（房屋树/发票记录）· 商城抬头不再写入开票单备注
-
-### 背景
-
-1. 发票申请无法追溯"哪套房"：只能靠业主姓名猜；列表也不能按房屋筛选。
-2. `/pages/fee/invoiceApply` 交互低效，需要"左房屋树 + 右发票记录"（与 `/pages/property/roomCreateFee` 左侧一致）。
-3. 商城后台抬头备注被污染成 `102026091518181085|林健|桂测试物业费1.8`：物业随单 upsert 抬头时把**开票单备注**（`applyId|业主|业务类目`）当成**抬头备注**写入了 `invoice_heading.remark`（`PropertyInvoiceBmoImpl.buildHeadingParam()`）。
-
-### 变更内容
-
-**物业仓库（MicroCommunityV2）**
-
-1. `InvoiceApplyPo` 新增 `roomId`/`roomName`；`InvoiceApplyDto` 新增 `roomId`/`roomName`（结果列 + 精确查询条件）、`roomNameLike`（模糊查询条件）与 `floorId`/`unitId`（楼栋/单元查询条件）。
-2. `InvoiceApplyV1ServiceDaoImplMapper.xml`：`saveInvoiceApplyInfo` 插 `room_id/room_name`；`getInvoiceApplyInfo` 增 `t.room_id/t.room_name` 及驼峰别名、增 `roomId`/`roomNameLike`/`floorId`/`unitId` 条件，并按 `t.room_id` **left join `building_room` → `building_unit`**（`floorId` 过滤 `bu.floor_id`、`unitId` 过滤 `bu.unit_id`）；`queryInvoiceApplysCount` 同步 join 与条件（分页总数口径一致）；`updateInvoiceApplyInfo`**不加** room 列（提交后房屋不可改，避免重提/状态回写误改房屋）。
-3. `SaveInvoiceApplyCmd`：`validate` 增加"有 `roomId` 必须有 `roomName`"校验（后端**不强制**房屋，兼容 App/历史调用）；`doCmd` 中 `roomName` 按列宽 64 截断（与 remark 200 截断同口径）。房屋信息**只落物业库**，`PropertyInvoiceSubmitBmoImpl.buildMallData()` 未加 room 字段（商城报文与幂等键 `orgId+orgType+source=WEB+ext_apply_id` 完全不变）。
-4. `invoiceApplyList.vue`：改为左右布局（左房屋筛选树 + 可拖拽分隔线 + 右查询/表格/分页，拖拽宽度记忆键 `invoiceApplyTreeWidth`，与房屋收费的 `roomCreateFeeTreeWidth` 隔离）；表格新增"房屋编号"列（空值显示 `-`）；查询条件新增"房屋编号"输入（`roomNameLike`）；新增"重置"按钮；树筛选三档（楼栋 `floorId` / 单元 `unitId` / 房屋 `roomId`）与输入房屋编号**互斥**；树面板顶部（与楼栋节点左对齐）"全部"入口清除房屋筛选与高亮；"开票"跳转携带 `?roomId=&roomName=`；表格"操作"列 `fixed="right"` 横向固定。
-5. `roomTreeDivHasOwner.vue`：新增 props `autoSelectFirst`（默认 `true`，为 `false` 时初始化不自动选中/不 emit `selectRoom`）与 `storageKey`（默认 `lastSelectedRoom`）；新增公开方法 `clearSelection()`；点击楼栋节点 emit `selectFloor`（`floorId/floorNum`）、点击单元节点 emit `selectUnit`（`floorId/unitId/unitNum`）；默认值保持向后兼容，`roomCreateFee` 行为不变，两页选房记忆互不干扰（开票中心用 `invoiceApplyFilterRoom` + `autoSelectFirst=false` 双保险）。
-6. `ownerApplyInvoiceList.vue`：支持 `?roomId=&roomName=` 预填（并 `loadRoomOwner()`，房屋编号以查询结果为准）；提交前拦截未选房屋（`roomRequired`）；提交报文补 `roomId/roomName`；`applyHeading()` 不再用 `heading.remark` 回填申请备注（切断"抬头备注 → 申请备注 → 再次写回商城"的二次污染回路）。
-7. 三语文案：`invoiceApplyLang.js` 增 `table.roomName`/`roomNamePlaceholder`/`roomFilterTitle`/`allRooms`；`ownerApplyInvoiceLang.js` 增 `roomRequired`。
-
-**商城仓库（MicroCommunityMall）**
-
-8. `PropertyInvoiceBmoImpl.buildHeadingParam()` 删除 `remark` 传参：物业随单 upsert 抬头不再写入/覆盖 `invoice_heading.remark`；`InvoiceHeadingUpsertService`、`SaveInvoiceHeadingBmoImpl`、`ListInvoiceHeadingsBmoImpl` 与 `invoice_heading` 表结构**均不改**（商城后台维护抬头备注能力保留）；`invoice_order.remark`（`applyId|业主|类目`）保留（商城存量单幂等兜底匹配依赖它）。
-
-### 数据库变更
-
-**物业库（TT）**：`docs/sql/invoice/add_invoice_apply_room.sql`（`docs/db/TT.sql` 的 `invoice_apply` 建表基线已同步）
 
 ```sql
 ALTER TABLE `invoice_apply`
@@ -578,52 +407,11 @@ ALTER TABLE `invoice_apply`
   ADD KEY `idx_room_id` (`room_id`);
 ```
 
-**商城库（hc_mall）**：无 DDL。可选一次性清理脚本 `docs/sql/invoice/clean_invoice_heading_remark.sql`（清理被开票单备注污染的抬头备注，**务必先 `SELECT` 人工核对**；只清 `invoice_heading.remark`，严禁动 `invoice_order.remark`）。
-
-### 部署执行项
-
-1. 物业库执行 `docs/sql/invoice/add_invoice_apply_room.sql`（ALTER + `idx_room_id`），无需服务注册/路由变更。
-2. 商城库无需 DDL；如需清理历史污染抬头，先 `SELECT` 核对再执行清理脚本。
-3. 前端 `pc-web` 重新 build（新增 i18n 键与页面布局变更）。
-4. 回归抽查：`SELECT apply_id, room_id, room_name, state FROM invoice_apply ORDER BY create_time DESC LIMIT 20;`；`SELECT heading_id, phone, heading_name, remark FROM invoice_heading WHERE remark LIKE '%|%';`；房屋收费页 `/pages/property/roomCreateFee` 选房/输入房屋编号行为应与改造前一致。
-
-### 未实现（P2，待确认）
-
-- 存量申请单房屋回填：`add_invoice_apply_room.sql` 内已附注释版 `pay_fee_detail/pay_fee` JOIN 回填语句，需人工核对后执行（历史记录显示 `-` 不影响使用）。
-- 开票详情页展示房屋编号（方案 F11 可选部分）：本方案文件清单未含 `invoiceApplyDetailList.vue`，本次未改。
 
 ## 2026-09-15 — 发票红冲（物业端发起，商城执行）：物业端零新增表 · 红冲数据以商城为权威源 · 开票页/房屋详情页双入口
 
-### 背景
-
-1. `/pages/fee/invoiceApply` 开票成功后需要「红冲」入口，操作员在物业端即可对已开票发票发起冲红。
-2. 红冲单（`invoice_red`）、红字发票号码与冲红状态全部以**商城**为权威源，**物业端不新建红冲表**。
-3. 开票页参考 `/pages/property/roomCreateFee` 的右侧 tab，拆分为「发票管理」「发票红冲」；房屋收费详情页在「押金」后新增「发票」「发票红冲」两个 tab。
-
-### 变更内容
-
-**商城仓库（MicroCommunityMall）**
-
-1. `InvoiceRedDto` 新增 `String[] invoiceIds` 与 `String extApplyId`（批量查询与申请单号回显）。
-2. `InvoiceRedV1ServiceDaoImplMapper.xml`：`getInvoiceRedInfo` 增 `io.ext_apply_id extApplyId` 输出与 `invoiceIds` IN 条件；`queryInvoiceRedsCount` 增 `invoiceIds` IN 条件（列表/总数口径一致）。
-3. 新增 `QueryInvoiceRedsBmoImpl`（`@Service("queryInvoiceRedsBmoImpl")`）：按 `applyIds`（`ext_apply_id IN`）解析 `invoiceId` 集合再分页查 `invoice_red`，返回 `{reds:[{applyId,invoiceId,redId,invoiceNo,buyerName,amount,reason,remark,state,redNo,createTime}], total}`，兼容直接传 `invoiceIds`。
-4. 新增 `PropertyInvoiceRedBmoImpl`（`@Service("propertyInvoiceRedBmoImpl")`）：校验 `orgId/orgType/applyId/reason`；按 `orgId+orgType+source=WEB+ext_apply_id` 定位开票单（缺失报「开票单不存在」）；已存在红冲单**幂等返回**；`state != DONE` 报「仅已开票状态可发起冲红」；落 `invoice_red`（`amount` 取负、`state=WAIT`）并将原单置 `RED` 写 `red_id`，随后同步调 `confirmInvoiceRed(redId)`（内部含分布式锁 → 诺诺红字开票 + 轮询）：成功返回 `state=DONE + redNo`，失败返回 `state=WAIT + failReason`（红冲单保留，可在商城后台「发票冲红」重试）。
-
-**物业仓库（MicroCommunityV2）**
-
-5. `java110-bean` 新增只读 DTO `dto/invoice/InvoiceRedDto.java`（`applyId/invoiceId/redId/invoiceNo/buyerName/amount/reason/remark/state/redNo/applyIds[]/failReason/createTime`，`extends PageDto`，含 `STATE_WAIT/STATE_DONE`）。
-6. `service-acct` 新增 `IInvoiceRedBmo` / `InvoiceRedBmoImpl`：`applyRed()` 调商城 `propertyInvoiceRedBmoImpl` 并解析结果；`queryMallReds()` 调商城 `queryInvoiceRedsBmoImpl`；`MALL_SWITCH != ON` 时**写操作抛 `CmdException`（商城未开启, 无法发起红冲）、查询静默返回空分页**；含 `safeRemark`（压缩空白 + 200 截断）与 `safeFailReason`（SQL 噪音摘要化）。
-7. `service-acct` 新增 CMD `SaveInvoiceRedCmd`（`invoice.saveInvoiceRed`）：校验 `applyId/communityId/reason` + `Assert.listOnlyOne` 校验申请单归属当前小区 + 调 BMO，返回 `{applyId,invoiceId,redId,state,redNo,failReason}`；**物业端不落任何表**。
-8. `service-acct` 新增 CMD `ListInvoiceRedsCmd`（`invoice.listInvoiceReds`）：`validatePageInfo` + `communityId` 必填；先按发票列表同样的筛选条件查 `invoice_apply`（`page=-1`）取 `applyId` 去重集合（超 `MAX_EXT_APPLY_IDS=2000` 截断并 warn），空集直接返回空分页，否则交商城分页查询后 `ResultVo(totalPage, count, reds)`。
-9. 前端 API `api/fee/invoiceApplyApi.js` 新增 `listInvoiceReds(params)`（GET）与 `saveInvoiceRed(data)`（POST，`code!==0` reject）。
-10. 新增组件：`components/fee/invoiceApplyTable.vue`（发票表格，`props: listData/showRoomColumn`，`emit: detail/red/submit/delete`，操作列 `common.operation` 宽 200 `fixed="right"`，红冲按钮仅 `mallState==='DONE'` 显示）、`components/fee/invoiceRedDialog.vue`（红冲弹窗，原因必选 + 备注 ≤200，`state!=DONE` 时 warning 提示并刷新）、`components/fee/invoiceRedTable.vue`（红冲列表表格，空态提示）、`components/fee/roomInvoiceApply.vue`（房屋详情-发票 tab，`open({roomId,roomName})`，含开票跳转/红冲/详情/重新提交/删除）、`components/fee/roomInvoiceRed.vue`（房屋详情-发票红冲 tab，`open({roomId})`）。
-11. `views/fee/invoiceApplyList.vue`：表格区域改为 `el-tabs`（「发票管理」「发票红冲」），两 tab 共用查询条件与房屋树（切 tab 复用当前筛选重新查询）；分页分别维护 `page` / `redPage`。
-12. `views/fee/roomCreateFeeList.vue`：在「押金」tab 后新增「发票」「发票红冲」两个 `el-tab-pane`（`name=roomInvoiceApply/roomInvoiceRed`，`v-if` 懒加载 + `:key` 随 `roomId` 重挂载，复用 `changeTab()` 的 `open(params)` 约定）。
-13. 三语文案（en/zh/zh-TW）：`invoiceApplyLang.js` 增 `tabInvoice`/`tabInvoiceRed`/`invoiceRed`/`redTitle`/`redDialogTitle`/`redReason*`/`redRemark*`/`confirmRed`/`redSuccess`/`redFailed`/`redEmptyTip`/`redState.*`/`redTable.*`；`roomCreateFeeLang.js` 增 `invoice`/`invoiceRed`。
 
 ### 数据库变更
-
-- **物业库（TT）**：无表结构变更（不新增 `invoice_red` 等任何表/列）。仅新增服务注册增量脚本 `docs/sql/invoice/register_invoice_red_service.sql`（`docs/db/TT.sql` 基线已同步）：
 
 ```sql
 -- ① 服务定义 c_service
@@ -635,18 +423,84 @@ INSERT INTO `c_route` VALUES ('3098', '8000418004', '982026090800000012', 'D', '
 INSERT INTO `c_route` VALUES ('3099', '8000418004', '982026090800000013', 'Q', '1000', 'S', '2026-09-15 18:00:00', '0');
 ```
 
-- **商城库（hc_mall）**：无 DDL（`invoice_red`/`invoice_order` 已存在，仅扩展 Mapper 查询条件与输出列）；商城开放接口按 `@Service("propertyInvoiceRedBmoImpl")` / `@Service("queryInvoiceRedsBmoImpl")` 自动装配，**无需**服务注册。
+## 2026-10-13 — 场地预约模块优化（场地管理 / 场地预约 / 预约订单）：日期语义统一 · 时段占用可控 · 收款/核销状态流转
 
-### 部署执行项
+> 迁移脚本：`docs/sql/community/20261013_community_space_reservation_optimize.sql`（已同步合入 `docs/db/TT.sql`）
 
-1. 物业库执行 `docs/sql/invoice/register_invoice_red_service.sql`（c_service 2108/2109 + c_route 3094/3095），执行后刷新服务路由缓存（`AppRouteCache`）或重启 `service-api`。
-2. 物业端与商城端重新构建部署（商城需先发布以提供 `propertyInvoiceRedBmoImpl` / `queryInvoiceRedsBmoImpl`）。
-3. 前端 `pc-web` 重新 build（新增组件与三语文案）。
-4. 回归抽查：开票成功单点「红冲」→ 商城 `invoice_red` 新增记录且原单 `invoice_order.state=RED`，物业列表 `mallState` 变 `RED`、红冲按钮消失、红冲 tab 出现该记录；重复点击幂等；对 `WAIT/AUDIT/FAIL` 单红冲提示「仅已开票状态可发起冲红」；商城开关 OFF 时红冲 tab 空列表且无错误提示。
+### 数据库变更
 
-### 风险与未实现
+```sql
+-- ① community_space_person：预约日期语义规范 + 索引 + 收款/取消留痕
+ALTER TABLE `community_space_person`
+    MODIFY COLUMN `appointment_time` varchar(10) NOT NULL COMMENT '预约日期 YYYY-MM-DD',
+    ADD COLUMN `pay_time` datetime DEFAULT NULL COMMENT '收款时间' AFTER `pay_way`,
+    ADD COLUMN `cancel_time` datetime DEFAULT NULL COMMENT '取消时间' AFTER `pay_time`,
+    ADD COLUMN `cancel_reason` varchar(255) DEFAULT NULL COMMENT '取消原因' AFTER `cancel_time`,
+    ADD INDEX `idx_csp_space_date` (`space_id`, `appointment_time`),
+    ADD INDEX `idx_csp_state` (`state`);
 
-- 商城红字开票含轮询（最长约 20s），受物业端 `outRestTemplate` 读超时（boot 10s / service-job 5s）限制：超时后红冲单已落库（`state=WAIT`），物业端提示失败，可在商城后台「发票冲红」确认重试。
-- `invoice_red` 无 `fail_reason` 列：冲红失败时状态停留 `WAIT`，失败原因仅随当次响应返回，不落库（如需展示历史失败原因，需另出 DDL 脚本）。
-- 红冲不改写 `pay_fee_detail.open_invoice`（按现有语义保留）；红冲按钮暂未挂权限码（待业务提供权限码后补充 `hasPrivilege`）。
+-- ② community_space_person_time：新增冗余日期列 + 索引
+ALTER TABLE `community_space_person_time`
+    ADD COLUMN `appointment_date` varchar(10) NOT NULL DEFAULT '' COMMENT '预约日期 YYYY-MM-DD' AFTER `hours`,
+    ADD INDEX `idx_cspt_space_date_hours` (`space_id`, `appointment_date`, `hours`);
+
+-- ③ 存量数据清洗
+UPDATE `community_space_person` SET `appointment_time` = LEFT(`appointment_time`, 10) WHERE CHAR_LENGTH(`appointment_time`) > 10;
+UPDATE `community_space_person_time` cspt JOIN `community_space_person` csp ON cspt.csp_id = csp.csp_id
+   SET cspt.appointment_date = csp.appointment_time
+ WHERE cspt.appointment_date = '' OR cspt.appointment_date IS NULL;
+
+-- ④ community_space_confirm_order：核销单收款留痕
+ALTER TABLE `community_space_confirm_order`
+    ADD COLUMN `received_amount` decimal(10,2) DEFAULT '0.00' COMMENT '实收金额' AFTER `space_id`,
+    ADD COLUMN `pay_way` varchar(12) DEFAULT NULL COMMENT '支付方式 1 现金 2 微信 3 支付宝' AFTER `received_amount`,
+    ADD COLUMN `pay_time` datetime DEFAULT NULL COMMENT '收款时间' AFTER `pay_way`;
+
+-- ⑤ 字典：删除语义冲突的 626109(F 待支付)，补齐订单/时段状态与收款方式（id 626353~626360）
+DELETE FROM `t_dict` WHERE `table_name` = 'community_space_person' AND `table_columns` = 'state' AND `status_cd` = 'F' AND `name` = '待支付';
+INSERT INTO `t_dict` (`id`,`status_cd`,`name`,`description`,`create_time`,`table_name`,`table_columns`) VALUES
+  ('626353', 'WP', '待支付', '待支付', NOW(), 'community_space_person', 'state'),
+  ('626354', 'C',  '已完成', '已完成', NOW(), 'community_space_person', 'state'),
+  ('626355', 'W',  '待核销', '待核销', NOW(), 'community_space_person_time', 'state'),
+  ('626356', 'C',  '已核销', '已核销', NOW(), 'community_space_person_time', 'state'),
+  ('626357', 'CL', '已取消', '已取消', NOW(), 'community_space_person_time', 'state'),
+  ('626358', '1',  '现金',   '现金',   NOW(), 'community_space_confirm_order', 'pay_way'),
+  ('626359', '2',  '微信',   '微信',   NOW(), 'community_space_confirm_order', 'pay_way'),
+  ('626360', '3',  '支付宝', '支付宝', NOW(), 'community_space_confirm_order', 'pay_way');
+
+-- ⑥ 服务注册（c_service 2110 / c_route 3096）
+INSERT INTO `c_service` VALUES ('2110', '982026101315180001', 'communitySpace.listCommunitySpacePersonSummary', 'API', '场地预约订单汇总', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3096', '8000418004', '982026101315180001', 'Q', '1000', 'S', NOW(), '0');
+```
+
+### 状态口径
+
+| person.state | 含义 | 触发 |
+| --- | --- | --- |
+| `WP` | 待支付 | PC 端生成预约（未收款） |
+| `S` | 已预约 / 进行中 | 收款成功 / 移动端在线支付成功 |
+| `C` | 已完成 | 全部时段核销完成 |
+| `CL` | 已取消 | 取消预约（释放时段） |
+| `W` / `F` | 待审核 / 预约失败 | 兼容存量，不再产生 |
+
+`person_time.state`：`W` 待核销 / `C` 已核销 / `CL` 已取消。占用判定统一为 `space_id + appointment_date + hours + state <> 'CL'`。
+
+### 后端变更（service-community / service-acct）
+
+- `SaveCommunitySpacePersonCmd`：日期格式校验、开放时段校验、占用校验、服务端算费 `receivableAmount = feeMoney × 时段数`、默认 `state=WP`、落 `person_time(appointment_date)`
+- `ListCommunitySpacePersonCmd`：支持 `keyword`（预约人/电话/订单号 like）、`beginDate`/`endDate` 日期区间、`venueId`
+- 新增 `ListCommunitySpacePersonSummaryCmd`：`total/pending/active/finished/canceled/receivableTotal/receivedTotal`
+- `UpdateCommunitySpacePersonCmd`：收款（`receivedAmount/payWay/state=S/payTime`）与状态流转校验
+- `DeleteCommunitySpacePersonCmd`：`state in (S, WP)` 可取消、`C` 拒绝取消、写 `cancel_time`、关联时段置 `CL`
+- `SaveCommunitySpaceConfirmOrderCmd`：全部时段核销完成后置 `person.state=C`，可选写收款字段
+- Mapper：`CommunitySpacePersonV1`/`CommunitySpacePersonTimeV1`/`CommunitySpaceOpenTimeV1` 占用判定改用 `appointment_date` 并排除 `CL`；字典 join 输出 `payWayName`/`stateName`
+- Mapper：`CommunitySpaceV1` 场地列表 `name` 条件兼容场地名/管理员模糊匹配（场地管理页搜索框）
+- `VenueReservationPaymentBusiness`：移动端回调写 `appointment_date`、默认 `state=S`
+
+### 前端变更（pc-web）
+
+- 三个页面按原型改版：场地管理（统计卡/场馆卡片/场地区/开放时间弹窗）、场地预约（场馆/场地 tab + 7 天日期条 + 四态时段格 + 右侧预约面板）、预约订单（5 统计卡/筛选/详情/收款/取消/导出）
+- 新增组件 `SpaceBookingPanel.vue`、`CommunitySpacePersonDetail.vue`、`CollectCommunitySpacePerson.vue`；删除 `addCommunitySpacePerson.vue`
+- 三语文案同步（`communitySpaceManageLang.js` / `reportCommunitySpaceLang.js` / `communitySpacePersonManageLang.js`）
+
 

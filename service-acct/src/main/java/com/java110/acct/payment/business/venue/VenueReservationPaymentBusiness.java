@@ -18,6 +18,7 @@ import com.java110.po.communitySpace.CommunitySpacePersonTimePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -138,7 +139,8 @@ public class VenueReservationPaymentBusiness implements IPaymentBusiness {
                 communitySpaceOpenTimeDto = new CommunitySpacePersonTimeDto();
                 communitySpaceOpenTimeDto.setSpaceId(spaces.getJSONObject(spaceIndex).getString("spaceId"));
                 communitySpaceOpenTimeDto.setHours(openTimes.getJSONObject(timeIndex).getString("hours"));
-                communitySpaceOpenTimeDto.setAppointmentTime(reqJson.getString("appointmentTime"));
+                communitySpaceOpenTimeDto.setAppointmentDate(getAppointmentDate(reqJson.getString("appointmentTime")));
+                communitySpaceOpenTimeDto.setStateNotIn(new String[]{CommunitySpacePersonTimeDto.STATE_CL});
                 communitySpacePersonTimeDtos = communitySpacePersonTimeV1InnerServiceSMOImpl.queryCommunitySpacePersonTimes(communitySpaceOpenTimeDto);
                 if (communitySpacePersonTimeDtos != null && communitySpacePersonTimeDtos.size() > 0) {
                     throw new IllegalArgumentException(openTimes.getJSONObject(timeIndex).getString("hours") + "已经被预约，不能重复预约");
@@ -168,8 +170,11 @@ public class VenueReservationPaymentBusiness implements IPaymentBusiness {
             communitySpacePersonPo.setSpaceId(spaceObj.getString("spaceId"));
             communitySpacePersonPo.setOrderId(paymentOrderDto.getOrderId());
             communitySpacePersonPo.setCspId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
+            communitySpacePersonPo.setAppointmentTime(getAppointmentDate(reqJson.getString("appointmentTime")));
+            communitySpacePersonPo.setPayTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
             if (StringUtil.isEmpty(communitySpacePersonPo.getState())) {
-                communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_W);
+                //在线支付成功后直接置为已预约
+                communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_S);
             }
             int flag = communitySpacePersonV1InnerServiceSMOImpl.saveCommunitySpacePerson(communitySpacePersonPo);
 
@@ -193,11 +198,32 @@ public class VenueReservationPaymentBusiness implements IPaymentBusiness {
                 communitySpacePersonTimePo.setCspId(communitySpacePersonPo.getCspId());
                 communitySpacePersonTimePo.setHours(openTimes.getJSONObject(timeIndex).getString("hours"));
                 communitySpacePersonTimePo.setSpaceId(communitySpacePersonPo.getSpaceId());
+                communitySpacePersonTimePo.setAppointmentDate(communitySpacePersonPo.getAppointmentTime());
                 communitySpacePersonTimePo.setTimeId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
                 communitySpacePersonTimePo.setState(CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM);
                 communitySpacePersonTimeV1InnerServiceSMOImpl.saveCommunitySpacePersonTime(communitySpacePersonTimePo);
             }
         }
 
+    }
+
+    /**
+     * 预约日期统一为 YYYY-MM-DD
+     *
+     * @param appointmentTime 预约日期
+     * @return 预约日期
+     */
+    private String getAppointmentDate(String appointmentTime) {
+        if (StringUtil.isEmpty(appointmentTime)) {
+            return appointmentTime;
+        }
+
+        appointmentTime = appointmentTime.trim();
+
+        if (appointmentTime.length() > 10) {
+            return appointmentTime.substring(0, 10);
+        }
+
+        return appointmentTime;
     }
 }

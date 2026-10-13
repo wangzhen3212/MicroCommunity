@@ -28,7 +28,7 @@
             and t.venue_id= #{venueId}
         </if>
         <if test="name !=null and name != ''">
-            and t.name like concat('%',#{name},'%')
+            and (t.name like concat('%',#{name},'%') or t.admin_name like concat('%',#{name},'%'))
         </if>
         <if test="startTime !=null and startTime != ''">
             and t.start_time= #{startTime}
@@ -87,11 +87,14 @@
         <if test="feeMoney !=null and feeMoney != ''">
             , t.fee_money= #{feeMoney}
         </if>
+        <if test="venueId !=null and venueId != ''">
+            , t.venue_id= #{venueId}
+        </if>
         where 1=1
         <if test="spaceId !=null and spaceId != ''">
             and t.space_id= #{spaceId}
         </if>
-        <if test="venueId !=null and venueId != ''">
+        <if test="(spaceId == null or spaceId == '') and venueId !=null and venueId != ''">
             and t.venue_id= #{venueId}
         </if>
     </update>
@@ -111,7 +114,7 @@
             and t.venue_id= #{venueId}
         </if>
         <if test="name !=null and name != ''">
-            and t.name like concat('%',#{name},'%')
+            and (t.name like concat('%',#{name},'%') or t.admin_name like concat('%',#{name},'%'))
         </if>
         <if test="startTime !=null and startTime != ''">
             and t.start_time= #{startTime}

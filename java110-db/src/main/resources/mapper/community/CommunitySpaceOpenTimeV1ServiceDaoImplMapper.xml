@@ -33,8 +33,7 @@
         from community_space_open_time t
         left join community_space cs on t.space_id = cs.space_id and cs.status_cd = '0'
         <if test="appointmentTime !=null and appointmentTime != ''">
-        left join community_space_person_time cspt on t.space_id = cspt.space_id and cspt.status_cd = '0' and cspt.hours = t.hours
-        left join community_space_person csp on cspt.csp_id = csp.csp_id and csp.status_cd = '0' and csp.appointment_time = #{appointmentTime}
+        left join community_space_person_time cspt on t.space_id = cspt.space_id and cspt.status_cd = '0' and cspt.hours = t.hours and cspt.appointment_date = #{appointmentTime} and cspt.state &lt;&gt; 'CL'
         </if>
         where 1 =1
         <if test="appointmentTime !=null and appointmentTime != ''">

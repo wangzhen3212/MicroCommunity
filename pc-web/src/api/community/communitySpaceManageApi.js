@@ -11,9 +11,7 @@ export function listCommunityVenue(params) {
       params
     }).then(response => {
       const res = response.data
-
-        resolve(res)
-
+      resolve(res)
     }).catch(error => {
       reject(error)
     })
@@ -45,6 +43,7 @@ export function saveCommunityVenue(data) {
 export function updateCommunityVenue(data) {
   return new Promise((resolve, reject) => {
     data.communityId = getCommunityId()
+    data.statusCd = '0'
     request({
       url: '/communityVenue.updateCommunityVenue',
       method: 'post',
@@ -128,6 +127,7 @@ export function saveCommunitySpace(data) {
 export function updateCommunitySpace(data) {
   return new Promise((resolve, reject) => {
     data.communityId = getCommunityId()
+    data.statusCd = '0'
     request({
       url: '/communitySpace.updateCommunitySpace',
       method: 'post',
@@ -173,6 +173,7 @@ export function deleteCommunitySpace(spaceId) {
 export function updateCommunitySpaceOpenTime(data) {
   return new Promise((resolve, reject) => {
     data.communityId = getCommunityId()
+    data.statusCd = '0'
     request({
       url: '/communitySpaceOpenTime.updateCommunitySpaceOpenTime',
       method: 'post',

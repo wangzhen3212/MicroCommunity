@@ -34,6 +34,9 @@ public class CommunitySpaceConfirmOrderPo implements Serializable {
     private String remark;
     private String statusCd = "0";
     private String communityId;
+    private String receivedAmount;
+    private String payWay;
+    private String payTime;
 
     public String getSpaceId() {
         return spaceId;
@@ -89,6 +92,30 @@ public class CommunitySpaceConfirmOrderPo implements Serializable {
 
     public void setCommunityId(String communityId) {
         this.communityId = communityId;
+    }
+
+    public String getReceivedAmount() {
+        return receivedAmount;
+    }
+
+    public void setReceivedAmount(String receivedAmount) {
+        this.receivedAmount = receivedAmount;
+    }
+
+    public String getPayWay() {
+        return payWay;
+    }
+
+    public void setPayWay(String payWay) {
+        this.payWay = payWay;
+    }
+
+    public String getPayTime() {
+        return payTime;
+    }
+
+    public void setPayTime(String payTime) {
+        this.payTime = payTime;
     }
 
 

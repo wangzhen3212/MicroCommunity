@@ -8,9 +8,9 @@
     <!-- 保存场地预约核销信息 add by wuxw 2018-07-03 -->
     <insert id="saveCommunitySpaceConfirmOrderInfo" parameterType="Map">
         insert into community_space_confirm_order(
-        space_id,csp_id,time_id,order_id,remark,community_id
+        space_id,csp_id,time_id,order_id,remark,community_id,received_amount,pay_way,pay_time
         ) values (
-        #{spaceId},#{cspId},#{timeId},#{orderId},#{remark},#{communityId}
+        #{spaceId},#{cspId},#{timeId},#{orderId},#{remark},#{communityId},#{receivedAmount},#{payWay},#{payTime}
         )
     </insert>
 
@@ -19,6 +19,7 @@
     <select id="getCommunitySpaceConfirmOrderInfo" parameterType="Map" resultType="Map">
         select t.space_id,t.space_id spaceId,t.csp_id,t.csp_id cspId,t.time_id,t.time_id timeId,t.order_id,t.order_id
         orderId,t.remark,t.status_cd,t.status_cd statusCd,t.community_id,t.community_id communityId,
+        t.received_amount,t.received_amount receivedAmount,t.pay_way,t.pay_way payWay,t.pay_time,t.pay_time payTime,
         cs.name spaceName,csp.person_name personName,csp.person_tel personTel,csp.appointment_time appointmentTime,
         cspt.hours,t.create_time createTime,cv.`name` venueName
         from community_space_confirm_order t
@@ -82,6 +83,15 @@
         </if>
         <if test="remark !=null and remark != ''">
             , t.remark= #{remark}
+        </if>
+        <if test="receivedAmount !=null and receivedAmount != ''">
+            , t.received_amount= #{receivedAmount}
+        </if>
+        <if test="payWay !=null and payWay != ''">
+            , t.pay_way= #{payWay}
+        </if>
+        <if test="payTime !=null and payTime != ''">
+            , t.pay_time= #{payTime}
         </if>
         <if test="communityId !=null and communityId != ''">
             , t.community_id= #{communityId}

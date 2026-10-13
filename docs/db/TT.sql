@@ -15235,6 +15235,9 @@ CREATE TABLE `community_space_confirm_order` (
   `csp_id` varchar(30) NOT NULL COMMENT '预约ID',
   `time_id` varchar(30) NOT NULL COMMENT '预约时间ID',
   `space_id` varchar(30) NOT NULL COMMENT '场地ID',
+  `received_amount` decimal(10,2) DEFAULT '0.00' COMMENT '实收金额',
+  `pay_way` varchar(12) DEFAULT NULL COMMENT '支付方式 1 现金 2 微信 3 支付宝',
+  `pay_time` datetime DEFAULT NULL COMMENT '收款时间',
   `b_id` varchar(30) DEFAULT NULL COMMENT '业务ID',
   `community_id` varchar(30) NOT NULL COMMENT '小区ID',
   `remark` varchar(512) DEFAULT NULL COMMENT '备注',
@@ -15277,18 +15280,23 @@ CREATE TABLE `community_space_person` (
   `person_id` varchar(30) DEFAULT '-1' COMMENT '用户ID',
   `person_name` varchar(64) NOT NULL COMMENT '预约人',
   `person_tel` varchar(11) NOT NULL COMMENT '预约电话',
-  `appointment_time` varchar(64) NOT NULL COMMENT '预约时间',
+  `appointment_time` varchar(10) NOT NULL COMMENT '预约日期 YYYY-MM-DD',
   `receivable_amount` decimal(10,2) NOT NULL COMMENT '应收金额',
   `received_amount` decimal(10,2) NOT NULL COMMENT '实收金额',
   `pay_way` varchar(12) NOT NULL COMMENT '支付方式 1 现金 2 微信 3 支付宝',
+  `pay_time` datetime DEFAULT NULL COMMENT '收款时间',
+  `cancel_time` datetime DEFAULT NULL COMMENT '取消时间',
+  `cancel_reason` varchar(255) DEFAULT NULL COMMENT '取消原因',
   `community_id` varchar(30) NOT NULL COMMENT '小区ID',
-  `state` varchar(12) NOT NULL DEFAULT '1001' COMMENT '状态 S 预约成功 F 预约失败 W 待审核 F 待支付',
+  `state` varchar(12) NOT NULL DEFAULT '1001' COMMENT '状态 S 预约成功 WP 待支付 C 已完成 CL 取消预约 W 待审核 F 预约失败',
   `b_id` varchar(30) DEFAULT '-1' COMMENT '业务ID',
   `remark` varchar(512) DEFAULT NULL COMMENT '备注',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `status_cd` varchar(2) NOT NULL DEFAULT '0' COMMENT '数据状态，详细参考c_status表，S 保存，0, 在用 1失效',
   `order_id` varchar(30) NOT NULL DEFAULT '-1' COMMENT '订单编号',
-  PRIMARY KEY (`csp_id`)
+  PRIMARY KEY (`csp_id`),
+  KEY `idx_csp_space_date` (`space_id`,`appointment_time`),
+  KEY `idx_csp_state` (`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -15304,12 +15312,14 @@ CREATE TABLE `community_space_person_time` (
   `space_id` varchar(30) NOT NULL COMMENT '场地ID',
   `csp_id` varchar(30) NOT NULL COMMENT '预约ID',
   `hours` int(11) NOT NULL COMMENT '小时',
+  `appointment_date` varchar(10) NOT NULL DEFAULT '' COMMENT '预约日期 YYYY-MM-DD',
   `b_id` varchar(30) DEFAULT NULL COMMENT '业务ID',
   `community_id` varchar(30) NOT NULL COMMENT '小区ID',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `status_cd` varchar(2) NOT NULL DEFAULT '0' COMMENT '数据状态，详细参考c_status表，S 保存，0, 在用 1失效',
-  `state` varchar(12) NOT NULL DEFAULT 'W' COMMENT 'W 待核销 C核销完成',
-  PRIMARY KEY (`time_id`)
+  `state` varchar(12) NOT NULL DEFAULT 'W' COMMENT 'W 待核销 C核销完成 CL 已取消',
+  PRIMARY KEY (`time_id`),
+  KEY `idx_cspt_space_date_hours` (`space_id`,`appointment_date`,`hours`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -20405,6 +20415,8 @@ INSERT INTO `c_route` VALUES ('3093', '8000418004', '982026090800000011', 'D', '
 -- 2026-09-15 发票红冲: 发起红冲(D=POST) + 红冲列表(Q=GET)
 INSERT INTO `c_route` VALUES ('3094', '8000418004', '982026090800000012', 'D', '1000', 'S', '2026-09-15 18:00:00', '0');
 INSERT INTO `c_route` VALUES ('3095', '8000418004', '982026090800000013', 'Q', '1000', 'S', '2026-09-15 18:00:00', '0');
+-- 2026-10-13 场地预约订单汇总(Q=GET)
+INSERT INTO `c_route` VALUES ('3096', '8000418004', '982026101315180001', 'Q', '1000', 'S', '2026-10-13 15:18:00', '0');
 
 -- ----------------------------
 -- Table structure for c_service
@@ -22491,6 +22503,8 @@ INSERT INTO `c_service` VALUES ('2107', '982026090800000011', 'invoice.reSubmitI
 -- 2026-09-15 发票红冲: 发起红冲 + 红冲列表(红冲单/红字发票号以商城为权威源, 物业端不落库)
 INSERT INTO `c_service` VALUES ('2108', '982026090800000012', 'invoice.saveInvoiceRed', 'API', '发起发票红冲', '1', null, 'CMD', 'http://acct-service', 'POST', '60', '3', '8000418002', '2026-09-15 18:00:00', '0');
 INSERT INTO `c_service` VALUES ('2109', '982026090800000013', 'invoice.listInvoiceReds', 'API', '查询发票红冲', '1', null, 'CMD', 'http://acct-service', 'GET', '60', '3', '8000418002', '2026-09-15 18:00:00', '0');
+-- 2026-10-13 场地预约订单汇总(统计卡)
+INSERT INTO `c_service` VALUES ('2110', '982026101315180001', 'communitySpace.listCommunitySpacePersonSummary', 'API', '场地预约订单汇总', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', '2026-10-13 15:18:00', '0');
 
 -- ----------------------------
 -- Table structure for c_service_business
@@ -50868,7 +50882,7 @@ CREATE TABLE `t_dict` (
   PRIMARY KEY (`id`),
   KEY `td_table_name` (`table_name`) USING BTREE,
   KEY `i_td_status_cd` (`status_cd`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=626353 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=626361 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of t_dict
@@ -51758,7 +51772,7 @@ INSERT INTO `t_dict` VALUES ('626105', '20200408', '巡检未完成', '巡检未
 INSERT INTO `t_dict` VALUES ('626106', 'S', '预约成功', '预约成功', '2019-10-15 09:47:21', 'community_space_person', 'state');
 INSERT INTO `t_dict` VALUES ('626107', 'F', '预约失败', '预约失败', '2019-10-15 09:47:21', 'community_space_person', 'state');
 INSERT INTO `t_dict` VALUES ('626108', 'W', '待审核', '待审核', '2019-10-15 09:47:21', 'community_space_person', 'state');
-INSERT INTO `t_dict` VALUES ('626109', 'F', '待支付', '待支付', '2019-10-15 09:47:21', 'community_space_person', 'state');
+-- 2026-10-13 场地预约: 删除 626109(F 待支付, 与"预约失败"语义冲突), 见 docs/sql/community/20261013_community_space_reservation_optimize.sql
 INSERT INTO `t_dict` VALUES ('626110', '1', '现金', '现金', '2019-10-15 09:47:21', 'community_space_person', 'pay_way');
 INSERT INTO `t_dict` VALUES ('626111', '2', '微信', '微信', '2019-10-15 09:47:21', 'community_space_person', 'pay_way');
 INSERT INTO `t_dict` VALUES ('626112', '3', '支付宝', '支付宝', '2019-10-15 09:47:21', 'community_space_person', 'pay_way');
@@ -51994,6 +52008,15 @@ INSERT INTO `t_dict` VALUES ('626349', '1002', '建筑面积*单价*比例系数
 INSERT INTO `t_dict` VALUES ('626350', '2101', '未售需收费', '未售需收费', '2019-10-30 20:57:36', 'building_room', 'state');
 INSERT INTO `t_dict` VALUES ('626351', 'importShop', '商铺导入', '商铺导入', '2020-05-12 13:46:12', 'asset_import_log', 'log_type');
 INSERT INTO `t_dict` VALUES ('626352', '11', '预付款扣', '预付款扣', '2024-05-31 16:17:51', 'pay_fee_detail', 'prime_rate');
+-- 2026-10-13 场地预约: 补齐订单/时段状态与收款方式字典, 见 docs/sql/community/20261013_community_space_reservation_optimize.sql
+INSERT INTO `t_dict` VALUES ('626353', 'WP', '待支付', '待支付', '2026-10-13 15:18:00', 'community_space_person', 'state');
+INSERT INTO `t_dict` VALUES ('626354', 'C', '已完成', '已完成', '2026-10-13 15:18:00', 'community_space_person', 'state');
+INSERT INTO `t_dict` VALUES ('626355', 'W', '待核销', '待核销', '2026-10-13 15:18:00', 'community_space_person_time', 'state');
+INSERT INTO `t_dict` VALUES ('626356', 'C', '已核销', '已核销', '2026-10-13 15:18:00', 'community_space_person_time', 'state');
+INSERT INTO `t_dict` VALUES ('626357', 'CL', '已取消', '已取消', '2026-10-13 15:18:00', 'community_space_person_time', 'state');
+INSERT INTO `t_dict` VALUES ('626358', '1', '现金', '现金', '2026-10-13 15:18:00', 'community_space_confirm_order', 'pay_way');
+INSERT INTO `t_dict` VALUES ('626359', '2', '微信', '微信', '2026-10-13 15:18:00', 'community_space_confirm_order', 'pay_way');
+INSERT INTO `t_dict` VALUES ('626360', '3', '支付宝', '支付宝', '2026-10-13 15:18:00', 'community_space_confirm_order', 'pay_way');
 
 -- ----------------------------
 -- Table structure for t_dict_spec

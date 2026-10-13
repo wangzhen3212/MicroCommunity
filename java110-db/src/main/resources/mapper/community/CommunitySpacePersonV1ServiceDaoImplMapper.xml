@@ -8,11 +8,12 @@
     <!-- 保存小区场地预约信息 add by wuxw 2018-07-03 -->
     <insert id="saveCommunitySpacePersonInfo" parameterType="Map">
         insert into community_space_person(
-        receivable_amount,pay_way,remark,received_amount,person_name,space_id,csp_id,appointment_time,person_id,state,person_tel,community_id,order_id
+        receivable_amount,pay_way,remark,received_amount,person_name,space_id,csp_id,appointment_time,person_id,state,person_tel,community_id,order_id,pay_time,cancel_time,cancel_reason
         ) values (
-        #{receivableAmount},#{payWay},#{remark},#{receivedAmount},#{personName},#{spaceId},#{cspId},#{appointmentTime},#{personId},#{state},#{personTel},#{communityId},#{orderId}
+        #{receivableAmount},#{payWay},#{remark},#{receivedAmount},#{personName},#{spaceId},#{cspId},#{appointmentTime},#{personId},#{state},#{personTel},#{communityId},#{orderId},#{payTime},#{cancelTime},#{cancelReason}
         )
     </insert>
+
 
 
     <!-- 查询小区场地预约信息 add by wuxw 2018-07-03 -->
@@ -22,6 +23,7 @@
         receivedAmount,t.person_name,t.person_name personName,t.space_id,t.space_id spaceId,t.csp_id,t.csp_id
         cspId,t.appointment_time,t.appointment_time appointmentTime,t.person_id,t.person_id
         personId,t.state,t.person_tel,t.person_tel personTel,t.community_id,t.community_id communityId,td.name stateName,td1.name payWayName,
+        t.order_id,t.order_id orderId,t.pay_time,t.pay_time payTime,t.cancel_time,t.cancel_time cancelTime,t.cancel_reason,t.cancel_reason cancelReason,
         cs.name spaceName,t.create_time createTime,cv.`name` venueName
         from community_space_person t
         left join community_space cs on t.space_id = cs.space_id and cs.status_cd = '0'
@@ -62,11 +64,32 @@
         <if test="appointmentTime !=null and appointmentTime != ''">
             and t.appointment_time= #{appointmentTime}
         </if>
+        <if test="beginDate !=null and beginDate != ''">
+            and t.appointment_time &gt;= #{beginDate}
+        </if>
+        <if test="endDate !=null and endDate != ''">
+            and t.appointment_time &lt;= #{endDate}
+        </if>
+        <if test="keyword !=null and keyword != ''">
+            and (t.person_name like concat('%',#{keyword},'%') or t.person_tel like concat('%',#{keyword},'%') or t.order_id like concat('%',#{keyword},'%'))
+        </if>
         <if test="personId !=null and personId != ''">
             and t.person_id= #{personId}
         </if>
         <if test="state !=null and state != ''">
             and t.state= #{state}
+        </if>
+        <if test="states !=null ">
+            and t.state in
+            <foreach collection="states" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="stateNotIn !=null ">
+            and t.state not in
+            <foreach collection="stateNotIn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="personTel !=null and personTel != ''">
             and t.person_tel= #{personTel}
@@ -121,6 +144,15 @@
         <if test="communityId !=null and communityId != ''">
             , t.community_id= #{communityId}
         </if>
+        <if test="payTime !=null and payTime != ''">
+            , t.pay_time= #{payTime}
+        </if>
+        <if test="cancelTime !=null and cancelTime != ''">
+            , t.cancel_time= #{cancelTime}
+        </if>
+        <if test="cancelReason !=null and cancelReason != ''">
+            , t.cancel_reason= #{cancelReason}
+        </if>
         where 1=1
         <if test="cspId !=null and cspId != ''">
             and t.csp_id= #{cspId}
@@ -167,11 +199,32 @@
         <if test="appointmentTime !=null and appointmentTime != ''">
             and t.appointment_time= #{appointmentTime}
         </if>
+        <if test="beginDate !=null and beginDate != ''">
+            and t.appointment_time &gt;= #{beginDate}
+        </if>
+        <if test="endDate !=null and endDate != ''">
+            and t.appointment_time &lt;= #{endDate}
+        </if>
+        <if test="keyword !=null and keyword != ''">
+            and (t.person_name like concat('%',#{keyword},'%') or t.person_tel like concat('%',#{keyword},'%') or t.order_id like concat('%',#{keyword},'%'))
+        </if>
         <if test="personId !=null and personId != ''">
             and t.person_id= #{personId}
         </if>
         <if test="state !=null and state != ''">
             and t.state= #{state}
+        </if>
+        <if test="states !=null ">
+            and t.state in
+            <foreach collection="states" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="stateNotIn !=null ">
+            and t.state not in
+            <foreach collection="stateNotIn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="personTel !=null and personTel != ''">
             and t.person_tel= #{personTel}
@@ -180,7 +233,59 @@
             and t.community_id= #{communityId}
         </if>
 
+    </select>
 
+    <!-- 查询小区场地预约订单汇总 add by wuxw 2026-10-13 -->
+    <select id="queryCommunitySpacePersonSummary" parameterType="Map" resultType="Map">
+        select count(1) total,
+        sum(case when t.state in ('WP','W') then 1 else 0 end) pending,
+        sum(case when t.state = 'S' then 1 else 0 end) active,
+        sum(case when t.state = 'C' then 1 else 0 end) finished,
+        sum(case when t.state = 'CL' then 1 else 0 end) canceled,
+        ifnull(sum(case when t.state &lt;&gt; 'CL' then t.receivable_amount else 0 end),0) receivableTotal,
+        ifnull(sum(case when t.state &lt;&gt; 'CL' then t.received_amount else 0 end),0) receivedTotal
+        from community_space_person t
+        left join community_space cs on t.space_id = cs.space_id and cs.status_cd = '0'
+        where 1 =1
+        <if test="spaceId !=null and spaceId != ''">
+            and t.space_id= #{spaceId}
+        </if>
+        <if test="venueId !=null and venueId != ''">
+            and cs.venue_id= #{venueId}
+        </if>
+        <if test="cspId !=null and cspId != ''">
+            and t.csp_id= #{cspId}
+        </if>
+        <if test="appointmentTime !=null and appointmentTime != ''">
+            and t.appointment_time= #{appointmentTime}
+        </if>
+        <if test="beginDate !=null and beginDate != ''">
+            and t.appointment_time &gt;= #{beginDate}
+        </if>
+        <if test="endDate !=null and endDate != ''">
+            and t.appointment_time &lt;= #{endDate}
+        </if>
+        <if test="keyword !=null and keyword != ''">
+            and (t.person_name like concat('%',#{keyword},'%') or t.person_tel like concat('%',#{keyword},'%') or t.order_id like concat('%',#{keyword},'%'))
+        </if>
+        <if test="state !=null and state != ''">
+            and t.state= #{state}
+        </if>
+        <if test="states !=null ">
+            and t.state in
+            <foreach collection="states" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="stateNotIn !=null ">
+            and t.state not in
+            <foreach collection="stateNotIn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
     </select>
 
 </mapper>

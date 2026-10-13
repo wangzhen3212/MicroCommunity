@@ -8,9 +8,9 @@
     <!-- 保存场地预约时间信息 add by wuxw 2018-07-03 -->
     <insert id="saveCommunitySpacePersonTimeInfo" parameterType="Map">
         insert into community_space_person_time(
-        space_id,csp_id,hours,time_id,community_id,state
+        space_id,csp_id,hours,time_id,community_id,state,appointment_date
         ) values (
-        #{spaceId},#{cspId},#{hours},#{timeId},#{communityId},#{state}
+        #{spaceId},#{cspId},#{hours},#{timeId},#{communityId},#{state},#{appointmentDate}
         )
     </insert>
 
@@ -18,10 +18,14 @@
     <!-- 查询场地预约时间信息 add by wuxw 2018-07-03 -->
     <select id="getCommunitySpacePersonTimeInfo" parameterType="Map" resultType="Map">
         select t.space_id,t.space_id spaceId,t.csp_id,t.csp_id cspId,t.hours,t.time_id,t.time_id
-        timeId,t.status_cd,t.status_cd statusCd,t.community_id,t.community_id communityId,t.state
+        timeId,t.status_cd,t.status_cd statusCd,t.community_id,t.community_id communityId,t.state,
+        t.appointment_date,t.appointment_date appointmentDate
         from community_space_person_time t
         left join community_space_person csp on t.csp_id = csp.csp_id and csp.status_cd = '0'
         where 1 =1
+        <if test="appointmentDate !=null and appointmentDate != ''">
+            and t.appointment_date = #{appointmentDate}
+        </if>
         <if test="appointmentTime !=null and appointmentTime != ''">
             and csp.appointment_time = #{appointmentTime}
         </if>
@@ -40,6 +44,12 @@
         <if test="states !=null ">
             and t.state in
             <foreach collection="states" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="stateNotIn !=null ">
+            and t.state not in
+            <foreach collection="stateNotIn" item="item" open="(" close=")" separator=",">
                 #{item}
             </foreach>
         </if>
@@ -82,6 +92,9 @@
         <if test="hours !=null and hours != ''">
             , t.hours= #{hours}
         </if>
+        <if test="appointmentDate !=null and appointmentDate != ''">
+            , t.appointment_date= #{appointmentDate}
+        </if>
         <if test="communityId !=null and communityId != ''">
             , t.community_id= #{communityId}
         </if>
@@ -101,6 +114,9 @@
         from community_space_person_time t
         left join community_space_person csp on t.csp_id = csp.csp_id and csp.status_cd = '0'
         where 1 =1
+        <if test="appointmentDate !=null and appointmentDate != ''">
+            and t.appointment_date = #{appointmentDate}
+        </if>
         <if test="appointmentTime !=null and appointmentTime != ''">
             and csp.appointment_time= #{appointmentTime}
         </if>
@@ -113,6 +129,18 @@
         <if test="cspIds !=null ">
             and t.csp_id in
             <foreach collection="cspIds" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="states !=null ">
+            and t.state in
+            <foreach collection="states" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="stateNotIn !=null ">
+            and t.state not in
+            <foreach collection="stateNotIn" item="item" open="(" close=")" separator=",">
                 #{item}
             </foreach>
         </if>

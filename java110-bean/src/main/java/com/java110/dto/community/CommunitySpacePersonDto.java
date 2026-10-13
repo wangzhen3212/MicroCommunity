@@ -21,6 +21,7 @@ public class CommunitySpacePersonDto extends PageDto implements Serializable {
     public static final String STATE_W = "W";//待审核
     public static final String STATE_WP = "WP";//待支付
     public static final String STATE_CL = "CL";//取消预约
+    public static final String STATE_C = "C";//已完成
 
     private String receivableAmount;
     private String payWay;
@@ -42,6 +43,24 @@ public class CommunitySpacePersonDto extends PageDto implements Serializable {
     private String communityId;
 
     private String orderId;
+
+    private String payTime;
+    private String cancelTime;
+    private String cancelReason;
+
+    private String[] states;
+    private String[] stateNotIn;
+
+    private String keyword;
+    private String beginDate;
+    private String endDate;
+
+    private String pending;
+    private String active;
+    private String finished;
+    private String canceled;
+    private String receivableTotal;
+    private String receivedTotal;
 
     private List<CommunitySpacePersonTimeDto> times;
 
@@ -219,5 +238,117 @@ public class CommunitySpacePersonDto extends PageDto implements Serializable {
 
     public void setVenueName(String venueName) {
         this.venueName = venueName;
+    }
+
+    public String getPayTime() {
+        return payTime;
+    }
+
+    public void setPayTime(String payTime) {
+        this.payTime = payTime;
+    }
+
+    public String getCancelTime() {
+        return cancelTime;
+    }
+
+    public void setCancelTime(String cancelTime) {
+        this.cancelTime = cancelTime;
+    }
+
+    public String getCancelReason() {
+        return cancelReason;
+    }
+
+    public void setCancelReason(String cancelReason) {
+        this.cancelReason = cancelReason;
+    }
+
+    public String[] getStates() {
+        return states;
+    }
+
+    public void setStates(String[] states) {
+        this.states = states;
+    }
+
+    public String[] getStateNotIn() {
+        return stateNotIn;
+    }
+
+    public void setStateNotIn(String[] stateNotIn) {
+        this.stateNotIn = stateNotIn;
+    }
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+
+    public String getBeginDate() {
+        return beginDate;
+    }
+
+    public void setBeginDate(String beginDate) {
+        this.beginDate = beginDate;
+    }
+
+    public String getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(String endDate) {
+        this.endDate = endDate;
+    }
+
+    public String getPending() {
+        return pending;
+    }
+
+    public void setPending(String pending) {
+        this.pending = pending;
+    }
+
+    public String getActive() {
+        return active;
+    }
+
+    public void setActive(String active) {
+        this.active = active;
+    }
+
+    public String getFinished() {
+        return finished;
+    }
+
+    public void setFinished(String finished) {
+        this.finished = finished;
+    }
+
+    public String getCanceled() {
+        return canceled;
+    }
+
+    public void setCanceled(String canceled) {
+        this.canceled = canceled;
+    }
+
+    public String getReceivableTotal() {
+        return receivableTotal;
+    }
+
+    public void setReceivableTotal(String receivableTotal) {
+        this.receivableTotal = receivableTotal;
+    }
+
+    public String getReceivedTotal() {
+        return receivedTotal;
+    }
+
+    public void setReceivedTotal(String receivedTotal) {
+        this.receivedTotal = receivedTotal;
     }
 }

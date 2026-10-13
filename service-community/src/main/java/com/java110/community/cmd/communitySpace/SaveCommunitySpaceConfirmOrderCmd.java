@@ -24,14 +24,19 @@ import com.java110.core.event.cmd.CmdEvent;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.doc.annotation.*;
 import com.java110.dto.community.CommunitySpaceConfirmOrderDto;
+import com.java110.dto.community.CommunitySpacePersonDto;
 import com.java110.dto.community.CommunitySpacePersonTimeDto;
 import com.java110.intf.community.ICommunitySpaceConfirmOrderV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpacePersonTimeV1InnerServiceSMO;
+import com.java110.intf.community.ICommunitySpacePersonV1InnerServiceSMO;
 import com.java110.po.communitySpace.CommunitySpaceConfirmOrderPo;
+import com.java110.po.communitySpace.CommunitySpacePersonPo;
 import com.java110.po.communitySpace.CommunitySpacePersonTimePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.DateUtil;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,6 +105,9 @@ public class SaveCommunitySpaceConfirmOrderCmd extends Cmd {
     @Autowired
     private ICommunitySpacePersonTimeV1InnerServiceSMO communitySpacePersonTimeV1InnerServiceSMOImpl;
 
+    @Autowired
+    private ICommunitySpacePersonV1InnerServiceSMO communitySpacePersonV1InnerServiceSMOImpl;
+
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
         Assert.hasKeyAndValue(reqJson, "timeId", "请求报文中未包含timeId");
@@ -131,16 +139,47 @@ public class SaveCommunitySpaceConfirmOrderCmd extends Cmd {
         communitySpaceConfirmOrderPo.setOrderId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         communitySpaceConfirmOrderPo.setSpaceId(communitySpacePersonTimeDtos.get(0).getSpaceId());
         communitySpaceConfirmOrderPo.setCspId(communitySpacePersonTimeDtos.get(0).getCspId());
+        if (!StringUtil.isEmpty(communitySpaceConfirmOrderPo.getReceivedAmount())
+                || !StringUtil.isEmpty(communitySpaceConfirmOrderPo.getPayWay())) {
+            communitySpaceConfirmOrderPo.setPayTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
+        }
 
         flag = communitySpaceConfirmOrderV1InnerServiceSMOImpl.saveCommunitySpaceConfirmOrder(communitySpaceConfirmOrderPo);
         if (flag < 1) {
             throw new CmdException("核销数据失败");
         }
+
+        //所有时段核销完成后，预约订单状态置为已完成
+        refreshPersonState(communitySpacePersonTimeDtos.get(0).getCspId(), reqJson.getString("communityId"));
+
         CommunitySpaceConfirmOrderDto communitySpaceConfirmOrderDto = new CommunitySpaceConfirmOrderDto();
         communitySpaceConfirmOrderDto.setOrderId(communitySpaceConfirmOrderPo.getOrderId());
         List<CommunitySpaceConfirmOrderDto> communitySpaceConfirmOrderDtos = communitySpaceConfirmOrderV1InnerServiceSMOImpl.queryCommunitySpaceConfirmOrders(communitySpaceConfirmOrderDto);
 
 
         cmdDataFlowContext.setResponseEntity(ResultVo.createResponseEntity(communitySpaceConfirmOrderDtos));
+    }
+
+    /**
+     * 预约订单下所有时段核销完成后，将预约订单状态置为已完成
+     *
+     * @param cspId       预约ID
+     * @param communityId 小区ID
+     */
+    private void refreshPersonState(String cspId, String communityId) {
+        CommunitySpacePersonTimeDto communitySpacePersonTimeDto = new CommunitySpacePersonTimeDto();
+        communitySpacePersonTimeDto.setCspId(cspId);
+        communitySpacePersonTimeDto.setCommunityId(communityId);
+        communitySpacePersonTimeDto.setState(CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM);
+        int waitCount = communitySpacePersonTimeV1InnerServiceSMOImpl.queryCommunitySpacePersonTimesCount(communitySpacePersonTimeDto);
+
+        if (waitCount > 0) {
+            return;
+        }
+
+        CommunitySpacePersonPo communitySpacePersonPo = new CommunitySpacePersonPo();
+        communitySpacePersonPo.setCspId(cspId);
+        communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_C);
+        communitySpacePersonV1InnerServiceSMOImpl.updateCommunitySpacePerson(communitySpacePersonPo);
     }
 }

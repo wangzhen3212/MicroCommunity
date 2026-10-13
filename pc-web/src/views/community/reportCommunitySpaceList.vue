@@ -1,209 +1,598 @@
 <template>
-  <div class="app-container">
-    <el-row :gutter="10">
-      <el-col :span="4">
-        <el-card class="box-card">
-          <div class="filter-container">
-            <el-date-picker v-model="queryParams.appointmentTime" type="month"
-              :placeholder="$t('reportCommunitySpace.selectMonth')" value-format="yyyy-MM" @change="fetchData" />
+  <div class="space-booking">
+    <div class="panel select-panel">
+      <div class="select-row">
+        <span class="select-label">{{ $t('reportCommunitySpace.venue') }}</span>
+        <div class="tab-list">
+          <div v-for="item in venues" :key="item.venueId" class="tab-item"
+            :class="{ active: currentVenueId === item.venueId }" @click="handleSelectVenue(item)">
+            <span class="tab-name">{{ item.name }}</span>
+            <span class="tab-meta">
+              {{ $t('reportCommunitySpace.venueTabsMeta',
+                { count: countSpace(item.venueId), start: item.startTime, end: item.endTime }) }}
+            </span>
           </div>
-          <el-scrollbar class="venue-scrollbar">
-            <ul class="venue-items">
-              <li v-for="(item, index) in venues" :key="index"
-                :class="{ 'active': queryParams.venueId === item.venueId }" @click="selectVenue(item)">
-                {{ item.name }}
-              </li>
-            </ul>
-          </el-scrollbar>
-        </el-card>
-      </el-col>
+          <span v-if="venues.length < 1" class="empty-tip">{{ $t('communitySpaceManage.noVenue') }}</span>
+        </div>
+      </div>
 
-      <el-col :span="20">
-        <el-card class="box-card">
-          <el-table :data="tableData" border style="width: 100%">
-            <el-table-column prop="time" :label="$t('reportCommunitySpace.appointmentTime')" width="100"
-              align="center" />
-            <template v-if="communitySpaces.length > 0">
-              <el-table-column v-for="space in communitySpaces" :key="space.spaceId" :label="space.name" align="center">
-                <template slot-scope="{ $index }">
-                  <div v-if="getSpaceStatus($index, space) === 'available'">
-                    <el-button type="text" @click="openAddModal(space.spaceId, $index)">
-                      {{ $t('reportCommunitySpace.available') }}
-                    </el-button>
-                  </div>
-                  <div v-else>
-                    {{ getSpaceStatus($index, space) }}
-                  </div>
-                </template>
-              </el-table-column>
-            </template>
-            <el-table-column v-else :label="$t('reportCommunitySpace.noSpace')" align="center" />
-          </el-table>
-        </el-card>
-      </el-col>
-    </el-row>
+      <div class="select-row">
+        <span class="select-label">{{ $t('reportCommunitySpace.space') }}</span>
+        <div class="tab-list">
+          <div v-for="item in venueSpaces" :key="item.spaceId" class="tab-item"
+            :class="{ active: currentSpaceId === item.spaceId }" @click="handleSelectSpace(item)">
+            <span class="tab-name">{{ item.name }}</span>
+            <span class="tab-meta">￥{{ item.feeMoney }}/{{ $t('reportCommunitySpace.hour') }}</span>
+          </div>
+          <span v-if="venueSpaces.length < 1" class="empty-tip">{{ $t('reportCommunitySpace.noEnabledSpace') }}</span>
+        </div>
+      </div>
 
-    <add-community-space-person ref="addPersonDialog" @success="fetchData" />
+      <div class="select-row">
+        <span class="select-label">{{ $t('reportCommunitySpace.appointmentDate') }}</span>
+        <div class="date-strip">
+          <div v-for="item in dateList" :key="item.date" class="date-item"
+            :class="{ active: appointmentDate === item.date }" @click="handleSelectDate(item.date)">
+            <span class="date-week">{{ item.week }}</span>
+            <span class="date-day">{{ item.dayText }}{{ item.isToday ? $t('reportCommunitySpace.today') : '' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="booking-body">
+      <div class="panel slot-panel">
+        <div class="panel-header">
+          <span class="panel-title">{{ $t('reportCommunitySpace.availableSlotTitle') }}</span>
+          <span class="panel-meta">{{ currentSpace ? currentSpace.name : '-' }}</span>
+          <div class="legend">
+            <span class="legend-item"><i class="legend-box legend-available"></i>{{ $t('reportCommunitySpace.legendAvailable') }}</span>
+            <span class="legend-item"><i class="legend-box legend-booked"></i>{{ $t('reportCommunitySpace.legendBooked') }}</span>
+            <span class="legend-item"><i class="legend-box legend-closed"></i>{{ $t('reportCommunitySpace.legendClosed') }}</span>
+            <span class="legend-item"><i class="legend-box legend-selected"></i>{{ $t('reportCommunitySpace.legendSelected') }}</span>
+          </div>
+        </div>
+
+        <div v-loading="loading" class="slot-grid">
+          <div v-for="slot in slots" :key="slot.hours" class="slot-item" :class="'slot-' + slot.status"
+            @click="handleToggleSlot(slot)">
+            <span class="slot-hour">{{ slot.label }}</span>
+            <span class="slot-state">{{ slotStatusText(slot.status) }}</span>
+          </div>
+        </div>
+        <div v-if="slots.length < 1" class="empty-tip">{{ $t('reportCommunitySpace.noSpace') }}</div>
+        <div class="slot-tip">{{ $t('reportCommunitySpace.slotTip') }}</div>
+      </div>
+
+      <div class="side-panel">
+        <space-booking-panel :venue="currentVenue" :space="currentSpace" :appointment-date="appointmentDate"
+          :selected-hours="selectedHours" @success="handleBookingSuccess" @clear="handleClearSelection" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { listCommunityVenue, listCommunitySpace, listCommunitySpacePerson } from '@/api/community/reportCommunitySpaceApi'
-import AddCommunitySpacePerson from '@/components/community/addCommunitySpacePerson'
+import {
+  listCommunityVenue,
+  listCommunitySpace,
+  listCommunitySpaceOpenTime
+} from '@/api/community/reportCommunitySpaceApi'
 import { getCommunityId } from '@/api/community/communityApi'
-import { getDateYYYYMMDD } from '@/utils/dateUtil'
+import SpaceBookingPanel from '@/components/community/SpaceBookingPanel'
 
 export default {
   name: 'ReportCommunitySpaceList',
-  components: { AddCommunitySpacePerson },
+  components: {
+    SpaceBookingPanel
+  },
   data() {
     return {
-      queryParams: {
-        venueId: '',
-        appointmentTime: getDateYYYYMMDD(),
-        communityId: getCommunityId()
-      },
+      loading: false,
+      communityId: getCommunityId(),
       venues: [],
-      communitySpaces: [],
-      spacePersons: [],
-      tableData: Array.from({ length: 24 }, (_, i) => ({ time: `${i}` }))
+      allSpaces: [],
+      openTimeConfig: [],
+      availableHours: [],
+      selectedHours: [],
+      currentVenueId: '',
+      currentSpaceId: '',
+      appointmentDate: ''
+    }
+  },
+  computed: {
+    currentVenue() {
+      return this.venues.find(item => item.venueId === this.currentVenueId)
+    },
+    venueSpaces() {
+      return this.allSpaces.filter(item => item.venueId === this.currentVenueId && item.state === '1001')
+    },
+    currentSpace() {
+      return this.venueSpaces.find(item => item.spaceId === this.currentSpaceId)
+    },
+    dateList() {
+      const list = []
+      const base = new Date()
+      for (let index = 0; index < 7; index++) {
+        const date = new Date(base.getFullYear(), base.getMonth(), base.getDate() + index)
+        const day = date.getDay()
+        list.push({
+          date: this.formatDate(date),
+          week: this.$t('reportCommunitySpace.week' + (day === 0 ? 7 : day)),
+          dayText: this.formatMonthDay(date),
+          isToday: index === 0
+        })
+      }
+      return list
+    },
+    slotHours() {
+      if (this.openTimeConfig.length < 1) {
+        return []
+      }
+      const venue = this.currentVenue
+      let startHour = 0
+      let endHour = 24
+      if (venue && venue.startTime) {
+        startHour = Number(venue.startTime.split(':')[0])
+      }
+      if (venue && venue.endTime) {
+        endHour = Number(venue.endTime.split(':')[0])
+      }
+      return this.openTimeConfig.filter(item => {
+        const hours = Number(item.hours)
+        return hours >= startHour && hours < endHour
+      })
+    },
+    slots() {
+      return this.slotHours.map(item => {
+        const hours = Number(item.hours)
+        return {
+          hours: hours,
+          label: this.formatHour(hours),
+          status: this.getSlotStatus(item)
+        }
+      })
     }
   },
   created() {
-    this.fetchVenues()
+    this.appointmentDate = this.formatDate(new Date())
+    this.listVenues()
   },
   methods: {
-    selectVenue(venue) {
-      this.queryParams.venueId = venue.venueId
-      this.fetchData()
-    },
-    async fetchVenues() {
+    async listVenues() {
       try {
-        const params = {
-          page: 1,
-          row: 100,
-          communityId: this.queryParams.communityId
-        }
-        this.venues = await listCommunityVenue(params)
+        const res = await listCommunityVenue({ page: 1, row: 100, communityId: this.communityId })
+        this.venues = res || []
         if (this.venues.length > 0) {
-          this.queryParams.venueId = this.venues[0].venueId
-          this.fetchData()
+          this.currentVenueId = this.venues[0].venueId
         }
+        this.listSpaces()
       } catch (error) {
-        this.$message.error(this.$t('common.fetchFailed'))
+        this.$message.error(error.message || this.$t('reportCommunitySpace.loadFailed'))
       }
     },
-    async fetchData() {
-      if (!this.queryParams.venueId) return
-
+    async listSpaces() {
       try {
-        // 获取场地列表
-        const spaceParams = {
-          page: 1,
-          row: 100,
-          venueId: this.queryParams.venueId,
-          communityId: this.queryParams.communityId
-        }
-        this.communitySpaces = await listCommunitySpace(spaceParams)
-
-        // 获取预约记录
-        const personParams = {
-          page: 1,
-          row: 100,
-          venueId: this.queryParams.venueId,
-          appointmentTime: this.queryParams.appointmentTime,
-          communityId: this.queryParams.communityId,
-          state: 'S'
-        }
-        this.spacePersons = await listCommunitySpacePerson(personParams)
+        const res = await listCommunitySpace({ page: 1, row: 1000, communityId: this.communityId })
+        this.allSpaces = res || []
+        this.syncCurrentSpace()
       } catch (error) {
-        this.$message.error(this.$t('common.fetchFailed'))
+        this.$message.error(error.message || this.$t('reportCommunitySpace.loadFailed'))
       }
     },
-    getSpaceStatus(hour, space) {
-      // 检查场地是否在该小时不可用
-      const openTime = space.openTimes.find(t => t.hours == hour)
-      if (openTime && openTime.isOpen === 'N') {
-        return this.$t('reportCommunitySpace.notAvailable')
+    async loadSlots() {
+      if (!this.currentSpaceId) {
+        this.openTimeConfig = []
+        this.availableHours = []
+        return
       }
+      this.loading = true
+      try {
+        const configRes = await listCommunitySpaceOpenTime({
+          spaceId: this.currentSpaceId,
+          communityId: this.communityId
+        })
+        this.openTimeConfig = configRes || []
 
-      // 检查是否有预约
-      const person = this.spacePersons.find(p => p.spaceId === space.spaceId)
-      if (person) {
-        const timeSlot = person.times.find(t => t.hours == hour)
-        if (timeSlot) {
-          return `${person.personName} > ${person.personTel}`
-        }
+        const availableRes = await listCommunitySpaceOpenTime({
+          spaceId: this.currentSpaceId,
+          communityId: this.communityId,
+          appointmentTime: this.appointmentDate
+        })
+        const hours = []
+        const openTimeList = availableRes || []
+        openTimeList.forEach(item => {
+          if (item.isOpen === 'Y') {
+            hours.push(Number(item.hours))
+          }
+        })
+        this.availableHours = hours
+      } catch (error) {
+        this.$message.error(error.message || this.$t('reportCommunitySpace.loadFailed'))
+      } finally {
+        this.loading = false
       }
-
+    },
+    syncCurrentSpace() {
+      const spaces = this.venueSpaces
+      const exists = spaces.some(item => item.spaceId === this.currentSpaceId)
+      if (!exists) {
+        this.currentSpaceId = spaces.length > 0 ? spaces[0].spaceId : ''
+      }
+      this.selectedHours = []
+      this.loadSlots()
+    },
+    getSlotStatus(item) {
+      if (item.isOpen !== 'Y') {
+        return 'closed'
+      }
+      const hours = Number(item.hours)
+      if (this.availableHours.indexOf(hours) < 0) {
+        return 'booked'
+      }
+      if (this.selectedHours.indexOf(hours) > -1) {
+        return 'selected'
+      }
       return 'available'
     },
-    openAddModal(spaceId, hour) {
-      const data = {
-        spaceId: spaceId,
-        hours: hour,
-        appointmentTime: this.queryParams.appointmentTime,
-        openTime: hour
+    slotStatusText(status) {
+      if (status === 'booked') {
+        return this.$t('reportCommunitySpace.slotStatusBooked')
       }
-      this.$refs.addPersonDialog.open(data)
+      if (status === 'closed') {
+        return this.$t('reportCommunitySpace.slotStatusClosed')
+      }
+      if (status === 'selected') {
+        return this.$t('reportCommunitySpace.slotStatusSelected')
+      }
+      return this.$t('reportCommunitySpace.slotStatusAvailable')
+    },
+    countSpace(venueId) {
+      return this.allSpaces.filter(item => item.venueId === venueId && item.state === '1001').length
+    },
+    handleSelectVenue(venue) {
+      if (this.currentVenueId === venue.venueId) {
+        return
+      }
+      this.currentVenueId = venue.venueId
+      this.currentSpaceId = ''
+      this.syncCurrentSpace()
+    },
+    handleSelectSpace(space) {
+      if (this.currentSpaceId === space.spaceId) {
+        return
+      }
+      this.currentSpaceId = space.spaceId
+      this.selectedHours = []
+      this.loadSlots()
+    },
+    handleSelectDate(date) {
+      if (this.appointmentDate === date) {
+        return
+      }
+      this.appointmentDate = date
+      this.selectedHours = []
+      this.loadSlots()
+    },
+    handleToggleSlot(slot) {
+      if (slot.status === 'available') {
+        this.selectedHours.push(slot.hours)
+        return
+      }
+      if (slot.status === 'selected') {
+        const index = this.selectedHours.indexOf(slot.hours)
+        if (index > -1) {
+          this.selectedHours.splice(index, 1)
+        }
+        return
+      }
+      if (slot.status === 'booked') {
+        this.$message.warning(this.$t('reportCommunitySpace.slotStatusBooked'))
+      }
+    },
+    handleClearSelection() {
+      this.selectedHours = []
+    },
+    handleBookingSuccess() {
+      this.selectedHours = []
+      this.loadSlots()
+    },
+    formatDate(date) {
+      return date.getFullYear() + '-' + this.pad(date.getMonth() + 1) + '-' + this.pad(date.getDate())
+    },
+    formatMonthDay(date) {
+      return this.pad(date.getMonth() + 1) + '-' + this.pad(date.getDate())
+    },
+    formatHour(hours) {
+      return this.pad(hours) + ':00'
+    },
+    pad(value) {
+      return value < 10 ? '0' + value : '' + value
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.app-container {
-  padding: 20px;
+.space-booking {
+  padding: 16px;
+  background: #f1f5f9;
+  min-height: calc(100vh - 90px);
 }
 
-.box-card {
-  margin-bottom: 20px;
+.panel {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.12);
 }
 
-.filter-container {
-  margin-bottom: 20px;
+.select-panel {
+  padding: 12px 16px;
+  margin-bottom: 16px;
 }
 
-.venue-list {
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+.select-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 0;
 }
 
-.venue-items {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.select-row + .select-row {
+  border-top: 1px solid #f1f5f9;
 }
 
-.venue-items li {
-  padding: 12px 15px;
-  border-bottom: 1px solid #eee;
+.select-label {
+  width: 72px;
+  flex: none;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 34px;
+}
+
+.tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
-.venue-items li:hover {
-  background-color: #f5f7fa;
+.tab-item:hover {
+  border-color: #93c5fd;
+  background: #f8fafc;
 }
 
-.venue-items li.active {
-  background-color: #409eff;
-  color:#ecf5ff ;
-  font-weight: bold;
+.tab-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
 }
 
-.venue-radio {
-  margin-bottom: 10px;
-  padding: 10px;
-  border-radius: 4px;
-  background: #f5f7fa;
+.tab-name {
+  font-size: 13px;
+  color: #334155;
+}
 
-  &:hover {
-    background: #e4e7ed;
-  }
+.tab-item.active .tab-name {
+  color: #2563eb;
+  font-weight: 600;
+}
 
-  ::v-deep .el-radio__label {
-    padding-left: 10px;
-  }
+.tab-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.date-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.date-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 72px;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-item:hover {
+  border-color: #93c5fd;
+  background: #f8fafc;
+}
+
+.date-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.date-week {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.date-item.active .date-week {
+  color: #2563eb;
+}
+
+.date-day {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.booking-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.slot-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.panel-meta {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.legend-box {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  border-radius: 3px;
+}
+
+.legend-available {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+}
+
+.legend-booked {
+  background: #ffe4e6;
+  border: 1px solid #fda4af;
+}
+
+.legend-closed {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.legend-selected {
+  background: #2563eb;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+  padding: 16px;
+  min-height: 120px;
+}
+
+.slot-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.slot-item:hover {
+  transform: translateY(-2px);
+}
+
+.slot-hour {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.slot-state {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.slot-available {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.slot-booked {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  cursor: not-allowed;
+}
+
+.slot-booked .slot-hour,
+.slot-booked .slot-state {
+  color: #e11d48;
+}
+
+.slot-closed {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
+.slot-closed .slot-hour,
+.slot-closed .slot-state {
+  color: #94a3b8;
+}
+
+.slot-selected {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.slot-selected .slot-hour,
+.slot-selected .slot-state {
+  color: #fff;
+}
+
+.slot-tip {
+  padding: 0 16px 16px 16px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.side-panel {
+  width: 340px;
+  flex: none;
+}
+
+.empty-tip {
+  padding: 10px 4px;
+  font-size: 13px;
+  color: #94a3b8;
 }
 </style>

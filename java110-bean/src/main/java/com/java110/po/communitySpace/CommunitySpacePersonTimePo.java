@@ -36,6 +36,9 @@ public class CommunitySpacePersonTimePo implements Serializable {
 
     private String state;
 
+    private String appointmentDate;
+
+
     public String getSpaceId() {
         return spaceId;
     }
@@ -90,5 +93,13 @@ public class CommunitySpacePersonTimePo implements Serializable {
 
     public void setState(String state) {
         this.state = state;
+    }
+
+    public String getAppointmentDate() {
+        return appointmentDate;
+    }
+
+    public void setAppointmentDate(String appointmentDate) {
+        this.appointmentDate = appointmentDate;
     }
 }

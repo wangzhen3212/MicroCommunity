@@ -43,6 +43,10 @@ public class CommunitySpacePersonPo implements Serializable {
 
     private String orderId;
 
+    private String payTime;
+    private String cancelTime;
+    private String cancelReason;
+
     public String getReceivableAmount() {
         return receivableAmount;
     }
@@ -153,5 +157,29 @@ public class CommunitySpacePersonPo implements Serializable {
 
     public void setOrderId(String orderId) {
         this.orderId = orderId;
+    }
+
+    public String getPayTime() {
+        return payTime;
+    }
+
+    public void setPayTime(String payTime) {
+        this.payTime = payTime;
+    }
+
+    public String getCancelTime() {
+        return cancelTime;
+    }
+
+    public void setCancelTime(String cancelTime) {
+        this.cancelTime = cancelTime;
+    }
+
+    public String getCancelReason() {
+        return cancelReason;
+    }
+
+    public void setCancelReason(String cancelReason) {
+        this.cancelReason = cancelReason;
     }
 }

@@ -23,6 +23,11 @@ public class CommunitySpaceConfirmOrderDto extends PageDto implements Serializab
     private String remark;
     private String communityId;
 
+    private String receivedAmount;
+    private String payWay;
+    private String payTime;
+
+
     private String personName;
 
     private String personTel;
@@ -151,5 +156,29 @@ public class CommunitySpaceConfirmOrderDto extends PageDto implements Serializab
 
     public void setVenueName(String venueName) {
         this.venueName = venueName;
+    }
+
+    public String getReceivedAmount() {
+        return receivedAmount;
+    }
+
+    public void setReceivedAmount(String receivedAmount) {
+        this.receivedAmount = receivedAmount;
+    }
+
+    public String getPayWay() {
+        return payWay;
+    }
+
+    public void setPayWay(String payWay) {
+        this.payWay = payWay;
+    }
+
+    public String getPayTime() {
+        return payTime;
+    }
+
+    public void setPayTime(String payTime) {
+        this.payTime = payTime;
     }
 }

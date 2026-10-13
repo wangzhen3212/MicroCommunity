@@ -108,5 +108,22 @@ public class CommunitySpacePersonV1ServiceDaoImpl extends BaseServiceDao impleme
         return Integer.parseInt(businessCommunitySpacePersonInfos.get(0).get("count").toString());
     }
 
+    /**
+     * 查询小区场地预约订单汇总
+     * @param info 小区场地预约信息
+     * @return 汇总信息
+     */
+    @Override
+    public Map queryCommunitySpacePersonSummary(Map info) throws DAOException {
+        logger.debug("查询 queryCommunitySpacePersonSummary 入参 info : {}",info);
+
+        List<Map> infos = sqlSessionTemplate.selectList("communitySpacePersonV1ServiceDaoImpl.queryCommunitySpacePersonSummary", info);
+        if (infos.size() < 1) {
+            return null;
+        }
+
+        return infos.get(0);
+    }
+
 
 }

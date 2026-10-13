@@ -15,6 +15,7 @@
  */
 package com.java110.intf.community;
 
+import com.alibaba.fastjson.JSONObject;
 import com.java110.config.feign.FeignConfiguration;
 import com.java110.dto.community.CommunitySpacePersonDto;
 import com.java110.po.communitySpace.CommunitySpacePersonPo;
@@ -65,4 +66,13 @@ public interface ICommunitySpacePersonV1InnerServiceSMO {
      */
     @RequestMapping(value = "/queryCommunitySpacePersonsCount", method = RequestMethod.POST)
     int queryCommunitySpacePersonsCount(@RequestBody CommunitySpacePersonDto communitySpacePersonDto);
+
+    /**
+     * 查询<p>小区场地预约</p>订单汇总
+     *
+     * @param communitySpacePersonDto 数据对象分享
+     * @return 汇总信息
+     */
+    @RequestMapping(value = "/queryCommunitySpacePersonSummary", method = RequestMethod.POST)
+    JSONObject queryCommunitySpacePersonSummary(@RequestBody CommunitySpacePersonDto communitySpacePersonDto);
 }

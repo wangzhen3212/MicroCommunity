@@ -24,10 +24,14 @@ import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.doc.annotation.*;
+import com.java110.dto.community.CommunitySpaceDto;
+import com.java110.dto.community.CommunitySpaceOpenTimeDto;
 import com.java110.dto.community.CommunitySpacePersonDto;
 import com.java110.dto.community.CommunitySpacePersonTimeDto;
+import com.java110.intf.community.ICommunitySpaceOpenTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpacePersonTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpacePersonV1InnerServiceSMO;
+import com.java110.intf.community.ICommunitySpaceV1InnerServiceSMO;
 import com.java110.po.communitySpace.CommunitySpacePersonPo;
 import com.java110.po.communitySpace.CommunitySpacePersonTimePo;
 import com.java110.utils.exception.CmdException;
@@ -38,6 +42,11 @@ import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 
 @Java110CmdDoc(title = "预约场地",
@@ -50,19 +59,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 )
 
 @Java110ParamsDoc(params = {
-        @Java110ParamDoc(name = "page",type = "int",length = 11, remark = "分页页数"),
-        @Java110ParamDoc(name = "row",type = "int", length = 11, remark = "分页行数"),
         @Java110ParamDoc(name = "communityId", length = 30, remark = "小区ID"),
-        @Java110ParamDoc(name = "appointmentDate", length = 30, remark = "预约日期 YYYY-MM-DD"),
-        @Java110ParamDoc(name = "appointmentTime", length = 30, remark = "预约时间 HH24:MI"),
-        @Java110ParamDoc(name = "payWay", length = 12, remark = "支付方式"),
+        @Java110ParamDoc(name = "appointmentTime", length = 30, remark = "预约日期 YYYY-MM-DD"),
         @Java110ParamDoc(name = "personName", length = 64, remark = "预约人"),
         @Java110ParamDoc(name = "personTel", length = 30, remark = "预约人电话"),
-        @Java110ParamDoc(name = "receivableAmount", length = 30, remark = "应收金额"),
-        @Java110ParamDoc(name = "receivedAmount", length = 30, remark = "实收金额"),
+        @Java110ParamDoc(name = "remark", length = 512, remark = "备注"),
         @Java110ParamDoc(name = "spaceId", length = 30, remark = "场地ID"),
-        @Java110ParamDoc(name = "openTimes",type="Array", length = 30, remark = "场地ID"),
-        @Java110ParamDoc(parentNodeName = "openTimes",name = "hours", length = 30, remark = "预约时间"),
+        @Java110ParamDoc(name = "openTimes",type="Array", remark = "预约时段"),
+        @Java110ParamDoc(parentNodeName = "openTimes",name = "hours", length = 11, remark = "预约小时"),
 
 })
 
@@ -75,7 +79,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 )
 
 @Java110ExampleDoc(
-        reqBody="{\"spaceId\":\"102022093043260007\",\"personName\":\"wuxw\",\"personTel\":\"18909711443\",\"appointmentTime\":\"01:00\",\"receivableAmount\":\"10\",\"receivedAmount\":\"10\",\"payWay\":\"2\",\"state\":\"S\",\"remark\":\"123\",\"appointmentDate\":\"2022-09-01\",\"communityId\":\"2022081539020475\"}",
+        reqBody="{\"spaceId\":\"102022093043260007\",\"personName\":\"wuxw\",\"personTel\":\"18909711443\",\"appointmentTime\":\"2022-09-01\",\"remark\":\"123\",\"communityId\":\"2022081539020475\",\"openTimes\":[{\"hours\":\"9\"},{\"hours\":\"10\"}]}",
         resBody="{\"code\":0,\"msg\":\"成功\"}"
 )
 
@@ -96,11 +100,23 @@ public class SaveCommunitySpacePersonCmd extends Cmd {
 
     public static final String CODE_PREFIX_ID = "10";
 
+    public static final String DEFAULT_PAY_WAY = "-1";
+
+    public static final String DEFAULT_AMOUNT = "0.00";
+
+    private static final Pattern DATE_PATTERN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
+
     @Autowired
     private ICommunitySpacePersonV1InnerServiceSMO communitySpacePersonV1InnerServiceSMOImpl;
 
     @Autowired
     private ICommunitySpacePersonTimeV1InnerServiceSMO communitySpacePersonTimeV1InnerServiceSMOImpl;
+
+    @Autowired
+    private ICommunitySpaceV1InnerServiceSMO communitySpaceV1InnerServiceSMOImpl;
+
+    @Autowired
+    private ICommunitySpaceOpenTimeV1InnerServiceSMO communitySpaceOpenTimeV1InnerServiceSMOImpl;
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
@@ -108,52 +124,82 @@ public class SaveCommunitySpacePersonCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "personName", "请求报文中未包含personName");
         Assert.hasKeyAndValue(reqJson, "personTel", "请求报文中未包含personTel");
         Assert.hasKeyAndValue(reqJson, "appointmentTime", "请求报文中未包含appointmentTime");
-        Assert.hasKeyAndValue(reqJson, "receivableAmount", "请求报文中未包含receivableAmount");
-        Assert.hasKeyAndValue(reqJson, "receivedAmount", "请求报文中未包含receivedAmount");
-        Assert.hasKeyAndValue(reqJson, "payWay", "请求报文中未包含payWay");
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
 
-        if(!reqJson.containsKey("openTimes")){
-            cmdDataFlowContext.setResponseEntity(ResultVo.success());
-            return ;
+        //预约日期统一为 YYYY-MM-DD
+        String appointmentTime = reqJson.getString("appointmentTime").trim();
+        if (appointmentTime.length() > 10) {
+            appointmentTime = appointmentTime.substring(0, 10);
         }
+        if (!DATE_PATTERN.matcher(appointmentTime).matches()) {
+            throw new CmdException("预约日期格式错误，应为 YYYY-MM-DD");
+        }
+        reqJson.put("appointmentTime", appointmentTime);
+
+        CommunitySpaceDto communitySpaceDto = new CommunitySpaceDto();
+        communitySpaceDto.setSpaceId(reqJson.getString("spaceId"));
+        communitySpaceDto.setCommunityId(reqJson.getString("communityId"));
+        List<CommunitySpaceDto> communitySpaceDtos = communitySpaceV1InnerServiceSMOImpl.queryCommunitySpaces(communitySpaceDto);
+        Assert.listOnlyOne(communitySpaceDtos, "场地不存在");
 
         JSONArray openTimes = reqJson.getJSONArray("openTimes");
 
-        if(openTimes == null || openTimes.size() <1){
-            cmdDataFlowContext.setResponseEntity(ResultVo.success());
-            return ;
+        if (openTimes == null || openTimes.size() < 1) {
+            throw new CmdException("请选择预约时段");
         }
+
+        List<JSONObject> appointmentTimes = getAppointmentTimes(openTimes);
+
+        if (appointmentTimes.size() < 1) {
+            throw new CmdException("请选择预约时段");
+        }
+
+        CommunitySpaceOpenTimeDto communitySpaceOpenTimeDto = null;
         CommunitySpacePersonTimeDto communitySpacePersonTimeDto = null;
         int flag = 0;
-        for(int timeIndex = 0 ;timeIndex < openTimes.size(); timeIndex++) {
-            if("N".equals(openTimes.getJSONObject(timeIndex).getString("isOpen"))){
-                continue;
+        for (JSONObject appointmentTimeObj : appointmentTimes) {
+            String hours = appointmentTimeObj.getString("hours");
+            communitySpaceOpenTimeDto = new CommunitySpaceOpenTimeDto();
+            communitySpaceOpenTimeDto.setSpaceId(reqJson.getString("spaceId"));
+            communitySpaceOpenTimeDto.setHours(hours);
+            communitySpaceOpenTimeDto.setIsOpen("Y");
+            flag = communitySpaceOpenTimeV1InnerServiceSMOImpl.queryCommunitySpaceOpenTimesCount(communitySpaceOpenTimeDto);
+            if (flag < 1) {
+                throw new CmdException(hours + ":00 时段未开放预约");
             }
+
             communitySpacePersonTimeDto = new CommunitySpacePersonTimeDto();
-            communitySpacePersonTimeDto.setCommunityId(reqJson.getString("communityId"));
-            communitySpacePersonTimeDto.setAppointmentTime(reqJson.getString("appointmentTime"));
-            communitySpacePersonTimeDto.setHours(openTimes.getJSONObject(timeIndex).getString("hours"));
             communitySpacePersonTimeDto.setSpaceId(reqJson.getString("spaceId"));
+            communitySpacePersonTimeDto.setAppointmentDate(appointmentTime);
+            communitySpacePersonTimeDto.setHours(hours);
+            communitySpacePersonTimeDto.setStateNotIn(new String[]{CommunitySpacePersonTimeDto.STATE_CL});
             flag = communitySpacePersonTimeV1InnerServiceSMOImpl.queryCommunitySpacePersonTimesCount(communitySpacePersonTimeDto);
-            if(flag > 0){
-                throw new CmdException(reqJson.getString("appointmentTime")+","+openTimes.getJSONObject(timeIndex).getString("hours")+"已经被预约");
+            if (flag > 0) {
+                throw new CmdException(appointmentTime + " " + hours + ":00 时段已被预约");
             }
         }
 
+        //应收金额由服务端计算，前端金额仅用于展示
+        BigDecimal feeMoney = new BigDecimal(communitySpaceDtos.get(0).getFeeMoney());
+        BigDecimal receivableAmount = feeMoney.multiply(new BigDecimal(appointmentTimes.size())).setScale(2, BigDecimal.ROUND_HALF_UP);
+        reqJson.put("receivableAmount", receivableAmount.toPlainString());
     }
 
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
-
-
         CommunitySpacePersonPo communitySpacePersonPo = BeanConvertUtil.covertBean(reqJson, CommunitySpacePersonPo.class);
         communitySpacePersonPo.setCspId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
         communitySpacePersonPo.setOrderId(GenerateCodeFactory.getGeneratorId("11"));
-        if(StringUtil.isEmpty(communitySpacePersonPo.getState())){
-            communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_W);
+        if (StringUtil.isEmpty(communitySpacePersonPo.getState())) {
+            communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_WP);
+        }
+        if (StringUtil.isEmpty(communitySpacePersonPo.getPayWay())) {
+            communitySpacePersonPo.setPayWay(DEFAULT_PAY_WAY);
+        }
+        if (StringUtil.isEmpty(communitySpacePersonPo.getReceivedAmount())) {
+            communitySpacePersonPo.setReceivedAmount(DEFAULT_AMOUNT);
         }
         int flag = communitySpacePersonV1InnerServiceSMOImpl.saveCommunitySpacePerson(communitySpacePersonPo);
 
@@ -161,32 +207,48 @@ public class SaveCommunitySpacePersonCmd extends Cmd {
             throw new CmdException("保存数据失败");
         }
 
-        if(!reqJson.containsKey("openTimes")){
-            cmdDataFlowContext.setResponseEntity(ResultVo.success());
-            return ;
-        }
+        List<JSONObject> appointmentTimes = getAppointmentTimes(reqJson.getJSONArray("openTimes"));
 
-        JSONArray openTimes = reqJson.getJSONArray("openTimes");
-
-        if(openTimes == null || openTimes.size() <1){
-            cmdDataFlowContext.setResponseEntity(ResultVo.success());
-            return ;
-        }
         CommunitySpacePersonTimePo communitySpacePersonTimePo = null;
-        for(int timeIndex = 0 ;timeIndex < openTimes.size(); timeIndex++) {
-            if("N".equals(openTimes.getJSONObject(timeIndex).getString("isOpen"))){
-                continue;
-            }
+        for (JSONObject appointmentTimeObj : appointmentTimes) {
             communitySpacePersonTimePo = new CommunitySpacePersonTimePo();
             communitySpacePersonTimePo.setCommunityId(communitySpacePersonPo.getCommunityId());
             communitySpacePersonTimePo.setCspId(communitySpacePersonPo.getCspId());
-            communitySpacePersonTimePo.setHours(openTimes.getJSONObject(timeIndex).getString("hours"));
+            communitySpacePersonTimePo.setHours(appointmentTimeObj.getString("hours"));
             communitySpacePersonTimePo.setSpaceId(communitySpacePersonPo.getSpaceId());
+            communitySpacePersonTimePo.setAppointmentDate(communitySpacePersonPo.getAppointmentTime());
             communitySpacePersonTimePo.setTimeId(GenerateCodeFactory.getGeneratorId(CODE_PREFIX_ID));
             communitySpacePersonTimePo.setState(CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM);
             communitySpacePersonTimeV1InnerServiceSMOImpl.saveCommunitySpacePersonTime(communitySpacePersonTimePo);
         }
 
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
+    }
+
+    /**
+     * 提取需要预约的时段，忽略未开放时段
+     *
+     * @param openTimes 前端传入时段
+     * @return 预约时段
+     */
+    private List<JSONObject> getAppointmentTimes(JSONArray openTimes) {
+        List<JSONObject> appointmentTimes = new ArrayList<>();
+        if (openTimes == null) {
+            return appointmentTimes;
+        }
+
+        JSONObject openTimeObj = null;
+        for (int timeIndex = 0; timeIndex < openTimes.size(); timeIndex++) {
+            openTimeObj = openTimes.getJSONObject(timeIndex);
+            if (openTimeObj == null || StringUtil.isEmpty(openTimeObj.getString("hours"))) {
+                continue;
+            }
+            if ("N".equals(openTimeObj.getString("isOpen"))) {
+                continue;
+            }
+            appointmentTimes.add(openTimeObj);
+        }
+
+        return appointmentTimes;
     }
 }

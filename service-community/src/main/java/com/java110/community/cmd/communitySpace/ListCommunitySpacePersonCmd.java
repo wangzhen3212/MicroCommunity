@@ -15,6 +15,7 @@
  */
 package com.java110.community.cmd.communitySpace;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.annotation.Java110Cmd;
 import com.java110.core.context.ICmdDataFlowContext;
@@ -26,6 +27,7 @@ import com.java110.intf.community.ICommunitySpacePersonTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpacePersonV1InnerServiceSMO;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +68,8 @@ public class ListCommunitySpacePersonCmd extends Cmd {
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
         CommunitySpacePersonDto communitySpacePersonDto = BeanConvertUtil.covertBean(reqJson, CommunitySpacePersonDto.class);
+        communitySpacePersonDto.setStates(getArrayValue(reqJson, "states"));
+        communitySpacePersonDto.setStateNotIn(getArrayValue(reqJson, "stateNotIn"));
 
         int count = communitySpacePersonV1InnerServiceSMOImpl.queryCommunitySpacePersonsCount(communitySpacePersonDto);
 
@@ -101,7 +105,8 @@ public class ListCommunitySpacePersonCmd extends Cmd {
         communitySpaceOpenTimeDto.setCspIds(cspIds.toArray(new String[cspIds.size()]));
         communitySpaceOpenTimeDto.setStates(new String[]{
                 CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM,
-                CommunitySpacePersonTimeDto.STATE_FINISH
+                CommunitySpacePersonTimeDto.STATE_FINISH,
+                CommunitySpacePersonTimeDto.STATE_CL
         });
         List<CommunitySpacePersonTimeDto> communitySpacePersonTimeDtos
                 = communitySpacePersonTimeV1InnerServiceSMOImpl.queryCommunitySpacePersonTimes(communitySpaceOpenTimeDto);
@@ -117,5 +122,42 @@ public class ListCommunitySpacePersonCmd extends Cmd {
             communitySpaceDto.setTimes(tmpCommunitySpaceOpenTimeDtos);
         }
 
+    }
+
+    /**
+     * 兼容数组和逗号串两种上报方式，转换为查询条件数组
+     *
+     * @param reqJson 请求报文
+     * @param key     字段名
+     * @return 查询条件数组
+     */
+    private String[] getArrayValue(JSONObject reqJson, String key) {
+        Object value = reqJson.get(key);
+
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof JSONArray) {
+            JSONArray valueArray = (JSONArray) value;
+            List<String> values = new ArrayList<>();
+            for (int valueIndex = 0; valueIndex < valueArray.size(); valueIndex++) {
+                if (StringUtil.isEmpty(valueArray.getString(valueIndex))) {
+                    continue;
+                }
+                values.add(valueArray.getString(valueIndex));
+            }
+            if (values.size() < 1) {
+                return null;
+            }
+            return values.toArray(new String[values.size()]);
+        }
+
+        String valueStr = value.toString().trim();
+        if (StringUtil.isEmpty(valueStr) || "[]".equals(valueStr)) {
+            return null;
+        }
+
+        return valueStr.split(",");
     }
 }

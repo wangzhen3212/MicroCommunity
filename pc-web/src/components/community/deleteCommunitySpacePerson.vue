@@ -1,16 +1,22 @@
-﻿<template>
+<template>
   <el-dialog
     :title="$t('deleteCommunitySpacePerson.confirmTitle')"
     :visible.sync="visible"
-    width="30%"
-    @close="close"
+    width="440px"
+    @close="handleClose"
   >
-    <div>
-      <p>{{ $t('deleteCommunitySpacePerson.confirmContent') }}</p>
+    <div class="confirm-body">
+      <i class="el-icon-warning confirm-icon"></i>
+      <div>
+        <p class="confirm-text">{{ $t('deleteCommunitySpacePerson.confirmContent') }}</p>
+        <p class="confirm-tip">{{ $t('deleteCommunitySpacePerson.releaseTip') }}</p>
+      </div>
     </div>
-    <span slot="footer" class="dialog-footer">
-      <el-button @click="close">{{ $t('deleteCommunitySpacePerson.cancel') }}</el-button>
-      <el-button type="primary" @click="deleteCommunitySpacePerson">{{ $t('deleteCommunitySpacePerson.confirmCancel') }}</el-button>
+    <span slot="footer">
+      <el-button @click="handleClose">{{ $t('deleteCommunitySpacePerson.cancel') }}</el-button>
+      <el-button type="danger" :loading="loading" @click="handleSubmit">
+        {{ $t('deleteCommunitySpacePerson.confirmCancel') }}
+      </el-button>
     </span>
   </el-dialog>
 </template>
@@ -24,32 +30,62 @@ export default {
   data() {
     return {
       visible: false,
+      loading: false,
       deleteData: {}
     }
   },
   methods: {
-    open(data) {
-      this.deleteData = { ...data }
+    open(row) {
+      this.deleteData = { ...row }
       this.visible = true
     },
-    close() {
+    handleClose() {
       this.visible = false
+      this.deleteData = {}
     },
-    async deleteCommunitySpacePerson() {
-      try {
-        const communityId = getCommunityId()
-        const data = {
-          ...this.deleteData,
-          communityId
-        }
-        await deleteCommunitySpacePerson(data)
+    handleSubmit() {
+      this.loading = true
+      deleteCommunitySpacePerson({
+        cspId: this.deleteData.cspId,
+        communityId: getCommunityId()
+      }).then(() => {
+        this.$message.success(this.$t('deleteCommunitySpacePerson.cancelSuccess'))
         this.$emit('success')
-        this.$message.success(this.$t('common.operationSuccess'))
-        this.close()
-      } catch (error) {
-        this.$message.error(error.message || this.$t('common.deleteFailed'))
-      }
+        this.handleClose()
+        this.loading = false
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('deleteCommunitySpacePerson.cancelFailed'))
+        this.loading = false
+      })
     }
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.confirm-body {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 0;
+}
+
+.confirm-icon {
+  font-size: 26px;
+  color: #f56c6c;
+  margin-right: 12px;
+}
+
+.confirm-text {
+  margin: 2px 0 0 0;
+  font-size: 14px;
+  color: #334155;
+  line-height: 22px;
+}
+
+.confirm-tip {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 20px;
+}
+</style>

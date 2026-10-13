@@ -1,32 +1,33 @@
-﻿<template>
-  <el-dialog 
-    :title="$t('communitySpaceManage.openTimeTitle')" 
+<template>
+  <el-dialog
+    :title="$t('communitySpaceManage.openTimeTitle')"
     :visible.sync="visible"
-    width="70%"
+    width="520px"
+    @close="handleClose"
   >
-    <el-row :gutter="20">
-      <el-col :span="6" v-for="(item, index) in openTimes" :key="index">
-        <div class="time-item">
-          <span>{{ item.hours }}{{ $t('common.hour') }}</span>
-          <el-select v-model="item.isOpen" @change="updateOpenTime(item)" style="width:100%">
-            <el-option 
-              :label="$t('communitySpaceManage.status1001')" 
-              value="Y" 
-            />
-            <el-option 
-              :label="$t('communitySpaceManage.status2002')" 
-              value="N" 
-            />
-          </el-select>
-        </div>
-      </el-col>
-    </el-row>
-    
-    <div slot="footer" class="dialog-footer">
-      <el-button @click="visible = false">
-        {{ $t('common.close') }}
-      </el-button>
+    <div class="open-time-header">
+      <span class="space-name">{{ spaceName }}</span>
+      <span class="space-tip">{{ $t('communitySpaceManage.openTimeModalTip') }}</span>
     </div>
+
+    <div class="open-time-list">
+      <div v-for="item in sortedOpenTimes" :key="item.timeId" class="open-time-row">
+        <span class="hour-text">{{ formatHour(item.hours) }} - {{ formatHour(item.hours, true) }}</span>
+        <el-switch
+          v-model="item.isOpen"
+          active-value="Y"
+          inactive-value="N"
+          :active-text="$t('communitySpaceManage.openYes')"
+          :inactive-text="$t('communitySpaceManage.openNo')"
+          @change="handleChange(item)"
+        />
+      </div>
+      <div v-if="sortedOpenTimes.length < 1" class="open-time-empty">{{ $t('communitySpaceManage.inheritEmpty') }}</div>
+    </div>
+
+    <span slot="footer">
+      <el-button type="primary" @click="handleClose">{{ $t('common.close') }}</el-button>
+    </span>
   </el-dialog>
 </template>
 
@@ -38,37 +39,92 @@ export default {
   data() {
     return {
       visible: false,
+      spaceId: '',
+      spaceName: '',
       openTimes: []
+    }
+  },
+  computed: {
+    sortedOpenTimes() {
+      return this.openTimes.slice().sort((a, b) => Number(a.hours) - Number(b.hours))
     }
   },
   methods: {
     open(space) {
-      this.openTimes = space.openTimes || []
+      this.spaceId = space.spaceId
+      this.spaceName = space.name
+      this.openTimes = (space.openTimes || []).map(item => ({ ...item }))
       this.visible = true
     },
-    
-    async updateOpenTime(item) {
-      try {
-        await updateCommunitySpaceOpenTime(item)
+    handleClose() {
+      this.visible = false
+      this.openTimes = []
+    },
+    formatHour(hours, isEnd) {
+      const value = isEnd ? Number(hours) + 1 : Number(hours)
+      return (value < 10 ? '0' + value : '' + value) + ':00'
+    },
+    handleChange(item) {
+      updateCommunitySpaceOpenTime({
+        timeId: item.timeId,
+        spaceId: item.spaceId,
+        hours: item.hours,
+        isOpen: item.isOpen
+      }).then(() => {
         this.$message.success(this.$t('common.operationSuccess'))
-      } catch (error) {
-        console.error('更新开放时间失败:', error)
-      }
+        this.$emit('success')
+      }).catch(error => {
+        item.isOpen = item.isOpen === 'Y' ? 'N' : 'Y'
+        this.$message.error(error.message || this.$t('communitySpaceManage.loadFailed'))
+      })
     }
   }
 }
 </script>
 
-<style scoped>
-.time-item {
-  margin-bottom: 15px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 4px;
+<style lang="scss" scoped>
+.open-time-header {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
 }
-.time-item span {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+
+.space-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.space-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.open-time-list {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-top: 6px;
+}
+
+.open-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 4px;
+  border-bottom: 1px solid #f8fafc;
+  font-size: 13px;
+}
+
+.hour-text {
+  color: #334155;
+}
+
+.open-time-empty {
+  padding: 20px 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
 }
 </style>
