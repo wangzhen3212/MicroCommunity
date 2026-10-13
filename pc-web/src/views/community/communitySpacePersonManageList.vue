@@ -1,23 +1,23 @@
 <template>
   <div class="order-manage">
     <div class="stat-row">
-      <div class="stat-card stat-card-slate">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpacePersonManage.statTotal') }}</div>
-        <div class="stat-value">{{ summary.total }}</div>
+        <div class="stat-value stat-slate">{{ summary.total }}</div>
       </div>
-      <div class="stat-card stat-card-amber">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpacePersonManage.statPending') }}</div>
         <div class="stat-value stat-amber">{{ summary.pending }}</div>
       </div>
-      <div class="stat-card stat-card-primary">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpacePersonManage.statActive') }}</div>
         <div class="stat-value stat-primary">{{ summary.active }}</div>
       </div>
-      <div class="stat-card stat-card-emerald">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpacePersonManage.statReceived') }}</div>
         <div class="stat-value stat-emerald">￥{{ summary.receivedTotal }}</div>
       </div>
-      <div class="stat-card stat-card-rose">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpacePersonManage.statCanceled') }}</div>
         <div class="stat-value stat-rose">{{ summary.canceled }}</div>
       </div>
@@ -82,13 +82,13 @@
           show-overflow-tooltip>
           <template slot-scope="scope">{{ scope.row.remark || '-' }}</template>
         </el-table-column>
-        <el-table-column :label="$t('communitySpacePersonManage.operation')" align="right" width="200" fixed="right">
+        <el-table-column :label="$t('communitySpacePersonManage.operation')" align="right" width="260" fixed="right">
           <template slot-scope="scope">
+            <el-button v-if="canShowQrcode(scope.row)" type="text" @click="handleQrcode(scope.row)">
+              {{ $t('communitySpacePersonManage.verifyQrcode') }}
+            </el-button>
             <el-button type="text" @click="handleDetail(scope.row)">
               {{ $t('communitySpacePersonManage.detail') }}
-            </el-button>
-            <el-button v-if="canCollect(scope.row)" type="text" @click="handleCollect(scope.row)">
-              {{ $t('communitySpacePersonManage.collect') }}
             </el-button>
             <el-button v-if="canCancel(scope.row)" type="text" class="danger-text" @click="handleCancel(scope.row)">
               {{ $t('communitySpacePersonManage.cancelAppointment') }}
@@ -102,8 +102,8 @@
         @size-change="handleSizeChange" @current-change="handlePageChange" />
     </div>
 
+    <community-space-person-qrcode ref="qrcodeModal" />
     <community-space-person-detail ref="detailModal" />
-    <collect-community-space-person ref="collectModal" @success="handleReload" />
     <delete-community-space-person ref="deleteModal" @success="handleReload" />
   </div>
 </template>
@@ -117,14 +117,14 @@ import {
 } from '@/api/community/communitySpacePersonManageApi'
 import { getCommunityId } from '@/api/community/communityApi'
 import CommunitySpacePersonDetail from '@/components/community/CommunitySpacePersonDetail'
-import CollectCommunitySpacePerson from '@/components/community/CollectCommunitySpacePerson'
+import CommunitySpacePersonQrcode from '@/components/community/CommunitySpacePersonQrcode'
 import DeleteCommunitySpacePerson from '@/components/community/deleteCommunitySpacePerson'
 
 export default {
   name: 'CommunitySpacePersonManageList',
   components: {
+    CommunitySpacePersonQrcode,
     CommunitySpacePersonDetail,
-    CollectCommunitySpacePerson,
     DeleteCommunitySpacePerson
   },
   data() {
@@ -280,17 +280,21 @@ export default {
     formatHour(value) {
       return (value < 10 ? '0' + value : '' + value) + ':00'
     },
-    canCollect(row) {
-      return row.state === 'WP' || row.state === 'W' || row.state === 'S'
+    canShowQrcode(row) {
+      if (row.state !== 'S') {
+        return false
+      }
+      const times = row.times || []
+      return times.some(item => item.state === 'W')
     },
     canCancel(row) {
       return row.state === 'S' || row.state === 'WP' || row.state === 'W'
     },
+    handleQrcode(row) {
+      this.$refs.qrcodeModal.open(row)
+    },
     handleDetail(row) {
       this.$refs.detailModal.open(row)
-    },
-    handleCollect(row) {
-      this.$refs.collectModal.open(row)
     },
     handleCancel(row) {
       this.$refs.deleteModal.open(row)
@@ -379,28 +383,7 @@ export default {
   padding: 16px;
   background: #fff;
   border-radius: 12px;
-  border-left: 4px solid #cbd5e1;
   box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.12);
-}
-
-.stat-card-slate {
-  border-left-color: #cbd5e1;
-}
-
-.stat-card-amber {
-  border-left-color: #fbbf24;
-}
-
-.stat-card-primary {
-  border-left-color: #3b82f6;
-}
-
-.stat-card-emerald {
-  border-left-color: #10b981;
-}
-
-.stat-card-rose {
-  border-left-color: #fb7185;
 }
 
 .stat-label {
@@ -412,6 +395,9 @@ export default {
   margin-top: 4px;
   font-size: 24px;
   font-weight: 700;
+}
+
+.stat-slate {
   color: #1e293b;
 }
 

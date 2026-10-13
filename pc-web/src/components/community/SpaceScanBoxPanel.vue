@@ -2,10 +2,6 @@
   <div class="scan-panel">
     <div class="panel-header">
       <span class="panel-title">{{ $t('communitySpaceConfirm.scanBoxTitle') }}</span>
-      <span class="status-tag">
-        <i class="status-dot dot-on"></i>
-        {{ $t('communitySpaceConfirm.boxConnected') }}
-      </span>
     </div>
 
     <div class="panel-body">
@@ -44,10 +40,6 @@
         <span>{{ $t('communitySpaceConfirm.scanCountTip', { count: scanCount }) }}</span>
       </div>
 
-      <el-button size="small" class="focus-button" @click="focusScanBox(true)">
-        {{ $t('communitySpaceConfirm.focusNow') }}
-      </el-button>
-
       <p class="panel-tip bottom-tip">{{ $t('communitySpaceConfirm.manualInputTip') }}</p>
     </div>
   </div>
@@ -55,8 +47,6 @@
 
 <script>
 const FOCUS_INTERVAL = 2000
-const SUBMIT_DELAY = 350
-const MIN_CODE_LENGTH = 4
 const MANUAL_INPUT_INTERVAL = 1000
 const FOCUSABLE_TAGS = ['INPUT', 'TEXTAREA', 'SELECT']
 
@@ -78,7 +68,6 @@ export default {
       focused: false,
       focusTime: '',
       focusTimer: null,
-      submitTimer: null,
       inputStartTime: 0
     }
   },
@@ -93,10 +82,6 @@ export default {
     if (this.focusTimer) {
       clearInterval(this.focusTimer)
       this.focusTimer = null
-    }
-    if (this.submitTimer) {
-      clearTimeout(this.submitTimer)
-      this.submitTimer = null
     }
   },
   methods: {
@@ -162,24 +147,11 @@ export default {
       if (!this.inputStartTime) {
         this.inputStartTime = Date.now()
       }
-      this.clearSubmitTimer()
-      const value = this.code ? this.code.trim() : ''
-      if (value.length >= MIN_CODE_LENGTH) {
-        this.submitTimer = setTimeout(this.emitScan, SUBMIT_DELAY)
-      }
     },
     handleEnter() {
-      this.clearSubmitTimer()
       this.emitScan()
     },
-    clearSubmitTimer() {
-      if (this.submitTimer) {
-        clearTimeout(this.submitTimer)
-        this.submitTimer = null
-      }
-    },
     emitScan() {
-      this.clearSubmitTimer()
       const value = this.code ? this.code.trim() : ''
       if (!value) {
         return
@@ -195,7 +167,6 @@ export default {
       }, 30)
     },
     clear() {
-      this.clearSubmitTimer()
       this.inputStartTime = 0
       this.code = ''
       this.focus()
@@ -226,17 +197,6 @@ export default {
   font-size: 14px;
   font-weight: 600;
   color: #334155;
-}
-
-.status-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: #ecfdf5;
-  color: #059669;
-  font-size: 11px;
 }
 
 .status-dot {
@@ -356,11 +316,6 @@ export default {
   margin-top: 8px;
   font-size: 12px;
   color: #94a3b8;
-}
-
-.focus-button {
-  width: 100%;
-  margin-top: 14px;
 }
 
 .bottom-tip {

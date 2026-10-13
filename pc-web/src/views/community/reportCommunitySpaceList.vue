@@ -40,35 +40,42 @@
       </div>
     </div>
 
-    <div class="booking-body">
-      <div class="panel slot-panel">
-        <div class="panel-header">
-          <span class="panel-title">{{ $t('reportCommunitySpace.availableSlotTitle') }}</span>
-          <span class="panel-meta">{{ currentSpace ? currentSpace.name : '-' }}</span>
-          <div class="legend">
-            <span class="legend-item"><i class="legend-box legend-available"></i>{{ $t('reportCommunitySpace.legendAvailable') }}</span>
-            <span class="legend-item"><i class="legend-box legend-booked"></i>{{ $t('reportCommunitySpace.legendBooked') }}</span>
-            <span class="legend-item"><i class="legend-box legend-closed"></i>{{ $t('reportCommunitySpace.legendClosed') }}</span>
-            <span class="legend-item"><i class="legend-box legend-selected"></i>{{ $t('reportCommunitySpace.legendSelected') }}</span>
+    <el-row :gutter="20" class="booking-body">
+      <el-col :span="16">
+        <div class="panel slot-panel">
+          <div class="panel-header">
+            <span class="panel-title">{{ $t('reportCommunitySpace.availableSlotTitle') }}</span>
+            <span class="panel-meta">{{ currentSpace ? currentSpace.name : '-' }}</span>
+            <div class="legend">
+              <span class="legend-item"><i class="legend-box legend-available"></i>{{ $t('reportCommunitySpace.legendAvailable') }}</span>
+              <span class="legend-item"><i class="legend-box legend-booked"></i>{{ $t('reportCommunitySpace.legendBooked') }}</span>
+              <span class="legend-item"><i class="legend-box legend-closed"></i>{{ $t('reportCommunitySpace.legendClosed') }}</span>
+              <span class="legend-item"><i class="legend-box legend-selected"></i>{{ $t('reportCommunitySpace.legendSelected') }}</span>
+            </div>
           </div>
-        </div>
 
-        <div v-loading="loading" class="slot-grid">
-          <div v-for="slot in slots" :key="slot.hours" class="slot-item" :class="'slot-' + slot.status"
-            @click="handleToggleSlot(slot)">
-            <span class="slot-hour">{{ slot.label }}</span>
-            <span class="slot-state">{{ slotStatusText(slot.status) }}</span>
+          <div v-loading="loading" class="slot-grid">
+            <el-row :gutter="10">
+              <el-col v-for="slot in slots" :key="slot.hours" :span="4" class="slot-col">
+                <div class="slot-item" :class="'slot-' + slot.status" @click="handleToggleSlot(slot)">
+                  <span class="slot-hour">{{ slot.label }}</span>
+                  <span class="slot-state">{{ slotStatusText(slot.status) }}</span>
+                </div>
+              </el-col>
+            </el-row>
           </div>
+          <div v-if="slots.length < 1" class="empty-tip">{{ $t('reportCommunitySpace.noSpace') }}</div>
+          <div class="slot-tip">{{ $t('reportCommunitySpace.slotTip') }}</div>
         </div>
-        <div v-if="slots.length < 1" class="empty-tip">{{ $t('reportCommunitySpace.noSpace') }}</div>
-        <div class="slot-tip">{{ $t('reportCommunitySpace.slotTip') }}</div>
-      </div>
+      </el-col>
 
-      <div class="side-panel">
-        <space-booking-panel :venue="currentVenue" :space="currentSpace" :appointment-date="appointmentDate"
-          :selected-hours="selectedHours" @success="handleBookingSuccess" @clear="handleClearSelection" />
-      </div>
-    </div>
+      <el-col :span="8">
+        <div class="side-panel">
+          <space-booking-panel :venue="currentVenue" :space="currentSpace" :appointment-date="appointmentDate"
+            :selected-hours="selectedHours" @success="handleBookingSuccess" @clear="handleClearSelection" />
+        </div>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -193,7 +200,7 @@ export default {
           appointmentTime: this.appointmentDate,
           communityId: this.communityId
         })
-        this.openTimeConfig = configRes || []
+        this.openTimeConfig = configRes.data || []
 
         const availableRes = await listCommunitySpaceOpenTime({
           venueId: this.currentVenueId,
@@ -202,7 +209,7 @@ export default {
           communityId: this.communityId
         })
         const hours = []
-        const openTimeList = availableRes || []
+        const openTimeList = availableRes.data || []
         openTimeList.forEach(item => {
           if (item.isOpen === 'Y') {
             hours.push(Number(item.hours))
@@ -436,14 +443,7 @@ export default {
   color: #334155;
 }
 
-.booking-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-}
-
 .slot-panel {
-  flex: 1;
   min-width: 0;
 }
 
@@ -509,19 +509,21 @@ export default {
 }
 
 .slot-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-  gap: 8px;
-  padding: 16px;
+  padding: 16px 16px 6px 16px;
   min-height: 120px;
+}
+
+.slot-col {
+  margin-bottom: 10px;
 }
 
 .slot-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 132px;
-  padding: 8px 4px;
+  justify-content: center;
+  min-height: 62px;
+  padding: 12px 6px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   cursor: pointer;
@@ -534,15 +536,15 @@ export default {
 }
 
 .slot-hour {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #334155;
   white-space: nowrap;
 }
 
 .slot-state {
-  margin-top: 2px;
-  font-size: 10px;
+  margin-top: 4px;
+  font-size: 11px;
   color: #94a3b8;
 }
 
@@ -587,11 +589,6 @@ export default {
   padding: 0 16px 16px 16px;
   font-size: 11px;
   color: #94a3b8;
-}
-
-.side-panel {
-  width: 340px;
-  flex: none;
 }
 
 .empty-tip {

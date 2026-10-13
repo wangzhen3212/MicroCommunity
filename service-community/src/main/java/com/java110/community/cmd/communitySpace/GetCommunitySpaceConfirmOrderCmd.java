@@ -246,8 +246,8 @@ public class GetCommunitySpaceConfirmOrderCmd extends Cmd {
         //未支付订单（存量 WP 订单）
         if (CommunitySpacePersonDto.STATE_WP.equals(communitySpacePersonDto.getState())) {
             result.put("level", LEVEL_WARN);
-            result.put("title", "订单尚未支付，请先收款后再核销");
-            result.put("desc", "该预约订单为待支付状态，请先到预约订单页收款后再核销");
+            result.put("title", "该预约订单为待支付状态（历史数据）");
+            result.put("desc", "该预约订单为待支付状态（历史数据），请先在预约台完成收款后再核销");
             cmdDataFlowContext.setResponseEntity(ResultVo.createResponseEntity(result));
             return;
         }

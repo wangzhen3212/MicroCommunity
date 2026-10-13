@@ -23,26 +23,20 @@ import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.doc.annotation.*;
 import com.java110.dto.community.CommunitySpacePersonDto;
-import com.java110.dto.community.CommunitySpacePersonTimeDto;
-import com.java110.intf.community.ICommunitySpacePersonTimeV1InnerServiceSMO;
 import com.java110.intf.community.ICommunitySpacePersonV1InnerServiceSMO;
 import com.java110.po.communitySpace.CommunitySpacePersonPo;
-import com.java110.po.communitySpace.CommunitySpacePersonTimePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
-import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
 
-@Java110CmdDoc(title = "收款/修改场地预约",
-        description = "场地预约订单收款，收款后订单状态变为已预约",
+@Java110CmdDoc(title = "修改场地预约",
+        description = "修改场地预约订单存量数据；收款已由 communitySpace.saveCommunitySpacePerson 在建单时一次完成，本命令不再承担收款职责",
         httpMethod = "post",
         url = "http://{ip}:{port}/app/communitySpace.updateCommunitySpacePerson",
         resource = "communityDoc",
@@ -53,8 +47,8 @@ import java.util.List;
 @Java110ParamsDoc(params = {
         @Java110ParamDoc(name = "cspId", length = 30, remark = "预约ID"),
         @Java110ParamDoc(name = "communityId", length = 30, remark = "小区ID"),
-        @Java110ParamDoc(name = "receivedAmount", length = 30, remark = "实收金额，为空时取应收金额"),
-        @Java110ParamDoc(name = "payWay", length = 12, remark = "支付方式 1 现金 2 微信 3 支付宝"),
+        @Java110ParamDoc(name = "receivedAmount", length = 30, remark = "实收金额（存量兼容字段，收款已不由此命令完成）"),
+        @Java110ParamDoc(name = "payWay", length = 12, remark = "支付方式（存量兼容字段，收款已不由此命令完成）"),
 })
 
 @Java110ResponseDoc(
@@ -78,18 +72,14 @@ import java.util.List;
  * 官网：http://www.homecommunity.cn
  * 温馨提示：如果您对此文件进行修改 请不要删除原有作者及注释信息，请补充您的 修改的原因以及联系邮箱如下
  * // modify by 张三 at 2021-09-12 第10行在某种场景下存在某种bug 需要修复，注释10至20行 加入 20行至30行
+ * // modify by wuxw at 2026-10-13 收款已由 communitySpace.saveCommunitySpacePerson 在建单时一次写入，
+ * // 本命令移出收款流程：不再做 待支付 → 已预约 的状态流转，不再写 payTime/payWay/receivedAmount，仅保留存量数据更新能力
  */
 @Java110Cmd(serviceCode = "communitySpace.updateCommunitySpacePerson")
 public class UpdateCommunitySpacePersonCmd extends Cmd {
 
-    private static Logger logger = LoggerFactory.getLogger(UpdateCommunitySpacePersonCmd.class);
-
-
     @Autowired
     private ICommunitySpacePersonV1InnerServiceSMO communitySpacePersonV1InnerServiceSMOImpl;
-
-    @Autowired
-    private ICommunitySpacePersonTimeV1InnerServiceSMO communitySpacePersonTimeV1InnerServiceSMOImpl;
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
@@ -112,7 +102,7 @@ public class UpdateCommunitySpacePersonCmd extends Cmd {
         String state = communitySpacePersonDtos.get(0).getState();
 
         if (CommunitySpacePersonDto.STATE_CL.equals(state)) {
-            throw new CmdException("已取消的预约不能收款");
+            throw new CmdException("已取消的预约不能修改");
         }
 
         if (CommunitySpacePersonDto.STATE_C.equals(state)) {
@@ -121,33 +111,14 @@ public class UpdateCommunitySpacePersonCmd extends Cmd {
 
         CommunitySpacePersonPo communitySpacePersonPo = BeanConvertUtil.covertBean(reqJson, CommunitySpacePersonPo.class);
 
-        //收款后订单状态流转 待支付 -> 已预约
         if (StringUtil.isEmpty(communitySpacePersonPo.getState())) {
             communitySpacePersonPo.setState(CommunitySpacePersonDto.STATE_S);
         }
 
-        if (StringUtil.isEmpty(communitySpacePersonPo.getReceivedAmount())) {
-            communitySpacePersonPo.setReceivedAmount(communitySpacePersonDtos.get(0).getReceivableAmount());
-        }
-
-        if (StringUtil.isEmpty(communitySpacePersonPo.getPayWay())) {
-            communitySpacePersonPo.setPayWay(communitySpacePersonDtos.get(0).getPayWay());
-        }
-
-        communitySpacePersonPo.setPayTime(DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
         int flag = communitySpacePersonV1InnerServiceSMOImpl.updateCommunitySpacePerson(communitySpacePersonPo);
 
         if (flag < 1) {
             throw new CmdException("更新数据失败");
-        }
-
-        //状态由待支付流转为已预约时，时段占用状态保持待核销
-        if (CommunitySpacePersonDto.STATE_S.equals(communitySpacePersonPo.getState())
-                && CommunitySpacePersonDto.STATE_WP.equals(state)) {
-            CommunitySpacePersonTimePo communitySpacePersonTimePo = new CommunitySpacePersonTimePo();
-            communitySpacePersonTimePo.setCspId(communitySpacePersonPo.getCspId());
-            communitySpacePersonTimePo.setState(CommunitySpacePersonTimeDto.STATE_WAIT_CONFIRM);
-            communitySpacePersonTimeV1InnerServiceSMOImpl.updateCommunitySpacePersonTime(communitySpacePersonTimePo);
         }
 
         cmdDataFlowContext.setResponseEntity(ResultVo.success());

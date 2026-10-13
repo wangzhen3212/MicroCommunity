@@ -1,50 +1,71 @@
 <template>
-  <div class="venue-open-time">
-    <div class="panel config-panel">
-      <div class="config-row">
-        <span class="config-label">{{ $t('communityVenueOpenTime.venue') }}</span>
-        <el-select v-model="venueId" size="small" class="venue-select"
-          :placeholder="$t('communityVenueOpenTime.venuePlaceholder')" @change="handleVenueChange">
-          <el-option v-for="item in venues" :key="item.venueId" :label="item.name" :value="item.venueId" />
-        </el-select>
-        <span class="config-label">{{ $t('communityVenueOpenTime.openLabel') }}</span>
-        <el-time-picker v-model="startTime" size="small" class="time-picker" value-format="HH:mm" format="HH:mm"
-          :placeholder="$t('communityVenueOpenTime.openLabel')" @change="handleTimeChange" />
-        <span class="config-label">{{ $t('communityVenueOpenTime.closeLabel') }}</span>
-        <el-time-picker v-model="endTime" size="small" class="time-picker" value-format="HH:mm" format="HH:mm"
-          :placeholder="$t('communityVenueOpenTime.closeLabel')" @change="handleTimeChange" />
-        <el-button type="primary" size="small" class="save-button" :loading="saving" @click="handleSave">
-          {{ $t('communityVenueOpenTime.saveConfig') }}
-        </el-button>
-      </div>
-      <div class="config-tip">{{ $t('communityVenueOpenTime.configTip') }}</div>
+  <div v-loading="venueLoading" class="venue-open-time">
+    <div v-if="venueLoaded && venues.length < 1" class="panel empty-panel">
+      <div class="empty-tip">{{ $t('communityVenueOpenTime.addVenueTip') }}</div>
     </div>
 
-    <div class="panel week-panel">
-      <div class="panel-header">
-        <span class="panel-title">{{ $t('communityVenueOpenTime.weekDayTitle') }}</span>
-        <span v-if="currentVenue" class="panel-meta">
-          {{ $t('communityVenueOpenTime.currentVenueTip', { name: currentVenue.name, count: spaceCount }) }}
-        </span>
-      </div>
-      <div v-loading="loading" class="week-list">
-        <div v-for="day in weekConfig" :key="day.weekDay" class="week-row"
-          :class="{ 'week-row-rest': !day.enabled }">
-          <span class="week-name">{{ $t('communityVenueOpenTime.week' + day.weekDay) }}</span>
-          <el-switch v-model="day.enabled" @change="handleDayChange(day)" />
-          <span class="week-state" :class="day.enabled ? 'state-open' : 'state-rest'">
-            {{ day.enabled ? $t('communityVenueOpenTime.dayOpen') : $t('communityVenueOpenTime.dayRest') }}
-          </span>
-          <div class="hour-list" :class="{ 'hour-list-rest': !day.enabled }">
-            <span v-for="item in day.hours" :key="item.hours" class="hour-item"
-              :class="{ 'hour-item-open': day.enabled && item.isOpen === 'Y' }" @click="handleToggleHour(day, item)">
-              {{ formatHourRange(item.hours) }}
+    <el-row v-else-if="venueLoaded" :gutter="20">
+      <el-col :span="4">
+        <div class="panel venue-panel">
+          <div class="panel-header">
+            <span class="panel-title">{{ $t('communityVenueOpenTime.venueList') }}</span>
+          </div>
+          <ul class="venue-list">
+            <li v-for="item in venues" :key="item.venueId" class="venue-item"
+              :class="{ 'venue-item-active': venueId === item.venueId }" @click="handleSelectVenue(item)">
+              {{ item.name }}
+            </li>
+          </ul>
+        </div>
+      </el-col>
+
+      <el-col :span="20">
+        <div class="panel config-panel">
+          <div class="config-row">
+            <span class="config-label">{{ $t('communityVenueOpenTime.openLabel') }}</span>
+            <el-time-picker v-model="startTime" size="small" class="time-picker" value-format="HH:mm" format="HH:mm"
+              :placeholder="$t('communityVenueOpenTime.openLabel')" @change="handleTimeChange" />
+            <span class="config-label">{{ $t('communityVenueOpenTime.closeLabel') }}</span>
+            <el-time-picker v-model="endTime" size="small" class="time-picker" value-format="HH:mm" format="HH:mm"
+              :placeholder="$t('communityVenueOpenTime.closeLabel')" @change="handleTimeChange" />
+            <el-button type="primary" size="small" class="save-button" :loading="saving" @click="handleSave">
+              {{ $t('communityVenueOpenTime.saveConfig') }}
+            </el-button>
+          </div>
+          <div class="config-tip">{{ $t('communityVenueOpenTime.configTip') }}</div>
+        </div>
+
+        <div class="panel week-panel">
+          <div class="panel-header">
+            <span class="panel-title">{{ $t('communityVenueOpenTime.weekDayTitle') }}</span>
+            <span v-if="currentVenue" class="panel-meta">
+              {{ $t('communityVenueOpenTime.currentVenueTip', { name: currentVenue.name, count: spaceCount }) }}
             </span>
           </div>
+          <div v-loading="loading" class="week-list">
+            <div v-for="day in weekConfig" :key="day.weekDay" class="week-row"
+              :class="{ 'week-row-rest': !day.enabled }">
+              <span class="week-name">{{ $t('communityVenueOpenTime.week' + day.weekDay) }}</span>
+              <el-switch v-model="day.enabled" @change="handleDayChange(day)" />
+              <span class="week-state" :class="day.enabled ? 'state-open' : 'state-rest'">
+                {{ day.enabled ? $t('communityVenueOpenTime.dayOpen') : $t('communityVenueOpenTime.dayRest') }}
+              </span>
+              <div class="day-time" :class="{ 'day-time-rest': !day.enabled }">
+                <el-time-picker v-model="day.startTime" size="small" class="time-picker" value-format="HH:mm"
+                  format="HH:mm" :placeholder="$t('communityVenueOpenTime.openLabel')" />
+                <span class="time-sep">{{ $t('communityVenueOpenTime.timeTo') }}</span>
+                <el-time-picker v-model="day.endTime" size="small" class="time-picker" value-format="HH:mm"
+                  format="HH:mm" :placeholder="$t('communityVenueOpenTime.closeLabel')" />
+              </div>
+              <span v-if="currentVenue" class="week-share">
+                {{ $t('communityVenueOpenTime.sharedByVenue', { name: currentVenue.name }) }}
+              </span>
+            </div>
+            <div v-if="weekConfig.length < 1" class="empty-tip">{{ $t('communityVenueOpenTime.noVenue') }}</div>
+          </div>
         </div>
-        <div v-if="weekConfig.length < 1" class="empty-tip">{{ $t('communityVenueOpenTime.noVenue') }}</div>
-      </div>
-    </div>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -70,6 +91,8 @@ export default {
       startTime: '08:00',
       endTime: '22:00',
       weekConfig: [],
+      venueLoading: false,
+      venueLoaded: false,
       loading: false,
       saving: false
     }
@@ -87,19 +110,24 @@ export default {
   },
   methods: {
     async listVenues() {
+      this.venueLoading = true
       try {
         const res = await listCommunityVenue({ page: 1, row: 100 })
         this.venues = res || []
         if (this.venues.length < 1) {
           this.weekConfig = []
-          this.$message.warning(this.$t('communityVenueOpenTime.noVenue'))
           return
         }
         this.venueId = this.venues[0].venueId
         this.listSpaces()
-        this.loadWeekConfig()
+        await this.loadWeekConfig()
       } catch (error) {
+        this.venues = []
+        this.weekConfig = []
         this.$message.error(error.message || this.$t('communityVenueOpenTime.loadFailed'))
+      } finally {
+        this.venueLoading = false
+        this.venueLoaded = true
       }
     },
     async listSpaces() {
@@ -117,8 +145,8 @@ export default {
       }
       const venue = this.currentVenue
       if (venue) {
-        this.startTime = venue.startTime || this.startTime
-        this.endTime = venue.endTime || this.endTime
+        this.startTime = venue.startTime || '08:00'
+        this.endTime = venue.endTime || '22:00'
       }
       this.loading = true
       try {
@@ -151,60 +179,64 @@ export default {
         if (!dayRows || dayRows.length < 1) {
           dayRows = commonRows
         }
-        const hours = this.buildDayHours(dayRows, weekDay)
-        config.push({
-          weekDay: weekDay,
-          enabled: hours.some(item => item.isOpen === 'Y'),
-          hours: hours
-        })
+        config.push(this.buildDayConfig(dayRows, weekDay))
       }
       return config
     },
-    buildDayHours(dayRows, weekDay) {
-      const hours = []
-      let isOpen = ''
-      for (let hourValue = 0; hourValue < HOUR_TOTAL; hourValue++) {
-        isOpen = ''
-        if (dayRows) {
-          dayRows.forEach(item => {
-            if (item.hours !== null && item.hours !== undefined && '' + item.hours === '' + hourValue) {
-              isOpen = item.isOpen === 'Y' ? 'Y' : 'N'
-            }
-          })
-        }
-        if (!isOpen && !dayRows) {
-          isOpen = this.getDefaultIsOpen(hourValue)
-        }
-        hours.push({
-          weekDay: weekDay,
-          hours: hourValue,
-          isOpen: isOpen === 'Y' ? 'Y' : 'N'
+    buildDayConfig(dayRows, weekDay) {
+      const openHours = []
+      if (dayRows) {
+        dayRows.forEach(item => {
+          if (item.isOpen !== 'Y' || item.hours === null || item.hours === undefined) {
+            return
+          }
+          const hour = parseInt(item.hours, 10)
+          if (!isNaN(hour) && hour >= 0 && hour < HOUR_TOTAL) {
+            openHours.push(hour)
+          }
         })
       }
-      return hours
+      if (openHours.length < 1) {
+        return {
+          weekDay: weekDay,
+          enabled: false,
+          startTime: this.startTime || '08:00',
+          endTime: this.endTime || '22:00'
+        }
+      }
+      openHours.sort((a, b) => a - b)
+      return {
+        weekDay: weekDay,
+        enabled: true,
+        startTime: this.pad(openHours[0]) + ':00',
+        endTime: this.formatEndTime(openHours[openHours.length - 1] + 1)
+      }
     },
-    getDefaultIsOpen(hourValue) {
-      const startHour = this.getHour(this.startTime, 0)
-      const endHour = this.getHour(this.endTime, 24)
-      return hourValue >= startHour && hourValue < endHour ? 'Y' : 'N'
+    formatEndTime(hour) {
+      if (hour >= HOUR_TOTAL) {
+        return '23:59'
+      }
+      return this.pad(hour) + ':00'
     },
-    getHour(time, defaultValue) {
+    getMinutes(time) {
       if (!time || time.indexOf(':') < 1) {
-        return defaultValue
+        return -1
       }
       const hour = parseInt(time.substring(0, time.indexOf(':')), 10)
-      if (isNaN(hour) || hour < 0 || hour > HOUR_TOTAL) {
-        return defaultValue
+      const minute = parseInt(time.substring(time.indexOf(':') + 1), 10)
+      if (isNaN(hour) || isNaN(minute)) {
+        return -1
       }
-      return hour
-    },
-    formatHourRange(hours) {
-      return this.pad(hours) + ':00~' + this.pad(Number(hours) + 1) + ':00'
+      return hour * 60 + minute
     },
     pad(value) {
       return value < 10 ? '0' + value : '' + value
     },
-    handleVenueChange() {
+    handleSelectVenue(venue) {
+      if (!venue || venue.venueId === this.venueId) {
+        return
+      }
+      this.venueId = venue.venueId
       this.weekConfig = []
       this.loadWeekConfig()
     },
@@ -216,28 +248,39 @@ export default {
         this.$message.warning(this.$t('communityVenueOpenTime.closeTimeError'))
         return
       }
+      this.syncWeekDaysTime()
+    },
+    syncWeekDaysTime() {
       this.weekConfig.forEach(day => {
         if (!day.enabled) {
           return
         }
-        day.hours.forEach(item => {
-          item.isOpen = this.getDefaultIsOpen(item.hours)
-        })
+        day.startTime = this.startTime
+        day.endTime = this.endTime
       })
     },
-    handleDayChange(day) {
-      if (day.enabled && !day.hours.some(item => item.isOpen === 'Y')) {
-        day.hours.forEach(item => {
-          item.isOpen = this.getDefaultIsOpen(item.hours)
+    buildOpenTimes(day) {
+      const startHour = Math.floor(this.getMinutes(day.startTime) / 60)
+      const endHour = Math.ceil(this.getMinutes(day.endTime) / 60)
+      const openTimes = []
+      for (let hourValue = 0; hourValue < HOUR_TOTAL; hourValue++) {
+        openTimes.push({
+          hours: '' + hourValue,
+          isOpen: day.enabled && hourValue >= startHour && hourValue < endHour ? 'Y' : 'N'
         })
       }
+      return openTimes
     },
-    handleToggleHour(day, item) {
+    handleDayChange(day) {
       if (!day.enabled) {
-        this.$message.warning(this.$t('communityVenueOpenTime.restDayTip'))
         return
       }
-      item.isOpen = item.isOpen === 'Y' ? 'N' : 'Y'
+      const startMin = this.getMinutes(day.startTime)
+      const endMin = this.getMinutes(day.endTime)
+      if (startMin < 0 || endMin < 0 || endMin <= startMin) {
+        day.startTime = this.startTime || '08:00'
+        day.endTime = this.endTime || '22:00'
+      }
     },
     async handleSave() {
       if (!this.venueId) {
@@ -252,28 +295,34 @@ export default {
         this.$message.warning(this.$t('communityVenueOpenTime.closeTimeError'))
         return
       }
+      const hasInvalidDay = this.weekConfig.some(day => {
+        if (!day.enabled) {
+          return false
+        }
+        const startMin = this.getMinutes(day.startTime)
+        const endMin = this.getMinutes(day.endTime)
+        return startMin < 0 || endMin < 0 || endMin <= startMin
+      })
+      if (hasInvalidDay) {
+        this.$message.warning(this.$t('communityVenueOpenTime.dayTimeError'))
+        return
+      }
       this.saving = true
       try {
-        for (let index = 0; index < this.weekConfig.length; index++) {
-          const day = this.weekConfig[index]
-          const data = {
-            venueId: this.venueId,
-            weekDay: '' + day.weekDay,
-            openTimes: day.hours.map(item => {
-              return {
-                hours: '' + item.hours,
-                isOpen: day.enabled && item.isOpen === 'Y' ? 'Y' : 'N'
-              }
-            })
-          }
-          if (index === 0) {
-            data.startTime = this.startTime
-            data.endTime = this.endTime
-          }
-          await saveCommunitySpaceOpenTimeBatch(data)
-        }
+        const openTimeConfigs = this.weekConfig.map(day => ({
+          weekDay: '' + day.weekDay,
+          startTime: day.startTime,
+          endTime: day.endTime,
+          openTimes: this.buildOpenTimes(day)
+        }))
+        await saveCommunitySpaceOpenTimeBatch({
+          venueId: this.venueId,
+          startTime: this.startTime,
+          endTime: this.endTime,
+          openTimeConfigs: openTimeConfigs
+        })
         this.$message.success(this.$t('communityVenueOpenTime.saveSuccess'))
-        this.loadWeekConfig()
+        await this.loadWeekConfig()
       } catch (error) {
         this.$message.error(error.message || this.$t('communityVenueOpenTime.loadFailed'))
       } finally {
@@ -314,8 +363,33 @@ export default {
   color: #475569;
 }
 
-.venue-select {
-  width: 200px;
+.venue-panel {
+  min-height: calc(100vh - 122px);
+}
+
+.venue-list {
+  list-style: none;
+  padding: 8px;
+  margin: 0;
+}
+
+.venue-item {
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.venue-item:hover {
+  background: #f1f5f9;
+}
+
+.venue-item-active {
+  background: #2563eb;
+  color: #fff;
 }
 
 .time-picker {
@@ -398,37 +472,29 @@ export default {
   color: #94a3b8;
 }
 
-.hour-list {
+.day-time {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
 
-.hour-list-rest {
-  opacity: 0.5;
+.day-time-rest {
+  opacity: 0.4;
 }
 
-.hour-item {
-  padding: 4px 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #f8fafc;
+.time-sep {
+  font-size: 12px;
   color: #94a3b8;
+}
+
+.week-share {
+  margin-left: auto;
   font-size: 11px;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.15s;
+  color: #94a3b8;
 }
 
-.hour-item:hover {
-  border-color: #93c5fd;
-}
-
-.hour-item-open {
-  background: #eff6ff;
-  border-color: #2563eb;
-  color: #2563eb;
-  font-weight: 600;
+.empty-panel {
+  padding: 60px 16px;
 }
 
 .empty-tip {

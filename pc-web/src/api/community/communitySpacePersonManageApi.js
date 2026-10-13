@@ -68,26 +68,6 @@ export function listCommunitySpace(params) {
   })
 }
 
-// 修改预约订单（收款）
-export function updateCommunitySpacePerson(data) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/communitySpace.updateCommunitySpacePerson',
-      method: 'post',
-      data
-    }).then(response => {
-      const res = response.data
-      if (res.code === 0) {
-        resolve(res)
-      } else {
-        reject(new Error(res.msg || 'error'))
-      }
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
 // 查询预约订单汇总（总数/待支付/进行中/已完成/已取消/应收合计/实收合计）
 export function listCommunitySpacePersonSummary(params) {
   return new Promise((resolve, reject) => {

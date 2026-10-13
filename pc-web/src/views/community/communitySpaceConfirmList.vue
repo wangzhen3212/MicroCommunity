@@ -1,44 +1,48 @@
 <template>
   <div class="space-confirm">
     <div class="stat-row">
-      <div class="stat-card stat-emerald">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpaceConfirm.statTodayCount') }}</div>
-        <div class="stat-value">{{ summary.todayCount }}</div>
+        <div class="stat-value stat-emerald">{{ summary.todayCount }}</div>
       </div>
-      <div class="stat-card stat-primary">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpaceConfirm.statTodayAmount') }}</div>
-        <div class="stat-value">￥{{ summary.todayAmount }}</div>
+        <div class="stat-value stat-primary">￥{{ summary.todayAmount }}</div>
       </div>
-      <div class="stat-card stat-amber">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpaceConfirm.statWaitCount') }}</div>
-        <div class="stat-value">{{ summary.waitCount }}</div>
+        <div class="stat-value stat-amber">{{ summary.waitCount }}</div>
       </div>
-      <div class="stat-card stat-slate">
+      <div class="stat-card">
         <div class="stat-label">{{ $t('communitySpaceConfirm.statTotalCount') }}</div>
-        <div class="stat-value">{{ summary.totalCount }}</div>
+        <div class="stat-value stat-slate">{{ summary.totalCount }}</div>
       </div>
     </div>
 
-    <div class="main-row">
-      <space-scan-box-panel
-        ref="scanBox"
-        :auto-verify.sync="verify.auto"
-        :scan-count="verify.count"
-        @scan="handleScan"
-      />
-      <space-confirm-info-panel
-        ref="infoPanel"
-        :current="verify.current"
-        :done="verify.done"
-        :not-found="verify.notFound"
-        :auto-verify="verify.auto"
-        :verifying="verifying"
-        :wait-count="summary.waitCount"
-        @confirm="handleConfirm(false)"
-        @reset="handleReset"
-        @view-order="handleViewOrder"
-      />
-    </div>
+    <el-row :gutter="16" class="main-row">
+      <el-col :md="24" :lg="10">
+        <space-scan-box-panel
+          ref="scanBox"
+          :auto-verify.sync="verify.auto"
+          :scan-count="verify.count"
+          @scan="handleScan"
+        />
+      </el-col>
+      <el-col :md="24" :lg="14">
+        <space-confirm-info-panel
+          ref="infoPanel"
+          :current="verify.current"
+          :done="verify.done"
+          :not-found="verify.notFound"
+          :auto-verify="verify.auto"
+          :verifying="verifying"
+          :wait-count="summary.waitCount"
+          @confirm="handleConfirm(false)"
+          @reset="handleReset"
+          @view-order="handleViewOrder"
+        />
+      </el-col>
+    </el-row>
 
     <div class="panel record-panel">
       <div class="panel-header">
@@ -452,10 +456,9 @@ export default {
 }
 
 .stat-card {
-  padding: 14px 16px;
+  padding: 16px;
   background: #fff;
   border-radius: 12px;
-  border-left: 4px solid #cbd5e1;
   box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.12);
 }
 
@@ -465,41 +468,40 @@ export default {
 }
 
 .stat-value {
-  margin-top: 6px;
-  font-size: 22px;
+  margin-top: 4px;
+  font-size: 24px;
   font-weight: 700;
+}
+
+.stat-slate {
   color: #1e293b;
 }
 
 .stat-emerald {
-  border-left-color: #10b981;
-}
-
-.stat-emerald .stat-value {
   color: #059669;
 }
 
 .stat-primary {
-  border-left-color: #2563eb;
-}
-
-.stat-primary .stat-value {
   color: #2563eb;
 }
 
 .stat-amber {
-  border-left-color: #fbbf24;
-}
-
-.stat-amber .stat-value {
   color: #d97706;
 }
 
 .main-row {
-  display: grid;
-  grid-template-columns: 2fr 3fr;
-  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.main-row ::v-deep .el-col {
+  display: flex;
+}
+
+.main-row ::v-deep .el-col > * {
+  flex: 1;
+  min-width: 0;
 }
 
 .panel {
@@ -572,9 +574,9 @@ export default {
   text-align: right;
 }
 
-@media (max-width: 1200px) {
-  .main-row {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1199px) {
+  .main-row ::v-deep .el-col:first-child {
+    margin-bottom: 16px;
   }
 
   .stat-row {

@@ -587,7 +587,7 @@ const routes = [
         path: '/pages/property/communityVenueOpenTime',
         name: '/pages/property/communityVenueOpenTime',
         component: () => import('@/views/community/communityVenueOpenTimeList.vue'),
-        meta: { title: '开放时间配置' }
+        meta: { title: '开放配置' }
       },
       {
         path: '/pages/property/reportCommunitySpace',

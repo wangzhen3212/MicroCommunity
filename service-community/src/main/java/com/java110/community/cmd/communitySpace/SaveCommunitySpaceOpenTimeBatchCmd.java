@@ -49,7 +49,7 @@ import java.util.List;
  * 官网：http://www.homecommunity.cn
  */
 @Java110CmdDoc(title = "批量保存场馆开放时间",
-        description = "按场馆 + 星期重建开放时段配置，可选同步场馆开场/关场时间",
+        description = "按场馆 + 星期重建开放时段配置，支持一次提交多星期配置，可选同步场馆开场/关场时间",
         httpMethod = "post",
         url = "http://{ip}:{port}/app/communitySpaceOpenTime.saveCommunitySpaceOpenTimeBatch",
         resource = "communityDoc",
@@ -60,12 +60,13 @@ import java.util.List;
 @Java110ParamsDoc(params = {
         @Java110ParamDoc(name = "communityId", length = 30, remark = "小区ID"),
         @Java110ParamDoc(name = "venueId", length = 30, remark = "场馆ID"),
-        @Java110ParamDoc(name = "weekDay", length = 2, remark = "星期 0 全周通用 1~7 周一~周日"),
+        @Java110ParamDoc(name = "weekDay", length = 2, remark = "星期 0 全周通用 1~7 周一~周日（不传 openTimeConfigs 时使用）"),
         @Java110ParamDoc(name = "startTime", length = 10, remark = "开场时间 HH:mm"),
         @Java110ParamDoc(name = "endTime", length = 10, remark = "关场时间 HH:mm"),
-        @Java110ParamDoc(name = "openTimes", type = "Array", remark = "开放时段"),
+        @Java110ParamDoc(name = "openTimes", type = "Array", remark = "开放时段（不传 openTimeConfigs 时使用）"),
         @Java110ParamDoc(parentNodeName = "openTimes", name = "hours", length = 11, remark = "小时"),
         @Java110ParamDoc(parentNodeName = "openTimes", name = "isOpen", length = 2, remark = "是否开放 Y 是 N 否"),
+        @Java110ParamDoc(name = "openTimeConfigs", type = "Array", remark = "多星期开放配置，传该参数时按每项 weekDay 重建，结构：weekDay + startTime + endTime + openTimes"),
 })
 
 @Java110ResponseDoc(
@@ -76,7 +77,7 @@ import java.util.List;
 )
 
 @Java110ExampleDoc(
-        reqBody = "{\"communityId\":\"2022081539020475\",\"venueId\":\"102022093043260007\",\"weekDay\":\"0\",\"startTime\":\"08:00\",\"endTime\":\"22:00\",\"openTimes\":[{\"hours\":\"8\",\"isOpen\":\"Y\"}]}",
+        reqBody = "{\"communityId\":\"2022081539020475\",\"venueId\":\"102022093043260007\",\"startTime\":\"08:00\",\"endTime\":\"22:00\",\"openTimeConfigs\":[{\"weekDay\":\"1\",\"startTime\":\"08:00\",\"endTime\":\"22:00\",\"openTimes\":[{\"hours\":\"8\",\"isOpen\":\"Y\"}]},{\"weekDay\":\"2\",\"startTime\":\"08:00\",\"endTime\":\"22:00\",\"openTimes\":[]}]}",
         resBody = "{\"code\":0,\"msg\":\"成功\"}"
 )
 @Java110Cmd(serviceCode = "communitySpaceOpenTime.saveCommunitySpaceOpenTimeBatch")
@@ -101,18 +102,6 @@ public class SaveCommunitySpaceOpenTimeBatchCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "communityId", "请求报文中未包含communityId");
         Assert.hasKeyAndValue(reqJson, "venueId", "请求报文中未包含venueId");
 
-        JSONArray openTimes = reqJson.getJSONArray("openTimes");
-        if (openTimes == null || openTimes.size() < 1) {
-            throw new CmdException("请配置开放时段");
-        }
-
-        String weekDay = reqJson.getString("weekDay");
-        if (StringUtil.isEmpty(weekDay)) {
-            reqJson.put("weekDay", WEEK_DAY_ALL);
-        } else if (!WEEK_DAY_ALL.equals(weekDay) && !weekDay.matches("^[1-7]$")) {
-            throw new CmdException("星期取值错误，应为 0~7");
-        }
-
         String startTime = reqJson.getString("startTime");
         String endTime = reqJson.getString("endTime");
         if (!StringUtil.isEmpty(startTime) && !startTime.matches(TIME_PATTERN)) {
@@ -125,6 +114,75 @@ public class SaveCommunitySpaceOpenTimeBatchCmd extends Cmd {
                 && endTime.compareTo(startTime) <= 0) {
             throw new CmdException("关场时间必须晚于开场时间");
         }
+
+        JSONArray openTimeConfigs = reqJson.getJSONArray("openTimeConfigs");
+        if (openTimeConfigs == null || openTimeConfigs.size() < 1) {
+            validateSingleWeekDay(reqJson);
+            return;
+        }
+
+        List<String> weekDayList = new ArrayList<>();
+        for (int index = 0; index < openTimeConfigs.size(); index++) {
+            JSONObject openTimeConfig = openTimeConfigs.getJSONObject(index);
+            if (openTimeConfig == null) {
+                throw new CmdException("开放时间配置格式错误");
+            }
+            String weekDay = openTimeConfig.getString("weekDay");
+            if (StringUtil.isEmpty(weekDay) || !isWeekDayValid(weekDay)) {
+                throw new CmdException("星期取值错误，应为 0~7");
+            }
+            if (weekDayList.contains(weekDay)) {
+                throw new CmdException("星期 " + weekDay + " 重复配置");
+            }
+            weekDayList.add(weekDay);
+
+            String dayStartTime = openTimeConfig.getString("startTime");
+            String dayEndTime = openTimeConfig.getString("endTime");
+            if (!StringUtil.isEmpty(dayStartTime) && !dayStartTime.matches(TIME_PATTERN)) {
+                throw new CmdException("开场时间格式错误，应为 HH:mm");
+            }
+            if (!StringUtil.isEmpty(dayEndTime) && !dayEndTime.matches(TIME_PATTERN)) {
+                throw new CmdException("关场时间格式错误，应为 HH:mm");
+            }
+            if (hasOpenHour(openTimeConfig.getJSONArray("openTimes"))
+                    && !StringUtil.isEmpty(dayStartTime) && !StringUtil.isEmpty(dayEndTime)
+                    && dayEndTime.compareTo(dayStartTime) <= 0) {
+                throw new CmdException("关场时间必须晚于开场时间");
+            }
+        }
+    }
+
+    private void validateSingleWeekDay(JSONObject reqJson) {
+        JSONArray openTimes = reqJson.getJSONArray("openTimes");
+        if (openTimes == null || openTimes.size() < 1) {
+            throw new CmdException("请配置开放时段");
+        }
+
+        String weekDay = reqJson.getString("weekDay");
+        if (StringUtil.isEmpty(weekDay)) {
+            reqJson.put("weekDay", WEEK_DAY_ALL);
+            return;
+        }
+        if (!isWeekDayValid(weekDay)) {
+            throw new CmdException("星期取值错误，应为 0~7");
+        }
+    }
+
+    private boolean isWeekDayValid(String weekDay) {
+        return WEEK_DAY_ALL.equals(weekDay) || weekDay.matches("^[1-7]$");
+    }
+
+    private boolean hasOpenHour(JSONArray openTimes) {
+        if (openTimes == null || openTimes.size() < 1) {
+            return false;
+        }
+        for (int index = 0; index < openTimes.size(); index++) {
+            JSONObject openTimeObj = openTimes.getJSONObject(index);
+            if (openTimeObj != null && "Y".equals(openTimeObj.getString("isOpen"))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -133,7 +191,6 @@ public class SaveCommunitySpaceOpenTimeBatchCmd extends Cmd {
 
         String communityId = reqJson.getString("communityId");
         String venueId = reqJson.getString("venueId");
-        String weekDay = reqJson.getString("weekDay");
 
         CommunityVenueDto communityVenueDto = new CommunityVenueDto();
         communityVenueDto.setVenueId(venueId);
@@ -151,7 +208,27 @@ public class SaveCommunitySpaceOpenTimeBatchCmd extends Cmd {
             communityVenueV1InnerServiceSMOImpl.updateCommunityVenue(communityVenuePo);
         }
 
-        //按场馆 + 星期逻辑删除旧配置
+        JSONArray openTimeConfigs = reqJson.getJSONArray("openTimeConfigs");
+        if (openTimeConfigs == null || openTimeConfigs.size() < 1) {
+            rebuildWeekConfig(communityId, venueId, reqJson.getString("weekDay"), reqJson.getJSONArray("openTimes"));
+            cmdDataFlowContext.setResponseEntity(ResultVo.success());
+            return;
+        }
+
+        for (int index = 0; index < openTimeConfigs.size(); index++) {
+            JSONObject openTimeConfig = openTimeConfigs.getJSONObject(index);
+            rebuildWeekConfig(communityId, venueId, openTimeConfig.getString("weekDay"),
+                    openTimeConfig.getJSONArray("openTimes"));
+        }
+
+        cmdDataFlowContext.setResponseEntity(ResultVo.success());
+    }
+
+    private void rebuildWeekConfig(String communityId, String venueId, String weekDay, JSONArray openTimes) {
+        if (StringUtil.isEmpty(weekDay)) {
+            weekDay = WEEK_DAY_ALL;
+        }
+
         CommunitySpaceOpenTimePo deletePo = new CommunitySpaceOpenTimePo();
         deletePo.setStatusCd("1");
         deletePo.setCommunityId(communityId);
@@ -159,7 +236,10 @@ public class SaveCommunitySpaceOpenTimeBatchCmd extends Cmd {
         deletePo.setWeekDay(weekDay);
         communitySpaceOpenTimeV1InnerServiceSMOImpl.updateCommunitySpaceOpenTime(deletePo);
 
-        JSONArray openTimes = reqJson.getJSONArray("openTimes");
+        if (openTimes == null || openTimes.size() < 1) {
+            return;
+        }
+
         List<CommunitySpaceOpenTimePo> communitySpaceOpenTimePos = new ArrayList<>();
         CommunitySpaceOpenTimePo communitySpaceOpenTimePo = null;
         for (int index = 0; index < openTimes.size(); index++) {
@@ -179,14 +259,12 @@ public class SaveCommunitySpaceOpenTimeBatchCmd extends Cmd {
         }
 
         if (communitySpaceOpenTimePos.size() < 1) {
-            throw new CmdException("请配置开放时段");
+            return;
         }
 
         int flag = communitySpaceOpenTimeV1InnerServiceSMOImpl.saveCommunitySpaceOpenTimes(communitySpaceOpenTimePos);
         if (flag < 1) {
             throw new CmdException("保存数据失败");
         }
-
-        cmdDataFlowContext.setResponseEntity(ResultVo.success());
     }
 }

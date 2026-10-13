@@ -5,30 +5,14 @@
     </div>
     <div class="panel-body">
       <div class="summary-box">
-        <div class="summary-row">
-          <span class="summary-label">{{ $t('reportCommunitySpace.venue') }}</span>
-          <span class="summary-value">{{ venue ? venue.name : '-' }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">{{ $t('reportCommunitySpace.space') }}</span>
-          <span class="summary-value">{{ space ? space.name : '-' }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">{{ $t('reportCommunitySpace.openTime') }}</span>
-          <span class="summary-value">{{ openTimeText }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">{{ $t('reportCommunitySpace.appointmentDate') }}</span>
-          <span class="summary-value">{{ appointmentDate || '-' }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">{{ $t('reportCommunitySpace.selectedHours') }}</span>
-          <span class="summary-value">{{ hoursText }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">{{ $t('reportCommunitySpace.duration') }}</span>
-          <span class="summary-value">{{ durationText }}</span>
-        </div>
+        <el-row :gutter="12">
+          <el-col v-for="item in summaryItems" :key="item.label" :span="12">
+            <div class="summary-row">
+              <span class="summary-label">{{ item.label }}</span>
+              <span class="summary-value">{{ item.value }}</span>
+            </div>
+          </el-col>
+        </el-row>
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="small" class="booking-form">
@@ -62,15 +46,21 @@
         {{ $t('reportCommunitySpace.clearSelection') }}
       </el-button>
     </div>
+
+    <space-booking-pay-dialog ref="payDialog" @success="handlePaySuccess" />
   </div>
 </template>
 
 <script>
 import { saveCommunitySpacePerson } from '@/api/community/reportCommunitySpaceApi'
 import { getCommunityId } from '@/api/community/communityApi'
+import SpaceBookingPayDialog from '@/components/community/SpaceBookingPayDialog'
 
 export default {
   name: 'SpaceBookingPanel',
+  components: {
+    SpaceBookingPayDialog
+  },
   props: {
     venue: {
       type: Object,
@@ -113,6 +103,16 @@ export default {
     }
   },
   computed: {
+    summaryItems() {
+      return [
+        { label: this.$t('reportCommunitySpace.venue'), value: this.venue ? this.venue.name : '-' },
+        { label: this.$t('reportCommunitySpace.space'), value: this.space ? this.space.name : '-' },
+        { label: this.$t('reportCommunitySpace.openTime'), value: this.openTimeText },
+        { label: this.$t('reportCommunitySpace.appointmentDate'), value: this.appointmentDate || '-' },
+        { label: this.$t('reportCommunitySpace.selectedHours'), value: this.hoursText },
+        { label: this.$t('reportCommunitySpace.duration'), value: this.durationText }
+      ]
+    },
     sortedHours() {
       return this.selectedHours.slice().sort((a, b) => a - b)
     },
@@ -157,38 +157,64 @@ export default {
         if (!valid) {
           return
         }
-        this.saveBooking()
+        this.handleBookingPay()
       })
     },
-    async saveBooking() {
+    buildBookingPayload() {
+      const openTimes = []
+      this.sortedHours.forEach(hour => {
+        openTimes.push({ hours: '' + hour })
+      })
+      return {
+        communityId: getCommunityId(),
+        venueId: this.venue ? this.venue.venueId : '',
+        spaceId: this.space ? this.space.spaceId : '',
+        personName: this.form.personName,
+        personTel: this.form.personTel,
+        appointmentTime: this.appointmentDate,
+        remark: this.form.remark,
+        openTimes: openTimes
+      }
+    },
+    // 免费场地不弹收款框，直接建单即收款（实收 0.00）
+    async handleBookingPay() {
+      if (Number(this.amount) > 0) {
+        if (!this.$refs.payDialog) {
+          return
+        }
+        this.$refs.payDialog.open({
+          booking: this.buildBookingPayload(),
+          receivableAmount: this.amount,
+          venueName: this.venue ? this.venue.name : '',
+          spaceName: this.space ? this.space.name : '',
+          appointmentTime: this.appointmentDate,
+          hoursText: this.hoursText
+        })
+        return
+      }
+
       this.loading = true
       try {
-        const openTimes = []
-        this.sortedHours.forEach(hour => {
-          openTimes.push({ hours: '' + hour })
-        })
-        await saveCommunitySpacePerson({
-          spaceId: this.space.spaceId,
-          personName: this.form.personName,
-          personTel: this.form.personTel,
-          appointmentTime: this.appointmentDate,
-          remark: this.form.remark,
-          communityId: getCommunityId(),
-          openTimes: openTimes
-        })
+        const booking = this.buildBookingPayload()
+        booking.payWay = '1'
+        booking.receivedAmount = '0.00'
+        await saveCommunitySpacePerson(booking)
         this.$message.success(this.$t('reportCommunitySpace.bookingSuccess'))
-        this.form.personName = ''
-        this.form.personTel = ''
-        this.form.remark = ''
-        if (this.$refs.formRef) {
-          this.$refs.formRef.clearValidate()
-        }
-        this.$emit('success')
+        this.handlePaySuccess()
       } catch (error) {
         this.$message.error(error.message || this.$t('reportCommunitySpace.bookingFailed'))
       } finally {
         this.loading = false
       }
+    },
+    handlePaySuccess() {
+      this.form.personName = ''
+      this.form.personTel = ''
+      this.form.remark = ''
+      if (this.$refs.formRef) {
+        this.$refs.formRef.clearValidate()
+      }
+      this.$emit('success')
     },
     handleClear() {
       this.form.personName = ''
@@ -208,6 +234,7 @@ export default {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.12);
+  text-align: left;
 }
 
 .panel-header {
@@ -268,6 +295,7 @@ export default {
 
 .booking-form ::v-deep .el-form-item {
   margin-bottom: 14px;
+  text-align: left;
 }
 
 .amount-label {
