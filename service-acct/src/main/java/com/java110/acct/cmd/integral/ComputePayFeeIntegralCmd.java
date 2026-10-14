@@ -73,8 +73,8 @@ public class ComputePayFeeIntegralCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson,"feeId","未包含费用");
         Assert.hasKeyAndValue(reqJson,"communityId","未包含小区");
         Assert.hasKeyAndValue(reqJson,"cycles","未包含缴费周期");
-        Assert.hasKeyAndValue(reqJson,"amount","未包含缴费周期");
-        Assert.hasKeyAndValue(reqJson,"area","未包含缴费周期");
+        Assert.hasKeyAndValue(reqJson,"amount","未包含缴费金额");
+        Assert.hasKeyAndValue(reqJson,"area","未包含缴费面积");
 
 
     }
