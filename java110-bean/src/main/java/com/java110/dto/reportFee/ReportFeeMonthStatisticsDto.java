@@ -50,6 +50,7 @@ public class ReportFeeMonthStatisticsDto extends PageDto implements Serializable
 
     private String roomName;
     private String carNum;
+    private String carNumLike;
     private String psName;
     private String contractCode;
     private String payerObjType;
@@ -510,6 +511,15 @@ public class ReportFeeMonthStatisticsDto extends PageDto implements Serializable
     public void setCarNum(String carNum) {
         this.carNum = carNum;
     }
+
+    public String getCarNumLike() {
+        return carNumLike;
+    }
+
+    public void setCarNumLike(String carNumLike) {
+        this.carNumLike = carNumLike;
+    }
+
 
     public String getPayerObjType() {
         return payerObjType;

@@ -54,6 +54,12 @@ public class PayFeeOrderDto extends PageDto implements Serializable {
 
     private String psName;
 
+    private String carNum;
+
+    private String carNumLike;
+
+    private String ownerNameLike;
+
     private String startTime;
     private String endTime;
 
@@ -281,6 +287,30 @@ public class PayFeeOrderDto extends PageDto implements Serializable {
 
     public void setPsName(String psName) {
         this.psName = psName;
+    }
+
+    public String getCarNum() {
+        return carNum;
+    }
+
+    public void setCarNum(String carNum) {
+        this.carNum = carNum;
+    }
+
+    public String getCarNumLike() {
+        return carNumLike;
+    }
+
+    public void setCarNumLike(String carNumLike) {
+        this.carNumLike = carNumLike;
+    }
+
+    public String getOwnerNameLike() {
+        return ownerNameLike;
+    }
+
+    public void setOwnerNameLike(String ownerNameLike) {
+        this.ownerNameLike = ownerNameLike;
     }
 
     public List<PayFeeOrderDetailDto> getPayFeeOrderDetailDtos() {

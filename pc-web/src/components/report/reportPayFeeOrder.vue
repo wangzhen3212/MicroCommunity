@@ -28,13 +28,19 @@
               :placeholder="$t('reportPayFeeDetail.payerObjName')" clearable></el-input>
           </el-form-item>
           <el-form-item>
+            <el-input v-model="payFeeOrderInfo.conditions.ownerNameLike"
+              :placeholder="$t('reportPayFeeDetail.ownerName')" clearable></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-input v-model="payFeeOrderInfo.conditions.carNumLike"
+              :placeholder="$t('reportPayFeeDetail.carNum')" clearable></el-input>
+          </el-form-item>
+          <el-form-item>
             <el-input v-model="payFeeOrderInfo.conditions.cashierName"
               :placeholder="$t('reportPayFeeDetail.cashierName')" clearable></el-input>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="_queryMethod">{{ $t('reportPayFeeDetail.search') }}</el-button>
-            <el-button type="info" @click="_resetMethod" class="reset-btn">{{ $t('reportPayFeeDetail.reset')
-              }}</el-button>
             <el-button type="primary"  @click="_exportPayFeeOrder">{{ $t('reportPayFeeDetail.export')
               }}</el-button>
           </el-form-item>
@@ -104,9 +110,9 @@
             align="center"></el-table-column>
           <el-table-column prop="lateFee" :label="$t('reportPayFeeDetail.lateFee')" align="center"></el-table-column>
           <el-table-column prop="builtUpArea" :label="$t('reportPayFeeDetail.area')" align="center"></el-table-column>
-          <el-table-column :label="$t('reportPayFeeDetail.parking')" align="center">
+          <el-table-column :label="$t('reportPayFeeDetail.carNum')" align="center">
             <template slot-scope="scope">
-              {{ scope.row.psName || '-' }}
+              {{ scope.row.carNum || '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="remark" :label="$t('reportPayFeeDetail.remark')" align="center"
@@ -189,6 +195,8 @@ export default {
         allGiftAmount: 0.0,
         conditions: {
           payerObjName: '',
+          ownerNameLike: '',
+          carNumLike: '',
           primeRate: '',
           state: '',
           startTime: '',
@@ -251,17 +259,6 @@ export default {
       } catch (error) {
         console.error('请求失败处理', error)
       }
-    },
-    async _resetMethod() {
-      this.payFeeOrderInfo.conditions = {
-        payerObjName: '',
-        primeRate: '',
-        state: '',
-        startTime: '',
-        endTime: '',
-        cashierName: ''
-      }
-      await this._listPayFeeOrders()
     },
     async _exportPayFeeOrder() {
       try {

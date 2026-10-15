@@ -1602,6 +1602,7 @@
         from pay_fee_detail t
         left JOIN pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
         left join pay_fee_config pfc on pf.config_id = pfc.config_id and pfc.status_cd = '0'
+        left join parking_space ps on ps.ps_id = pf.payer_obj_id and pf.payer_obj_type = '6666' and ps.status_cd = '0'
         where t.status_cd = '0'
         and pf.status_cd = '0' and t.state != '1500'
         <if test="detailId !=null and detailId != ''">
@@ -1662,6 +1663,12 @@
         <if test="cashierName !=null and cashierName != ''">
             and t.cashier_name= #{cashierName}
         </if>
+        <if test="ownerNameLike !=null and ownerNameLike != ''">
+            and pf.owner_name like concat('%',#{ownerNameLike},'%')
+        </if>
+        <if test="carNumLike !=null and carNumLike != ''">
+            and ps.car_num like concat('%',#{carNumLike},'%')
+        </if>
     </select>
 
     <!-- 查询费用月统计信息 add by wuxw 2018-07-03 -->
@@ -1672,10 +1679,11 @@
         t.state,d3.name stateName,t.fee_id feeId,t.detail_id detailId,pf.payer_obj_id payerObjId,
         t.cashier_id cashierId,t.cashier_name cashierName,t.payable_amount payableAmount,pfc.fee_flag feeFlag,
         t.acct_amount acctAmount, t.discount_amount discountAmount, t.deduction_amount deductionAmount, t.late_amount lateAmount,
-        t.gift_amount giftAmount,t.remark,t.community_id communityId
+        t.gift_amount giftAmount,t.remark,t.community_id communityId,ps.car_num carNum
         from pay_fee_detail t
         left JOIN pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
         left join pay_fee_config pfc on pf.config_id = pfc.config_id and pfc.status_cd = '0'
+        left join parking_space ps on ps.ps_id = pf.payer_obj_id and pf.payer_obj_type = '6666' and ps.status_cd = '0'
         left join t_dict d on t.prime_rate = d.status_cd and d.table_name='pay_fee_detail' and
         d.table_columns='prime_rate'
         left join t_dict d2 on pfc.fee_type_cd = d2.status_cd and d2.table_name = 'pay_fee_config' and d2.table_columns
@@ -1741,6 +1749,12 @@
         </if>
         <if test="cashierName !=null and cashierName != ''">
             and t.cashier_name= #{cashierName}
+        </if>
+        <if test="ownerNameLike !=null and ownerNameLike != ''">
+            and pf.owner_name like concat('%',#{ownerNameLike},'%')
+        </if>
+        <if test="carNumLike !=null and carNumLike != ''">
+            and ps.car_num like concat('%',#{carNumLike},'%')
         </if>
         order by t.create_time desc
         <if test="page != -1 and page != null ">

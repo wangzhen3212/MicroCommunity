@@ -27,11 +27,12 @@
         extOrderId,t.owner_name ownerName,t.late_amount lateAmount,t.cashier_id cashierId,t.acct_amount
         acctAmount,t.state,t.community_id communityId,t.payer_obj_type payerObjType,t.cashier_name
         cashierName,t.payer_obj_id payerObjId,t.create_time createTime,td2.`name` primeRateName,td.name stateName,
-        t.prime_file primeFile
+        t.prime_file primeFile,ps.car_num carNum
         from pay_fee_order t
         left join t_dict td on t.state = td.status_cd and td.table_name = 'pay_fee_detail' and td.table_columns = 'state'
         left join t_dict td2 on t.`prime_rate` = td2.`status_cd` AND
         td2.`table_name` = 'pay_fee_detail' AND td2.`table_columns` = 'prime_rate'
+        left join parking_space ps on ps.ps_id = t.payer_obj_id and t.payer_obj_type = '6666' and ps.status_cd = '0'
         where 1 =1
         <if test="giftAmount !=null and giftAmount != ''">
             and t.gift_amount= #{giftAmount}
@@ -101,6 +102,12 @@
         </if>
         <if test="endTime !=null and endTime !=''">
             and t.create_time &lt;= #{endTime}
+        </if>
+        <if test="ownerNameLike !=null and ownerNameLike != ''">
+            and t.owner_name like concat('%',#{ownerNameLike},'%')
+        </if>
+        <if test="carNumLike !=null and carNumLike != ''">
+            and ps.car_num like concat('%',#{carNumLike},'%')
         </if>
         order by t.create_time desc
         <if test="page != -1 and page != null ">
@@ -180,6 +187,7 @@
         sum(t.acct_amount) accAmount,sum(t.discount_amount) discountAmount,sum(t.late_amount) lateAmount,
         sum(t.gift_amount) giftAmount
         from pay_fee_order t
+        left join parking_space ps on ps.ps_id = t.payer_obj_id and t.payer_obj_type = '6666' and ps.status_cd = '0'
         where 1 =1
         <if test="giftAmount !=null and giftAmount != ''">
             and t.gift_amount= #{giftAmount}
@@ -249,6 +257,12 @@
         </if>
         <if test="endTime !=null and endTime !=''">
             and t.create_time &lt;= #{endTime}
+        </if>
+        <if test="ownerNameLike !=null and ownerNameLike != ''">
+            and t.owner_name like concat('%',#{ownerNameLike},'%')
+        </if>
+        <if test="carNumLike !=null and carNumLike != ''">
+            and ps.car_num like concat('%',#{carNumLike},'%')
         </if>
 
 
