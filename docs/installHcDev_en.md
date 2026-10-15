@@ -5,8 +5,6 @@ git clone https://github.com/java110/MicroCommunity.git <br/>
 Execute mvn clean package and mvn clean install<br/><br/>
 2、Add hosts<br/>
 127.0.0.1 dev.db.java110.com <br/>
-127.0.0.1 dev.zk.java110.com <br/>
-127.0.0.1 dev.kafka.java110.com <br/>
 127.0.0.1 dev.redis.java110.com <br/>
 127.0.0.1 api.java110.com <br/>
 127.0.0.1 dev.java110.com <br/>

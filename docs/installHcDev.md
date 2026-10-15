@@ -5,8 +5,6 @@ git clone https://gitee.com/wuxw7/MicroCommunity.git <br/>
 执行 mvn clean package  和 mvn clean install<br/><br/>
 2、添加hosts<br/>
 127.0.0.1 dev.db.java110.com <br/>
-127.0.0.1 dev.zk.java110.com <br/>
-127.0.0.1 dev.kafka.java110.com <br/>
 127.0.0.1 dev.redis.java110.com <br/>
 127.0.0.1 api.java110.com <br/>
 127.0.0.1 dev.java110.com <br/>
