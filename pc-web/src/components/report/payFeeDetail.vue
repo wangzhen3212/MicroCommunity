@@ -36,6 +36,11 @@
         <el-input v-model="payFeeDetailInfo.conditions.carNumLike"
           :placeholder="$t('reportPayFeeDetail.carNum')" clearable></el-input>
       </el-form-item>
+    </el-form>
+
+
+    <el-form :inline="true" class="extra-form text-left">
+
       <el-form-item>
         <el-select v-model="payFeeDetailInfo.conditions.feeTypeCd" :placeholder="$t('reportPayFeeDetail.selectFeeType')"
           style="width: 100%;" @change="_selectConfig" clearable>
@@ -43,16 +48,6 @@
             :value="item.statusCd"></el-option>
         </el-select>
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="_queryDetailMethod">{{ $t('reportPayFeeDetail.search') }}</el-button>
-        <el-button type="primary" size="small" @click="_exportPayFeeDetail">{{ $t('reportPayFeeDetail.export')
-          }}</el-button>
-      </el-form-item>
-    </el-form>
-
-
-    <el-form :inline="true" class="extra-form text-left">
-
       <el-form-item>
         <el-select v-model="payFeeDetailInfo.conditions.configId" :placeholder="$t('reportPayFeeDetail.selectFeeItem')"
           style="width: 100%;" clearable>
@@ -67,6 +62,11 @@
       <el-form-item>
         <el-date-picker v-model="payFeeDetailInfo.conditions.feeEndTime"
           :placeholder="$t('reportPayFeeDetail.selectFeeEndTime')" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="feeEndTime" clearable></el-date-picker>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="_queryDetailMethod">{{ $t('reportPayFeeDetail.search') }}</el-button>
+        <el-button type="primary" @click="_exportPayFeeDetail">{{ $t('reportPayFeeDetail.export')
+          }}</el-button>
       </el-form-item>
     </el-form>
 
