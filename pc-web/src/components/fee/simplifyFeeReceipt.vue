@@ -17,10 +17,10 @@
           </el-select>
         </div>
         <div :span="3" class="padding-right-xs padding-left-xl" v-else-if="simplifyFeeReceiptInfo.objType == '6666'">
-          <el-select v-model="simplifyFeeReceiptInfo.carId" size="small" @change="changeSimplifyFeeReceiptObj"
-            :placeholder="$t('simplifyFeeReceipt.selectCar')">
-            <el-option v-for="(item, index) in simplifyFeeReceiptInfo.ownerCars" :key="index" :label="item.carNum"
-              :value="item.carId"></el-option>
+          <el-select v-model="simplifyFeeReceiptInfo.psId" size="small" @change="changeSimplifyFeeReceiptObj"
+            :placeholder="$t('simplifyFeeReceipt.selectParkingSpace')">
+            <el-option v-for="item in simplifyFeeReceiptInfo.ownerParkingSpaces" :key="item.psId"
+              :label="_getParkingSpaceName(item)" :value="item.psId"></el-option>
           </el-select>
         </div>
         <div :span="3" class="padding-right-xs padding-left-xl" v-else-if="simplifyFeeReceiptInfo.objType == '7777'">
@@ -138,13 +138,13 @@
 
 <script>
 import { getCommunityId, getDict } from '@/api/community/communityApi'
-import { queryFeeReceipt, listFeePrintPage, queryOwnerCars, queryContract, listOwnerShops } from '@/api/fee/simplifyFeeReceiptApi'
+import { queryFeeReceipt, listFeePrintPage, queryContract, listOwnerShops, listOwnerParkingSpaces } from '@/api/fee/simplifyFeeReceiptApi'
 import { dateFormat } from '@/utils/dateUtil'
 
 const DEFAULT_OBJ_TYPES = [
   { statusCd: '3333', nameKey: 'room' },
   { statusCd: '4444', nameKey: 'shop' },
-  { statusCd: '6666', nameKey: 'car' },
+  { statusCd: '6666', nameKey: 'parkingSpace' },
   { statusCd: '7777', nameKey: 'contract' }
 ]
 
@@ -161,13 +161,13 @@ export default {
         payObjId: '',
         roomId: '',
         shopId: '',
-        carId: '',
+        psId: '',
         receiptCode: '',
         total: '',
         records: '',
         ownerId: '',
         objTypes: [],
-        ownerCars: [],
+        ownerParkingSpaces: [],
         ownerContracts: [],
         ownerShops: [],
         selectReceipts: [],
@@ -193,7 +193,7 @@ export default {
     this._loadDictData()
   },
   methods: {
-    handleSwitch(param) {
+    async handleSwitch(param) {
       this.clearSimplifyFeeReceiptInfo()
       this._loadDictData()
       this._listFeePrintPages()
@@ -206,7 +206,40 @@ export default {
       if (!this.simplifyFeeReceiptInfo.ownerId) {
         return
       }
-      this._listSimplifyFeeReceipt(this.DEFAULT_PAGE, this.DEFAULT_ROWS)
+      await this._initFeeReceiptObjType()
+      this._queryFeeReceiptMethod()
+    },
+    async _initFeeReceiptObjType() {
+      await Promise.all([
+        this._listSimplifyFeeReceiptOwnerShop({ silent: true }),
+        this._listSimplifyFeeReceiptOwnerParkingSpaces({ silent: true }),
+        this._listSimplifyFeeReceiptOwnerContract({ silent: true })
+      ])
+      const info = this.simplifyFeeReceiptInfo
+      if (info.roomId) {
+        info.objType = '3333'
+        info.ownerFlag = 'F'
+        return
+      }
+      if (info.ownerParkingSpaces.length > 0) {
+        info.objType = '6666'
+        info.ownerFlag = 'F'
+        info.psId = info.ownerParkingSpaces[0].psId
+        return
+      }
+      if (info.ownerShops.length > 0) {
+        info.objType = '4444'
+        info.ownerFlag = 'F'
+        info.shopId = info.ownerShops[0].shopId
+        return
+      }
+      if (info.ownerContracts.length > 0) {
+        info.objType = '7777'
+        info.contractId = info.ownerContracts[0].contractId
+        return
+      }
+      info.objType = '3333'
+      info.ownerFlag = 'T'
     },
     handleCurrentChange(val) {
       this._listSimplifyFeeReceipt(val, this.DEFAULT_ROWS)
@@ -243,7 +276,7 @@ export default {
       const objIdMap = {
         '3333': this.simplifyFeeReceiptInfo.roomId,
         '4444': this.simplifyFeeReceiptInfo.shopId,
-        '6666': this.simplifyFeeReceiptInfo.carId,
+        '6666': this.simplifyFeeReceiptInfo.psId,
         '7777': this.simplifyFeeReceiptInfo.contractId
       }
 
@@ -257,11 +290,12 @@ export default {
       }
 
       if (this.simplifyFeeReceiptInfo.ownerFlag === 'F') {
-        params.objId = objIdMap[objType] || ''
-        if (!params.objId) {
-          this.$message.warning(this.$t('simplifyFeeReceipt.needObj'))
-          return
+        const objId = objIdMap[objType] || ''
+        if (!objId) {
+          this.simplifyFeeReceiptInfo.ownerFlag = 'T'
+          return this._listSimplifyFeeReceipt(page, rows)
         }
+        params.objId = objId
       } else {
         params.payObjId = this.simplifyFeeReceiptInfo.payObjId
         if (!params.payObjId) {
@@ -317,13 +351,13 @@ export default {
         payObjId: '',
         roomId: '',
         shopId: '',
-        carId: '',
+        psId: '',
         receiptCode: '',
         total: '',
         records: '',
         ownerId: '',
         objTypes: [],
-        ownerCars: [],
+        ownerParkingSpaces: [],
         ownerContracts: [],
         ownerShops: [],
         selectReceipts: [],
@@ -335,25 +369,29 @@ export default {
     },
     async _changeSimplifyFeeReceiptFeeTypeCd(objType) {
       this.simplifyFeeReceiptInfo.shopId = ''
-      this.simplifyFeeReceiptInfo.carId = ''
+      this.simplifyFeeReceiptInfo.psId = ''
       this.simplifyFeeReceiptInfo.contractId = ''
       if (!this.simplifyFeeReceiptInfo.ownerId) {
-        this.$emit('notify', {})
         return
       }
-      if (objType === '4444') {
+      if (objType === '3333') {
+        if (!this.simplifyFeeReceiptInfo.roomId) {
+          this.$message.warning(this.$t('simplifyFeeReceipt.noRoom'))
+          this.simplifyFeeReceiptInfo.ownerFlag = 'T'
+        }
+      } else if (objType === '4444') {
         await this._listSimplifyFeeReceiptOwnerShop()
       } else if (objType === '6666') {
-        await this._listSimplifyFeeReceiptOwnerCar()
+        await this._listSimplifyFeeReceiptOwnerParkingSpaces()
       } else if (objType === '7777') {
         await this._listSimplifyFeeReceiptOwnerContract()
       }
-      this.$emit('notify', {})
+      this._queryFeeReceiptMethod()
     },
     changeSimplifyFeeReceiptObj() {
       this._queryFeeReceiptMethod()
     },
-    async _listSimplifyFeeReceiptOwnerShop() {
+    async _listSimplifyFeeReceiptOwnerShop(opt = {}) {
       try {
         const res = await listOwnerShops({
           page: 1,
@@ -366,32 +404,38 @@ export default {
           this.simplifyFeeReceiptInfo.shopId = shops[0].shopId
           return
         }
-        this.$message.warning(this.$t('simplifyFeeReceipt.noShop'))
+        if (!opt.silent) {
+          this.$message.warning(this.$t('simplifyFeeReceipt.noShop'))
+          this.simplifyFeeReceiptInfo.ownerFlag = 'T'
+        }
       } catch (error) {
         console.error('Request failed:', error)
       }
     },
-    async _listSimplifyFeeReceiptOwnerCar() {
+    async _listSimplifyFeeReceiptOwnerParkingSpaces(opt = {}) {
       try {
-        const res = await queryOwnerCars({
+        const res = await listOwnerParkingSpaces({
           page: 1,
           row: 100,
           ownerId: this.simplifyFeeReceiptInfo.ownerId,
-          carTypeCd: '1001',
           communityId: getCommunityId()
         })
-        const cars = res && Array.isArray(res.data) ? res.data : []
-        this.simplifyFeeReceiptInfo.ownerCars = cars
-        if (cars.length > 0) {
-          this.simplifyFeeReceiptInfo.carId = cars[0].carId
+        const list = (res && Array.isArray(res.parkingSpaces) ? res.parkingSpaces : [])
+          .filter(item => item.state === 'S' || item.state === 'H')
+        this.simplifyFeeReceiptInfo.ownerParkingSpaces = list
+        if (list.length > 0) {
+          this.simplifyFeeReceiptInfo.psId = list[0].psId
           return
         }
-        this.$message.warning(this.$t('simplifyFeeReceipt.noCar'))
+        if (!opt.silent) {
+          this.$message.warning(this.$t('simplifyFeeReceipt.noParkingSpace'))
+          this.simplifyFeeReceiptInfo.ownerFlag = 'T'
+        }
       } catch (error) {
         console.error('Request failed:', error)
       }
     },
-    async _listSimplifyFeeReceiptOwnerContract() {
+    async _listSimplifyFeeReceiptOwnerContract(opt = {}) {
       try {
         const res = await queryContract({
           page: 1,
@@ -405,10 +449,18 @@ export default {
           this.simplifyFeeReceiptInfo.contractId = contracts[0].contractId
           return
         }
-        this.$message.warning(this.$t('simplifyFeeReceipt.noContract'))
+        if (!opt.silent) {
+          this.$message.warning(this.$t('simplifyFeeReceipt.noContract'))
+          this.simplifyFeeReceiptInfo.ownerFlag = 'T'
+        }
       } catch (error) {
         console.error('Request failed:', error)
       }
+    },
+    _getParkingSpaceName(item) {
+      return item.sectionName
+        ? `${item.areaNum}-${item.sectionName}-${item.num}`
+        : `${item.areaNum}-${item.num}`
     },
     checkAllReceipt(e) {
       const checkObj = document.querySelectorAll('.checReceiptItem')
@@ -428,7 +480,7 @@ export default {
       } else if (feeTypeCd === '4444') {
         return this.$t('simplifyFeeReceipt.shop')
       } else if (feeTypeCd === '6666') {
-        return this.$t('simplifyFeeReceipt.car')
+        return this.$t('simplifyFeeReceipt.parkingSpace')
       } else {
         return this.$t('simplifyFeeReceipt.contract')
       }

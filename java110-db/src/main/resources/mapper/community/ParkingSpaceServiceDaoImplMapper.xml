@@ -206,6 +206,9 @@
             <if test="carNumLike !=null and carNumLike != ''">
                 and t.car_num like concat('%',#{carNumLike},'%')
             </if>
+            <if test="ownerId !=null and ownerId != ''">
+                and t.owner_id = #{ownerId}
+            </if>
             order by t.create_time desc
             <if test="page != -1 and page != null ">
                 limit #{page}, #{row}
@@ -307,6 +310,9 @@
             </if>
             <if test="carNumLike !=null and carNumLike != ''">
                 and t.car_num like concat('%',#{carNumLike},'%')
+            </if>
+            <if test="ownerId !=null and ownerId != ''">
+                and t.owner_id = #{ownerId}
             </if>
         </where>
     </select>

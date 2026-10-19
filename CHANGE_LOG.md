@@ -545,3 +545,12 @@ INSERT INTO `t_dict` VALUES ('626364', '4444', '商铺', '商铺', '2026-10-19 1
 - 前端 `components/fee/simplifyFeeReceipt.vue`：创建即加载 `fee_receipt/obj_type` 字典并内置兜底项（房屋/商铺/车位/合同）、新增商铺二级下拉、合同改按 `objPersonId` 查询、「全部X」按 `payObjId`（即业主）过滤、未选业主/对象时不发请求、`_getFeeObjName` 支持 4444。
 - 父页面 `views/simplify/simplifyAcceptanceList.vue`：多房业主改打开房间树选房（原 `$refs.searchRoom` 不存在导致 roomId 为空）。
 - 后端 `GetFeeReceiptBMOImpl.freshRoomInfo`：商铺/合同不再按车位刷新对象名。
+
+## 2026-10-19 — 补打收据：业主无房屋时误提示「请选择对象」· 车位对象口径修正
+
+无 DDL/字典变更。
+
+- 前端 `components/fee/simplifyFeeReceipt.vue`：进入 Tab 由 `_initFeeReceiptObjType` 按「房屋→车位→商铺→合同→全部」自动定位对象类型，全程不弹提示；`当前X` 无具体对象时自动降级为「全部X」按业主查询（去掉「请选择对象」）；车位下拉改用 `ownerParkingSpaces`（`psId` + 车位编号 `区域-区域-车位号`）；`carId/ownerCars` 改为 `psId/ownerParkingSpaces`；`_getFeeObjName(6666)` 与类型下拉文案改为「车位」；类型切换时该类型无数据提示「该业主名下没有X」并自动切「全部X」。
+- 前端 `api/fee/simplifyFeeReceiptApi.js`：新增 `listOwnerParkingSpaces`（`parkingSpace.queryParkingSpaces`，按业主过滤），移除无引用的 `queryOwnerCars`。
+- 前端 `views/fee/roomCreateFeeLang.js`：`simplifyFeeReceipt` 三语新增 `parkingSpace/selectParkingSpace/noParkingSpace/noRoom`。
+- 后端 `java110-db/mapper/community/ParkingSpaceServiceDaoImplMapper.xml`：`getParkingSpaceInfo` 与 `queryParkingSpacesCount` 同口径新增 `ownerId` 条件（`t.owner_id = #{ownerId}`，车位表自身即有 `owner_id`，与 `building_shop_owner.owner_id` 口径一致）。

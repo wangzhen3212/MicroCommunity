@@ -29,12 +29,15 @@ export function listFeePrintPage(params) {
   })
 }
 
-export function queryOwnerCars(params) {
+export function listOwnerParkingSpaces(params) {
   return new Promise((resolve, reject) => {
     request({
-      url: '/owner.queryOwnerCars',
+      url: '/parkingSpace.queryParkingSpaces',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       resolve(response.data)
     }).catch(error => {
