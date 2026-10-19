@@ -52111,6 +52111,8 @@ INSERT INTO `t_dict` VALUES ('626360', '3', '支付宝', '支付宝', '2026-10-1
 -- 2026-10-13 场地预约二次改版: 核销方式字典, 见 docs/sql/community/20261013_community_space_confirm_optimize.sql
 INSERT INTO `t_dict` VALUES ('626361', '1', '扫码盒子核销', '扫码盒子核销', '2026-10-13 16:31:05', 'community_space_confirm_order', 'verify_method');
 INSERT INTO `t_dict` VALUES ('626362', '2', '手动核销', '手动核销', '2026-10-13 16:31:05', 'community_space_confirm_order', 'verify_method');
+-- 2026-10-19 缴费订单导出: 下载中心文件类型字典, 见 CHANGE_LOG.md
+INSERT INTO `t_dict` VALUES ('626363', 'reportPayFeeOrder', '缴费订单表', '缴费订单表', '2026-10-19 09:00:00', 'user_download_file', 'file_type');
 
 -- ----------------------------
 -- Table structure for t_dict_spec

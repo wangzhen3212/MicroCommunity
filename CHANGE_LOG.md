@@ -525,3 +525,12 @@ SELECT DISTINCT '502026101316310002', r.pg_id, NOW(), '0' FROM `p_privilege_rel`
 INSERT INTO `p_privilege_rel` (`p_id`, `pg_id`, `create_time`, `status_cd`)
 SELECT DISTINCT '502026101316310001', r.pg_id, NOW(), '0' FROM `p_privilege_rel` r WHERE r.p_id = '502022093035580003' AND r.status_cd = '0';
 ```
+
+## 2026-10-19 — 缴费订单/缴费明细导出对齐页面：拆分导出适配器 · 列名与列顺序修正
+
+
+```sql
+-- 字典：下载中心文件类型（id 626363，已同步合入 docs/db/TT.sql）
+INSERT INTO `t_dict` VALUES ('626363', 'reportPayFeeOrder', '缴费订单表', '缴费订单表', '2026-10-19 09:00:00', 'user_download_file', 'file_type');
+```
+

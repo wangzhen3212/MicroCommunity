@@ -3,14 +3,8 @@ package com.java110.job.export.adapt;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.dto.data.ExportDataDto;
-import com.java110.dto.fee.FeeDto;
-import com.java110.dto.owner.OwnerCarDto;
-import com.java110.dto.owner.OwnerRoomRelDto;
 import com.java110.dto.reportFee.ReportFeeMonthStatisticsDto;
-import com.java110.dto.room.RoomDto;
-import com.java110.intf.community.IRoomInnerServiceSMO;
 import com.java110.intf.report.IQueryPayFeeDetailInnerServiceSMO;
-import com.java110.intf.user.IOwnerRoomRelInnerServiceSMO;
 import com.java110.job.export.IExportDataAdapt;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.DateUtil;
@@ -24,10 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 /**
  * 缴费明细导出
@@ -37,12 +28,6 @@ public class ReportPayFeeDetailAdapt implements IExportDataAdapt {
 
     @Autowired
     private IQueryPayFeeDetailInnerServiceSMO queryPayFeeDetailInnerServiceSMOImpl;
-
-    @Autowired
-    private IOwnerRoomRelInnerServiceSMO ownerRoomRelInnerServiceSMOImpl;
-
-    @Autowired
-    private IRoomInnerServiceSMO roomInnerServiceSMOImpl;
 
     private static final int MAX_ROW = 60000;
 
@@ -56,26 +41,22 @@ public class ReportPayFeeDetailAdapt implements IExportDataAdapt {
         Sheet sheet = workbook.createSheet("缴费明细表");
         Row row = sheet.createRow(0);
         row.createCell(0).setCellValue("订单号");
-        row.createCell(1).setCellValue("房号");
-        row.createCell(2).setCellValue("业主");
-        row.createCell(3).setCellValue("费用类型");
-        row.createCell(4).setCellValue("费用项");
-        row.createCell(5).setCellValue("费用状态");
-        row.createCell(6).setCellValue("支付方式");
-        row.createCell(7).setCellValue("费用开始时间");
-        row.createCell(8).setCellValue("费用结束时间");
-        row.createCell(9).setCellValue("缴费时间");
-        row.createCell(10).setCellValue("应缴/应收金额");
-        row.createCell(11).setCellValue("实收金额");
-        row.createCell(12).setCellValue("优惠金额");
-        row.createCell(13).setCellValue("减免金额");
-        row.createCell(14).setCellValue("赠送金额");
-        row.createCell(15).setCellValue("滞纳金");
-        row.createCell(16).setCellValue("面积");
-        row.createCell(17).setCellValue("车位");
-        row.createCell(18).setCellValue("账户抵扣");
-        row.createCell(19).setCellValue("收银员");
-        row.createCell(20).setCellValue("备注");
+        row.createCell(1).setCellValue("房号/业主");
+        row.createCell(2).setCellValue("费用类型>费用项");
+        row.createCell(3).setCellValue("费用状态");
+        row.createCell(4).setCellValue("支付方式");
+        row.createCell(5).setCellValue("缴费时间段");
+        row.createCell(6).setCellValue("缴费时间");
+        row.createCell(7).setCellValue("收银员");
+        row.createCell(8).setCellValue("应缴/应收金额(元)");
+        row.createCell(9).setCellValue("实收金额(元)");
+        row.createCell(10).setCellValue("账户抵扣(元)");
+        row.createCell(11).setCellValue("优惠/减免金额(元)");
+        row.createCell(12).setCellValue("赠送金额(元)");
+        row.createCell(13).setCellValue("滞纳金(元)");
+        row.createCell(14).setCellValue("面积(平方米)");
+        row.createCell(15).setCellValue("车牌号");
+        row.createCell(16).setCellValue("说明");
         JSONObject reqJson = exportDataDto.getReqJson();
 
         String endTime = reqJson.getString("endTime");
@@ -115,72 +96,52 @@ public class ReportPayFeeDetailAdapt implements IExportDataAdapt {
         }
         Row row = null;
         JSONObject dataObj = null;
-//        JSONObject reportFeeMonthStatisticsDto = null;
-        Date endDate = null;
         for (int roomIndex = 0; roomIndex < reportFeeMonthStatisticsDtos.size(); roomIndex++) {
             row = sheet.createRow(roomIndex + step + 1);
             dataObj = reportFeeMonthStatisticsDtos.getJSONObject(roomIndex);
-//            dataObj = JSONObject.parseObject(JSONObject.toJSONString(reportFeeMonthStatisticsDtos.get(roomIndex)));
-            row.createCell(0).setCellValue(dataObj.getString("oId"));
-            if (FeeDto.PAYER_OBJ_TYPE_PARKING_SPACE.equals(dataObj.getString("payerObjType"))) {
-                String payerObjName = dataObj.getString("payerObjName");
-                payerObjName += doFreshRoomInfo(dataObj.getString("payerObjId"));
-                row.createCell(1).setCellValue(payerObjName);
-
-            } else {
-                row.createCell(1).setCellValue(dataObj.getString("payerObjName"));
-            }
-            endDate = DateUtil.getDateFromStringB(dataObj.getString("endTime"));
-
-            row.createCell(2).setCellValue(dataObj.getString("ownerName"));
-            row.createCell(3).setCellValue(dataObj.getString("feeTypeCdName"));
-            row.createCell(4).setCellValue(dataObj.getString("feeName"));
-            row.createCell(5).setCellValue(dataObj.getString("stateName"));
-            row.createCell(6).setCellValue(dataObj.getString("primeRate"));
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            row.createCell(7).setCellValue(DateUtil.getFormatTimeStringB(format.parse(dataObj.getString("startTime"))));
-            row.createCell(8).setCellValue(DateUtil.getFormatTimeStringB(endDate));
-            row.createCell(9).setCellValue(DateUtil.getFormatTimeStringA(dataObj.getDate("createTime")));
-            row.createCell(10).setCellValue(dataObj.getDouble("receivableAmount"));
-            row.createCell(11).setCellValue(dataObj.getDouble("receivedAmount"));
-            row.createCell(12).setCellValue(dataObj.getDouble("preferentialAmount"));
-            row.createCell(13).setCellValue(dataObj.getDouble("deductionAmount"));
-            row.createCell(14).setCellValue(dataObj.getDouble("giftAmount"));
-            row.createCell(15).setCellValue(dataObj.getDouble("lateFee"));
-            row.createCell(16).setCellValue(dataObj.getString("builtUpArea"));
-            row.createCell(17).setCellValue(dataObj.getString("psName"));
-            row.createCell(18).setCellValue(dataObj.getString("withholdAmount"));
-            row.createCell(19).setCellValue(dataObj.getString("cashierName"));
-            row.createCell(20).setCellValue(dataObj.getString("remark"));
+            row.createCell(0).setCellValue(getValue(dataObj, "oId", "-"));
+            row.createCell(1).setCellValue(getValue(dataObj, "payerObjName") + "/" + getValue(dataObj, "ownerName"));
+            row.createCell(2).setCellValue(getValue(dataObj, "feeTypeCdName") + ">" + getValue(dataObj, "feeName"));
+            row.createCell(3).setCellValue(getValue(dataObj, "stateName"));
+            row.createCell(4).setCellValue(getValue(dataObj, "primeRate"));
+            row.createCell(5).setCellValue(formatDate(dataObj.getString("startTime")) + " ~ " + formatDate(dataObj.getString("endTime")));
+            row.createCell(6).setCellValue(formatDateTime(dataObj.getDate("createTime")));
+            row.createCell(7).setCellValue(getValue(dataObj, "cashierName", "-"));
+            row.createCell(8).setCellValue(getValue(dataObj, "payableAmount") + "/" + getValue(dataObj, "receivableAmount"));
+            row.createCell(9).setCellValue(getValue(dataObj, "receivedAmount"));
+            row.createCell(10).setCellValue(getValue(dataObj, "withholdAmount", "0"));
+            row.createCell(11).setCellValue(getValue(dataObj, "preferentialAmount") + "/" + getValue(dataObj, "deductionAmount"));
+            row.createCell(12).setCellValue(getValue(dataObj, "giftAmount"));
+            row.createCell(13).setCellValue(getValue(dataObj, "lateFee"));
+            row.createCell(14).setCellValue(getValue(dataObj, "builtUpArea"));
+            row.createCell(15).setCellValue(getValue(dataObj, "carNum", "-"));
+            row.createCell(16).setCellValue(getValue(dataObj, "remark"));
         }
     }
 
-    private String doFreshRoomInfo(String ownerId) {
+    private String getValue(JSONObject dataObj, String key) {
+        return getValue(dataObj, key, "");
+    }
 
-        if (StringUtil.isNullOrNone(ownerId)) {
+    private String getValue(JSONObject dataObj, String key, String defaultValue) {
+        String value = dataObj.getString(key);
+        return StringUtil.isEmpty(value) ? defaultValue : value;
+    }
+
+    private String formatDate(String date) {
+        if (StringUtil.isEmpty(date)) {
             return "";
         }
-        OwnerRoomRelDto ownerRoomRelDto = new OwnerRoomRelDto();
-        ownerRoomRelDto.setOwnerId(ownerId);
-        ownerRoomRelDto.setPage(1);
-        ownerRoomRelDto.setRow(3); //只展示3个房屋以内 不然页面太乱
-        List<OwnerRoomRelDto> ownerRoomRelDtos = ownerRoomRelInnerServiceSMOImpl.queryOwnerRoomRels(ownerRoomRelDto);
-        if (ListUtil.isNull(ownerRoomRelDtos)) {
+        if (date.length() > 10) {
+            return date.substring(0, 10);
+        }
+        return date;
+    }
+
+    private String formatDateTime(Date date) {
+        if (date == null) {
             return "";
         }
-        List<String> roomIds = new ArrayList<>();
-        for (OwnerRoomRelDto tOwnerRoomRelDto : ownerRoomRelDtos) {
-            roomIds.add(tOwnerRoomRelDto.getRoomId());
-        }
-        RoomDto roomDto = new RoomDto();
-        roomDto.setRoomIds(roomIds.toArray(new String[roomIds.size()]));
-        List<RoomDto> roomDtos = roomInnerServiceSMOImpl.queryRooms(roomDto);
-        String roomName = "";
-        for (RoomDto tRoomDto : roomDtos) {
-            roomName += (tRoomDto.getFloorNum() + "-" + tRoomDto.getUnitNum() + "-" + tRoomDto.getRoomNum() + "-" + "/");
-        }
-        roomName = roomName.endsWith("/") ? roomName.substring(0, roomName.length() - 1) : roomName;
-        return "(" + roomName + ")";
-
+        return DateUtil.getFormatTimeStringA(date);
     }
 }

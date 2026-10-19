@@ -262,7 +262,7 @@ export default {
     },
     async _exportPayFeeOrder() {
       try {
-        const params = { ...this.payFeeOrderInfo.conditions, pagePath: 'reportPayFeeDetail' }
+        const params = { ...this.payFeeOrderInfo.conditions, pagePath: 'reportPayFeeOrder' }
         const data = await exportPayFeeOrder(params)
         this.$message.success(data.msg)
         if (data.code === 0) {

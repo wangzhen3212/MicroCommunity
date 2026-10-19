@@ -271,7 +271,7 @@
             and t.community_id= #{communityId}
         </if>
         <if test="startDate != null and startDate != ''">
-            and t.create_time &gt; #{startDate}
+            and t.create_time &gt;= #{startDate}
         </if>
         <if test="endDate != null and endDate != ''">
             and t.create_time &lt; #{endDate}
@@ -842,17 +842,20 @@
         order by a.seq
     </select>
 
-    <!-- 按缴费方式统计 -->
+    <!-- 按缴费方式统计：口径与 getReceivedFee 保持一致 -->
     <select id="getReceivedFeeByPrimeRate" parameterType="Map" resultType="Map">
         select td.`name`, td.status_cd primeRate, ifnull(SUM(t.received_amount), 0) receivedAmount
         from t_dict td
                  left join pay_fee_detail t on td.status_cd = t.prime_rate and t.status_cd = '0'
+                 left join pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
         where 1 = 1
           and td.table_name = 'pay_fee_detail'
           and td.table_columns = 'prime_rate'
+          and pf.payer_obj_type = '3333'
+          and t.state in ('1400', '1000', '1200')
           and t.community_id = #{communityId}
           and t.create_time &gt;= #{startDate}
-          and t.create_time &lt; #{endDate}
+          and t.create_time &lt;= #{endDate}
         group by td.status_cd, td.`name`
     </select>
 
