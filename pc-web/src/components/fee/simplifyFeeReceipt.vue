@@ -9,15 +9,22 @@
               :value="item.statusCd"></el-option>
           </el-select>
         </div>
-        <div :span="3" class="padding-right-xs padding-left-xl" v-if="simplifyFeeReceiptInfo.objType == '6666'">
-          <el-select v-model="simplifyFeeReceiptInfo.carId" size="small" @change="changeSimplifyFeeReceiptCar"
+        <div :span="3" class="padding-right-xs padding-left-xl" v-if="simplifyFeeReceiptInfo.objType == '4444'">
+          <el-select v-model="simplifyFeeReceiptInfo.shopId" size="small" @change="changeSimplifyFeeReceiptObj"
+            :placeholder="$t('simplifyFeeReceipt.selectShop')">
+            <el-option v-for="(item, index) in simplifyFeeReceiptInfo.ownerShops" :key="index" :label="item.shopNum"
+              :value="item.shopId"></el-option>
+          </el-select>
+        </div>
+        <div :span="3" class="padding-right-xs padding-left-xl" v-else-if="simplifyFeeReceiptInfo.objType == '6666'">
+          <el-select v-model="simplifyFeeReceiptInfo.carId" size="small" @change="changeSimplifyFeeReceiptObj"
             :placeholder="$t('simplifyFeeReceipt.selectCar')">
             <el-option v-for="(item, index) in simplifyFeeReceiptInfo.ownerCars" :key="index" :label="item.carNum"
               :value="item.carId"></el-option>
           </el-select>
         </div>
         <div :span="3" class="padding-right-xs padding-left-xl" v-else-if="simplifyFeeReceiptInfo.objType == '7777'">
-          <el-select v-model="simplifyFeeReceiptInfo.contractId" size="small" @change="changeSimplifyFeeReceiptCar"
+          <el-select v-model="simplifyFeeReceiptInfo.contractId" size="small" @change="changeSimplifyFeeReceiptObj"
             :placeholder="$t('simplifyFeeReceipt.selectContract')">
             <el-option v-for="(item, index) in simplifyFeeReceiptInfo.ownerContracts" :key="index"
               :label="item.contractCode" :value="item.contractId"></el-option>
@@ -25,11 +32,9 @@
         </div>
         <div :span="3" class="padding-right-xs padding-left-xl" v-if="simplifyFeeReceiptInfo.objType != '7777'">
           <el-select v-model="simplifyFeeReceiptInfo.ownerFlag" size="small" @change="_queryFeeReceiptMethod">
-            <el-option
-              :label="$t('simplifyFeeReceipt.current') + (simplifyFeeReceiptInfo.objType == '6666' ? $t('simplifyFeeReceipt.car') : $t('simplifyFeeReceipt.room'))"
+            <el-option :label="$t('simplifyFeeReceipt.current') + _getFeeObjName(simplifyFeeReceiptInfo.objType)"
               value="F"></el-option>
-            <el-option
-              :label="$t('simplifyFeeReceipt.all') + (simplifyFeeReceiptInfo.objType == '6666' ? $t('simplifyFeeReceipt.car') : $t('simplifyFeeReceipt.room'))"
+            <el-option :label="$t('simplifyFeeReceipt.all') + _getFeeObjName(simplifyFeeReceiptInfo.objType)"
               value="T"></el-option>
           </el-select>
         </div>
@@ -133,10 +138,15 @@
 
 <script>
 import { getCommunityId, getDict } from '@/api/community/communityApi'
-import { queryFeeReceipt, listFeePrintPage } from '@/api/fee/simplifyFeeReceiptApi'
-import { queryOwnerCars } from '@/api/room/ownerCarsApi'
-import { queryContract } from '@/api/contract/contractChangeDetailApi'
+import { queryFeeReceipt, listFeePrintPage, queryOwnerCars, queryContract, listOwnerShops } from '@/api/fee/simplifyFeeReceiptApi'
 import { dateFormat } from '@/utils/dateUtil'
+
+const DEFAULT_OBJ_TYPES = [
+  { statusCd: '3333', nameKey: 'room' },
+  { statusCd: '4444', nameKey: 'shop' },
+  { statusCd: '6666', nameKey: 'car' },
+  { statusCd: '7777', nameKey: 'contract' }
+]
 
 export default {
   name: 'SimplifyFeeReceipt',
@@ -150,6 +160,7 @@ export default {
         objId: '',
         payObjId: '',
         roomId: '',
+        shopId: '',
         carId: '',
         receiptCode: '',
         total: '',
@@ -158,6 +169,7 @@ export default {
         objTypes: [],
         ownerCars: [],
         ownerContracts: [],
+        ownerShops: [],
         selectReceipts: [],
         ownerFlag: 'F',
         contractId: '',
@@ -178,56 +190,87 @@ export default {
     }
   },
   created() {
+    this._loadDictData()
   },
   methods: {
     handleSwitch(param) {
-      if (param.roomId === '') return
-
       this.clearSimplifyFeeReceiptInfo()
       this._loadDictData()
-
       this._listFeePrintPages()
-      Object.assign(this.simplifyFeeReceiptInfo, param)
-      this.simplifyFeeReceiptInfo.objId = param.roomId
-      this.simplifyFeeReceiptInfo.payObjId = param.ownerId
+
+      this.simplifyFeeReceiptInfo.ownerId = param.ownerId || ''
+      this.simplifyFeeReceiptInfo.payObjId = param.ownerId || ''
+      this.simplifyFeeReceiptInfo.roomId = param.roomId || ''
+      this.simplifyFeeReceiptInfo.objType = '3333'
+
+      if (!this.simplifyFeeReceiptInfo.ownerId) {
+        return
+      }
       this._listSimplifyFeeReceipt(this.DEFAULT_PAGE, this.DEFAULT_ROWS)
     },
     handleCurrentChange(val) {
       this._listSimplifyFeeReceipt(val, this.DEFAULT_ROWS)
     },
     async _loadDictData() {
+      let dictList = []
       try {
         const data = await getDict('fee_receipt', 'obj_type')
-        this.simplifyFeeReceiptInfo.objTypes = data
+        dictList = Array.isArray(data) ? data : []
       } catch (error) {
         console.error('Failed to load dict data:', error)
       }
+      const objTypes = []
+      DEFAULT_OBJ_TYPES.forEach(item => {
+        const dictItem = dictList.find(dict => dict.statusCd === item.statusCd)
+        objTypes.push({
+          statusCd: item.statusCd,
+          name: dictItem ? dictItem.name : this.$t('simplifyFeeReceipt.' + item.nameKey)
+        })
+      })
+      dictList.forEach(dictItem => {
+        const exists = objTypes.some(item => item.statusCd === dictItem.statusCd)
+        if (!exists) {
+          objTypes.push({ statusCd: dictItem.statusCd, name: dictItem.name })
+        }
+      })
+      this.simplifyFeeReceiptInfo.objTypes = objTypes
     },
     async _listSimplifyFeeReceipt(page, rows) {
       this.simplifyFeeReceiptInfo.selectReceipts = []
       this.simplifyFeeReceiptInfo.quan = false
-      let objId = ''
-      if (this.simplifyFeeReceiptInfo.objType === '3333') {
-        objId = this.simplifyFeeReceiptInfo.roomId
-      } else if (this.simplifyFeeReceiptInfo.objType === '6666') {
-        objId = this.simplifyFeeReceiptInfo.carId
-      } else {
-        objId = this.simplifyFeeReceiptInfo.contractId
+
+      const objType = this.simplifyFeeReceiptInfo.objType
+      const objIdMap = {
+        '3333': this.simplifyFeeReceiptInfo.roomId,
+        '4444': this.simplifyFeeReceiptInfo.shopId,
+        '6666': this.simplifyFeeReceiptInfo.carId,
+        '7777': this.simplifyFeeReceiptInfo.contractId
       }
 
       const params = {
         page,
         row: rows,
-        objType: this.simplifyFeeReceiptInfo.objType,
-        objId,
+        objType,
+        objId: '',
         receiptCode: this.simplifyFeeReceiptInfo.receiptCode,
         communityId: getCommunityId()
       }
 
-      if (this.simplifyFeeReceiptInfo.ownerFlag === 'T') {
-        params.objId = ''
+      if (this.simplifyFeeReceiptInfo.ownerFlag === 'F') {
+        params.objId = objIdMap[objType] || ''
+        if (!params.objId) {
+          this.$message.warning(this.$t('simplifyFeeReceipt.needObj'))
+          return
+        }
+      } else {
         params.payObjId = this.simplifyFeeReceiptInfo.payObjId
+        if (!params.payObjId) {
+          this.$message.warning(this.$t('simplifyFeeReceipt.needOwner'))
+          return
+        }
       }
+
+      this.currentPage = page
 
       try {
         const res = await queryFeeReceipt(params)
@@ -271,7 +314,9 @@ export default {
         feeReceipts: [],
         objType: '3333',
         objId: '',
+        payObjId: '',
         roomId: '',
+        shopId: '',
         carId: '',
         receiptCode: '',
         total: '',
@@ -280,6 +325,7 @@ export default {
         objTypes: [],
         ownerCars: [],
         ownerContracts: [],
+        ownerShops: [],
         selectReceipts: [],
         ownerFlag: 'F',
         contractId: '',
@@ -288,64 +334,80 @@ export default {
       }
     },
     async _changeSimplifyFeeReceiptFeeTypeCd(objType) {
-      if (objType === '3333') {
+      this.simplifyFeeReceiptInfo.shopId = ''
+      this.simplifyFeeReceiptInfo.carId = ''
+      this.simplifyFeeReceiptInfo.contractId = ''
+      if (!this.simplifyFeeReceiptInfo.ownerId) {
         this.$emit('notify', {})
-      } else if (objType === '6666') {
-        try {
-          await this._listSimplifyFeeReceiptOwnerCar()
-          this.$emit('notify', {})
-        } catch (error) {
-          console.error(error)
-        }
-      } else {
-        try {
-          await this._listSimplifyFeeReceiptOwnerContract()
-          this.$emit('notify', {})
-        } catch (error) {
-          console.error(error)
-        }
+        return
       }
+      if (objType === '4444') {
+        await this._listSimplifyFeeReceiptOwnerShop()
+      } else if (objType === '6666') {
+        await this._listSimplifyFeeReceiptOwnerCar()
+      } else if (objType === '7777') {
+        await this._listSimplifyFeeReceiptOwnerContract()
+      }
+      this.$emit('notify', {})
     },
-    changeSimplifyFeeReceiptCar() {
-      this._changeSimplifyFeeReceiptFeeTypeCd(this.simplifyFeeReceiptInfo.objType)
+    changeSimplifyFeeReceiptObj() {
+      this._queryFeeReceiptMethod()
+    },
+    async _listSimplifyFeeReceiptOwnerShop() {
+      try {
+        const res = await listOwnerShops({
+          page: 1,
+          row: 100,
+          ownerId: this.simplifyFeeReceiptInfo.ownerId
+        })
+        const shops = res && Array.isArray(res.data) ? res.data : []
+        this.simplifyFeeReceiptInfo.ownerShops = shops
+        if (shops.length > 0) {
+          this.simplifyFeeReceiptInfo.shopId = shops[0].shopId
+          return
+        }
+        this.$message.warning(this.$t('simplifyFeeReceipt.noShop'))
+      } catch (error) {
+        console.error('Request failed:', error)
+      }
     },
     async _listSimplifyFeeReceiptOwnerCar() {
       try {
         const res = await queryOwnerCars({
           page: 1,
-          row: 50,
+          row: 100,
           ownerId: this.simplifyFeeReceiptInfo.ownerId,
           carTypeCd: '1001',
           communityId: getCommunityId()
         })
-        this.simplifyFeeReceiptInfo.ownerCars = res.data
-        if (res.data.length > 0) {
-          this.simplifyFeeReceiptInfo.carId = res.data[0].carId
-          return res.data
+        const cars = res && Array.isArray(res.data) ? res.data : []
+        this.simplifyFeeReceiptInfo.ownerCars = cars
+        if (cars.length > 0) {
+          this.simplifyFeeReceiptInfo.carId = cars[0].carId
+          return
         }
-        throw new Error(this.$t('simplifyFeeReceipt.noCar'))
+        this.$message.warning(this.$t('simplifyFeeReceipt.noCar'))
       } catch (error) {
         console.error('Request failed:', error)
-        throw error
       }
     },
     async _listSimplifyFeeReceiptOwnerContract() {
       try {
         const res = await queryContract({
           page: 1,
-          row: 50,
-          objId: this.simplifyFeeReceiptInfo.ownerId,
+          row: 100,
+          objPersonId: this.simplifyFeeReceiptInfo.ownerId,
           communityId: getCommunityId()
         })
-        this.simplifyFeeReceiptInfo.ownerContracts = res.data
-        if (res.data.length > 0) {
-          this.simplifyFeeReceiptInfo.contractId = res.data[0].contractId
-          return res.data
+        const contracts = res && Array.isArray(res.data) ? res.data : []
+        this.simplifyFeeReceiptInfo.ownerContracts = contracts
+        if (contracts.length > 0) {
+          this.simplifyFeeReceiptInfo.contractId = contracts[0].contractId
+          return
         }
-        throw new Error(this.$t('simplifyFeeReceipt.noContract'))
+        this.$message.warning(this.$t('simplifyFeeReceipt.noContract'))
       } catch (error) {
         console.error('Request failed:', error)
-        throw error
       }
     },
     checkAllReceipt(e) {
@@ -363,6 +425,8 @@ export default {
     _getFeeObjName(feeTypeCd) {
       if (feeTypeCd === '3333') {
         return this.$t('simplifyFeeReceipt.room')
+      } else if (feeTypeCd === '4444') {
+        return this.$t('simplifyFeeReceipt.shop')
       } else if (feeTypeCd === '6666') {
         return this.$t('simplifyFeeReceipt.car')
       } else {

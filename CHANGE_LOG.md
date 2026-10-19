@@ -534,3 +534,14 @@ SELECT DISTINCT '502026101316310001', r.pg_id, NOW(), '0' FROM `p_privilege_rel`
 INSERT INTO `t_dict` VALUES ('626363', 'reportPayFeeOrder', '缴费订单表', '缴费订单表', '2026-10-19 09:00:00', 'user_download_file', 'file_type');
 ```
 
+## 2026-10-19 — 补打收据：类型下拉缺失修复 + 「全部X」按业主名下对象过滤
+
+```sql
+-- 字典：补打收据对象类型补充「商铺」（id 626364，已同步合入 docs/db/TT.sql）
+-- 未执行时前端内置兜底选项仍可选出商铺
+INSERT INTO `t_dict` VALUES ('626364', '4444', '商铺', '商铺', '2026-10-19 16:42:20', 'fee_receipt', 'obj_type');
+```
+
+- 前端 `components/fee/simplifyFeeReceipt.vue`：创建即加载 `fee_receipt/obj_type` 字典并内置兜底项（房屋/商铺/车位/合同）、新增商铺二级下拉、合同改按 `objPersonId` 查询、「全部X」按 `payObjId`（即业主）过滤、未选业主/对象时不发请求、`_getFeeObjName` 支持 4444。
+- 父页面 `views/simplify/simplifyAcceptanceList.vue`：多房业主改打开房间树选房（原 `$refs.searchRoom` 不存在导致 roomId 为空）。
+- 后端 `GetFeeReceiptBMOImpl.freshRoomInfo`：商铺/合同不再按车位刷新对象名。

@@ -52113,6 +52113,8 @@ INSERT INTO `t_dict` VALUES ('626361', '1', '扫码盒子核销', '扫码盒子�
 INSERT INTO `t_dict` VALUES ('626362', '2', '手动核销', '手动核销', '2026-10-13 16:31:05', 'community_space_confirm_order', 'verify_method');
 -- 2026-10-19 缴费订单导出: 下载中心文件类型字典, 见 CHANGE_LOG.md
 INSERT INTO `t_dict` VALUES ('626363', 'reportPayFeeOrder', '缴费订单表', '缴费订单表', '2026-10-19 09:00:00', 'user_download_file', 'file_type');
+-- 2026-10-19 补打收据: 收据对象类型补充 商铺, 见 CHANGE_LOG.md
+INSERT INTO `t_dict` VALUES ('626364', '4444', '商铺', '商铺', '2026-10-19 16:42:20', 'fee_receipt', 'obj_type');
 
 -- ----------------------------
 -- Table structure for t_dict_spec

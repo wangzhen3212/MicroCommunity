@@ -468,7 +468,8 @@ export default {
 
         const _rooms = _owner.rooms
         if (_rooms.length > 1) {
-          this.$refs.searchRoom.$emit('showOwnerRooms', _rooms)
+          this.$message.info(this.$t('simplifyAcceptance.multiRoomTip'))
+          this.$refs.roomTree.open()
           return
         }
 

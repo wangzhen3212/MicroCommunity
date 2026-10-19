@@ -74,7 +74,9 @@ public class GetFeeReceiptBMOImpl implements IGetFeeReceiptBMO {
     private void freshRoomInfo(List<FeeReceiptDto> feeReceiptDtos) {
 
         for (FeeReceiptDto feeReceiptDto : feeReceiptDtos) {
-            if (FeeDto.PAYER_OBJ_TYPE_ROOM.equals(feeReceiptDto.getObjType())) {
+            if (FeeDto.PAYER_OBJ_TYPE_ROOM.equals(feeReceiptDto.getObjType())
+                    || FeeDto.PAYER_OBJ_TYPE_SHOP.equals(feeReceiptDto.getObjType())
+                    || FeeDto.PAYER_OBJ_TYPE_CONTRACT.equals(feeReceiptDto.getObjType())) {
                 feeReceiptDto.setRoomName(feeReceiptDto.getObjName());
                 feeReceiptDto.setCarNum("-");
                 continue;
