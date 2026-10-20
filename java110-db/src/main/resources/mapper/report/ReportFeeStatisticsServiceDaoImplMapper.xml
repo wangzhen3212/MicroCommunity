@@ -1218,4 +1218,398 @@
             and pf.link = #{link}
         </if>
     </select>
+
+    <!-- 停车费 收费情况统计：按停车场聚合（payer_obj_type=6666 车位口径） -->
+    <select id="getParkingAreaFeeStatistics" parameterType="Map" resultType="Map">
+        select a.pa_id paId,
+        a.num paName,
+        (
+        select count(1)
+        from parking_space ps
+        where 1 = 1
+        and ps.status_cd = '0'
+        and ps.pa_id = a.pa_id
+        ) psCount,
+        (
+        select count(distinct pf.payer_obj_id)
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pfd.status_cd = '0'
+        and pfd.community_id = #{communityId}
+        and pfd.create_time &gt;= #{startDate}
+        and pfd.create_time &lt; #{endDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) feePsCount,
+        (
+        select ifnull(sum(pf.owe_amount), 0.0)
+        from pay_fee pf
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pf.status_cd = '0'
+        and pf.payer_obj_type = '6666'
+        and pf.state = '2008001'
+        and pf.community_id = #{communityId}
+        and pf.fee_time &lt; #{hisDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) hisMonthOweFee,
+        (
+        select ifnull(sum(pf.owe_amount), 0.0)
+        from pay_fee pf
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pf.status_cd = '0'
+        and pf.payer_obj_type = '6666'
+        and pf.state = '2008001'
+        and pf.community_id = #{communityId}
+        and pf.fee_time &gt;= #{hisDate}
+        and pf.fee_time &lt; #{monthEndDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) oweFee,
+        (
+        select count(distinct pf.payer_obj_id)
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pfd.status_cd = '0'
+        and pfd.community_id = #{communityId}
+        and pfd.create_time &gt;= #{todayStartDate}
+        and pfd.create_time &lt; #{todayEndDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) todayReceivedRoomCount,
+        (
+        select ifnull(sum(pfd.received_amount), 0.0)
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pfd.status_cd = '0'
+        and pfd.community_id = #{communityId}
+        and pfd.create_time &gt;= #{todayStartDate}
+        and pfd.create_time &lt; #{todayEndDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) todayReceivedRoomAmount,
+        (
+        select count(distinct pf.payer_obj_id)
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pfd.status_cd = '0'
+        and pfd.state in ('1400', '1000', '1200')
+        and pfd.community_id = #{communityId}
+        and pfd.create_time &gt;= #{todayStartDate}
+        and pfd.create_time &lt; #{todayEndDate}
+        and pf.fee_time &lt; #{hisDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) hisOweReceivedRoomCount,
+        (
+        select ifnull(sum(pfd.received_amount), 0.0)
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pfd.status_cd = '0'
+        and pfd.state in ('1400', '1000', '1200')
+        and pfd.community_id = #{communityId}
+        and pfd.create_time &gt;= #{todayStartDate}
+        and pfd.create_time &lt; #{todayEndDate}
+        and pf.fee_time &lt; #{hisDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) hisOweReceivedRoomAmount,
+        (
+        select count(1)
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pfd.status_cd = '0'
+        and pfd.state in ('1400', '1000', '1200')
+        and pfd.community_id = #{communityId}
+        and pfd.create_time &gt;= #{hisDate}
+        and pfd.create_time &lt; #{monthEndDate}
+        and pf.fee_time &gt;= #{hisDate}
+        and pf.fee_time &lt; #{monthEndDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) monthReceivedRoomCount,
+        (
+        select ifnull(sum(pfd.received_amount), 0.0)
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pfd.status_cd = '0'
+        and pfd.state in ('1400', '1000', '1200')
+        and pfd.community_id = #{communityId}
+        and pfd.create_time &gt;= #{hisDate}
+        and pfd.create_time &lt; #{monthEndDate}
+        and pf.fee_time &gt;= #{hisDate}
+        and pf.fee_time &lt; #{monthEndDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) monthReceivedRoomAmount,
+        (
+        select ifnull(sum(pf.owe_amount), 0.0)
+        from pay_fee pf
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pf.status_cd = '0'
+        and pf.payer_obj_type = '6666'
+        and pf.state = '2008001'
+        and pf.community_id = #{communityId}
+        and pf.fee_time &gt;= #{hisDate}
+        and pf.fee_time &lt;= #{monthEndDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) curMonthOweFee,
+        (
+        select ifnull(sum(pf.receivable_amount), 0.0)
+        from pay_fee pf
+        inner join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        where 1 = 1
+        and ps.pa_id = a.pa_id
+        and pf.status_cd = '0'
+        and pf.payer_obj_type = '6666'
+        and pf.community_id = #{communityId}
+        and pf.fee_time &gt;= #{hisDate}
+        and pf.fee_time &lt;= #{monthEndDate}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        ) curReceivableFee
+        from parking_area a
+        where 1 = 1
+        and a.status_cd = '0'
+        and a.community_id = #{communityId}
+        <if test="paId != null and paId != ''">
+            and a.pa_id = #{paId}
+        </if>
+        <if test="paIds != null">
+            and a.pa_id in
+            <foreach collection="paIds" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        order by a.num
+    </select>
+
+    <!-- 停车费 月实收 数量 -->
+    <select id="getParkingMonthReceivedDetailCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        left join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        left join parking_area pa on ps.pa_id = pa.pa_id and pa.status_cd = '0'
+        where 1 = 1
+        and pfd.status_cd = '0'
+        and pfd.state in ('1400', '1000', '1200')
+        and pfd.create_time &gt;= #{startDate}
+        and pfd.create_time &lt; #{endDate}
+        and pf.fee_time &gt;= #{startDate}
+        and pf.fee_time &lt; #{endDate}
+        and pfd.community_id = #{communityId}
+        and pf.community_id = #{communityId}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        <if test="paId != null and paId != ''">
+            and ps.pa_id = #{paId}
+        </if>
+        <if test="objName != null and objName != ''">
+            and ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) like concat('%', #{objName}, '%')
+        </if>
+        <if test="ownerName != null and ownerName != ''">
+            and pf.owner_name like concat('%', #{ownerName}, '%')
+        </if>
+    </select>
+
+    <!-- 停车费 月实收 查询 -->
+    <select id="getParkingMonthReceivedDetailInfo" parameterType="Map" resultType="Map">
+        select ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) objName,
+        pf.owner_name ownerName,
+        (select max(bo.link) from building_owner bo where bo.member_id = ps.owner_id and bo.status_cd = '0') link,
+        pfc.fee_name feeName,pfd.start_time startTime,pfd.end_time endTime,
+        pfd.pay_order_id payOrderId,pfd.cashier_name cashierName,
+        pf.receivable_amount receivableAmount,pfd.received_amount receivedAmount,pfd.create_time
+        createTime,DATE_FORMAT(pfd.create_time,'%Y-%m') curYearMonth
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        left join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        left join parking_area pa on ps.pa_id = pa.pa_id and pa.status_cd = '0'
+        left join pay_fee_config pfc on pf.config_id = pfc.config_id and pfc.status_cd = '0'
+        where 1=1
+        and pfd.status_cd = '0'
+        and pfd.state in ('1400','1000','1200')
+        and pfd.create_time &gt;= #{startDate}
+        and pfd.create_time &lt; #{endDate}
+        and pfd.community_id = #{communityId}
+        and pf.community_id= #{communityId}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        <if test="paId != null and paId != ''">
+            and ps.pa_id = #{paId}
+        </if>
+        <if test="objName != null and objName != ''">
+            and ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) like concat('%', #{objName}, '%')
+        </if>
+        <if test="ownerName != null and ownerName != ''">
+            and pf.owner_name like concat('%', #{ownerName}, '%')
+        </if>
+        order by objName,fee_name,createTime
+        <if test="page != -1 and page != null ">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <!-- 停车费 月实收总金额 -->
+    <select id="getParkingMonthReceivedDetailAmount" parameterType="Map" resultType="Map">
+        select ifnull(sum(pfd.received_amount),0.0) amount
+        from pay_fee_detail pfd
+        inner join pay_fee pf on pfd.fee_id = pf.fee_id and pf.status_cd = '0' and pf.payer_obj_type = '6666'
+        left join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        left join parking_area pa on ps.pa_id = pa.pa_id and pa.status_cd = '0'
+        where 1=1
+        and pfd.status_cd = '0'
+        and pfd.state in ('1400','1000','1200')
+        and pfd.create_time &gt;= #{startDate}
+        and pfd.create_time &lt; #{endDate}
+        and pf.fee_time &gt;= #{startDate}
+        and pf.fee_time &lt; #{endDate}
+        and pfd.community_id = #{communityId}
+        and pf.community_id= #{communityId}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        <if test="paId != null and paId != ''">
+            and ps.pa_id = #{paId}
+        </if>
+        <if test="objName != null and objName != ''">
+            and ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) like concat('%', #{objName}, '%')
+        </if>
+        <if test="ownerName != null and ownerName != ''">
+            and pf.owner_name like concat('%', #{ownerName}, '%')
+        </if>
+    </select>
+
+    <!-- 停车费 月欠费 数量 -->
+    <select id="getParkingMonthOweDetailCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from pay_fee pf
+        left join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        left join parking_area pa on ps.pa_id = pa.pa_id and pa.status_cd = '0'
+        where 1 = 1
+        and pf.status_cd = '0'
+        and pf.payer_obj_type = '6666'
+        and pf.state = '2008001'
+        and pf.fee_time &gt;= #{startDate}
+        and pf.fee_time &lt; #{endDate}
+        and pf.community_id = #{communityId}
+        and pf.owe_amount &gt; 0
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        <if test="paId != null and paId != ''">
+            and ps.pa_id = #{paId}
+        </if>
+        <if test="objName != null and objName != ''">
+            and ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) like concat('%', #{objName}, '%')
+        </if>
+        <if test="ownerName != null and ownerName != ''">
+            and pf.owner_name like concat('%', #{ownerName}, '%')
+        </if>
+    </select>
+
+    <!-- 停车费 月欠费 查询 -->
+    <select id="getParkingMonthOweDetailInfo" parameterType="Map" resultType="Map">
+        select ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) objName,pf.owner_name ownerName,
+        pfc.fee_name feeName, pf.start_time startTime, pf.end_time endTime,
+        pf.receivable_amount receivableAmount,pf.owe_amount receivedAmount,DATE_FORMAT(pf.fee_time,'%Y-%m') curYearMonth
+        from pay_fee pf
+        left join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        left join parking_area pa on ps.pa_id = pa.pa_id and pa.status_cd = '0'
+        left join pay_fee_config pfc on pf.config_id = pfc.config_id and pfc.status_cd = '0'
+        where 1=1
+        and pf.status_cd = '0'
+        and pf.payer_obj_type = '6666'
+        and pf.state = '2008001'
+        and pf.fee_time &gt;= #{startDate}
+        and pf.fee_time &lt; #{endDate}
+        and pf.owe_amount &gt; 0
+        and pf.community_id = #{communityId}
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        <if test="paId != null and paId != ''">
+            and ps.pa_id = #{paId}
+        </if>
+        <if test="objName != null and objName != ''">
+            and ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) like concat('%', #{objName}, '%')
+        </if>
+        <if test="ownerName != null and ownerName != ''">
+            and pf.owner_name like concat('%', #{ownerName}, '%')
+        </if>
+        order by objName,fee_name,fee_time
+        <if test="page != -1 and page != null ">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <!-- 停车费 月欠费总金额 -->
+    <select id="getParkingMonthOweDetailAmount" parameterType="Map" resultType="Map">
+        select ifnull(sum(pf.owe_amount),0.0) amount
+        from pay_fee pf
+        left join parking_space ps on pf.payer_obj_id = ps.ps_id and ps.status_cd = '0'
+        left join parking_area pa on ps.pa_id = pa.pa_id and pa.status_cd = '0'
+        where 1=1
+        and pf.status_cd = '0'
+        and pf.payer_obj_type = '6666'
+        and pf.state = '2008001'
+        and pf.fee_time &gt;= #{startDate}
+        and pf.fee_time &lt; #{endDate}
+        and pf.community_id = #{communityId}
+        and pf.owe_amount &gt; 0
+        <if test="feeTypeCd != null and feeTypeCd != ''">
+            and pf.fee_type_cd = #{feeTypeCd}
+        </if>
+        <if test="paId != null and paId != ''">
+            and ps.pa_id = #{paId}
+        </if>
+        <if test="objName != null and objName != ''">
+            and ifnull(concat(pa.num, '-', ps.num), pf.payer_obj_name) like concat('%', #{objName}, '%')
+        </if>
+        <if test="ownerName != null and ownerName != ''">
+            and pf.owner_name like concat('%', #{ownerName}, '%')
+        </if>
+    </select>
 </mapper>

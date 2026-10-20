@@ -304,4 +304,39 @@ public class FeeStatisticsImpl implements IFeeStatistics {
     public double getMonthReceivedDetailAmount(QueryStatisticsDto queryStatisticsDto) {
         return reportFeeStatisticsInnerServiceSMOImpl.getMonthReceivedDetailAmount(queryStatisticsDto);
     }
+
+    @Override
+    public List<Map> getParkingAreaFeeStatistics(QueryStatisticsDto queryStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getParkingAreaFeeStatistics(queryStatisticsDto);
+    }
+
+    @Override
+    public long getParkingMonthReceivedDetailCount(QueryStatisticsDto queryStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getParkingMonthReceivedDetailCount(queryStatisticsDto);
+    }
+
+    @Override
+    public List<Map> getParkingMonthReceivedDetailInfo(QueryStatisticsDto queryStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getParkingMonthReceivedDetailInfo(queryStatisticsDto);
+    }
+
+    @Override
+    public double getParkingMonthReceivedDetailAmount(QueryStatisticsDto queryStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getParkingMonthReceivedDetailAmount(queryStatisticsDto);
+    }
+
+    @Override
+    public long getParkingMonthOweDetailCount(QueryStatisticsDto queryStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getParkingMonthOweDetailCount(queryStatisticsDto);
+    }
+
+    @Override
+    public List<Map> getParkingMonthOweDetailInfo(QueryStatisticsDto queryStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getParkingMonthOweDetailInfo(queryStatisticsDto);
+    }
+
+    @Override
+    public double getParkingMonthOweDetailAmount(QueryStatisticsDto queryStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getParkingMonthOweDetailAmount(queryStatisticsDto);
+    }
 }

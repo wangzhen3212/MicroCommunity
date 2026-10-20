@@ -248,4 +248,24 @@ public interface IFeeStatistics {
     double getMonthOweDetailAmount(QueryStatisticsDto queryStatisticsDto);
 
     double getMonthReceivedDetailAmount(QueryStatisticsDto queryStatisticsDto);
+
+    /**
+     * 停车费 收费情况统计（按停车场）
+     *
+     * @param queryStatisticsDto
+     * @return
+     */
+    List<Map> getParkingAreaFeeStatistics(QueryStatisticsDto queryStatisticsDto);
+
+    long getParkingMonthReceivedDetailCount(QueryStatisticsDto queryStatisticsDto);
+
+    List<Map> getParkingMonthReceivedDetailInfo(QueryStatisticsDto queryStatisticsDto);
+
+    double getParkingMonthReceivedDetailAmount(QueryStatisticsDto queryStatisticsDto);
+
+    long getParkingMonthOweDetailCount(QueryStatisticsDto queryStatisticsDto);
+
+    List<Map> getParkingMonthOweDetailInfo(QueryStatisticsDto queryStatisticsDto);
+
+    double getParkingMonthOweDetailAmount(QueryStatisticsDto queryStatisticsDto);
 }

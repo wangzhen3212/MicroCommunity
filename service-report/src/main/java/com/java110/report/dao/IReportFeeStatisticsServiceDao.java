@@ -248,4 +248,24 @@ public interface IReportFeeStatisticsServiceDao {
     double getMonthOweDetailAmount(Map info);
 
     double getMonthReceivedDetailAmount(Map info);
+
+    /**
+     * 停车费 收费情况统计（按停车场）
+     *
+     * @param info
+     * @return
+     */
+    List<Map> getParkingAreaFeeStatistics(Map info);
+
+    long getParkingMonthReceivedDetailCount(Map info);
+
+    List<Map> getParkingMonthReceivedDetailInfo(Map info);
+
+    double getParkingMonthReceivedDetailAmount(Map info);
+
+    long getParkingMonthOweDetailCount(Map info);
+
+    List<Map> getParkingMonthOweDetailInfo(Map info);
+
+    double getParkingMonthOweDetailAmount(Map info);
 }

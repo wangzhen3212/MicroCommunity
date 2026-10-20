@@ -483,4 +483,66 @@ public class ReportFeeStatisticsServiceDaoImpl extends BaseServiceDao implements
 
         return Double.parseDouble(infos.get(0).get("amount").toString());
     }
+
+    @Override
+    public List<Map> getParkingAreaFeeStatistics(Map info) {
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getParkingAreaFeeStatistics", info);
+        return infos;
+    }
+
+    @Override
+    public long getParkingMonthReceivedDetailCount(Map info) {
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getParkingMonthReceivedDetailCount", info);
+
+        if (infos == null || infos.size() < 1) {
+            return 0;
+        }
+
+        return Long.parseLong(infos.get(0).get("count").toString());
+    }
+
+    @Override
+    public List<Map> getParkingMonthReceivedDetailInfo(Map info) {
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getParkingMonthReceivedDetailInfo", info);
+        return infos;
+    }
+
+    @Override
+    public double getParkingMonthReceivedDetailAmount(Map info) {
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getParkingMonthReceivedDetailAmount", info);
+
+        if (infos == null || infos.size() < 1) {
+            return 0;
+        }
+
+        return Double.parseDouble(infos.get(0).get("amount").toString());
+    }
+
+    @Override
+    public long getParkingMonthOweDetailCount(Map info) {
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getParkingMonthOweDetailCount", info);
+
+        if (infos == null || infos.size() < 1) {
+            return 0;
+        }
+
+        return Long.parseLong(infos.get(0).get("count").toString());
+    }
+
+    @Override
+    public List<Map> getParkingMonthOweDetailInfo(Map info) {
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getParkingMonthOweDetailInfo", info);
+        return infos;
+    }
+
+    @Override
+    public double getParkingMonthOweDetailAmount(Map info) {
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getParkingMonthOweDetailAmount", info);
+
+        if (infos == null || infos.size() < 1) {
+            return 0;
+        }
+
+        return Double.parseDouble(infos.get(0).get("amount").toString());
+    }
 }

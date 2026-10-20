@@ -208,6 +208,70 @@ export function queryFloors(params) {
   })
 }
 
+// 查询停车场列表
+export function queryParkingAreas(params) {
+  return new Promise((resolve, reject) => {
+    request({
+      url: '/parkingArea.listParkingAreas',
+      method: 'get',
+      params
+    }).then(response => {
+      const res = response.data
+      resolve(res)
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}
+
+// 查询收缴情况（停车费）统计数据
+export function queryParkingFeeStatistics(params) {
+  return new Promise((resolve, reject) => {
+    request({
+      url: '/dataReport.queryParkingFeeStatistics',
+      method: 'get',
+      params
+    }).then(response => {
+      const res = response.data
+      resolve(res)
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}
+
+// 查询月实收明细（停车费）数据
+export function queryParkingMonthReceivedDetail(params) {
+  return new Promise((resolve, reject) => {
+    request({
+      url: '/dataReport.queryParkingMonthReceivedDetail',
+      method: 'get',
+      params
+    }).then(response => {
+      const res = response.data
+      resolve(res)
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}
+
+// 查询月欠费明细（停车费）数据
+export function queryParkingMonthOweDetail(params) {
+  return new Promise((resolve, reject) => {
+    request({
+      url: '/dataReport.queryParkingMonthOweDetail',
+      method: 'get',
+      params
+    }).then(response => {
+      const res = response.data
+      resolve(res)
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}
+
 // 查询我入驻的小区列表
 export function listMyEnteredCommunitys(params) {
   return new Promise((resolve, reject) => {

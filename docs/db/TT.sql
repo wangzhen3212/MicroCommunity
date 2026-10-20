@@ -20431,6 +20431,10 @@ INSERT INTO `c_route` VALUES ('3097', '8000418004', '982026101316310001', 'D', '
 INSERT INTO `c_route` VALUES ('3098', '8000418004', '982026101316310002', 'Q', '1000', 'S', '2026-10-13 16:31:05', '0');
 INSERT INTO `c_route` VALUES ('3099', '8000418004', '982026101316310003', 'D', '1000', 'S', '2026-10-13 16:31:05', '0');
 INSERT INTO `c_route` VALUES ('3100', '8000418004', '982026101316310004', 'Q', '1000', 'S', '2026-10-13 16:31:05', '0');
+-- 2026-10-20 报表停车费口径: 收费情况/月实收明细/月欠费明细均为 GET，故 Q
+INSERT INTO `c_route` VALUES ('3101', '8000418004', '982026102012120001', 'Q', '1000', 'S', '2026-10-20 12:12:17', '0');
+INSERT INTO `c_route` VALUES ('3102', '8000418004', '982026102012120002', 'Q', '1000', 'S', '2026-10-20 12:12:17', '0');
+INSERT INTO `c_route` VALUES ('3103', '8000418004', '982026102012120003', 'Q', '1000', 'S', '2026-10-20 12:12:17', '0');
 
 -- ----------------------------
 -- Table structure for c_service
@@ -22524,6 +22528,10 @@ INSERT INTO `c_service` VALUES ('2111', '982026101316310001', 'communitySpaceOpe
 INSERT INTO `c_service` VALUES ('2112', '982026101316310002', 'communitySpace.getCommunitySpaceConfirmOrder', 'API', '扫码解析预约核销', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', '2026-10-13 16:31:05', '0');
 INSERT INTO `c_service` VALUES ('2113', '982026101316310003', 'communitySpace.deleteCommunitySpaceConfirmOrder', 'API', '撤销预约核销', '1', null, 'CMD', 'http://community-service', 'POST', '60', '3', '8000418002', '2026-10-13 16:31:05', '0');
 INSERT INTO `c_service` VALUES ('2114', '982026101316310004', 'communitySpace.listCommunitySpaceConfirmOrderSummary', 'API', '预约核销统计', '1', null, 'CMD', 'http://community-service', 'GET', '60', '3', '8000418002', '2026-10-13 16:31:05', '0');
+-- 2026-10-20 报表停车费口径: 收费情况/月实收明细/月欠费明细（停车费，PC app 8000418004）
+INSERT INTO `c_service` VALUES ('2115', '982026102012120001', 'dataReport.queryParkingFeeStatistics', 'API', '查询收费情况(停车费)', '1', null, 'CMD', 'http://report-service', 'GET', '60', '3', '8000418002', '2026-10-20 12:12:17', '0');
+INSERT INTO `c_service` VALUES ('2116', '982026102012120002', 'dataReport.queryParkingMonthReceivedDetail', 'API', '查询月实收明细(停车费)', '1', null, 'CMD', 'http://report-service', 'GET', '60', '3', '8000418002', '2026-10-20 12:12:17', '0');
+INSERT INTO `c_service` VALUES ('2117', '982026102012120003', 'dataReport.queryParkingMonthOweDetail', 'API', '查询月欠费明细(停车费)', '1', null, 'CMD', 'http://report-service', 'GET', '60', '3', '8000418002', '2026-10-20 12:12:17', '0');
 
 -- ----------------------------
 -- Table structure for c_service_business
@@ -52115,6 +52123,10 @@ INSERT INTO `t_dict` VALUES ('626362', '2', '手动核销', '手动核销', '202
 INSERT INTO `t_dict` VALUES ('626363', 'reportPayFeeOrder', '缴费订单表', '缴费订单表', '2026-10-19 09:00:00', 'user_download_file', 'file_type');
 -- 2026-10-19 补打收据: 收据对象类型补充 商铺, 见 CHANGE_LOG.md
 INSERT INTO `t_dict` VALUES ('626364', '4444', '商铺', '商铺', '2026-10-19 16:42:20', 'fee_receipt', 'obj_type');
+-- 2026-10-20 报表停车费口径: 下载中心文件类型字典, 见 CHANGE_LOG.md
+INSERT INTO `t_dict` VALUES ('626365', 'dataReportParkingFeeStatistics', '收费情况(停车费)', '收费情况(停车费)', '2026-10-20 12:12:17', 'user_download_file', 'file_type');
+INSERT INTO `t_dict` VALUES ('626366', 'dataMonthReceivedParkingStatistics', '月实收明细(停车费)', '月实收明细(停车费)', '2026-10-20 12:12:17', 'user_download_file', 'file_type');
+INSERT INTO `t_dict` VALUES ('626367', 'dataMonthOweParkingStatistics', '月欠费明细(停车费)', '月欠费明细(停车费)', '2026-10-20 12:12:17', 'user_download_file', 'file_type');
 
 -- ----------------------------
 -- Table structure for t_dict_spec

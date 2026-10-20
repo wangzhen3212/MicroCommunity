@@ -554,3 +554,29 @@ INSERT INTO `t_dict` VALUES ('626364', '4444', '商铺', '商铺', '2026-10-19 1
 - 前端 `api/fee/simplifyFeeReceiptApi.js`：新增 `listOwnerParkingSpaces`（`parkingSpace.queryParkingSpaces`，按业主过滤），移除无引用的 `queryOwnerCars`。
 - 前端 `views/fee/roomCreateFeeLang.js`：`simplifyFeeReceipt` 三语新增 `parkingSpace/selectParkingSpace/noParkingSpace/noRoom`。
 - 后端 `java110-db/mapper/community/ParkingSpaceServiceDaoImplMapper.xml`：`getParkingSpaceInfo` 与 `queryParkingSpacesCount` 同口径新增 `ownerId` 条件（`t.owner_id = #{ownerId}`，车位表自身即有 `owner_id`，与 `building_shop_owner.owner_id` 口径一致）。
+
+## 2026-10-20 — 报表（/pages/report/dataReport）停车费按车位口径统计
+
+```sql
+-- 服务注册：收费情况/月实收明细/月欠费明细（停车费，GET，c_service 2115~2117 / c_route 3101~3103，已同步合入 docs/db/TT.sql）
+INSERT INTO `c_service` VALUES ('2118', '982026102012120001', 'dataReport.queryParkingFeeStatistics', 'API', '查询收费情况(停车费)', '1', null, 'CMD', 'http://report-service', 'GET', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_service` VALUES ('2119', '982026102012120002', 'dataReport.queryParkingMonthReceivedDetail', 'API', '查询月实收明细(停车费)', '1', null, 'CMD', 'http://report-service', 'GET', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_service` VALUES ('2120', '982026102012120003', 'dataReport.queryParkingMonthOweDetail', 'API', '查询月欠费明细(停车费)', '1', null, 'CMD', 'http://report-service', 'GET', '60', '3', '8000418002', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3105', '8000418004', '982026102012120001', 'Q', '1000', 'S', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3106', '8000418004', '982026102012120002', 'Q', '1000', 'S', NOW(), '0');
+INSERT INTO `c_route` VALUES ('3107', '8000418004', '982026102012120003', 'Q', '1000', 'S', NOW(), '0');
+
+-- 字典：下载中心文件类型（id 626365~626367，已同步合入 docs/db/TT.sql）
+INSERT INTO `t_dict` VALUES ('626365', 'dataReportParkingFeeStatistics', '收费情况(停车费)', '收费情况(停车费)', NOW(), 'user_download_file', 'file_type');
+INSERT INTO `t_dict` VALUES ('626366', 'dataMonthReceivedParkingStatistics', '月实收明细(停车费)', '月实收明细(停车费)', NOW(), 'user_download_file', 'file_type');
+INSERT INTO `t_dict` VALUES ('626367', 'dataMonthOweParkingStatistics', '月欠费明细(停车费)', '月欠费明细(停车费)', NOW(), 'user_download_file', 'file_type');
+```
+
+- 后端 `java110-db/mapper/report/ReportFeeStatisticsServiceDaoImplMapper.xml`：新增 7 条车位口径 SQL（`payer_obj_type='6666'`、`parking_space.ps_id = pay_fee.payer_obj_id`、`parking_area.pa_id = parking_space.pa_id`）：`getParkingAreaFeeStatistics`、`getParkingMonthReceivedDetailCount/Info/Amount`、`getParkingMonthOweDetailCount/Info/Amount`，既有房屋口径节点零改动。
+- 后端 `QueryStatisticsDto`：新增 `paId/paIds/todayStartDate/todayEndDate/monthEndDate` 字段。
+- 后端 `IReportFeeStatisticsServiceDao`、`ReportFeeStatisticsServiceDaoImpl`、`IReportFeeStatisticsInnerServiceSMO`、`ReportFeeStatisticsInnerServiceSMOImpl`（明细 Info 做 `(page-1)*row`）、`IFeeStatistics`、`FeeStatisticsImpl`：新增上述 7 个方法。
+- 后端新增 CMD：`QueryParkingFeeStatisticsCmd`（按停车场循环聚合）、`QueryParkingMonthReceivedDetailCmd`、`QueryParkingMonthOweDetailCmd`（`ResultVo` + `sumTotal`）。
+- 后端新增导出适配：`DataReportParkingFeeStatisticsAdapt`（`dataReportParkingFeeStatistics`，列头 停车场/车位数/收费车位数）、`DataMonthReceivedParkingStatisticsAdapt`（`dataMonthReceivedParkingStatistics`，列头「车位」）、`DataMonthOweParkingStatisticsAdapt`（`dataMonthOweParkingStatistics`，列头「车位」）。
+- 前端 `api/report/dataReportApi.js`：新增 `queryParkingAreas`（`parkingArea.listParkingAreas`）、`queryParkingFeeStatistics`、`queryParkingMonthReceivedDetail`、`queryParkingMonthOweDetail`。
+- 前端 `components/report/`：三个 Tab 改为容器（仅保留左侧费用大类列表 + 动态组件，`feeTypeCd === '888800010008'` 时渲染车位组件，`:key="feeTypeCd"` 强制重建），右侧内容拆为 `*Room.vue`（原逻辑平移）与 `*Parking.vue`（停车场维度、停车场下拉、「车位」列、新导出 pagePath）。
+- 前端 `views/report/dataReportLang.js`：三语新增 `parkingArea/parkingSpaceCount/feeParkingSpaceCount/parkingSpace/selectParkingArea/parkingRemainingCount`。

@@ -258,4 +258,31 @@ public interface IReportFeeStatisticsInnerServiceSMO {
 
     @RequestMapping(value = "/getMonthReceivedDetailAmount", method = RequestMethod.POST)
     double getMonthReceivedDetailAmount(@RequestBody QueryStatisticsDto queryStatisticsDto);
+
+    /**
+     * 停车费 收费情况统计（按停车场）
+     *
+     * @param queryStatisticsDto
+     * @return
+     */
+    @RequestMapping(value = "/getParkingAreaFeeStatistics", method = RequestMethod.POST)
+    List<Map> getParkingAreaFeeStatistics(@RequestBody QueryStatisticsDto queryStatisticsDto);
+
+    @RequestMapping(value = "/getParkingMonthReceivedDetailCount", method = RequestMethod.POST)
+    long getParkingMonthReceivedDetailCount(@RequestBody QueryStatisticsDto queryStatisticsDto);
+
+    @RequestMapping(value = "/getParkingMonthReceivedDetailInfo", method = RequestMethod.POST)
+    List<Map> getParkingMonthReceivedDetailInfo(@RequestBody QueryStatisticsDto queryStatisticsDto);
+
+    @RequestMapping(value = "/getParkingMonthReceivedDetailAmount", method = RequestMethod.POST)
+    double getParkingMonthReceivedDetailAmount(@RequestBody QueryStatisticsDto queryStatisticsDto);
+
+    @RequestMapping(value = "/getParkingMonthOweDetailCount", method = RequestMethod.POST)
+    long getParkingMonthOweDetailCount(@RequestBody QueryStatisticsDto queryStatisticsDto);
+
+    @RequestMapping(value = "/getParkingMonthOweDetailInfo", method = RequestMethod.POST)
+    List<Map> getParkingMonthOweDetailInfo(@RequestBody QueryStatisticsDto queryStatisticsDto);
+
+    @RequestMapping(value = "/getParkingMonthOweDetailAmount", method = RequestMethod.POST)
+    double getParkingMonthOweDetailAmount(@RequestBody QueryStatisticsDto queryStatisticsDto);
 }

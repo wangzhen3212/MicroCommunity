@@ -357,4 +357,58 @@ public class ReportFeeStatisticsInnerServiceSMOImpl extends BaseServiceSMO imple
         double info = reportFeeStatisticsServiceDaoImpl.getMonthReceivedDetailAmount(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
         return info;
     }
+
+    @Override
+    public List<Map> getParkingAreaFeeStatistics(@RequestBody QueryStatisticsDto queryStatisticsDto) {
+        List<Map> infos = reportFeeStatisticsServiceDaoImpl.getParkingAreaFeeStatistics(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
+        return infos;
+    }
+
+    @Override
+    public long getParkingMonthReceivedDetailCount(@RequestBody QueryStatisticsDto queryStatisticsDto) {
+        long info = reportFeeStatisticsServiceDaoImpl.getParkingMonthReceivedDetailCount(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
+        return info;
+    }
+
+    @Override
+    public List<Map> getParkingMonthReceivedDetailInfo(@RequestBody QueryStatisticsDto queryStatisticsDto) {
+        int page = queryStatisticsDto.getPage();
+
+        if (page != PageDto.DEFAULT_PAGE) {
+            queryStatisticsDto.setPage((page - 1) * queryStatisticsDto.getRow());
+        }
+
+        List<Map> info = reportFeeStatisticsServiceDaoImpl.getParkingMonthReceivedDetailInfo(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
+        return info;
+    }
+
+    @Override
+    public double getParkingMonthReceivedDetailAmount(@RequestBody QueryStatisticsDto queryStatisticsDto) {
+        double info = reportFeeStatisticsServiceDaoImpl.getParkingMonthReceivedDetailAmount(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
+        return info;
+    }
+
+    @Override
+    public long getParkingMonthOweDetailCount(@RequestBody QueryStatisticsDto queryStatisticsDto) {
+        long info = reportFeeStatisticsServiceDaoImpl.getParkingMonthOweDetailCount(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
+        return info;
+    }
+
+    @Override
+    public List<Map> getParkingMonthOweDetailInfo(@RequestBody QueryStatisticsDto queryStatisticsDto) {
+        int page = queryStatisticsDto.getPage();
+
+        if (page != PageDto.DEFAULT_PAGE) {
+            queryStatisticsDto.setPage((page - 1) * queryStatisticsDto.getRow());
+        }
+
+        List<Map> info = reportFeeStatisticsServiceDaoImpl.getParkingMonthOweDetailInfo(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
+        return info;
+    }
+
+    @Override
+    public double getParkingMonthOweDetailAmount(@RequestBody QueryStatisticsDto queryStatisticsDto) {
+        double info = reportFeeStatisticsServiceDaoImpl.getParkingMonthOweDetailAmount(BeanConvertUtil.beanCovertMap(queryStatisticsDto));
+        return info;
+    }
 }

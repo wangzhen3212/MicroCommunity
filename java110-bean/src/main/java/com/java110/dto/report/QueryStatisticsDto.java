@@ -50,6 +50,28 @@ public class QueryStatisticsDto extends PageDto implements Serializable {
      */
     private String paName;
 
+    /**
+     * 停车场ID
+     */
+    private String paId;
+
+    private String[] paIds;
+
+    /**
+     * 本日统计开始时间
+     */
+    private String todayStartDate;
+
+    /**
+     * 本日统计结束时间
+     */
+    private String todayEndDate;
+
+    /**
+     * 当月统计结束时间
+     */
+    private String monthEndDate;
+
 
     public String getCommunityId() {
         return communityId;
@@ -202,5 +224,45 @@ public class QueryStatisticsDto extends PageDto implements Serializable {
 
     public void setPaName(String paName) {
         this.paName = paName;
+    }
+
+    public String getPaId() {
+        return paId;
+    }
+
+    public void setPaId(String paId) {
+        this.paId = paId;
+    }
+
+    public String[] getPaIds() {
+        return paIds;
+    }
+
+    public void setPaIds(String[] paIds) {
+        this.paIds = paIds;
+    }
+
+    public String getTodayStartDate() {
+        return todayStartDate;
+    }
+
+    public void setTodayStartDate(String todayStartDate) {
+        this.todayStartDate = todayStartDate;
+    }
+
+    public String getTodayEndDate() {
+        return todayEndDate;
+    }
+
+    public void setTodayEndDate(String todayEndDate) {
+        this.todayEndDate = todayEndDate;
+    }
+
+    public String getMonthEndDate() {
+        return monthEndDate;
+    }
+
+    public void setMonthEndDate(String monthEndDate) {
+        this.monthEndDate = monthEndDate;
     }
 }
