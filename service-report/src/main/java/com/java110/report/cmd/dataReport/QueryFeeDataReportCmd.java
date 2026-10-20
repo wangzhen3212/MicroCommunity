@@ -19,6 +19,7 @@ import java.text.ParseException;
 
 /**
  * 查询费用类统计
+ * 实收金额口径：统计所选时间区间内全部支付对象（房屋/车位/车辆/商铺/合同）的实收，与收款方式统计同源可对账
  */
 @Java110Cmd(serviceCode = "dataReport.queryFeeDataReport")
 public class QueryFeeDataReportCmd extends Cmd {
@@ -56,8 +57,8 @@ public class QueryFeeDataReportCmd extends Cmd {
         JSONArray datas = new JSONArray();
         JSONObject data = null;
 
-        // todo 查询 实收金额
-        double receivedFee = feeStatisticsImpl.getReceivedFee(queryStatisticsDto);
+        // todo 查询 实收金额（不限支付对象类型）
+        double receivedFee = feeStatisticsImpl.getReceivedFeeAll(queryStatisticsDto);
         data = new JSONObject();
         data.put("name","实收金额");
         data.put("value", MoneyUtil.computePriceScale(receivedFee));

@@ -136,6 +136,26 @@ public class ReportFeeStatisticsServiceDaoImpl extends BaseServiceDao implements
         return Double.parseDouble(infos.get(0).get("receivedFee").toString());
     }
 
+    /**
+     * 实收费用（不限支付对象类型）
+     *
+     * @param info
+     * @return
+     */
+    @Override
+    public double getReceivedFeeAll(Map info) {
+        logger.debug("查询 实收费用(全部支付对象) 入参 info : {}", JSONObject.toJSONString(info));
+
+        List<Map> infos = sqlSessionTemplate.selectList("reportFeeStatisticsServiceDaoImpl.getReceivedFeeAll", info);
+
+        if (infos == null || infos.size() < 1) {
+            return 0;
+        }
+
+        return Double.parseDouble(infos.get(0).get("receivedFee").toString());
+    }
+
+
     @Override
     public int getOweRoomCount(Map info) {
         logger.debug("查询 欠费户数 入参 info : {}", JSONObject.toJSONString(info));

@@ -580,3 +580,13 @@ INSERT INTO `t_dict` VALUES ('626367', 'dataMonthOweParkingStatistics', '月欠�
 - 前端 `api/report/dataReportApi.js`：新增 `queryParkingAreas`（`parkingArea.listParkingAreas`）、`queryParkingFeeStatistics`、`queryParkingMonthReceivedDetail`、`queryParkingMonthOweDetail`。
 - 前端 `components/report/`：三个 Tab 改为容器（仅保留左侧费用大类列表 + 动态组件，`feeTypeCd === '888800010008'` 时渲染车位组件，`:key="feeTypeCd"` 强制重建），右侧内容拆为 `*Room.vue`（原逻辑平移）与 `*Parking.vue`（停车场维度、停车场下拉、「车位」列、新导出 pagePath）。
 - 前端 `views/report/dataReportLang.js`：三语新增 `parkingArea/parkingSpaceCount/feeParkingSpaceCount/parkingSpace/selectParkingArea/parkingRemainingCount`。
+
+## 2026-10-20 — 报表口径统一：实收金额/收款方式统计不限支付对象类型（可对账）
+
+无 DDL/字典/服务注册变更。
+
+- 后端 `java110-db/mapper/report/ReportFeeStatisticsServiceDaoImplMapper.xml`：新增 `getReceivedFeeAll`（与 `getReceivedFee` 同源，唯一区别不限制 `pf.payer_obj_type`，`endDate` 用 `<=`）；`getReceivedFeeByPrimeRate` 去掉 `payer_obj_type='3333'`、`pay_fee` 由 `left join` 改 `inner join`、时间边界统一 `<= #{endDate}`，不做「其他」兜底分组。`getReceivedFee` 本身未改动（月度费用汇总、费用汇总导出、小区费用汇总数值不变）。
+- 后端 `IReportFeeStatisticsServiceDao`、`ReportFeeStatisticsServiceDaoImpl`、`IReportFeeStatisticsInnerServiceSMO`、`ReportFeeStatisticsInnerServiceSMOImpl`、`IFeeStatistics`、`FeeStatisticsImpl`：新增 `getReceivedFeeAll`。
+- 后端 `QueryFeeDataReportCmd`：顶部「实收金额」改调 `getReceivedFeeAll`（含房屋/车位/车辆/商铺/合同收款），与收款方式统计各方式之和逐分相等；`QueryReceivedWayStatisticsCmd` 仅补注释，逻辑不变。
+- 前端 `views/report/dataReportLang.js`：三语新增 `receivedFeeTip/monthPaidAmountTip`。
+- 前端 `views/report/dataReportList.vue`：「实收金额」卡片加口径 tooltip；`components/report/DataReportFeeStatisticsRoom.vue`、`...Parking.vue`：「当月已收金额」列头加 tooltip（本月1日至月末；停车费仅统计车位收款）。

@@ -36,7 +36,12 @@
           <div class="data-report-title">{{ $t('dataReport.feeStatistics') }}</div>
           <div class="flex flex-wrap">
             <div v-for="(item, index) in dataReportInfo.fees" :key="index" class="data-report-card">
-              <div class="data-report-card-title">{{ item.name }}</div>
+              <div class="data-report-card-title">
+                {{ item.name }}
+                <el-tooltip v-if="item.name === '实收金额'" :content="$t('dataReport.receivedFeeTip')" placement="top">
+                  <i class="el-icon-question"></i>
+                </el-tooltip>
+              </div>
               <div class="data-report-card-value">{{ item.value }}</div>
             </div>
           </div>

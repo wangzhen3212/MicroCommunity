@@ -60,6 +60,15 @@ public interface IFeeStatistics {
     double getReceivedFee(QueryStatisticsDto queryFeeStatisticsDto);
 
     /**
+     * 查询实收数据（不限支付对象类型）
+     *
+     * @param queryFeeStatisticsDto
+     * @return
+     */
+    double getReceivedFeeAll(QueryStatisticsDto queryFeeStatisticsDto);
+
+
+    /**
      * 查询欠费户数
      *
      * @param queryStatisticsDto

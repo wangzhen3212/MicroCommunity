@@ -56,6 +56,8 @@ export const messages = {
       parkingRemainingCount: 'Parking Space Remaining',
       feeStartDate: 'Fee Start Date',
       feeEndDate: 'Fee End Date',
+      receivedFeeTip: 'Statistics of the received fee of all payment objects (room/parking space/vehicle/shop/contract) in the selected time range',
+      monthPaidAmountTip: 'Statistics from the 1st to the end of this month; parking fee only counts parking space payments, which differs from the received fee (selected range) above',
       noExportData: 'No data to export'
     }
   },
@@ -116,6 +118,8 @@ export const messages = {
       parkingRemainingCount: '剩余车位数',
       feeStartDate: '费用开始时间',
       feeEndDate: '费用结束时间',
+      receivedFeeTip: '统计所选时间区间内全部支付对象（房屋/车位/车辆/商铺/合同）的实收',
+      monthPaidAmountTip: '统计本月1日至月末；停车费仅统计车位收款，与顶部实收金额（所选区间）口径不同',
 noExportData: '沒有可以導出的數據'
     }
   },
@@ -176,6 +180,8 @@ noExportData: '沒有可以導出的數據'
       parkingRemainingCount: '剩餘車位數',
       feeStartDate: '費用開始時間',
       feeEndDate: '費用結束時間',
+      receivedFeeTip: '統計所選時間區間內全部支付對象（房屋/車位/車輛/商鋪/合同）的實收',
+      monthPaidAmountTip: '統計本月1日至月末；停車費僅統計車位收款，與頂部實收金額（所選區間）口徑不同',
       noExportData: '沒有可以導出的數據'
     }
   }

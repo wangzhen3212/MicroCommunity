@@ -21,6 +21,7 @@ import java.util.Map;
 
 /**
  * 查询收款方式统计
+ * 口径与实收金额（getReceivedFeeAll）同源：不区分支付对象类型，各收款方式金额之和等于实收金额
  */
 @Java110Cmd(serviceCode = "dataReport.queryReceivedWayStatistics")
 public class QueryReceivedWayStatisticsCmd extends Cmd {

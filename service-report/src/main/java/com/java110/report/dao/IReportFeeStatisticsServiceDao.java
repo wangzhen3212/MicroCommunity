@@ -57,6 +57,15 @@ public interface IReportFeeStatisticsServiceDao {
     double getReceivedFee(Map info);
 
     /**
+     * 查询 实收费用（不限支付对象类型）
+     *
+     * @param info
+     * @return
+     */
+    double getReceivedFeeAll(Map info);
+
+
+    /**
      * 查询欠费户数
      *
      * @param info

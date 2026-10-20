@@ -45,7 +45,14 @@
               ((scope.row.monthReceivedRoomCount) / (scope.row.feeRoomCount) * 100).toFixed(2) + '%' : '0%' }}
           </template>
         </el-table-column>
-        <el-table-column prop="monthReceivedRoomAmount" :label="$t('dataReport.monthPaidAmount')" align="center" />
+        <el-table-column prop="monthReceivedRoomAmount" align="center">
+          <template slot="header">
+            {{ $t('dataReport.monthPaidAmount') }}
+            <el-tooltip :content="$t('dataReport.monthPaidAmountTip')" placement="top" append-to-body>
+              <i class="el-icon-question"></i>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column prop="curMonthOweFee" :label="$t('dataReport.monthRemaining')" align="center" />
         <el-table-column :label="$t('dataReport.collectionRate')" align="center">
           <template slot-scope="scope">

@@ -97,6 +97,18 @@ public class FeeStatisticsImpl implements IFeeStatistics {
         return reportFeeStatisticsInnerServiceSMOImpl.getReceivedFee(queryFeeStatisticsDto);
     }
 
+    /**
+     * 查询 实收费用（不限支付对象类型）
+     *
+     * @param queryFeeStatisticsDto
+     * @return
+     */
+    @Override
+    public double getReceivedFeeAll(QueryStatisticsDto queryFeeStatisticsDto) {
+        return reportFeeStatisticsInnerServiceSMOImpl.getReceivedFeeAll(queryFeeStatisticsDto);
+    }
+
+
     @Override
     public int getOweRoomCount(QueryStatisticsDto queryStatisticsDto) {
         return reportFeeStatisticsInnerServiceSMOImpl.getOweRoomCount(queryStatisticsDto);

@@ -85,6 +85,13 @@ public class ReportFeeStatisticsInnerServiceSMOImpl extends BaseServiceSMO imple
         return info;
     }
 
+    @Override
+    public double getReceivedFeeAll(@RequestBody QueryStatisticsDto queryFeeStatisticsDto) {
+        double info = reportFeeStatisticsServiceDaoImpl.getReceivedFeeAll(BeanConvertUtil.beanCovertMap(queryFeeStatisticsDto));
+        return info;
+    }
+
+
     /**
      * 查询欠费户数
      *

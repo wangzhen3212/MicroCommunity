@@ -68,6 +68,16 @@ public interface IReportFeeStatisticsInnerServiceSMO {
     double getReceivedFee(@RequestBody QueryStatisticsDto queryFeeStatisticsDto);
 
     /**
+     * 实收费用（不限支付对象类型）
+     *
+     * @param queryFeeStatisticsDto
+     * @return
+     */
+    @RequestMapping(value = "/getReceivedFeeAll", method = RequestMethod.POST)
+    double getReceivedFeeAll(@RequestBody QueryStatisticsDto queryFeeStatisticsDto);
+
+
+    /**
      * 欠费户数
      *
      * @param queryStatisticsDto

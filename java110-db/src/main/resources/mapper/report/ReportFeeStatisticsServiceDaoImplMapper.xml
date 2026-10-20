@@ -278,6 +278,23 @@
         </if>
     </select>
 
+    <!-- 查询实收费用（不限支付对象类型，与收款方式统计同源，可逐分对账） -->
+    <select id="getReceivedFeeAll" parameterType="Map" resultType="Map">
+        select ifnull(sum(t.received_amount),0.0) receivedFee
+        from pay_fee_detail t
+        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
+        where 1 = 1
+        and t.status_cd = '0'
+        and t.state in ('1400','1000','1200')
+        and t.community_id = #{communityId}
+        <if test="startDate != null and startDate != ''">
+            and t.create_time &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            and t.create_time &lt;= #{endDate}
+        </if>
+    </select>
+
     <!-- 查询欠费户数 -->
     <select id="getOweRoomCount" parameterType="Map" resultType="Map">
         select count(1) oweRoomCount
@@ -842,20 +859,19 @@
         order by a.seq
     </select>
 
-    <!-- 按缴费方式统计：口径与 getReceivedFee 保持一致 -->
+    <!-- 按缴费方式统计：口径与 getReceivedFeeAll 保持一致（不限支付对象类型，各方式合计等于实收金额） -->
     <select id="getReceivedFeeByPrimeRate" parameterType="Map" resultType="Map">
-        select td.`name`, td.status_cd primeRate, ifnull(SUM(t.received_amount), 0) receivedAmount
+        select td.`name`, td.status_cd primeRate, ifnull(sum(t.received_amount), 0) receivedAmount
         from t_dict td
-                 left join pay_fee_detail t on td.status_cd = t.prime_rate and t.status_cd = '0'
-                 left join pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
-        where 1 = 1
-          and td.table_name = 'pay_fee_detail'
+        inner join pay_fee_detail t on td.status_cd = t.prime_rate
+                                   and t.status_cd = '0'
+                                   and t.state in ('1400', '1000', '1200')
+                                   and t.community_id = #{communityId}
+                                   and t.create_time &gt;= #{startDate}
+                                   and t.create_time &lt;= #{endDate}
+        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.status_cd = '0'
+        where td.table_name = 'pay_fee_detail'
           and td.table_columns = 'prime_rate'
-          and pf.payer_obj_type = '3333'
-          and t.state in ('1400', '1000', '1200')
-          and t.community_id = #{communityId}
-          and t.create_time &gt;= #{startDate}
-          and t.create_time &lt;= #{endDate}
         group by td.status_cd, td.`name`
     </select>
 
