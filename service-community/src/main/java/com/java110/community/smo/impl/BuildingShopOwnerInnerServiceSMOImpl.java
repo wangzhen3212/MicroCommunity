@@ -47,8 +47,7 @@ public class BuildingShopOwnerInnerServiceSMOImpl extends BaseServiceSMO impleme
 
     @Override
     public int deleteBuildingShopOwner(@RequestBody BuildingShopOwnerPo buildingShopOwnerPo) {
-        buildingShopOwnerPo.setStatusCd("1");
-        int deleteFlag = buildingShopOwnerV1ServiceDaoImpl.updateBuildingShopOwnerInfo(BeanConvertUtil.beanCovertMap(buildingShopOwnerPo));
+        int deleteFlag = buildingShopOwnerV1ServiceDaoImpl.deleteBuildingShopOwnerInfo(BeanConvertUtil.beanCovertMap(buildingShopOwnerPo));
         return deleteFlag;
     }
 

@@ -139,9 +139,9 @@
         )
     </insert>
 
-    <update id="updateBuildingShopOwner" parameterType="com.java110.po.shop.BuildingShopOwnerPo">
+    <update id="updateBuildingShopOwner" parameterType="map">
         UPDATE building_shop_owner
-        <set>
+        <trim prefix="SET" suffixOverrides=",">
             <if test="shopId != null and shopId != ''">
                 shop_id = #{shopId},
             </if>
@@ -163,14 +163,31 @@
             <if test="endTime != null">
                 end_time = #{endTime},
             </if>
-        </set>
+            <if test="communityId != null and communityId != ''">
+                community_id = #{communityId},
+            </if>
+            <if test="statusCd != null and statusCd != ''">
+                status_cd = #{statusCd},
+            </if>
+        </trim>
         WHERE shop_owner_id = #{shopOwnerId} AND status_cd = '0'
     </update>
 
     <update id="deleteBuildingShopOwner" parameterType="map">
         UPDATE building_shop_owner
         SET status_cd = '1'
-        WHERE shop_owner_id = #{shopOwnerId} AND status_cd = '0'
+        <where>
+            <if test="shopOwnerId != null and shopOwnerId != ''">
+                AND shop_owner_id = #{shopOwnerId}
+            </if>
+            <if test="shopId != null and shopId != ''">
+                AND shop_id = #{shopId}
+            </if>
+            <if test="communityId != null and communityId != ''">
+                AND community_id = #{communityId}
+            </if>
+            AND status_cd = '0'
+        </where>
     </update>
 
 </mapper>

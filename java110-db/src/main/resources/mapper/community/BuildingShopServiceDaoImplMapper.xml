@@ -110,31 +110,39 @@
     </select>
 
     <update id="updateBuildingShopInfo" parameterType="Map">
-        update building_shop t set t.status_cd = #{statusCd}
-        <if test="shopNum != null and shopNum != ''">
-            , t.shop_num = #{shopNum}
-        </if>
-        <if test="locationId != null and locationId != ''">
-            , t.location_id = #{locationId}
-        </if>
-        <if test="locationName != null and locationName != ''">
-            , t.location_name = #{locationName}
-        </if>
-        <if test="builtUpArea != null and builtUpArea != ''">
-            , t.built_up_area = #{builtUpArea}
-        </if>
-        <if test="shopArea != null and shopArea != ''">
-            , t.shop_area = #{shopArea}
-        </if>
-        <if test="remark != null and remark != ''">
-            , t.remark = #{remark}
-        </if>
-        <if test="state != null and state != ''">
-            , t.state = #{state}
-        </if>
-        <if test="shopRent != null and shopRent != ''">
-            , t.shop_rent = #{shopRent}
-        </if>
+        update building_shop t
+        <set>
+            <if test="statusCd != null and statusCd != ''">
+                t.status_cd = #{statusCd},
+            </if>
+            <if test="shopNum != null and shopNum != ''">
+                t.shop_num = #{shopNum},
+            </if>
+            <if test="locationId != null and locationId != ''">
+                t.location_id = #{locationId},
+            </if>
+            <if test="locationName != null and locationName != ''">
+                t.location_name = #{locationName},
+            </if>
+            <if test="builtUpArea != null and builtUpArea != ''">
+                t.built_up_area = #{builtUpArea},
+            </if>
+            <if test="shopArea != null and shopArea != ''">
+                t.shop_area = #{shopArea},
+            </if>
+            <if test="remark != null and remark != ''">
+                t.remark = #{remark},
+            </if>
+            <if test="state != null and state != ''">
+                t.state = #{state},
+            </if>
+            <if test="shopRent != null and shopRent != ''">
+                t.shop_rent = #{shopRent},
+            </if>
+            <if test="shopId != null and shopId != ''">
+                t.shop_id = t.shop_id,
+            </if>
+        </set>
         where 1 = 1
         <if test="shopId != null and shopId != ''">
             and t.shop_id = #{shopId}

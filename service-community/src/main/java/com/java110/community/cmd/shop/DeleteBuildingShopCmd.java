@@ -46,11 +46,14 @@ public class DeleteBuildingShopCmd extends Cmd {
         buildingShopOwnerDto.setShopId(shopId);
         buildingShopOwnerDto.setCommunityId(communityId);
         int count = buildingShopOwnerInnerServiceSMOImpl.queryBuildingShopOwnersCount(buildingShopOwnerDto);
-        if(count >0) {
+        if (count > 0) {
             BuildingShopOwnerPo buildingShopOwnerPo = new BuildingShopOwnerPo();
             buildingShopOwnerPo.setShopId(shopId);
             buildingShopOwnerPo.setCommunityId(communityId);
-            buildingShopOwnerInnerServiceSMOImpl.deleteBuildingShopOwner(buildingShopOwnerPo);
+            int deleteOwnerFlag = buildingShopOwnerInnerServiceSMOImpl.deleteBuildingShopOwner(buildingShopOwnerPo);
+            if (deleteOwnerFlag < 1) {
+                throw new CmdException("删除商铺租赁数据失败，shopId=" + shopId);
+            }
         }
 
         // 删除商铺

@@ -590,3 +590,21 @@ INSERT INTO `t_dict` VALUES ('626367', 'dataMonthOweParkingStatistics', '月欠�
 - 后端 `QueryFeeDataReportCmd`：顶部「实收金额」改调 `getReceivedFeeAll`（含房屋/车位/车辆/商铺/合同收款），与收款方式统计各方式之和逐分相等；`QueryReceivedWayStatisticsCmd` 仅补注释，逻辑不变。
 - 前端 `views/report/dataReportLang.js`：三语新增 `receivedFeeTip/monthPaidAmountTip`。
 - 前端 `views/report/dataReportList.vue`：「实收金额」卡片加口径 tooltip；`components/report/DataReportFeeStatisticsRoom.vue`、`...Parking.vue`：「当月已收金额」列头加 tooltip（本月1日至月末；停车费仅统计车位收款）。
+
+## 2026-10-23 — 商铺删除 / 退铺（shop.deleteBuildingShop、shop.deleteBuildingShopOwner）报错修复
+
+无 DDL/字典/服务注册变更（仅代码，可选脏数据修复 SQL 见下）。
+
+```sql
+-- 可选：修复历史 status_cd 为 NULL 的商铺/租赁脏数据（先查后改）
+SELECT shop_id, status_cd FROM building_shop WHERE status_cd IS NULL;
+UPDATE building_shop SET status_cd = '0' WHERE status_cd IS NULL;
+UPDATE building_shop_owner SET status_cd = '0' WHERE status_cd IS NULL;
+```
+
+- 后端 `java110-db/mapper/community/BuildingShopOwnerServiceDaoImplMapper.xml`：`deleteBuildingShopOwner` 改为「单条 `shopOwnerId` / 批量 `shopId(+communityId)`」双入参逻辑删除（`SET status_cd='1'`，`<where>` 动态条件 + `status_cd='0'`）；`updateBuildingShopOwner` 由 `<set>` 改 `<trim prefix="SET" suffixOverrides=",">` 并补 `community_id`、`status_cd` 条件赋值，修复「update 语句没有 set」。
+- 后端 `java110-db/mapper/community/BuildingShopServiceDaoImplMapper.xml`：`updateBuildingShopInfo` 的 `status_cd` 改为条件更新（`statusCd` 非空才写），其余字段同步改 `<set> + 逗号后缀` 写法，`shopId` 存在时追加恒真项 `t.shop_id = t.shop_id` 兜底，避免 `status_cd` 被置 NULL/脏值导致商铺从列表消失。
+- 后端 `service-community/dao/impl/BuildingShopOwnerV1ServiceDaoImpl`：`deleteBuildingShopOwnerInfo` 改为幂等（`shopOwnerId`/`shopId`/`communityId` 全空抛 `DAOException`，影响 0 行仅 warn 并返回 0）；`updateBuildingShopOwnerInfo` 前置校验 `shopOwnerId` 必填且至少一个可更新字段。
+- 后端 `service-community/smo/impl/BuildingShopOwnerInnerServiceSMOImpl`：`deleteBuildingShopOwner` 改走 `deleteBuildingShopOwnerInfo`（专用删除 mapper），不再 `setStatusCd("1")` 后复用动态 update。
+- 后端 `service-community/cmd/shop/DeleteBuildingShopCmd`：批量逻辑删除租赁关系后校验影响行数，失败文案明确。
+- 后端 `service-community/cmd/shop/DeleteBuildingShopOwnerCmd`：`validate` 改为 `shopOwnerId` 或 `(shopId + ownerId)` 至少一组（提示「shopOwnerId 或 (shopId + ownerId) 不能为空」）；退铺后按该商铺剩余有效租赁记录回写 `building_shop.state`（无剩余置 `2008` 空置，仍有记录取剩余首条 `state`），且不传 `statusCd` 以免污染商铺状态。
