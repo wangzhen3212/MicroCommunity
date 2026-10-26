@@ -221,6 +221,11 @@ public class ImportRoomFeeQueueDataAdapt extends DefaultImportData implements II
     private PayFeeRulePo createPayFeeRulePo(ImportRoomFee importRoomFee, String batchId, FeeConfigDto feeConfigDto) {
         String time = importRoomFee.getStartTime();
 
+        String maxTime = importRoomFee.getEndTime();
+        if(!maxTime.contains(":")){
+            maxTime += " 23:59:59";
+        }
+
         PayFeeRulePo payFeeRulePo = new PayFeeRulePo();
         payFeeRulePo.setRuleId(GenerateCodeFactory.getGeneratorId("11"));
         payFeeRulePo.setConfigId(feeConfigDto.getConfigId());
@@ -230,7 +235,7 @@ public class ImportRoomFeeQueueDataAdapt extends DefaultImportData implements II
         payFeeRulePo.setAmount(importRoomFee.getAmount());
         payFeeRulePo.setStartTime(time);
         payFeeRulePo.setEndTime(time);
-        payFeeRulePo.setMaxTime(importRoomFee.getEndTime());
+        payFeeRulePo.setMaxTime(maxTime);
         payFeeRulePo.setBatchId(batchId);
         payFeeRulePo.setUserId("-1");
         payFeeRulePo.setIncomeObjId(importRoomFee.getStoreId());

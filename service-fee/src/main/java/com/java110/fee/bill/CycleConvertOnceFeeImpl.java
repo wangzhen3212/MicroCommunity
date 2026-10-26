@@ -171,6 +171,10 @@ public class CycleConvertOnceFeeImpl implements ICycleConvertOnceFee {
     public int ruleGeneratePayFee(PayFeeRulePo tmpPayFeeRulePo) {
         int ruleCycle = 1;
 
+        //todo 已结束的规则不再出账
+        if (FeeDto.STATE_FINISH.equals(tmpPayFeeRulePo.getState())) {
+            return 0;
+        }
 
         //todo 查询费用项信息
         FeeConfigDto feeConfigDto = new FeeConfigDto();
@@ -201,18 +205,30 @@ public class CycleConvertOnceFeeImpl implements ICycleConvertOnceFee {
         OwnerDto ownerDto = computeFeeSMOImpl.getFeeOwnerDto(feeDto);
         String payerObjName = computeFeeSMOImpl.getFeeObjName(feeDto);
 
-        Date startTime = DateUtil.getDateFromStringB(tmpPayFeeRulePo.getCurYearMonth());
+        Date startTime = null;
         Date endTime = null;
 
-        // 如果是后付费，startTime 要减去一个周期时间
-        if (FeeConfigDto.PAYMENT_CD_AFTER.equals(feeConfigDtos.get(0).getPaymentCd()) && FeeDto.FEE_FLAG_CYCLE.equals(tmpPayFeeRulePo.getFeeFlag())) {
-            startTime = DateUtil.getNextMonthDate(startTime, ruleCycle * -1);
+        // 账单日
+        Date curYearMonth = DateUtil.getDateFromStringB(tmpPayFeeRulePo.getCurYearMonth());
+
+        // 账期起点：规则账期终点，即上一次出账的终点
+        startTime = DateUtil.getDateFromStringB(tmpPayFeeRulePo.getEndTime());
+        // 历史规则的 end_time 未随出账推进，用账单日推算的上一次账期起点兜底
+        Date billStartTime = curYearMonth;
+        // 后付费周期性规则的账单日比账期终点多一个周期
+        if (FeeConfigDto.PAYMENT_CD_AFTER.equals(feeConfigDtos.get(0).getPaymentCd())
+                && FeeDto.FEE_FLAG_CYCLE.equals(tmpPayFeeRulePo.getFeeFlag())) {
+            billStartTime = DateUtil.getNextMonthDate(curYearMonth, ruleCycle * -1);
+        }
+        if (startTime.before(billStartTime)) {
+            startTime = billStartTime;
         }
 
-        //todo 没到时间
-        if (startTime.getTime() >= targetEndTime.getTime()) {
+        //todo 没到账单日
+        if (curYearMonth.after(getTodayStartTime())) {
             return 0;
         }
+
         // 周期性费用
         if (FeeDto.FEE_FLAG_CYCLE.equals(tmpPayFeeRulePo.getFeeFlag())) {
             do {
@@ -251,9 +267,10 @@ public class CycleConvertOnceFeeImpl implements ICycleConvertOnceFee {
             saveFlag = saveFeeAndAttrs(tmpPayFeePos, tmpFeeAttrPos, payFeeRuleBillPos);
         }
 
-        //todo 修改pay_fee_rule 的CurYearMonth
+        //todo 修改pay_fee_rule 的账期终点和CurYearMonth
         PayFeeRulePo payFeeRulePo = new PayFeeRulePo();
         payFeeRulePo.setRuleId(tmpPayFeeRulePo.getRuleId());
+        payFeeRulePo.setEndTime(DateUtil.getFormatTimeStringA(endTime));
         payFeeRulePo.setCurYearMonth(DateUtil.getFormatTimeStringB(endTime));
         // 后付费 最后刷账单日时还是要多刷一个月
         if (FeeConfigDto.PAYMENT_CD_AFTER.equals(feeConfigDtos.get(0).getPaymentCd())) {
@@ -392,6 +409,15 @@ public class CycleConvertOnceFeeImpl implements ICycleConvertOnceFee {
 
         payFeeMonthInnerServiceSMOImpl.doGeneratorOweFees(payFeeDetailRefreshFeeMonthDto);
         return flag;
+    }
+
+    /**
+     * 今天 00:00:00
+     *
+     * @return
+     */
+    private Date getTodayStartTime() {
+        return DateUtil.getDateFromStringB(DateUtil.getFormatTimeStringB(DateUtil.getCurrentDate()));
     }
 
     /**
