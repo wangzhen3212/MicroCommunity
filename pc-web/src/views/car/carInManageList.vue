@@ -42,9 +42,9 @@
             </el-col>
 
             <el-col :span="6">
-              <el-select v-model="carInManageInfo.conditions.carType" :placeholder="$t('carInManage.selectPlateType')"
-                style="width:100%">
-                <el-option value="" :label="$t('carInManage.selectPlateType')" />
+              <el-select v-model="carInManageInfo.conditions.carType" :placeholder="$t('carInManage.selectCarType')"
+                style="width:100%" @change="queryCarInoutMethod">
+                <el-option value="" :label="$t('carInManage.selectCarType')" />
                 <el-option value="T" :label="$t('carInManage.temporaryVehicle')" />
                 <el-option value="S" :label="$t('carInManage.forSaleVehicle')" />
                 <el-option value="H" :label="$t('carInManage.monthlyRental')" />
