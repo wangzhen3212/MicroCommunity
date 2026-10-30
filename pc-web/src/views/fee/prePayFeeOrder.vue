@@ -130,7 +130,8 @@
             <el-table-column :label="$t('prePayFeeOrder.startMonth')" align="center" width="250">
               <template slot-scope="scope">
                 <el-date-picker v-model="scope.row.startMonth" type="month" format="yyyy-MM" value-format="yyyy-MM"
-                  readonly style="width: 100%" />
+                  :disabled="scope.row.selected != 'Y'" :picker-options="getStartMonthOptions(scope.row)"
+                  :placeholder="$t('prePayFeeOrder.startMonthPlaceholder')" style="width: 100%" />
               </template>
             </el-table-column>
           </el-table>
@@ -140,8 +141,9 @@
               style="background-color: #f9f9f9;" class="discount-table">
               <el-table-column width="60" align="center">
                 <template slot-scope="scope">
-                  <el-checkbox v-model="rule.selectedDiscountIds" :value="scope.row.discountId"
-                    @change="selectOneDiscount(scope.row)" />
+                  <el-checkbox-group v-model="rule.selectedDiscountIds" @change="selectOneDiscount">
+                    <el-checkbox :label="scope.row.discountId" />
+                  </el-checkbox-group>
                 </template>
               </el-table-column>
               <el-table-column :label="$t('prePayFeeOrder.feeName')" align="center" prop="discountName" />
@@ -162,7 +164,7 @@
             </el-checkbox>
           </div>
 
-          <div v-if="prePayFeeOrderInfo.showMeterRule == 'Y'">
+          <div v-if="prePayFeeOrderInfo.showMeterRule">
             <el-table :data="prePayFeeOrderInfo.meterRules" border class="meter-table">
               <el-table-column :label="$t('prePayFeeOrder.feeName')" align="center" prop="ftName" />
               <el-table-column :label="$t('prePayFeeOrder.prepaidAmount')" align="center">
@@ -230,7 +232,8 @@ export default {
         rules: [],
         selectRuleIds: [],
         meterRules: [],
-        showMeterRule: 'N'
+        meterRulesLoaded: false,
+        showMeterRule: false
       }
     }
   },
@@ -268,9 +271,12 @@ export default {
           item.cycles = ''
           item.startDateInputClass = 'startDateInputClass' + item.ruleId
           const date = new Date(item.curYearMonth)
-          item.startMonth = date.getFullYear() + '-' + (date.getMonth() + 1)
+          const month = (date.getMonth() + 1).toString().padStart(2, '0')
+          item.startMonth = date.getFullYear() + '-' + month
           item.selected = 'N'
           item.showFlag = 'N'
+          item.selectedDiscountIds = []
+          item.discounts = item.discounts || []
           return item
         })
 
@@ -313,15 +319,25 @@ export default {
       this.computeReceivedAmount()
     },
 
-    async selectMeterRule() {
-      const showMeterRule = this.prePayFeeOrderInfo.showMeterRule
-      if (showMeterRule == 'Y') {
-        this.prePayFeeOrderInfo.showMeterRule = 'N'
+    async selectMeterRule(checked) {
+      if (checked) {
+        if (!this.prePayFeeOrderInfo.meterRulesLoaded) {
+          const loaded = await this.loadMeterFeeRuleInfo()
+          if (!loaded) {
+            this.prePayFeeOrderInfo.showMeterRule = false
+            this.computeReceivedAmount()
+            return
+          }
+          this.prePayFeeOrderInfo.meterRulesLoaded = true
+        }
+        if (this.prePayFeeOrderInfo.meterRules.length < 1) {
+          this.$message.warning(this.$t('prePayFeeOrder.loadMeterEmpty'))
+        }
       } else {
-        this.prePayFeeOrderInfo.showMeterRule = 'Y'
-        await this.loadMeterFeeRuleInfo()
+        this.prePayFeeOrderInfo.meterRules = []
+        this.prePayFeeOrderInfo.meterRulesLoaded = false
       }
-      this.$forceUpdate()
+      this.computeReceivedAmount()
     },
 
     async loadMeterFeeRuleInfo() {
@@ -330,10 +346,43 @@ export default {
           communityId: this.prePayFeeOrderInfo.communityId
         }
         const response = await getMeterFeeRuleInfo(params)
-        this.prePayFeeOrderInfo.meterRules = response.data
+        this.prePayFeeOrderInfo.meterRules = (response.data || []).map(item => {
+          item.amount = parseFloat(item.amount || 0)
+          return item
+        })
+        return true
       } catch (error) {
         this.$message.error(this.$t('prePayFeeOrder.loadMeterError'))
+        return false
       }
+    },
+
+    getStartMonthOptions(row) {
+      const minDate = this.getRuleMinMonthDate(row)
+      return {
+        disabledDate(time) {
+          if (!minDate) {
+            return false
+          }
+          return time.getTime() < minDate.getTime()
+        }
+      }
+    },
+
+    getRuleMinMonthDate(row) {
+      if (!row || !row.curYearMonth) {
+        return null
+      }
+      const parts = row.curYearMonth.split('-')
+      if (parts.length < 2) {
+        return null
+      }
+      const year = parseInt(parts[0], 10)
+      const month = parseInt(parts[1], 10)
+      if (isNaN(year) || isNaN(month)) {
+        return null
+      }
+      return new Date(year, month - 1, 1)
     },
 
     switchRuleFlag(rule) {
@@ -386,9 +435,9 @@ export default {
     computeMeterReceivedAmount() {
       if (this.prePayFeeOrderInfo.meterRules.length < 1) return
 
-      let receivedAmount = parseFloat(this.prePayFeeOrderInfo.receivedAmount)
+      let receivedAmount = parseFloat(this.prePayFeeOrderInfo.receivedAmount || 0)
       this.prePayFeeOrderInfo.meterRules.forEach(item => {
-        receivedAmount += parseFloat(item.amount)
+        receivedAmount += parseFloat(item.amount || 0)
       })
       this.prePayFeeOrderInfo.receivedAmount = receivedAmount.toFixed(2)
     },
@@ -421,10 +470,34 @@ export default {
         return false
       }
 
-      const meterRules = this.prePayFeeOrderInfo.meterRules.filter(item => item.amount > 0)
-      if (this.prePayFeeOrderInfo.selectRuleIds.length < 1 && meterRules.length < 1) {
+      const selectedRules = this.prePayFeeOrderInfo.rules.filter(item =>
+        this.prePayFeeOrderInfo.selectRuleIds.includes(item.ruleId)
+      )
+      const meterRules = this.prePayFeeOrderInfo.meterRules.filter(item => parseFloat(item.amount || 0) > 0)
+
+      if (selectedRules.length < 1 && meterRules.length < 1) {
         this.$message.warning(this.$t('prePayFeeOrder.selectPrepaidFee'))
         return false
+      }
+
+      for (let i = 0; i < selectedRules.length; i++) {
+        const rule = selectedRules[i]
+        if (!rule.cycles || rule.cycles < 1) {
+          this.$message.warning(this.$t('prePayFeeOrder.selectMonthsBeforeSubmit'))
+          return false
+        }
+        if (!rule.startMonth || !/^\d{4}-\d{2}$/.test(rule.startMonth)) {
+          this.$message.warning(this.$t('prePayFeeOrder.selectStartMonth'))
+          return false
+        }
+      }
+
+      for (let i = 0; i < this.prePayFeeOrderInfo.meterRules.length; i++) {
+        const amount = parseFloat(this.prePayFeeOrderInfo.meterRules[i].amount)
+        if (isNaN(amount) || amount < 0) {
+          this.$message.warning(this.$t('prePayFeeOrder.meterAmountInvalid'))
+          return false
+        }
       }
 
       return true
@@ -441,7 +514,7 @@ export default {
         this.prePayFeeOrderInfo.selectRuleIds.includes(item.ruleId)
       )
 
-      const meterRules = this.prePayFeeOrderInfo.meterRules.filter(item => item.amount > 0)
+      const meterRules = this.prePayFeeOrderInfo.meterRules.filter(item => parseFloat(item.amount || 0) > 0)
 
       const confirmData = {
         primeRate: this.prePayFeeOrderInfo.primeRate,

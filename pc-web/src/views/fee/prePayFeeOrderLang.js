@@ -24,6 +24,7 @@ export const messages = {
       description: 'Description',
       months: 'Months',
       startMonth: 'Start Month',
+      startMonthPlaceholder: 'Please select start month',
       selectMonthsPlaceholder: 'Please select prepaid months',
       monthsUnit: ' months',
       prepaidAmount: 'Prepaid Amount',
@@ -32,8 +33,12 @@ export const messages = {
       submitPayment: 'Submit Payment',
       selectPaymentMethod: 'Please select payment method',
       selectPrepaidFee: 'Please select prepaid fee',
+      selectMonthsBeforeSubmit: 'Please select prepaid months for the selected fees',
+      selectStartMonth: 'Please select start month for the selected fees',
+      meterAmountInvalid: 'Prepaid utilities amount is invalid',
       loadError: 'Failed to load fee rule information',
-      loadMeterError: 'Failed to load meter fee rule information'
+      loadMeterError: 'Failed to load meter fee rule information',
+      loadMeterEmpty: 'No prepaid utilities fee rule available'
     },
     prePayFeeOrderConfirm: {
       title: 'Payment Confirmation',
@@ -101,6 +106,7 @@ export const messages = {
       description: '说明',
       months: '月份',
       startMonth: '起始月',
+      startMonthPlaceholder: '请选择起始月',
       selectMonthsPlaceholder: '请选择预存月份',
       monthsUnit: '个月',
       prepaidAmount: '预收金额',
@@ -109,8 +115,12 @@ export const messages = {
       submitPayment: '提交收费',
       selectPaymentMethod: '请选择支付方式',
       selectPrepaidFee: '请选择预付费用',
+      selectMonthsBeforeSubmit: '已选费用请先选择预存月份',
+      selectStartMonth: '已选费用请先选择起始月',
+      meterAmountInvalid: '预付水电费金额格式不正确',
       loadError: '加载费用规则信息失败',
-      loadMeterError: '加载水电费规则信息失败'
+      loadMeterError: '加载水电费规则信息失败',
+      loadMeterEmpty: '暂无预付水电费规则'
     },
     prePayFeeOrderConfirm: {
       title: '收费确认',
@@ -178,6 +188,7 @@ export const messages = {
       description: '說明',
       months: '月份',
       startMonth: '起始月',
+      startMonthPlaceholder: '請選擇起始月',
       selectMonthsPlaceholder: '請選擇預存月份',
       monthsUnit: '個月',
       prepaidAmount: '預收金額',
@@ -186,8 +197,12 @@ export const messages = {
       submitPayment: '提交收費',
       selectPaymentMethod: '請選擇支付方式',
       selectPrepaidFee: '請選擇預付費用',
+      selectMonthsBeforeSubmit: '已選費用請先選擇預存月份',
+      selectStartMonth: '已選費用請先選擇起始月',
+      meterAmountInvalid: '預付水電費金額格式不正確',
       loadError: '載入費用規則資訊失敗',
-      loadMeterError: '載入水電費規則資訊失敗'
+      loadMeterError: '載入水電費規則資訊失敗',
+      loadMeterEmpty: '暫無預付水電費規則'
     },
     prePayFeeOrderConfirm: {
       title: '收費確認',
