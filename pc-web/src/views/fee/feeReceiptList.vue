@@ -13,11 +13,15 @@
           <el-input v-model="feeReceiptManageInfo.conditions.receiptId" :placeholder="$t('feeReceipt.search.receiptId')"
             clearable />
         </el-col>
-        <el-col :span="8">
-          <el-input v-model="feeReceiptManageInfo.conditions.roomId" :placeholder="$t('feeReceipt.search.roomId')"
+        <el-col :span="6">
+          <el-input v-model="feeReceiptManageInfo.conditions.objNameLike" :placeholder="$t('feeReceipt.search.objNameLike')"
             clearable />
         </el-col>
-        <el-col :span="6">
+        <el-col :span="4">
+          <el-input v-model="feeReceiptManageInfo.conditions.carNumLike" :placeholder="$t('feeReceipt.search.carNumLike')"
+            clearable />
+        </el-col>
+        <el-col :span="4">
           <el-select v-model="feeReceiptManageInfo.conditions.objType" :placeholder="$t('feeReceipt.search.objType')"
             style="width:100%">
             <el-option :label="$t('feeReceipt.search.all')" value="" />
@@ -69,6 +73,7 @@
         </el-table-column>
         <el-table-column prop="feeName" :label="$t('feeReceipt.table.feeName')" align="center" />
         <el-table-column prop="roomName" :label="$t('feeReceipt.table.roomName')" align="center" />
+        <el-table-column prop="psNum" :label="$t('feeReceipt.table.psNum')" align="center" />
         <el-table-column prop="payObjName" :label="$t('feeReceipt.table.payObjName')" align="center" />
         <el-table-column prop="carNum" :label="$t('feeReceipt.table.carNum')" align="center" />
         <el-table-column prop="amount" :label="$t('feeReceipt.table.amount')" align="center" />
@@ -151,7 +156,8 @@ export default {
           qstartTime: '',
           qendTime: '',
           type: '',
-          roomId: '',
+          objNameLike: '',
+          carNumLike: '',
           communityId: getCommunityId(),
           receiptId: '',
           page: 1,
@@ -211,7 +217,8 @@ export default {
       this.feeReceiptManageInfo.conditions = {
         ...this.feeReceiptManageInfo.conditions,
         objType: '',
-        roomId: '',
+        objNameLike: '',
+        carNumLike: '',
         receiptId: '',
         qstartTime: '',
         qendTime: ''

@@ -19,6 +19,7 @@ public class OwnerRoomRelDto extends PageDto implements Serializable {
     private String remark;
     private String state;
     private String ownerId;
+    private String[] ownerIds;
     private String ownerName;
     private String ownerNameLike;
     private String idCard;
@@ -70,6 +71,15 @@ public class OwnerRoomRelDto extends PageDto implements Serializable {
     public void setOwnerId(String ownerId) {
         this.ownerId = ownerId;
     }
+
+    public String[] getOwnerIds() {
+        return ownerIds;
+    }
+
+    public void setOwnerIds(String[] ownerIds) {
+        this.ownerIds = ownerIds;
+    }
+
 
     public String getUserId() {
         return userId;

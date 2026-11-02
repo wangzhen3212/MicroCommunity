@@ -73,8 +73,11 @@
             {{ _getFeeObjName(scope.row.objType) }}{{ $t('simplifyFeeReceipt.fee') }}
           </template>
         </el-table-column>
-        <el-table-column prop="objName" :label="_getFeeObjName(simplifyFeeReceiptInfo.objType)"
-          align="center"></el-table-column>
+        <el-table-column :label="_getFeeObjName(simplifyFeeReceiptInfo.objType)" align="center">
+          <template slot-scope="scope">
+            {{ _getFeeObjNameText(scope.row) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="payObjName" :label="$t('simplifyFeeReceipt.owner')" align="center"></el-table-column>
         <el-table-column prop="feeName" :label="$t('simplifyFeeReceipt.feeItem')" align="center"></el-table-column>
         <el-table-column :label="$t('simplifyFeeReceipt.timePeriod')" align="center">
@@ -484,6 +487,12 @@ export default {
       } else {
         return this.$t('simplifyFeeReceipt.contract')
       }
+    },
+    _getFeeObjNameText(receipt) {
+      if (receipt.objType === '6666' && receipt.psNum && receipt.psNum !== '-') {
+        return receipt.psNum
+      }
+      return receipt.objName
     },
     async _listFeePrintPages() {
       try {

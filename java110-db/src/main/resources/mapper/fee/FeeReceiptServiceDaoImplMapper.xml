@@ -67,6 +67,13 @@
         <if test="objName !=null and objName != ''">
             and t.obj_name= #{objName}
         </if>
+        <if test="objNameLike !=null and objNameLike != ''">
+            and t.obj_name like concat('%',#{objNameLike},'%')
+        </if>
+        <if test="carNumLike !=null and carNumLike != ''">
+            and exists (select 1 from parking_space ps where ps.ps_id = t.obj_id and ps.status_cd = '0'
+            and ps.car_num like concat('%',#{carNumLike},'%'))
+        </if>
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
         </if>
@@ -327,6 +334,13 @@
         </if>
         <if test="objName !=null and objName != ''">
             and t.obj_name= #{objName}
+        </if>
+        <if test="objNameLike !=null and objNameLike != ''">
+            and t.obj_name like concat('%',#{objNameLike},'%')
+        </if>
+        <if test="carNumLike !=null and carNumLike != ''">
+            and exists (select 1 from parking_space ps where ps.ps_id = t.obj_id and ps.status_cd = '0'
+            and ps.car_num like concat('%',#{carNumLike},'%'))
         </if>
         <if test="receiptCode !=null and receiptCode != ''">
             and t.receipt_code = #{receiptCode}
