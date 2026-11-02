@@ -39,7 +39,10 @@
         <tr v-for="(item, index) in printPayFeeInfo.fees" :key="index">
           <th scope="row" class="text-center">{{ index + 1 }}</th>
           <td class="text-center">{{ item.feeName }}</td>
-          <td class="text-center">{{ item.objName }}</td>
+          <td class="text-center">
+            <div>{{ getObjNameText(item) }}</div>
+            <div v-if="getCarNumText(item)" style="font-size:16px;">（{{ getCarNumText(item) }}）</div>
+          </td>
           <td class="text-center">
             <div v-if="item.preDegrees">
               {{ formatDate(item.startTime) }}{{ $t('printPayFeeBangTai.to') }}{{ formatDate(item.endTime) }}<br>
@@ -200,6 +203,9 @@ export default {
             if (item.receiptId == im.receiptId) {
               item.objName = im.objName
               item.feeTypeCd = im.feeTypeCd
+              item.objType = im.objType
+              item.psNum = im.psNum
+              item.carNum = im.carNum
             }
           })
         })
@@ -240,6 +246,18 @@ export default {
     formatDate(date) {
       if (!date) return ''
       return dateFormat(date)
+    },
+    getObjNameText(item) {
+      if (item.objType === '6666' && item.psNum && item.psNum !== '-') {
+        return item.psNum
+      }
+      return item.objName || '-'
+    },
+    getCarNumText(item) {
+      if (!item.carNum || item.carNum === '-') {
+        return ''
+      }
+      return item.carNum
     },
     changeNumMoneyToChinese,
     handlePrint() {
