@@ -49,6 +49,15 @@ public interface IUserAttrV1InnerServiceSMO {
     public int deleteUserAttr(@RequestBody  UserAttrPo userAttrPo);
 
     /**
+     * <p>物理删除用户属性信息，退出登录解除 openId 绑定使用</p>
+     *
+     * @param userAttrPo 删除条件（userId 或 attrId 必须有一个，可配合 specCd）
+     * @return 删除记录数
+     */
+    @RequestMapping(value = "/deleteUserAttrInfo", method = RequestMethod.POST)
+    public int deleteUserAttrInfo(@RequestBody UserAttrPo userAttrPo);
+
+    /**
      * <p>查询小区楼信息</p>
      *
      *

@@ -63,6 +63,15 @@ public interface IUserAttrV1ServiceDao {
 
 
     /**
+     * 物理删除用户属性信息
+     *
+     * @param info 删除条件（userId / attrId / specCd）
+     * @throws DAOException DAO异常
+     */
+    int deleteUserAttrInfo(Map info) throws DAOException;
+
+
+    /**
      * 查询用户属性总数
      *
      * @param info 用户属性信息

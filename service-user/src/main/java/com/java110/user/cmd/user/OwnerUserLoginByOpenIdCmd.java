@@ -98,6 +98,7 @@ public class OwnerUserLoginByOpenIdCmd extends Cmd {
         UserAttrDto userAttrDto = new UserAttrDto();
         userAttrDto.setSpecCd(UserAttrDto.SPEC_OPEN_ID);
         userAttrDto.setValue(reqJson.getString("openId"));
+        userAttrDto.setStatusCd("0");
         List<UserAttrDto> userAttrDtos = userAttrV1InnerServiceSMOImpl.queryUserAttrs(userAttrDto);
 
         if (ListUtil.isNull(userAttrDtos)) {

@@ -73,6 +73,21 @@
 
     </update>
 
+    <!-- 物理删除用户属性信息（退出登录解除 openId 绑定使用，必须传 userId 或 attrId） -->
+    <delete id="deleteUserAttrInfo" parameterType="Map">
+        delete from u_user_attr
+        where 1 = 1
+        <if test="attrId !=null and attrId != ''">
+            and attr_id= #{attrId}
+        </if>
+        <if test="userId !=null and userId != ''">
+            and user_id= #{userId}
+        </if>
+        <if test="specCd !=null and specCd != ''">
+            and spec_cd= #{specCd}
+        </if>
+    </delete>
+
     <!-- 查询用户属性数量 add by wuxw 2018-07-03 -->
     <select id="queryUserAttrsCount" parameterType="Map" resultType="Map">
         select count(1) count

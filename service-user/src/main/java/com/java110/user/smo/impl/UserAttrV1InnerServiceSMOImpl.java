@@ -23,6 +23,7 @@ import com.java110.intf.user.IUserAttrV1InnerServiceSMO;
 import com.java110.po.user.UserAttrPo;
 import com.java110.user.dao.IUserAttrV1ServiceDao;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,6 +62,14 @@ public class UserAttrV1InnerServiceSMOImpl extends BaseServiceSMO implements IUs
         userAttrPo.setStatusCd("1");
         int saveFlag = userAttrV1ServiceDaoImpl.updateUserAttrInfo(BeanConvertUtil.beanCovertMap(userAttrPo));
         return saveFlag;
+    }
+
+    @Override
+    public int deleteUserAttrInfo(@RequestBody UserAttrPo userAttrPo) {
+        if (StringUtil.isEmpty(userAttrPo.getUserId()) && StringUtil.isEmpty(userAttrPo.getAttrId())) {
+            throw new IllegalArgumentException("删除用户属性必须指定 userId 或 attrId");
+        }
+        return userAttrV1ServiceDaoImpl.deleteUserAttrInfo(BeanConvertUtil.beanCovertMap(userAttrPo));
     }
 
     @Override

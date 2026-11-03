@@ -92,6 +92,20 @@ public class UserAttrV1ServiceDaoImpl extends BaseServiceDao implements IUserAtt
     }
 
      /**
+     * 物理删除用户属性信息
+     * @param info 删除条件（userId / attrId / specCd）
+     * @throws DAOException DAO异常
+     */
+    @Override
+    public int deleteUserAttrInfo(Map info) throws DAOException {
+        logger.debug("物理删除 deleteUserAttrInfo 入参 info : {}",info);
+
+        int deleteFlag = sqlSessionTemplate.delete("userAttrV1ServiceDaoImpl.deleteUserAttrInfo",info);
+
+        return deleteFlag;
+    }
+
+     /**
      * 查询用户属性数量
      * @param info 用户属性信息
      * @return 用户属性数量

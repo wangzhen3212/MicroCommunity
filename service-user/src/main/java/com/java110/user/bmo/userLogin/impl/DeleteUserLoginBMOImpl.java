@@ -3,8 +3,9 @@ package com.java110.user.bmo.userLogin.impl;
 import com.java110.core.annotation.Java110Transactional;
 import com.java110.dto.user.UserAttrDto;
 import com.java110.dto.user.UserDto;
-import com.java110.intf.user.IUserAttrInnerServiceSMO;
+import com.java110.intf.user.IUserAttrV1InnerServiceSMO;
 import com.java110.intf.user.IUserLoginInnerServiceSMO;
+import com.java110.po.user.UserAttrPo;
 import com.java110.po.user.UserLoginPo;
 import com.java110.user.bmo.userLogin.IDeleteUserLoginBMO;
 import com.java110.vo.ResultVo;
@@ -12,15 +13,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service("deleteUserLoginBMOImpl")
 public class DeleteUserLoginBMOImpl implements IDeleteUserLoginBMO {
 
     @Autowired
     private IUserLoginInnerServiceSMO userLoginInnerServiceSMOImpl;
     @Autowired
-    private IUserAttrInnerServiceSMO userAttrInnerServiceSMOImpl;
+    private IUserAttrV1InnerServiceSMO userAttrV1InnerServiceSMOImpl;
 
     /**
      * @param userLoginPo 数据
@@ -43,21 +42,12 @@ public class DeleteUserLoginBMOImpl implements IDeleteUserLoginBMO {
      */
     @Java110Transactional
     public ResponseEntity<String> deleteOpenId(UserDto userDto) {
-        UserAttrDto userAttrDto = new UserAttrDto();
-        userAttrDto.setUserId( userDto.getUserId() );
-        userAttrDto.setSpecCd( "100201911001" );
-        List<UserAttrDto> userAttrDtos = userAttrInnerServiceSMOImpl.queryUserAttrs( userAttrDto );
-        if (userAttrDtos != null && userAttrDtos.size() > 0) {
-            UserAttrDto userAttr = new UserAttrDto();
-            userAttr.setAttrId( userAttrDtos.get( 0 ).getAttrId() );
-            int flag = userAttrInnerServiceSMOImpl.deleteUserAttr(userAttr);
-            if (flag < 1) {
-                return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "清空openid失败");
-            }
-        }
+        UserAttrPo userAttrPo = new UserAttrPo();
+        userAttrPo.setUserId( userDto.getUserId() );
+        userAttrPo.setSpecCd( UserAttrDto.SPEC_OPEN_ID );
+        userAttrV1InnerServiceSMOImpl.deleteUserAttrInfo( userAttrPo );
 
-
-        return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "保存失败");
+        return ResultVo.createResponseEntity(ResultVo.CODE_OK, "清空openid成功");
     }
 
 }
