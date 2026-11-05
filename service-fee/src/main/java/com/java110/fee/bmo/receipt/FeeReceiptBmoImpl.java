@@ -3,8 +3,10 @@ package com.java110.fee.bmo.receipt;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.core.smo.IComputeFeeSMO;
 import com.java110.dto.fee.FeeDto;
+import com.java110.dto.parking.ParkingSpaceDto;
 import com.java110.dto.payFee.PayFeeRuleDto;
 import com.java110.dto.room.RoomDto;
+import com.java110.intf.community.IParkingSpaceV1InnerServiceSMO;
 import com.java110.intf.community.IRoomV1InnerServiceSMO;
 import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.intf.fee.IFeeReceiptDetailInnerServiceSMO;
@@ -40,6 +42,9 @@ public class FeeReceiptBmoImpl implements IFeeReceiptBmo {
     private IRoomV1InnerServiceSMO roomV1InnerServiceSMOImpl;
 
     @Autowired
+    private IParkingSpaceV1InnerServiceSMO parkingSpaceV1InnerServiceSMOImpl;
+
+    @Autowired
     private IFeeInnerServiceSMO feeInnerServiceSMOImpl;
 
     @Autowired
@@ -47,8 +52,14 @@ public class FeeReceiptBmoImpl implements IFeeReceiptBmo {
 
     @Override
     public void savePrePayFeeReceipt(PrePayFeePo prePayFeePo, String receiptCode) {
+        savePrePayFeeReceipt(prePayFeePo, receiptCode, null);
+    }
+
+    @Override
+    public void savePrePayFeeReceipt(PrePayFeePo prePayFeePo, String receiptCode, String payerObjType) {
         // 生成receiptId
         String receiptId = GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_receiptId);
+        String objType = computePayerObjType(prePayFeePo.getPayerObjId(), payerObjType);
 
         // 保存fee_receipt 表
         FeeReceiptPo feeReceiptPo = new FeeReceiptPo();
@@ -58,7 +69,7 @@ public class FeeReceiptBmoImpl implements IFeeReceiptBmo {
         feeReceiptPo.setReceivableAmount(prePayFeePo.getReceivableAmount());
         feeReceiptPo.setObjId(prePayFeePo.getPayerObjId());
         feeReceiptPo.setObjName(prePayFeePo.getPayerObjName());
-        feeReceiptPo.setObjType("3333"); // 预付费类型
+        feeReceiptPo.setObjType(objType); // 预付费类型
         feeReceiptPo.setCommunityId(prePayFeePo.getCommunityId());
         feeReceiptPo.setRemark(prePayFeePo.getRemark());
         feeReceiptPo.setPayObjId(prePayFeePo.getOwnerId());
@@ -97,16 +108,38 @@ public class FeeReceiptBmoImpl implements IFeeReceiptBmo {
         if (!ListUtil.isNull(payFeeRuleDtos)) {
             feeReceiptDetailPo.setSquarePrice(Double.parseDouble(payFeeRuleDtos.get(0).getSquarePrice()) + ""); // 单价
         }
-        RoomDto roomDto = new RoomDto();
-        roomDto.setRoomId(prePayFeePo.getPayerObjId());
-        List<RoomDto> roomDtos = roomV1InnerServiceSMOImpl.queryRooms(roomDto);
-        if (!ListUtil.isNull(roomDtos)) {
-            feeReceiptDetailPo.setArea(roomDtos.get(0).getBuiltUpArea());
+        if (FeeDto.PAYER_OBJ_TYPE_ROOM.equals(objType)) {
+            RoomDto roomDto = new RoomDto();
+            roomDto.setRoomId(prePayFeePo.getPayerObjId());
+            List<RoomDto> roomDtos = roomV1InnerServiceSMOImpl.queryRooms(roomDto);
+            if (!ListUtil.isNull(roomDtos)) {
+                feeReceiptDetailPo.setArea(roomDtos.get(0).getBuiltUpArea());
+            }
         }
 
         feeReceiptDetailPo.setPrintCount("0"); // 打印次数
 
         feeReceiptDetailInnerServiceSMOImpl.saveFeeReceiptDetail(feeReceiptDetailPo);
+    }
+
+    /**
+     * 计算收费对象类型，入参优先，入参为空时按对象ID推断（车位 6666 否则房屋 3333）
+     *
+     * @param payerObjId   收费对象ID
+     * @param payerObjType 收费对象类型
+     * @return 收费对象类型
+     */
+    private String computePayerObjType(String payerObjId, String payerObjType) {
+        if (!StringUtil.isEmpty(payerObjType)) {
+            return payerObjType;
+        }
+        ParkingSpaceDto parkingSpaceDto = new ParkingSpaceDto();
+        parkingSpaceDto.setPsId(payerObjId);
+        List<ParkingSpaceDto> parkingSpaceDtos = parkingSpaceV1InnerServiceSMOImpl.queryParkingSpaces(parkingSpaceDto);
+        if (!ListUtil.isNull(parkingSpaceDtos)) {
+            return FeeDto.PAYER_OBJ_TYPE_PARKING_SPACE;
+        }
+        return FeeDto.PAYER_OBJ_TYPE_ROOM;
     }
 
     @Override

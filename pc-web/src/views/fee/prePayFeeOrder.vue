@@ -193,6 +193,7 @@
     </div>
 
     <pre-pay-fee-order-confirm ref="confirmDialog" @success="handlePaymentSuccess" />
+    <pre-pay-fee-order-result ref="resultDialog" @closed="handleGoBack" />
   </div>
 </template>
 
@@ -201,12 +202,14 @@ import { getFeeRuleInfo, getMeterFeeRuleInfo } from '@/api/fee/prePayFeeOrderApi
 import { getDict } from '@/api/community/communityApi'
 import { getCommunityId } from '@/api/community/communityApi'
 import PrePayFeeOrderConfirm from '@/components/fee/prePayFeeOrderConfirm'
+import PrePayFeeOrderResult from '@/components/fee/prePayFeeOrderResult'
 import { getDateStr } from '@/utils/dateUtil'
 
 export default {
   name: 'PrePayFeeOrder',
   components: {
-    PrePayFeeOrderConfirm
+    PrePayFeeOrderConfirm,
+    PrePayFeeOrderResult
   },
   data() {
     return {
@@ -534,8 +537,12 @@ export default {
       this.$refs.confirmDialog.open(confirmData)
     },
 
-    handlePaymentSuccess() {
-      this.$router.go(-1)
+    handlePaymentSuccess(data) {
+      if (this.$refs.resultDialog) {
+        this.$refs.resultDialog.open(data)
+      } else {
+        this.handleGoBack()
+      }
     }
   }
 }

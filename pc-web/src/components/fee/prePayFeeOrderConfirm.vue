@@ -95,11 +95,7 @@ export default {
         authCode: '',
         orderId: '',
         paymentPoolId: '',
-        feeId: '',
-        squarePrice: '',
-        additionalAmount: '',
-        feeName: '',
-        subServiceCode: 'fee.payFee'
+        subServiceCode: 'prePayFee.prePayFee'
       },
       checkTimer: null,
       retryCount: 0,
@@ -147,11 +143,7 @@ export default {
         authCode: '',
         orderId: '',
         paymentPoolId: '',
-        feeId: '',
-        squarePrice: '',
-        additionalAmount: '',
-        feeName: '',
-        subServiceCode: 'fee.payFee'
+        subServiceCode: 'prePayFee.prePayFee'
       }
     },
     
@@ -165,18 +157,7 @@ export default {
     async requestYuDiFuQrCode() {
       try {
         this.loading = true
-        const printFees = [{
-          feeId: this.confirmInfo.feeId,
-          squarePrice: this.confirmInfo.squarePrice,
-          additionalAmount: this.confirmInfo.additionalAmount,
-          feeName: this.confirmInfo.feeName,
-          amount: this.confirmInfo.receivedAmount,
-          authCode: '123456'
-        }]
-
-        const requestData = Object.assign({}, this.confirmInfo, {
-          printFees: printFees
-        })
+        const requestData = Object.assign({}, this.confirmInfo)
 
         const response = await qrCodePayment(requestData)
         if (response.code === 0) {
@@ -201,19 +182,7 @@ export default {
     
     async checkPaymentStatus() {
       try {
-        const printFees = [{
-          feeId: this.confirmInfo.feeId,
-          squarePrice: this.confirmInfo.squarePrice,
-          additionalAmount: this.confirmInfo.additionalAmount,
-          feeName: this.confirmInfo.feeName,
-          amount: this.confirmInfo.receivedAmount,
-          authCode: this.confirmInfo.authCode,
-          orderId: this.confirmInfo.orderId
-        }]
-
-        const requestData = Object.assign({}, this.confirmInfo, {
-          printFees: printFees
-        })
+        const requestData = Object.assign({}, this.confirmInfo)
 
         const response = await checkPayFinish(requestData)
         
@@ -252,18 +221,7 @@ export default {
 
       try {
         this.loading = true
-        const printFees = [{
-          feeId: this.confirmInfo.feeId,
-          squarePrice: this.confirmInfo.squarePrice,
-          additionalAmount: this.confirmInfo.additionalAmount,
-          feeName: this.confirmInfo.feeName,
-          amount: this.confirmInfo.receivedAmount,
-          authCode: this.confirmInfo.authCode
-        }]
-
-        const requestData = Object.assign({}, this.confirmInfo, {
-          printFees: printFees
-        })
+        const requestData = Object.assign({}, this.confirmInfo)
 
         const response = await qrCodePayment(requestData)
         
@@ -288,21 +246,7 @@ export default {
     async handleConfirmPayment() {
       try {
         this.loading = true
-        const printFees = [{
-          primeRate: this.confirmInfo.primeRate,
-          rules: this.confirmInfo.rules,
-          remark: this.confirmInfo.remark,
-          communityId: this.confirmInfo.communityId,
-          payerObjId: this.confirmInfo.payerObjId,
-          payerObjType: this.confirmInfo.payerObjType,
-          payerObjName: this.confirmInfo.payerObjName,
-          ownerId: this.confirmInfo.ownerId,
-          receivedAmount: this.confirmInfo.receivedAmount,
-        }]
-
-        const requestData = Object.assign({}, this.confirmInfo, {
-          printFees: printFees
-        })
+        const requestData = Object.assign({}, this.confirmInfo)
 
         const response = await prePayFee(requestData)
         
@@ -320,7 +264,7 @@ export default {
     
     handlePaymentSuccess(data) {
       this.clearCheckTimer()
-      this.$emit('success', data)
+      this.$emit('success', { receiptCode: data ? data.receiptCode : '' })
       this.handleClose()
     }
   },

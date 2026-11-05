@@ -60,25 +60,12 @@ export const messages = {
     },
     prePayFeeOrderResult: {
       title: 'Payment Result',
-      receipt: 'Receipt',
-      print: 'Print',
-      receiptTitle: 'PREPAID FEE RECEIPT',
-      receiptNo: 'Receipt No',
-      paymentTime: 'Payment Time',
-      paymentMethod: 'Payment Method',
-      totalAmount: 'Total Amount',
-      operator: 'Operator',
-      amount: 'Amount',
-      period: 'Period',
-      paymentSuccess: 'Payment Successful',
-      backToList: 'Back to List',
-      viewDetails: 'View Details',
-      close: 'Close',
-      download: 'Download Receipt',
-      receiptFooter: 'Thank you for your payment!',
-      loadReceiptFailed: 'Failed to load receipt information',
-      downloadFeature: 'Download feature is under development',
-      requestFailed: 'Request failed'
+      success: 'Payment successful',
+      back: 'Back',
+      printSmall: 'Print Receipt Slip',
+      mergePrint: 'Merge Print',
+      printReceipt: 'Print Receipt',
+      receiptTip: 'No receipt information found, printing is not available'
     }
   },
   zh: {
@@ -142,26 +129,13 @@ export const messages = {
     },
     prePayFeeOrderResult: {
       title: '收费结果',
-      receipt: '收据',
-      print: '打印',
-      receiptTitle: '预付费用收据',
-      receiptNo: '收据编号',
-      paymentTime: '缴费时间',
-      paymentMethod: '支付方式',
-      totalAmount: '总计金额',
-      operator: '操作员',
-      amount: '金额',
-      period: '期间',
-      paymentSuccess: '支付成功',
-      backToList: '返回列表',
-      viewDetails: '查看详情',
-      close: '关闭',
-      download: '下载收据',
-      receiptFooter: '感谢您的支付！',
-      loadReceiptFailed: '加载收据信息失败',
-      downloadFeature: '下载功能开发中',
-      requestFailed: '请求失败'
-}
+      success: '收费成功',
+      back: '返回',
+      printSmall: '打印小票',
+      mergePrint: '合并打印',
+      printReceipt: '打印收据',
+      receiptTip: '未查询到收据信息，无法打印'
+    }
   },
   'zh-TW': {
     prePayFeeOrder: {
@@ -224,25 +198,12 @@ export const messages = {
     },
     prePayFeeOrderResult: {
       title: '收費結果',
-      receipt: '收據',
-      print: '列印',
-      receiptTitle: '預付費用收據',
-      receiptNo: '收據編號',
-      paymentTime: '繳費時間',
-      paymentMethod: '支付方式',
-      totalAmount: '總計金額',
-      operator: '操作員',
-      amount: '金額',
-      period: '期間',
-      paymentSuccess: '支付成功',
-      backToList: '返回列表',
-      viewDetails: '查看詳情',
-      close: '關閉',
-      download: '下載收據',
-      receiptFooter: '感謝您的支付！',
-      loadReceiptFailed: '載入收據資訊失敗',
-      downloadFeature: '下載功能開發中',
-      requestFailed: '請求失敗'
+      success: '收費成功',
+      back: '返回',
+      printSmall: '列印小票',
+      mergePrint: '合併列印',
+      printReceipt: '列印收據',
+      receiptTip: '未查詢到收據資訊，無法列印'
     }
   }
 }

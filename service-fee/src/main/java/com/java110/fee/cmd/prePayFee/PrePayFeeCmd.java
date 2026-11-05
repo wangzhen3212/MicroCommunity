@@ -26,6 +26,7 @@ import com.java110.core.event.cmd.CmdEvent;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.fee.*;
 import com.java110.dto.owner.OwnerDto;
+import com.java110.dto.parking.ParkingSpaceDto;
 import com.java110.dto.payFee.PayFeeRuleDto;
 import com.java110.dto.prePayFee.PrePayFeeDto;
 import com.java110.dto.user.UserDto;
@@ -34,6 +35,7 @@ import com.java110.fee.bill.IComputeFeeDiscount;
 import com.java110.fee.bill.IDeductionPrePayFee;
 import com.java110.fee.bmo.fee.IGeneratorPayFeeOrder;
 import com.java110.fee.bmo.receipt.IFeeReceiptBmo;
+import com.java110.intf.community.IParkingSpaceV1InnerServiceSMO;
 import com.java110.intf.fee.*;
 import com.java110.intf.user.IOwnerV1InnerServiceSMO;
 import com.java110.intf.user.IUserV1InnerServiceSMO;
@@ -105,6 +107,9 @@ public class PrePayFeeCmd extends Cmd {
     @Autowired
     private IFeeDiscountSpecInnerServiceSMO feeDiscountSpecInnerServiceSMOImpl;
 
+    @Autowired
+    private IParkingSpaceV1InnerServiceSMO parkingSpaceV1InnerServiceSMOImpl;
+
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
@@ -170,7 +175,11 @@ public class PrePayFeeCmd extends Cmd {
         ownerDto.setCommunityId(communityId);
         List<OwnerDto> ownerDtos = ownerV1InnerServiceSMOImpl.queryOwners(ownerDto);
 
-        String payOrderId = GenerateCodeFactory.getGeneratorId("11");
+        String payOrderId = reqJson.getString("payOrderId");
+        if (StringUtil.isEmpty(payOrderId)) {
+            payOrderId = GenerateCodeFactory.getGeneratorId("11");
+        }
+        String payerObjType = computePayerObjType(payerObjId, reqJson.getString("payerObjType"));
 
         List<PrePayFeePo> prePayFeePos = new ArrayList<>();
         String receiptCode = feeReceiptInnerServiceSMOImpl.generatorReceiptCode(communityId);
@@ -182,7 +191,7 @@ public class PrePayFeeCmd extends Cmd {
                 doPrePayFee(rule, primeRate, communityId,
                         payerObjId, payerObjName,
                         receivedAmount, remark, way, userDtos.get(0),
-                        ownerDtos.get(0), payOrderId, prePayFeePos, receiptCode);
+                        ownerDtos.get(0), payOrderId, payerObjType, prePayFeePos, receiptCode);
             }
         }
         JSONArray meterRules = reqJson.getJSONArray("meterRules");
@@ -194,25 +203,40 @@ public class PrePayFeeCmd extends Cmd {
                         communityId, payerObjId,
                         payerObjName, receivedAmount,
                         remark, way, userDtos.get(0),
-                        ownerDtos.get(0), payOrderId, prePayFeePos, receiptCode);
-            }
-        }
-        String payerObjType = reqJson.getString("payerObjType");
-        if (StringUtil.isEmpty(payerObjType)) {
-            payerObjType = FeeDto.PAYER_OBJ_TYPE_ROOM;
-            if (!payerObjName.contains("-")) {
-                payerObjType = FeeDto.PAYER_OBJ_TYPE_PARKING_SPACE;
+                        ownerDtos.get(0), payOrderId, payerObjType, prePayFeePos, receiptCode);
             }
         }
         generatorPayFeeOrderImpl.generatorPrePayFeeOrder(prePayFeePos, payerObjType);
 
-        cmdDataFlowContext.setResponseEntity(ResultVo.success());
+        JSONObject paramOut = new JSONObject();
+        paramOut.put("receiptCode", receiptCode);
+        cmdDataFlowContext.setResponseEntity(ResultVo.createResponseEntity(paramOut));
+    }
+
+    /**
+     * 计算收费对象类型，入参优先，入参为空时按对象ID推断（车位 6666 否则房屋 3333）
+     *
+     * @param payerObjId   收费对象ID
+     * @param payerObjType 收费对象类型
+     * @return 收费对象类型
+     */
+    private String computePayerObjType(String payerObjId, String payerObjType) {
+        if (!StringUtil.isEmpty(payerObjType)) {
+            return payerObjType;
+        }
+        ParkingSpaceDto parkingSpaceDto = new ParkingSpaceDto();
+        parkingSpaceDto.setPsId(payerObjId);
+        List<ParkingSpaceDto> parkingSpaceDtos = parkingSpaceV1InnerServiceSMOImpl.queryParkingSpaces(parkingSpaceDto);
+        if (!ListUtil.isNull(parkingSpaceDtos)) {
+            return FeeDto.PAYER_OBJ_TYPE_PARKING_SPACE;
+        }
+        return FeeDto.PAYER_OBJ_TYPE_ROOM;
     }
 
 
     private void doPrePayFee(JSONObject rule, String primeRate, String communityId, String payerObjId,
                              String payerObjName, String receivedAmount, String remark, String way, UserDto userDto, OwnerDto ownerDto,
-                             String payOrderId, List<PrePayFeePo> prePayFeePos, String receiptCode) {
+                             String payOrderId, String payerObjType, List<PrePayFeePo> prePayFeePos, String receiptCode) {
         String ruleId = rule.getString("ruleId");
         int cycles = rule.getIntValue("cycles");
         double ruleReceivedAmount = rule.getDoubleValue("receivedAmount");
@@ -272,7 +296,7 @@ public class PrePayFeeCmd extends Cmd {
 
         int flag = prePayFeeV1InnerServiceSMOImpl.savePrePayFee(prePayFeePo);
 
-        feeReceiptBmoImpl.savePrePayFeeReceipt(prePayFeePo, receiptCode);
+        feeReceiptBmoImpl.savePrePayFeeReceipt(prePayFeePo, receiptCode, payerObjType);
 
         prePayFeePos.add(prePayFeePo);
 
@@ -290,7 +314,7 @@ public class PrePayFeeCmd extends Cmd {
     private void doMeterPrePayFee(JSONObject meterRule, String primeRate, String communityId,
                                   String payerObjId, String payerObjName, String receivedAmount,
                                   String remark, String way, UserDto userDto, OwnerDto ownerDto,
-                                  String payOrderId, List<PrePayFeePo> prePayFeePos, String receiptCode) {
+                                  String payOrderId, String payerObjType, List<PrePayFeePo> prePayFeePos, String receiptCode) {
         String ruleId = "-1";
         int cycles = 1;
         double amount = meterRule.getDoubleValue("amount");
@@ -325,7 +349,7 @@ public class PrePayFeeCmd extends Cmd {
         prePayFeePo.setWay(way);
 
         int flag = prePayFeeV1InnerServiceSMOImpl.savePrePayFee(prePayFeePo);
-        feeReceiptBmoImpl.savePrePayFeeReceipt(prePayFeePo, receiptCode);
+        feeReceiptBmoImpl.savePrePayFeeReceipt(prePayFeePo, receiptCode, payerObjType);
         prePayFeePos.add(prePayFeePo);
         if (flag < 1) {
             throw new CmdException("保存数据失败");

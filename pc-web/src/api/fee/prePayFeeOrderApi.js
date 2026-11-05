@@ -100,22 +100,6 @@ export function prePayFee(data) {
   })
 }
 
-// 获取收据信息
-export function getReceiptInfo(params) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/receipt.getReceiptInfo',
-      method: 'get',
-      params
-    }).then(response => {
-      const res = response.data
-      resolve(res)
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
 // 获取支付方式字典
 export function getPaymentMethods() {
   return new Promise((resolve, reject) => {
@@ -139,42 +123,6 @@ export function getPaymentMethods() {
 export function getCommunityId() {
   const communityInfo = JSON.parse(localStorage.getItem('communityInfo') || '{}')
   return communityInfo.communityId || ''
-}
-
-// 导出收据
-export function exportReceipt(data) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/receipt.exportReceipt',
-      method: 'post',
-      data,
-      responseType: 'blob'
-    }).then(response => {
-      resolve(response)
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
-// 打印收据
-export function printReceipt(data) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/receipt.printReceipt',
-      method: 'post',
-      data
-    }).then(response => {
-      const res = response.data
-      if (res.code === 0) {
-        resolve(res)
-      } else {
-        reject(new Error(res.msg || 'error'))
-      }
-    }).catch(error => {
-      reject(error)
-    })
-  })
 }
 
 // 获取预付费用历史记录
