@@ -127,6 +127,83 @@
         order by t.car_num
     </select>
 
+    <!-- 车位结构图查询条件 -->
+    <sql id="parkingSpaceStructureWhere">
+        where t.status_cd = '0'
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
+        <if test="psId != null and psId != ''">
+            and t.ps_id = #{psId}
+        </if>
+        <if test="paId != null and paId != ''">
+            and t.pa_id = #{paId}
+        </if>
+        <if test="sectionId != null and sectionId != ''">
+            and t.section_id = #{sectionId}
+        </if>
+        <if test="state != null and state != ''">
+            and t.state = #{state}
+        </if>
+        <if test="num != null and num != ''">
+            and t.num like concat('%', #{num}, '%')
+        </if>
+        <if test="carNumLike != null and carNumLike != ''">
+            and t.car_num like concat('%', #{carNumLike}, '%')
+        </if>
+        <if test="ownerNameLike != null and ownerNameLike != ''">
+            and t.owner_name like concat('%', #{ownerNameLike}, '%')
+        </if>
+    </sql>
+
+    <!-- 查询车位结构图数据 -->
+    <select id="queryParkingSpaceStructures" parameterType="Map" resultType="Map">
+        select t.ps_id                       psId,
+               t.num,
+               t.pa_id                       paId,
+               pa.num                        areaNum,
+               t.section_id                  sectionId,
+               s.section_name                sectionName,
+               s.section_num                 sectionNum,
+               t.area,
+               t.state,
+               trim(td1.name)                stateName,
+               t.parking_type                parkingType,
+               trim(td2.name)                parkingTypeName,
+               t.owner_id                    ownerId,
+               t.owner_name                  ownerName,
+               t.car_id                      carId,
+               t.car_num                     carNum,
+               t.start_time                  startTime,
+               t.end_time                    endTime,
+               ifnull((select sum(rof.amount_owed)
+                       from report_owe_fee rof
+                       where rof.community_id = t.community_id
+                         and rof.payer_obj_type = '6666'
+                         and (rof.payer_obj_id = t.ps_id or rof.payer_obj_id = t.car_id)
+                         and rof.amount_owed > 0), 0) oweAmount
+        from parking_space t
+                 left join parking_area pa on t.pa_id = pa.pa_id and pa.status_cd = '0'
+                 left join parking_area_section s on t.section_id = s.section_id and s.status_cd = '0'
+                 left join t_dict td1
+                           on t.state = td1.status_cd and td1.table_name = 'parking_space' and td1.table_columns = 'state'
+                 left join t_dict td2
+                           on t.parking_type = td2.status_cd and td2.table_name = 'parking_space' and
+                              td2.table_columns = 'parking_type'
+        <include refid="parkingSpaceStructureWhere"/>
+        order by pa.num, s.section_num, t.num
+        <if test="page != -1 and page != null">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <!-- 查询车位结构图数据数量 -->
+    <select id="queryParkingSpaceStructuresCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from parking_space t
+        <include refid="parkingSpaceStructureWhere"/>
+    </select>
+
     <!-- 查询房屋个数 add by wuxw 2018-07-03 -->
     <select id="getCarCount" parameterType="com.java110.dto.report.ReportCarDto" resultType="Map">
         select count(1) count

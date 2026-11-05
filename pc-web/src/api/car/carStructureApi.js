@@ -44,6 +44,29 @@ export function listCarStructure(params) {
   })
 }
 
+// 查询车位结构图数据（按停车区/分区）
+export function listParkingSpaceStructures(params) {
+  return new Promise((resolve, reject) => {
+    const communityId = getCommunityId()
+    request({
+      url: '/car.listParkingSpaceStructures',
+      method: 'get',
+      params: {
+        ...params,
+        communityId
+      }
+    }).then(response => {
+      const res = response.data
+      resolve({
+        data: res.data,
+        total: res.total
+      })
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}
+
 // 获取当前小区ID
 export function getCurrentCommunityId() {
   return getCommunityId()

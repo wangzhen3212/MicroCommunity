@@ -8,6 +8,7 @@ import com.java110.dto.floor.FloorDto;
 import com.java110.dto.inspection.InspectionPlanDto;
 import com.java110.dto.machine.MachineTypeDto;
 import com.java110.dto.parking.ParkingAreaDto;
+import com.java110.dto.parking.ParkingSpaceStructureDto;
 import com.java110.dto.repair.RepairSettingDto;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.fee.FeeDto;
@@ -137,6 +138,27 @@ public class ReportCommunityInnerServiceSMOImpl extends BaseServiceSMO implement
     @Override
     public int queryHisOwnerCarCount(@RequestBody OwnerCarDto ownerCarDto) {
         return reportCommunityServiceDaoImpl.queryHisOwnerCarCount(BeanConvertUtil.beanCovertMap(ownerCarDto));
+    }
+
+    @Override
+    public List<ParkingSpaceStructureDto> queryParkingSpaceStructures(@RequestBody ParkingSpaceStructureDto parkingSpaceStructureDto) {
+
+        int page = parkingSpaceStructureDto.getPage();
+
+        if (page != PageDto.DEFAULT_PAGE) {
+            parkingSpaceStructureDto.setPage((page - 1) * parkingSpaceStructureDto.getRow());
+        }
+
+        List<ParkingSpaceStructureDto> parkingSpaceStructureDtos = BeanConvertUtil.covertBeanList(
+                reportCommunityServiceDaoImpl.queryParkingSpaceStructures(BeanConvertUtil.beanCovertMap(parkingSpaceStructureDto)),
+                ParkingSpaceStructureDto.class);
+
+        return parkingSpaceStructureDtos;
+    }
+
+    @Override
+    public int queryParkingSpaceStructuresCount(@RequestBody ParkingSpaceStructureDto parkingSpaceStructureDto) {
+        return reportCommunityServiceDaoImpl.queryParkingSpaceStructuresCount(BeanConvertUtil.beanCovertMap(parkingSpaceStructureDto));
     }
 
     @Override

@@ -608,3 +608,18 @@ UPDATE building_shop_owner SET status_cd = '0' WHERE status_cd IS NULL;
 - 后端 `service-community/smo/impl/BuildingShopOwnerInnerServiceSMOImpl`：`deleteBuildingShopOwner` 改走 `deleteBuildingShopOwnerInfo`（专用删除 mapper），不再 `setStatusCd("1")` 后复用动态 update。
 - 后端 `service-community/cmd/shop/DeleteBuildingShopCmd`：批量逻辑删除租赁关系后校验影响行数，失败文案明确。
 - 后端 `service-community/cmd/shop/DeleteBuildingShopOwnerCmd`：`validate` 改为 `shopOwnerId` 或 `(shopId + ownerId)` 至少一组（提示「shopOwnerId 或 (shopId + ownerId) 不能为空」）；退铺后按该商铺剩余有效租赁记录回写 `building_shop.state`（无剩余置 `2008` 空置，仍有记录取剩余首条 `state`），且不传 `statusCd` 以免污染商铺状态。
+
+## 2026-11-05 — 车位结构图（/pages/property/carStructure）改造：左树右卡片 + 欠费感知
+
+新增服务注册 `car.listParkingSpaceStructures`（`c_service` 2126 + `c_route` 3108，物业端 app `8000418004`，GET 对应 `Q`）；无 DDL/字典/菜单变更。脚本：`docs/sql/car/20261105_parking_space_structure_service.sql`。
+
+```sql
+-- ① 服务定义 c_service
+INSERT INTO `c_service` (`id`, `service_id`, `service_code`, `business_type_cd`, `name`, `seq`, `messageQueueName`, `is_instance`, `url`, `method`, `timeout`, `retry_count`, `provide_app_id`, `create_time`, `status_cd`)
+VALUES ('2126', '982026110515300001', 'car.listParkingSpaceStructures', 'API', '查询车位结构图数据', '1', null, 'CMD', 'http://report-service', 'GET', '60', '3', '8000418002', '2026-11-05 15:30:00', '0');
+
+-- ② 路由关系 c_route(物业端 app 8000418004, GET 用 Q)
+INSERT INTO `c_route` (`id`, `app_id`, `service_id`, `order_type_cd`, `invoke_limit_times`, `invoke_model`, `create_time`, `status_cd`)
+VALUES ('3108', '8000418004', '982026110515300001', 'Q', '1000', 'S', '2026-11-05 15:30:00', '0');
+```
+

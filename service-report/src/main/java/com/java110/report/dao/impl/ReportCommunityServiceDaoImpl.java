@@ -287,5 +287,26 @@ public class ReportCommunityServiceDaoImpl extends BaseServiceDao implements IRe
         return infos;
     }
 
+    @Override
+    public List<Map> queryParkingSpaceStructures(Map info) {
+        logger.debug("查询 queryParkingSpaceStructures 入参 info : {}", JSONObject.toJSONString(info));
+
+        List<Map> infos = sqlSessionTemplate.selectList("reportCommunityServiceDaoImpl.queryParkingSpaceStructures", info);
+
+        return infos;
+    }
+
+    @Override
+    public int queryParkingSpaceStructuresCount(Map info) {
+        logger.debug("查询 queryParkingSpaceStructuresCount 入参 info : {}", JSONObject.toJSONString(info));
+
+        List<Map> infos = sqlSessionTemplate.selectList("reportCommunityServiceDaoImpl.queryParkingSpaceStructuresCount", info);
+        if (infos.size() < 1) {
+            return 0;
+        }
+
+        return Integer.parseInt(infos.get(0).get("count").toString());
+    }
+
 
 }

@@ -6,6 +6,7 @@ import com.java110.dto.floor.FloorDto;
 import com.java110.dto.inspection.InspectionPlanDto;
 import com.java110.dto.machine.MachineTypeDto;
 import com.java110.dto.parking.ParkingAreaDto;
+import com.java110.dto.parking.ParkingSpaceStructureDto;
 import com.java110.dto.repair.RepairSettingDto;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.fee.FeeDto;
@@ -125,4 +126,22 @@ public interface IReportCommunityInnerServiceSMO {
 
     @RequestMapping(value = "/queryCommunityMachineTypeTree", method = RequestMethod.POST)
     List<MachineTypeDto> queryCommunityMachineTypeTree(@RequestBody MachineTypeDto machineTypeDto);
+
+    /**
+     * 查询车位结构图数据
+     *
+     * @param parkingSpaceStructureDto
+     * @return
+     */
+    @RequestMapping(value = "/queryParkingSpaceStructures", method = RequestMethod.POST)
+    List<ParkingSpaceStructureDto> queryParkingSpaceStructures(@RequestBody ParkingSpaceStructureDto parkingSpaceStructureDto);
+
+    /**
+     * 查询车位结构图数据数量
+     *
+     * @param parkingSpaceStructureDto
+     * @return
+     */
+    @RequestMapping(value = "/queryParkingSpaceStructuresCount", method = RequestMethod.POST)
+    int queryParkingSpaceStructuresCount(@RequestBody ParkingSpaceStructureDto parkingSpaceStructureDto);
 }

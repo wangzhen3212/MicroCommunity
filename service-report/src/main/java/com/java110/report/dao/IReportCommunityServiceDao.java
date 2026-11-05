@@ -124,4 +124,20 @@ public interface IReportCommunityServiceDao {
     List<Map> queryCommunityFloorTree(Map info);
 
     List<Map> queryCommunityMachineTypeTree(Map info);
+
+    /**
+     * 查询车位结构图数据（车位台账 + 欠费汇总）
+     *
+     * @param info
+     * @return
+     */
+    List<Map> queryParkingSpaceStructures(Map info);
+
+    /**
+     * 查询车位结构图数据数量
+     *
+     * @param info
+     * @return
+     */
+    int queryParkingSpaceStructuresCount(Map info);
 }
