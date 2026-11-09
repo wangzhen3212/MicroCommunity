@@ -310,6 +310,70 @@ public class CycleConvertOnceFeeImpl implements ICycleConvertOnceFee {
         return saveFlag;
     }
 
+    @Override
+    public List<String> saveRuleAndGenerateOncePayFee(PayFeeRulePo payFeeRulePo) {
+
+        if (payFeeRulePo == null || StringUtil.isEmpty(payFeeRulePo.getRuleId())) {
+            throw new IllegalArgumentException("费用规则信息不完整");
+        }
+
+        //todo 先保存规则（金额计算依赖库中规则）
+        List<PayFeeRulePo> payFeeRulePos = new ArrayList<>();
+        payFeeRulePos.add(payFeeRulePo);
+        payFeeRuleV1InnerServiceSMOImpl.savePayFeeRules(payFeeRulePos);
+
+        //todo 查询费用项
+        FeeConfigDto feeConfigDto = new FeeConfigDto();
+        feeConfigDto.setConfigId(payFeeRulePo.getConfigId());
+        feeConfigDto.setCommunityId(payFeeRulePo.getCommunityId());
+        List<FeeConfigDto> feeConfigDtos = payFeeConfigV1InnerServiceSMOImpl.queryPayFeeConfigs(feeConfigDto);
+        Assert.listOnlyOne(feeConfigDtos, "费用项不存在，configId=" + payFeeRulePo.getConfigId());
+
+        //todo 直接用规则账期生成一次性费用，不做账单日校验和周期推算
+        Date startTime = DateUtil.getDateFromStringA(payFeeRulePo.getStartTime());
+        Date endTime = DateUtil.getDateFromStringA(payFeeRulePo.getMaxTime());
+
+        List<PayFeePo> tmpPayFeePos = new ArrayList<>();
+        List<FeeAttrPo> tmpFeeAttrPos = new ArrayList<>();
+        List<PayFeeRuleBillPo> payFeeRuleBillPos = new ArrayList<>();
+
+        FeeDto feeDto = new FeeDto();
+        feeDto.setPayerObjType(payFeeRulePo.getPayerObjType());
+        feeDto.setCommunityId(payFeeRulePo.getCommunityId());
+        feeDto.setPayerObjId(payFeeRulePo.getPayerObjId());
+        OwnerDto ownerDto = computeFeeSMOImpl.getFeeOwnerDto(feeDto);
+        String payerObjName = computeFeeSMOImpl.getFeeObjName(feeDto);
+
+        doGeneratorPayFee(payFeeRulePo, startTime, endTime, feeConfigDtos.get(0),
+                tmpPayFeePos, tmpFeeAttrPos, payFeeRuleBillPos, ownerDto, payerObjName, 1);
+
+        if (ListUtil.isNull(tmpPayFeePos)) {
+            return new ArrayList<>();
+        }
+
+        //todo 保存 pay_fee 和 fee_attr，同步生成月数据和欠费数据
+        int flag = saveFeeAndAttrs(tmpPayFeePos, tmpFeeAttrPos, payFeeRuleBillPos);
+        if (flag < 1) {
+            throw new IllegalArgumentException("生成费用失败");
+        }
+
+        //todo 规则置为结束，防止定时任务重复出账
+        PayFeeRulePo updateRulePo = new PayFeeRulePo();
+        updateRulePo.setRuleId(payFeeRulePo.getRuleId());
+        updateRulePo.setCommunityId(payFeeRulePo.getCommunityId());
+        updateRulePo.setEndTime(DateUtil.getFormatTimeStringA(endTime));
+        updateRulePo.setCurYearMonth(DateUtil.getFormatTimeStringB(endTime));
+        updateRulePo.setState(FeeDto.STATE_FINISH);
+        payFeeRuleV1InnerServiceSMOImpl.updatePayFeeRule(updateRulePo);
+
+        //todo 返回生成的费用ID
+        List<String> feeIds = new ArrayList<>();
+        for (PayFeePo tmpPayFeePo : tmpPayFeePos) {
+            feeIds.add(tmpPayFeePo.getFeeId());
+        }
+        return feeIds;
+    }
+
 
     private void doGeneratorPayFee(PayFeeRulePo tmpPayFeeRulePo, Date startTime, Date endTime, FeeConfigDto feeConfigDto,
                                    List<PayFeePo> tmpPayFeePos, List<FeeAttrPo> tmpFeeAttrPos,

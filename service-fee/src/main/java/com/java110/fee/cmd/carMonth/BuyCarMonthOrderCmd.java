@@ -41,7 +41,6 @@ import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -88,9 +87,6 @@ public class BuyCarMonthOrderCmd extends Cmd {
 
     @Autowired
     private IPayFeeBatchV1InnerServiceSMO payFeeBatchV1InnerServiceSMOImpl;
-
-    @Autowired
-    private IPayFeeRuleV1InnerServiceSMO payFeeRuleV1InnerServiceSMOImpl;
 
     @Autowired
     private ICycleConvertOnceFee cycleConvertOnceFeeImpl;
@@ -181,6 +177,11 @@ public class BuyCarMonthOrderCmd extends Cmd {
 
         FeeConfigDto feeConfigDto = getFeeConfigDto(reqJson.getString("communityId"));
 
+        //todo 直接出账方法仅支持一次性费用
+        if (!FeeDto.FEE_FLAG_ONCE.equals(feeConfigDto.getFeeFlag())) {
+            throw new CmdException("月租车月卡费用项[" + feeConfigDto.getFeeName() + "]的费用标识不是一次性费用，请将费用项费用标识配置为一次性费用");
+        }
+
 
         CommunityMemberDto communityMemberDto = new CommunityMemberDto();
         communityMemberDto.setCommunityId(reqJson.getString("communityId"));
@@ -214,7 +215,6 @@ public class BuyCarMonthOrderCmd extends Cmd {
         }
 
         //todo 创建账单规则（费用挂载车辆 5555）
-        List<PayFeeRulePo> payFeeRulePos = new ArrayList<>();
         PayFeeRulePo payFeeRulePo = new PayFeeRulePo();
         payFeeRulePo.setRuleId(GenerateCodeFactory.getGeneratorId("11"));
         payFeeRulePo.setCommunityId(reqJson.getString("communityId"));
@@ -235,22 +235,18 @@ public class BuyCarMonthOrderCmd extends Cmd {
         payFeeRulePo.setIncomeObjId(communityMemberDtos.get(0).getMemberId());
         payFeeRulePo.setUserId("-1");
         payFeeRulePo.setCurYearMonth(DateUtil.getFormatTimeStringB(startTime));
-        payFeeRulePos.add(payFeeRulePo);
 
-        //todo 保存账单规则
-        payFeeRuleV1InnerServiceSMOImpl.savePayFeeRules(payFeeRulePos);
+        //todo 保存账单规则并直接生成一次性账单（内部先保存规则，不做账单日校验）
+        List<String> feeIds = cycleConvertOnceFeeImpl.saveRuleAndGenerateOncePayFee(payFeeRulePo);
 
-        //todo 生成账单（pay_fee）
-        cycleConvertOnceFeeImpl.rulesGeneratePayFees(payFeeRulePos);
+        if (ListUtil.isNull(feeIds)) {
+            throw new CmdException("生成账单失败");
+        }
 
-        //todo 查询生成的费用
+        //todo 按 feeId 反查生成的费用
         FeeDto feeDto = new FeeDto();
+        feeDto.setFeeId(feeIds.get(0));
         feeDto.setCommunityId(reqJson.getString("communityId"));
-        feeDto.setPayerObjId(reqJson.getString("carId"));
-        feeDto.setPayerObjType(FeeDto.PAYER_OBJ_TYPE_CAR);
-        feeDto.setConfigId(feeConfigDto.getConfigId());
-        feeDto.setState(FeeDto.STATE_DOING);
-        feeDto.setStartTime(DateUtil.getDateFromStringB(DateUtil.getFormatTimeStringB(startTime)));
         List<FeeDto> feeDtos = feeInnerServiceSMOImpl.queryFees(feeDto);
 
 

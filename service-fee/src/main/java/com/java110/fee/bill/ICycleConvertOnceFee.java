@@ -58,4 +58,13 @@ public interface ICycleConvertOnceFee {
      * @return
      */
     int ruleGeneratePayFee(PayFeeRulePo payFeeRulePo);
+
+    /**
+     * 保存费用规则并直接生成一次性账单（不做账单日校验）
+     * 适用场景：月卡、预付类费用等账期起点可能为未来日期的业务
+     *
+     * @param payFeeRulePo 费用规则（ruleId/startTime/maxTime/amount 等必须已赋值）
+     * @return 生成的费用ID集合，为空表示未生成
+     */
+    List<String> saveRuleAndGenerateOncePayFee(PayFeeRulePo payFeeRulePo);
 }
