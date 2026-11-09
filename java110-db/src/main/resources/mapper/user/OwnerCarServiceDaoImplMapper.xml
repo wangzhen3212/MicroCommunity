@@ -153,6 +153,9 @@
                 #{item}
             </foreach>
         </if>
+        <if test="num !=null and num != ''">
+            and ps.num like concat('%',#{num},'%')
+        </if>
         <if test="carNum !=null and carNum != ''">
             and t.car_num= #{carNum}
         </if>
@@ -391,6 +394,11 @@
             <foreach collection="paIds" item="item" index="index" open="(" close=")" separator=",">
                 #{item}
             </foreach>
+        </if>
+        <if test="num !=null and num != ''">
+            and exists (select 1 from parking_space ps
+                        where ps.car_id = t.car_id and ps.status_cd = '0'
+                          and ps.num like concat('%',#{num},'%'))
         </if>
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}

@@ -27,11 +27,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 @Java110Cmd(serviceCode = "owner.queryAdminOwnerCars")
 public class QueryAdminOwnerCarsCmd extends Cmd {
+
+    private static final List<String> CAR_TYPE_CDS = Arrays.asList("1001", "1002", "1003");
 
     @Autowired
     private IOwnerCarInnerServiceSMO ownerCarInnerServiceSMOImpl;
@@ -55,12 +58,31 @@ public class QueryAdminOwnerCarsCmd extends Cmd {
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
         super.validateAdmin(cmdDataFlowContext);
         super.validatePageInfo(reqJson);
+        String carTypeCd = reqJson.getString("carTypeCd");
+        if (!StringUtil.isEmpty(carTypeCd) && !CAR_TYPE_CDS.contains(carTypeCd)) {
+            throw new CmdException("车辆类型不合法");
+        }
     }
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        if (!StringUtil.isEmpty(reqJson.getString("carNumLike"))) {
+            reqJson.put("carNumLike", reqJson.getString("carNumLike").trim());
+        }
+        if (!StringUtil.isEmpty(reqJson.getString("num"))) {
+            reqJson.put("num", reqJson.getString("num").trim());
+        }
+
         OwnerCarDto ownerCarDto = BeanConvertUtil.covertBean(reqJson, OwnerCarDto.class);
+
+        if (!StringUtil.isEmpty(reqJson.getString("paId")) && StringUtil.isEmpty(reqJson.getString("paIds"))) {
+            ownerCarDto.setPaIds(new String[]{reqJson.getString("paId")});
+        }
+        if (!StringUtil.isEmpty(reqJson.getString("carTypeCds"))) {
+            ownerCarDto.setCarTypeCd("");
+            ownerCarDto.setCarTypeCds(reqJson.getString("carTypeCds").split(","));
+        }
 
         String staffId = CmdContextUtils.getUserId(cmdDataFlowContext);
 

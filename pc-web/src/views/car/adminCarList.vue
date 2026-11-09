@@ -12,10 +12,18 @@
           </div>
           <el-row :gutter="20">
             <el-col :span="6">
-              <el-input v-model="searchForm.carNumLike" :placeholder="$t('adminCar.search.carNum')" clearable />
+              <el-input v-model.trim="searchForm.carNumLike" :placeholder="$t('adminCar.search.carNum')" clearable />
             </el-col>
             <el-col :span="6">
-              <el-input v-model="searchForm.num" :placeholder="$t('adminCar.search.parkingNum')" clearable />
+              <el-input v-model.trim="searchForm.num" :placeholder="$t('adminCar.search.parkingNum')" clearable />
+            </el-col>
+            <el-col :span="4">
+              <el-select v-model="searchForm.carTypeCd" :placeholder="$t('adminCar.search.carType')" clearable>
+                <el-option value="" :label="$t('adminCar.carType.all')" />
+                <el-option value="1001" :label="$t('adminCar.carType.primary')" />
+                <el-option value="1002" :label="$t('adminCar.carType.member')" />
+                <el-option value="1003" :label="$t('adminCar.carType.temp')" />
+              </el-select>
             </el-col>
             <el-col :span="4">
               <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
@@ -101,7 +109,7 @@ export default {
         leaseType: '',
         carNumLike: '',
         num: '',
-        carTypeCd: '1001'
+        carTypeCd: ''
       },
       tableData: [],
       pagination: {

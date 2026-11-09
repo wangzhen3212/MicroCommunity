@@ -4,7 +4,8 @@ export const messages = {
       search: {
         title: 'Search Conditions',
         carNum: 'Please enter license plate number',
-        parkingNum: 'Please enter parking space number'
+        parkingNum: 'Please enter parking space number',
+        carType: 'Please select vehicle type'
       },
       list: {
         title: 'Community Vehicles'
@@ -25,6 +26,12 @@ export const messages = {
       leaseType: {
         temp: 'Temporary Vehicle'
       },
+      carType: {
+        all: 'All',
+        primary: 'Primary Vehicle',
+        member: 'Member Vehicle',
+        temp: 'Temporary Vehicle'
+      },
       parking: {
         released: 'Parking space released'
       },
@@ -40,7 +47,8 @@ export const messages = {
       search: {
         title: '查询条件',
         carNum: '请输入车牌号',
-        parkingNum: '请填写车位编号'
+        parkingNum: '请填写车位编号',
+        carType: '请选择车辆类型'
       },
       list: {
         title: '小区车辆'
@@ -61,6 +69,12 @@ export const messages = {
       leaseType: {
         temp: '临时车'
       },
+      carType: {
+        all: '全部',
+        primary: '主车辆',
+        member: '成员车辆',
+        temp: '临时车'
+      },
       parking: {
         released: '车位已释放'
       },
@@ -76,7 +90,8 @@ fetchError: '获取车辆列表失败'
       search: {
         title: '查詢條件',
         carNum: '請輸入車牌號',
-        parkingNum: '請填寫車位編號'
+        parkingNum: '請填寫車位編號',
+        carType: '請選擇車輛類型'
       },
       list: {
         title: '小區車輛'
@@ -95,6 +110,12 @@ fetchError: '获取车辆列表失败'
         remark: '備註'
       },
       leaseType: {
+        temp: '臨時車'
+      },
+      carType: {
+        all: '全部',
+        primary: '主車輛',
+        member: '成員車輛',
         temp: '臨時車'
       },
       parking: {
