@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 @Service
 public class AsynNotifySubServiceImpl implements IAsynNotifySubService {
@@ -234,7 +235,7 @@ public class AsynNotifySubServiceImpl implements IAsynNotifySubService {
             }
             String keySql = "( ";
             String valueSql = " values (";
-            for (String key : keyValue.keySet()) {
+            for (String key : new TreeMap<String, Object>(keyValue).keySet()) {
                 if ("status_cd".equals(key) || "create_time".equals(key) || "b_id".equals(key)) {
                     continue;
                 }
@@ -285,7 +286,7 @@ public class AsynNotifySubServiceImpl implements IAsynNotifySubService {
             }
             String keySql = "( ";
             String valueSql = " values (";
-            for (String key : keyValue.keySet()) {
+            for (String key : new TreeMap<String, Object>(keyValue).keySet()) {
                 if ("status_cd".equals(key) || "create_time".equals(key) || "b_id".equals(key)) {
                     continue;
                 }

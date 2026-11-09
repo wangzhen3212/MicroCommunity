@@ -623,3 +623,18 @@ INSERT INTO `c_route` (`id`, `app_id`, `service_id`, `order_type_cd`, `invoke_li
 VALUES ('3108', '8000418004', '982026110515300001', 'Q', '1000', 'S', '2026-11-05 15:30:00', '0');
 ```
 
+## 2026-11-09 — 事务回退日志列值错位（`Incorrect datetime value ... for column 'end_time'`）修复
+
+无 DDL/字典/服务注册变更（仅代码，可选脏数据清理 SQL 见下）。
+
+```sql
+-- 可选：清理错位写入的 business_pay_fee（中间表，按 b_id 精确清理后再由业务重新生成）
+SELECT b_id, o_id, action, action_obj, log_text FROM c_order_item WHERE action_obj = 'pay_fee' ORDER BY create_time DESC LIMIT 10;
+DELETE FROM business_pay_fee WHERE b_id = '202026110907400396' AND operate = 'ADD';
+```
+
+- 新增 `java110-db/src/main/java/com/java110/db/SqlInsertParser.java`：按 INSERT 的列段与 VALUES 段逐列对位，占位符（`?`）按参数顺序取值、字面量列（`'0'`、`'-1'`、`now()` 等）跳过；支持 `<foreach>` 多行 VALUES；结构无法安全对齐（列数与 token 数不等、函数内含占位符、`insert ... select`）时返回 `null`。
+- 后端 `java110-db/.../Java110MybatisInterceptor.java`：INSERT 分支改为走 `SqlInsertParser`，不再用「列序号 = 参数序号」硬配对；`dealInsertSql` 支持多行 `afterValues`（有序 `JSONObject(true)`），解析失败仅 warn 并跳过写日志（宁缺勿错）；`replaceFirst` 正则替换改为 `buildSqlWithValues` 顺序重建（跳过单引号内 `?`，值含 `$`/`\`/`?` 不再异常）；`getParameterValue`/`dealReturnMap` 对字符串值做 `'` → `''` 转义。
+- 后端 `service-order/.../AsynNotifySubServiceImpl.java`、`service-order/.../OIdServiceSMOImpl.java`：`business_*` 历史表/回退 SQL 的列顺序由 `JSONObject.keySet()` 改为 `TreeMap` 字典序，避免列顺序随 hash 变化。
+
+

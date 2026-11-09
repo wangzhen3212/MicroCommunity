@@ -50,8 +50,9 @@ public class Java110MybatisInterceptor implements Interceptor {
         BoundSql boundSql = mappedStatement.getBoundSql(parameter);
         Configuration configuration = mappedStatement.getConfiguration();
         Map<String, Object> sqlValue = new HashMap<>();
+        List<Map<String, String>> insertValues = new ArrayList<>();
         //获取sql语句
-        String sql = showSql(configuration, boundSql, sqlValue, sqlCommandType);
+        String sql = showSql(configuration, boundSql, sqlValue, insertValues, sqlCommandType);
         if(Environment.isStartBootWay()){
             restTemplate = ApplicationContextFactory.getBean("outRestTemplate", RestTemplate.class);
         }else {
@@ -59,7 +60,7 @@ public class Java110MybatisInterceptor implements Interceptor {
         }
         switch (sqlCommandType) {
             case INSERT:
-                dealInsertSql(mappedStatement, parameter, sql, sqlValue);
+                dealInsertSql(mappedStatement, parameter, sql, insertValues);
                 break;
             case UPDATE:
                 dealUpdateSql(mappedStatement, parameter, sql, sqlValue);
@@ -194,7 +195,7 @@ public class Java110MybatisInterceptor implements Interceptor {
         for (String key : map.keySet()) {
             Object value = map.get(key);
             if (value instanceof String) {
-                map.put(key, "'" + map.get(key) + "'");
+                map.put(key, "'" + ((String) value).replace("'", "''") + "'");
             } else if (value instanceof Date) {
                 String tmpValue = DateUtil.getFormatTimeString((Date) value, DateUtil.DATE_FORMATE_STRING_A);
                 map.put(key, "'" + tmpValue + "'");
@@ -220,14 +221,9 @@ public class Java110MybatisInterceptor implements Interceptor {
      * @param mappedStatement
      * @param parameter
      */
-    private void dealInsertSql(MappedStatement mappedStatement, Object parameter, String sql, Map<String, Object> sqlValue) {
+    private void dealInsertSql(MappedStatement mappedStatement, Object parameter, String sql, List<Map<String, String>> insertValues) {
 
         // RestTemplate restTemplate = ApplicationContextFactory.getBean("restTemplate", RestTemplate.class);
-
-        //插入操作时之前的 没有数据 所以 preValue 为空对象
-        JSONArray preValues = new JSONArray();
-
-        JSONArray afterValues = new JSONArray();
 
         String tmpTable = sql.substring(sql.toLowerCase().indexOf("into") + 4, sql.indexOf("(")).trim();
 
@@ -235,7 +231,23 @@ public class Java110MybatisInterceptor implements Interceptor {
             tmpTable = tmpTable.substring(0,tmpTable.indexOf(" "));
         }
 
-        afterValues.add(sqlValue);
+        if (insertValues == null || insertValues.isEmpty()) {
+            logger.warn("未解析到 insert 列值，跳过事务回退日志，actionObj=" + tmpTable + " sql=" + sql);
+            return;
+        }
+
+        //插入操作时之前的 没有数据 所以 preValue 为空对象
+        JSONArray preValues = new JSONArray();
+
+        JSONArray afterValues = new JSONArray();
+
+        // 多行插入时每行一条记录，列顺序与 SQL 列顺序保持一致
+        for (Map<String, String> insertValue : insertValues) {
+            JSONObject afterValue = new JSONObject(true);
+            afterValue.putAll(insertValue);
+            afterValues.add(afterValue);
+        }
+
 
         JSONObject logText = new JSONObject();
         logText.put("preValue", preValues);
@@ -276,65 +288,47 @@ public class Java110MybatisInterceptor implements Interceptor {
 
     }
 
-    public String showSql(Configuration configuration, BoundSql boundSql, Map<String, Object> sqlValue, SqlCommandType sqlCommandType) {
+    public String showSql(Configuration configuration, BoundSql boundSql, Map<String, Object> sqlValue,
+                          List<Map<String, String>> insertValues, SqlCommandType sqlCommandType) {
         Object parameterObject = boundSql.getParameterObject();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
         String sql = boundSql.getSql().replaceAll("[\\s]+", " ").toLowerCase();
-        String orgSql = sql;// 原始sql
 
         List<String> values = new ArrayList<>();
         if (parameterMappings.size() > 0 && parameterObject != null) {
             TypeHandlerRegistry typeHandlerRegistry = configuration.getTypeHandlerRegistry();
             if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
-                sql = sql.replaceFirst("\\?", getParameterValue(parameterObject));
                 values.add(getParameterValue(parameterObject));
             } else {
                 MetaObject metaObject = configuration.newMetaObject(parameterObject);
                 for (ParameterMapping parameterMapping : parameterMappings) {
                     String propertyName = parameterMapping.getProperty();
                     if (metaObject.hasGetter(propertyName)) {
-                        Object obj = metaObject.getValue(propertyName);
-                        String value = getParameterValue(obj);
-                        if(value.contains("${")){
-                            value = value.replace("${","\\${");
-                        }
-                        sql = sql.replaceFirst("\\?", value);
-                        values.add(getParameterValue(obj));
+                        values.add(getParameterValue(metaObject.getValue(propertyName)));
                     } else if (boundSql.hasAdditionalParameter(propertyName)) {
-                        Object obj = boundSql.getAdditionalParameter(propertyName);
-                        sql = sql.replaceFirst("\\?", getParameterValue(obj));
-                        values.add(getParameterValue(obj));
+                        values.add(getParameterValue(boundSql.getAdditionalParameter(propertyName)));
                     }
                 }
             }
         }
 
-        if (sqlCommandType == SqlCommandType.INSERT) {
-            String tmpKey = orgSql.substring(orgSql.indexOf("(") + 1, orgSql.indexOf(")"));
-            String[] tmpKeys = tmpKey.split(",");
+        // 按占位符顺序重建带值 sql，避免 replaceFirst 的正则替换风险（值含 $、\、? 时会异常或替换错位）
+        String sqlWithValues = buildSqlWithValues(sql, values);
 
-//            if (values.size() < tmpKeys.length) {
-//                throw new IllegalArgumentException("sql 错误 key P和value 个数不等" + sql);
-//            }
-            for (int keyIndex = 0; keyIndex < tmpKeys.length; keyIndex++) {
-                String key = tmpKeys[keyIndex].trim();
-                String value = "";
-                if (values.size() - 1 < keyIndex) {
-                    continue;
-                }
-                value = values.get(keyIndex);
-                if ("''".equals(value)) {
-                    continue;
-                }
-                sqlValue.put(key, value);
+        if (sqlCommandType == SqlCommandType.INSERT) {
+            List<Map<String, String>> rows = SqlInsertParser.parseInsertValues(sql, values);
+            if (rows == null) {
+                logger.warn("insert 语句列与占位符无法安全配对，跳过事务回退日志，sql=" + sql);
+            } else if (insertValues != null) {
+                insertValues.addAll(rows);
             }
         } else if (sqlCommandType == SqlCommandType.UPDATE) {
-            String tmpKey = sql.substring(sql.indexOf("set") + 3, sql.indexOf("where"));
+            String tmpKey = sqlWithValues.substring(sqlWithValues.indexOf("set") + 3, sqlWithValues.indexOf("where"));
             List<String> tmpKeys = splitSetKeys(tmpKey);
             for (String tmpSetKey : tmpKeys) {
                 int equalIndex = tmpSetKey.indexOf("=");
                 if (equalIndex < 0) {
-                    throw new IllegalArgumentException("update 语句可能有问题，没有 set 中出错 " + sql);
+                    throw new IllegalArgumentException("update 语句可能有问题，没有 set 中出错 " + sqlWithValues);
                 }
                 String key = tmpSetKey.substring(0, equalIndex);
                 if (key.contains(".")) {
@@ -354,8 +348,41 @@ public class Java110MybatisInterceptor implements Interceptor {
         }
 
 
-        return sql;
+        return sqlWithValues;
     }
+
+    /**
+     * 按占位符顺序用参数值重建 sql
+     *
+     * @param sql    已转小写并压缩空白的 sql
+     * @param values 参数值列表
+     * @return 带值的 sql
+     */
+    private String buildSqlWithValues(String sql, List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return sql;
+        }
+        StringBuilder sqlBuilder = new StringBuilder();
+        int valueIndex = 0;
+        boolean inSingleQuote = false;
+        for (int index = 0; index < sql.length(); index++) {
+            char tmpChar = sql.charAt(index);
+            if (tmpChar == '\'') {
+                inSingleQuote = !inSingleQuote;
+                sqlBuilder.append(tmpChar);
+                continue;
+            }
+            if (tmpChar == '?' && !inSingleQuote && valueIndex < values.size()) {
+                String value = values.get(valueIndex);
+                valueIndex++;
+                sqlBuilder.append(value == null ? "''" : value);
+            } else {
+                sqlBuilder.append(tmpChar);
+            }
+        }
+        return sqlBuilder.toString();
+    }
+
 
     /**
      * 按逗号切分 update set 片段
@@ -398,7 +425,7 @@ public class Java110MybatisInterceptor implements Interceptor {
     private String getParameterValue(Object obj) {
         String value = null;
         if (obj instanceof String) {
-            value = "'" + obj.toString() + "'";
+            value = "'" + obj.toString().replace("'", "''") + "'";
         } else if (obj instanceof Date) {
             DateFormat formatter = DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.DEFAULT, Locale.CHINA);
             value = "'" + formatter.format(obj) + "'";

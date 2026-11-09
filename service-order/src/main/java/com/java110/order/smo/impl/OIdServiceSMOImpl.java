@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 
 /**
@@ -200,7 +201,7 @@ public class OIdServiceSMOImpl implements IOIdServiceSMO {
             }
             String keySql = "( ";
             String valueSql = " values (";
-            for (String key : keyValue.keySet()) {
+            for (String key : new TreeMap<String, Object>(keyValue).keySet()) {
                 keySql += (key + ",");
                 valueSql += (keyValue.getString(key) + ",");
             }
@@ -237,7 +238,7 @@ public class OIdServiceSMOImpl implements IOIdServiceSMO {
                 continue;
             }
             String whereSql = " where 1=1 ";
-            for (String key : keyValue.keySet()) {
+            for (String key : new TreeMap<String, Object>(keyValue).keySet()) {
                 sql += (key + "=" + keyValue.getString(key) + ",");
                 if ("''".equals(afterKeyValue.getString(key))) { //条件中不拼写 为空的结果
                     continue;
@@ -282,7 +283,7 @@ public class OIdServiceSMOImpl implements IOIdServiceSMO {
             if (keyValue.isEmpty()) {
                 continue;
             }
-            for (String key : keyValue.keySet()) {
+            for (String key : new TreeMap<String, Object>(keyValue).keySet()) {
                 if (!StringUtil.isEmpty(keyValue.getString(key))) {
                     sql += (" and " + key + "=" + keyValue.getString(key));
                 }

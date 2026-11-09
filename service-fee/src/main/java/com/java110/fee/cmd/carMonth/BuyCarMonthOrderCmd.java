@@ -228,7 +228,7 @@ public class BuyCarMonthOrderCmd extends Cmd {
         payFeeRulePo.setFeeTypeCd(feeConfigDto.getFeeTypeCd());
         payFeeRulePo.setFeeFlag(feeConfigDto.getFeeFlag());
         payFeeRulePo.setStartTime(DateUtil.getFormatTimeStringA(startTime));
-        payFeeRulePo.setEndTime(endTime);
+        payFeeRulePo.setEndTime(DateUtil.getFormatTimeStringA(startTime));
         payFeeRulePo.setMaxTime(endTime);
         payFeeRulePo.setState(FeeDto.STATE_DOING);
         payFeeRulePo.setBatchId(payFeeBatchPo.getBatchId());
