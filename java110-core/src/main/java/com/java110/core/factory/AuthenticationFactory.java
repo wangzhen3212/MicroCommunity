@@ -625,10 +625,7 @@ public class AuthenticationFactory {
             }
             jwt.withClaim(key, info.get(key));
         }
-        String expireTime = MappingCache.getValue(MappingConstant.KEY_JWT_EXPIRE_TIME);
-        if (StringUtil.isNullOrNone(expireTime)) {
-            expireTime = CommonConstant.DEFAULT_JWT_EXPIRE_TIME;
-        }
+        String expireTime  = CommonConstant.DEFAULT_JWT_EXPIRE_TIME;
         //保存token Id
         JWTCache.setValue(jdi, info.get(CommonConstant.LOGIN_USER_ID), Integer.parseInt(expireTime));
         jwt.withIssuer("java110");
@@ -680,10 +677,7 @@ public class AuthenticationFactory {
         if (StringUtil.isNullOrNone(userId)) {
             throw new JWTVerificationException("用户还未登录");
         }
-        String expireTime = MappingCache.getValue(MappingConstant.KEY_JWT_EXPIRE_TIME);
-        if (StringUtil.isNullOrNone(expireTime)) {
-            expireTime = CommonConstant.DEFAULT_JWT_EXPIRE_TIME;
-        }
+        String expireTime = CommonConstant.DEFAULT_JWT_EXPIRE_TIME;
         //刷新过时时间
         JWTCache.resetExpireTime(jdi, Integer.parseInt(expireTime));
         Map<String, Claim> claims = jwt.getClaims();
