@@ -37,17 +37,12 @@ export default {
       this.deleteFeeInfo.communityId = getCommunityId()
       
       try {
-        const res = await deleteFee(this.deleteFeeInfo)
-        if (res.code == 0) {
-          this.$message.success(this.$t('common.operationSuccess'))
-          this.$emit('success')
-          this.handleClose()
-        } else {
-          this.$message.error(res.msg)
-        }
+        await deleteFee(this.deleteFeeInfo)
+        this.$message.success(this.$t('common.operationSuccess'))
+        this.$emit('success')
+        this.handleClose()
       } catch (error) {
-        console.error('请求失败:', error)
-        this.$message.error(error || this.$t('common.operateFail'))
+        this.$message.error(error.message || this.$t('common.operateFailed'))
       }
     }
   }

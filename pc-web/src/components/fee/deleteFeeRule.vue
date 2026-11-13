@@ -41,17 +41,12 @@ export default {
         communityId: this.communityId
       }
 
-      deletePayFeeRule(params).then(response => {
-        if (response.code == 0) {
-          this.dialogVisible = false
-          this.$emit('success')
-          this.$message.success(this.$t('common.operationSuccess'))
-        } else {
-          this.$message.error(response.msg)
-        }
+      deletePayFeeRule(params).then(() => {
+        this.dialogVisible = false
+        this.$emit('success')
+        this.$message.success(this.$t('common.operationSuccess'))
       }).catch(error => {
-        console.error('请求失败:', error)
-        this.$message.error(this.$t('deleteFeeRule.deleteFailed'))
+        this.$message.error(error.message || this.$t('deleteFeeRule.deleteFailed'))
       })
     },
     closeDeleteFeeRuleModel() {

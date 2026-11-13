@@ -96,8 +96,7 @@ export default {
           this.$message.error(res.msg)
         }
       } catch (error) {
-        console.error('请求失败:', error)
-        this.$message.error(this.$t('common.operateFail'))
+        this.$message.error(error.message || this.$t('common.operateFailed'))
       }
     },
     clearEditFeeRuleInfoData() {
