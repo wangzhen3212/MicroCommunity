@@ -1,5 +1,6 @@
 package com.java110.fee.bill;
 
+import com.java110.dto.fee.PreGenerateFeePeriodDto;
 import com.java110.po.fee.PayFeePo;
 import com.java110.po.payFee.PayFeeRulePo;
 
@@ -67,4 +68,21 @@ public interface ICycleConvertOnceFee {
      * @return 生成的费用ID集合，为空表示未生成
      */
     List<String> saveRuleAndGenerateOncePayFee(PayFeeRulePo payFeeRulePo);
+
+    /**
+     * 预生成周期性费用账单（不做账单日校验，按指定期次逐期出账）
+     *
+     * @param payFeeRulePo 费用规则
+     * @param periods      需要出账的期次，按 seq 升序且连续
+     * @return 生成的账单条数
+     */
+    int preGeneratePayFee(PayFeeRulePo payFeeRulePo, List<PreGenerateFeePeriodDto> periods);
+
+    /**
+     * 预生成一次性费用账单（不做账单日校验，生成后规则置为结束）
+     *
+     * @param payFeeRulePo 费用规则
+     * @return 生成的账单条数
+     */
+    int generateOncePayFeeByRule(PayFeeRulePo payFeeRulePo);
 }

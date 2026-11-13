@@ -7,6 +7,8 @@ import com.java110.dto.fee.FeeAmountDto;
 import com.java110.dto.fee.FeeAttrDto;
 import com.java110.dto.fee.FeeConfigDto;
 import com.java110.dto.fee.FeeDto;
+import com.java110.dto.fee.PreGenerateFeePeriodDto;
+import com.java110.dto.fee.PayFeeDto;
 import com.java110.dto.owner.OwnerDto;
 import com.java110.dto.payFee.PayFeeDetailRefreshFeeMonthDto;
 import com.java110.dto.payFee.PayFeeRuleDto;
@@ -372,6 +374,205 @@ public class CycleConvertOnceFeeImpl implements ICycleConvertOnceFee {
             feeIds.add(tmpPayFeePo.getFeeId());
         }
         return feeIds;
+    }
+
+    @Override
+    public int preGeneratePayFee(PayFeeRulePo payFeeRulePo, List<PreGenerateFeePeriodDto> periods) {
+
+        if (payFeeRulePo == null || StringUtil.isEmpty(payFeeRulePo.getRuleId())) {
+            throw new IllegalArgumentException("费用规则信息不完整");
+        }
+
+        if (ListUtil.isNull(periods)) {
+            throw new IllegalArgumentException("请选择要预生成的期次");
+        }
+
+        //todo 查询费用项
+        FeeConfigDto feeConfigDto = queryFeeConfig(payFeeRulePo);
+        int ruleCycle = computeRuleCycle(feeConfigDto);
+
+        List<PayFeePo> tmpPayFeePos = new ArrayList<>();
+        List<FeeAttrPo> tmpFeeAttrPos = new ArrayList<>();
+        List<PayFeeRuleBillPo> payFeeRuleBillPos = new ArrayList<>();
+
+        FeeDto feeDto = new FeeDto();
+        feeDto.setPayerObjType(payFeeRulePo.getPayerObjType());
+        feeDto.setCommunityId(payFeeRulePo.getCommunityId());
+        feeDto.setPayerObjId(payFeeRulePo.getPayerObjId());
+        OwnerDto ownerDto = computeFeeSMOImpl.getFeeOwnerDto(feeDto);
+        String payerObjName = computeFeeSMOImpl.getFeeObjName(feeDto);
+
+        //todo 按指定期次逐期出账，不做账单日校验
+        for (PreGenerateFeePeriodDto period : periods) {
+            Date startTime = parseDateTime(period.getStartTime());
+            Date endTime = parseDateTime(period.getEndTime());
+            if (startTime == null || endTime == null) {
+                throw new IllegalArgumentException("预生成期次不合法，请刷新后重试");
+            }
+            doGeneratorPayFee(payFeeRulePo, startTime, DateUtil.getNextSecDateTime(endTime),
+                    feeConfigDto, tmpPayFeePos, tmpFeeAttrPos, payFeeRuleBillPos,
+                    ownerDto, payerObjName, ruleCycle);
+        }
+
+        if (ListUtil.isNull(tmpPayFeePos)) {
+            return 0;
+        }
+
+        //todo 保存 pay_fee 和 fee_attr，同步生成月数据和欠费数据
+        int flag = saveFeeAndAttrs(tmpPayFeePos, tmpFeeAttrPos, payFeeRuleBillPos);
+        if (flag < 1) {
+            throw new IllegalArgumentException("生成费用失败");
+        }
+
+        //todo 规则账期终点推进到最后生成的一期
+        Date lastEndTime = parseDateTime(periods.get(periods.size() - 1).getEndTime());
+        updatePayFeeRuleEndTime(payFeeRulePo, feeConfigDto,
+                DateUtil.getNextSecDateTime(lastEndTime), ruleCycle);
+
+        return tmpPayFeePos.size();
+    }
+
+    @Override
+    public int generateOncePayFeeByRule(PayFeeRulePo payFeeRulePo) {
+
+        if (payFeeRulePo == null || StringUtil.isEmpty(payFeeRulePo.getRuleId())) {
+            throw new IllegalArgumentException("费用规则信息不完整");
+        }
+
+        //todo 已经生成过账单的不再重复生成
+        PayFeeDto payFeeDto = new PayFeeDto();
+        payFeeDto.setCommunityId(payFeeRulePo.getCommunityId());
+        payFeeDto.setRuleId(payFeeRulePo.getRuleId());
+        List<PayFeeDto> payFeeDtos = payFeeV1InnerServiceSMOImpl.queryPayFees(payFeeDto);
+        if (!ListUtil.isNull(payFeeDtos)) {
+            throw new IllegalArgumentException("该费用已生成账单，无需重复预生成");
+        }
+
+        //todo 查询费用项
+        FeeConfigDto feeConfigDto = queryFeeConfig(payFeeRulePo);
+
+        //todo 账期起点取规则账期终点，终点取规则最大时间
+        Date startTime = parseDateTime(payFeeRulePo.getEndTime());
+        if (startTime == null) {
+            startTime = parseDateTime(payFeeRulePo.getStartTime());
+        }
+        Date endTime = parseDateTime(payFeeRulePo.getMaxTime());
+        if (startTime == null || endTime == null) {
+            throw new IllegalArgumentException("费用规则账期不完整，不能预生成账单");
+        }
+        if (endTime.before(startTime)) {
+            throw new IllegalArgumentException("费用规则结束时间早于开始时间，请检查费用规则");
+        }
+
+        List<PayFeePo> tmpPayFeePos = new ArrayList<>();
+        List<FeeAttrPo> tmpFeeAttrPos = new ArrayList<>();
+        List<PayFeeRuleBillPo> payFeeRuleBillPos = new ArrayList<>();
+
+        FeeDto feeDto = new FeeDto();
+        feeDto.setPayerObjType(payFeeRulePo.getPayerObjType());
+        feeDto.setCommunityId(payFeeRulePo.getCommunityId());
+        feeDto.setPayerObjId(payFeeRulePo.getPayerObjId());
+        OwnerDto ownerDto = computeFeeSMOImpl.getFeeOwnerDto(feeDto);
+        String payerObjName = computeFeeSMOImpl.getFeeObjName(feeDto);
+
+        doGeneratorPayFee(payFeeRulePo, startTime, endTime, feeConfigDto,
+                tmpPayFeePos, tmpFeeAttrPos, payFeeRuleBillPos, ownerDto, payerObjName, 1);
+
+        if (ListUtil.isNull(tmpPayFeePos)) {
+            return 0;
+        }
+
+        //todo 保存 pay_fee 和 fee_attr，同步生成月数据和欠费数据
+        int flag = saveFeeAndAttrs(tmpPayFeePos, tmpFeeAttrPos, payFeeRuleBillPos);
+        if (flag < 1) {
+            throw new IllegalArgumentException("生成费用失败");
+        }
+
+        //todo 一次性账单生成后规则置为结束，防止定时任务重复出账
+        PayFeeRulePo updateRulePo = new PayFeeRulePo();
+        updateRulePo.setRuleId(payFeeRulePo.getRuleId());
+        updateRulePo.setCommunityId(payFeeRulePo.getCommunityId());
+        updateRulePo.setEndTime(DateUtil.getFormatTimeStringA(endTime));
+        updateRulePo.setCurYearMonth(DateUtil.getFormatTimeStringB(endTime));
+        updateRulePo.setState(FeeDto.STATE_FINISH);
+        payFeeRuleV1InnerServiceSMOImpl.updatePayFeeRule(updateRulePo);
+
+        return tmpPayFeePos.size();
+    }
+
+    /**
+     * 查询费用项
+     *
+     * @param payFeeRulePo 费用规则
+     * @return 费用项
+     */
+    private FeeConfigDto queryFeeConfig(PayFeeRulePo payFeeRulePo) {
+        FeeConfigDto feeConfigDto = new FeeConfigDto();
+        feeConfigDto.setConfigId(payFeeRulePo.getConfigId());
+        feeConfigDto.setCommunityId(payFeeRulePo.getCommunityId());
+        List<FeeConfigDto> feeConfigDtos = payFeeConfigV1InnerServiceSMOImpl.queryPayFeeConfigs(feeConfigDto);
+        Assert.listOnlyOne(feeConfigDtos, "费用项不存在，configId=" + payFeeRulePo.getConfigId());
+        return feeConfigDtos.get(0);
+    }
+
+    /**
+     * 计算缴费周期，一次性费用按 1 处理
+     *
+     * @param feeConfigDto 费用项
+     * @return 缴费周期
+     */
+    private int computeRuleCycle(FeeConfigDto feeConfigDto) {
+        if (FeeDto.FEE_FLAG_ONCE.equals(feeConfigDto.getFeeFlag())) {
+            return 1;
+        }
+        if (StringUtil.isEmpty(feeConfigDto.getPaymentCycle()) || !StringUtil.isNumber(feeConfigDto.getPaymentCycle())) {
+            return 1;
+        }
+        int ruleCycle = Integer.parseInt(feeConfigDto.getPaymentCycle());
+        return ruleCycle < 1 ? 1 : ruleCycle;
+    }
+
+    /**
+     * 推进规则账期终点与账单日
+     *
+     * @param payFeeRulePo 费用规则
+     * @param feeConfigDto 费用项
+     * @param endTime      最后一期账期终点
+     * @param ruleCycle    缴费周期
+     */
+    private void updatePayFeeRuleEndTime(PayFeeRulePo payFeeRulePo, FeeConfigDto feeConfigDto, Date endTime, int ruleCycle) {
+        PayFeeRulePo updateRulePo = new PayFeeRulePo();
+        updateRulePo.setRuleId(payFeeRulePo.getRuleId());
+        updateRulePo.setCommunityId(payFeeRulePo.getCommunityId());
+        updateRulePo.setEndTime(DateUtil.getFormatTimeStringA(endTime));
+        // 后付费 账单日比账期终点多一个周期
+        Date curYearMonth = endTime;
+        if (FeeConfigDto.PAYMENT_CD_AFTER.equals(feeConfigDto.getPaymentCd())) {
+            curYearMonth = DateUtil.getNextMonthDate(endTime, ruleCycle);
+        }
+        updateRulePo.setCurYearMonth(DateUtil.getFormatTimeStringB(curYearMonth));
+
+        Date maxTime = parseDateTime(payFeeRulePo.getMaxTime());
+        if (maxTime != null && !endTime.before(maxTime)) {
+            updateRulePo.setState(FeeDto.STATE_FINISH);
+        }
+        payFeeRuleV1InnerServiceSMOImpl.updatePayFeeRule(updateRulePo);
+    }
+
+    /**
+     * 兼容 yyyy-MM-dd 与 yyyy-MM-dd HH:mm:ss 两种格式
+     *
+     * @param time 时间字符串
+     * @return 时间
+     */
+    private Date parseDateTime(String time) {
+        if (StringUtil.isEmpty(time)) {
+            return null;
+        }
+        if (!time.contains(":")) {
+            return DateUtil.getDateFromStringB(time);
+        }
+        return DateUtil.getDateFromStringA(time);
     }
 
 

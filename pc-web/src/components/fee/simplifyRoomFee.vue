@@ -97,6 +97,9 @@
                 <td class="text-center">
                   <!-- <el-button class="btn-link" type="text" v-if="feeSub.state != '2009001' && hasPrivilege('502020082314267912')" @click="payFee(feeSub)">{{ $t('simplifyRoomFee.payment') || '缴费' }}</el-button> -->
                   <el-button class="btn-link" type="text" @click="payFeeHis(feeSub)">{{ $t('simplifyRoomFee.paymentHistory') || '缴费历史' }}</el-button>
+                  <el-button class="btn-link" type="text"
+                    v-if="feeSub.state == '2008001' && feeSub.ruleId && hasPrivilege('502020082314267912')"
+                    @click="preGenerateFee(feeSub)">{{ $t('simplifyRoomFee.preGenerate') }}</el-button>
                   <el-dropdown v-if="hasPrivilege('502020090604200029') || hasPrivilege('502021070488970005') || hasPrivilege('502020090427190001')">
                     <span class="el-dropdown-link">{{ $t('simplifyRoomFee.moreOperations') || '更多操作' }}<i class="el-icon-arrow-down el-icon--right"></i></span>
                     <el-dropdown-menu slot="dropdown">
@@ -139,11 +142,13 @@
     <edit-fee ref="editFee" @success="handleNotify"></edit-fee>
     <finish-fee ref="finishFee" @success="handleNotify"></finish-fee>
     <split-fee ref="splitFee" @success="handleNotify"></split-fee>
+    <pre-generate-fee ref="preGenerateFee" @success="handleNotify"></pre-generate-fee>
   </div>
 </template>
 
 <script>
 import { listFee, listFeeConfigs } from '@/api/fee/simplifyRoomFeeApi'
+import { queryPreGenerateFeePeriods, preGenerateFee as preGenerateFeeApi } from '@/api/fee/preGenerateFeeApi'
 import { getDict } from '@/api/community/communityApi'
 import { getCommunityId } from '@/api/community/communityApi'
 //import { listFeeConfigs } from '@/api/fee/feeConfigManageApi'
@@ -152,6 +157,7 @@ import DeleteFee from '@/components/fee/deleteFee'
 import EditFee from '@/components/fee/editFee'
 import FinishFee from '@/components/fee/finishFee'
 import SplitFee from '@/components/fee/splitFee'
+import PreGenerateFee from '@/components/fee/preGenerateFee'
 
 export default {
   name: 'SimplifyRoomFee',
@@ -159,7 +165,8 @@ export default {
     DeleteFee,
     EditFee,
     FinishFee,
-    SplitFee
+    SplitFee,
+    PreGenerateFee
   },
   data() {
     return {
@@ -371,6 +378,55 @@ export default {
       this.$refs.deleteFee.open({
         communityId: getCommunityId(),
         feeId: fee.feeId
+      })
+    },
+    preGenerateFee(fee) {
+      const communityId = getCommunityId()
+      queryPreGenerateFeePeriods({
+        communityId: communityId,
+        ruleId: fee.ruleId
+      }).then(res => {
+        const data = res.data
+        if (!data) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        // 一次性费用确认后直接生成账单
+        if (data.feeFlag == '2006012') {
+          this.$confirm(this.$t('simplifyRoomFee.preGenerateConfirmTip'), this.$t('simplifyRoomFee.preGenerate'), {
+            confirmButtonText: this.$t('common.confirm'),
+            cancelButtonText: this.$t('common.cancel'),
+            type: 'warning'
+          }).then(() => {
+            preGenerateFeeApi({
+              communityId: communityId,
+              ruleId: fee.ruleId,
+              periods: []
+            }).then(response => {
+              this.$message.success(this.$t('simplifyRoomFee.preGenerateSuccess', { count: response.data }))
+              this.handleNotify()
+            }).catch(error => {
+              this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
+            })
+          }).catch(() => {})
+          return
+        }
+        // 周期性费用勾选期次预生成
+        if (!data.periods || data.periods.length < 1) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        if (this.$refs.preGenerateFee) {
+          this.$refs.preGenerateFee.open({
+            communityId: communityId,
+            ruleId: fee.ruleId,
+            feeName: fee.feeName,
+            endTime: data.endTime,
+            periods: data.periods
+          })
+        }
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
       })
     },
     finishFee(fee) {  

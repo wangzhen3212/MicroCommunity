@@ -111,7 +111,19 @@ export const messages = {
       payment: 'Payment',
       prePayFee: 'Pre Pay Fee',
       paymentHistory: 'Payment History',
-      splitFee: 'Split Fee'
+      splitFee: 'Split Fee',
+      preGenerate: 'Pre Generate',
+      preGenerateConfirmTip: 'Generate the bill for this fee item in advance?',
+      preGenerateTitle: 'Pre Generate Bill',
+      period: 'Period No.',
+      periodStart: 'Period Start',
+      periodEnd: 'Period End',
+      selectPeriodTip: 'Please select the periods to generate, must start from period 1 and be continuous',
+      continuousTip: 'Periods must be continuous, the missing periods have been selected automatically',
+      continuousRequired: 'Periods must start from period 1 and be continuous',
+      noAvailablePeriod: 'No period available for pre generation',
+      preGenerateSuccess: 'Generated {count} bill(s) successfully',
+      preGenerateFailed: 'Pre generate bill failed'
     },
 simplifyHisFee: {
       feeItem: 'Fee Item',
@@ -644,7 +656,19 @@ simplifyHisFee: {
       payment: '缴费',
       prePayFee: '预付收款',  
       paymentHistory: '缴费历史',
-      splitFee: '拆费'
+      splitFee: '拆费',
+      preGenerate: '预生成',
+      preGenerateConfirmTip: '是否为该费用项预生成账单？',
+      preGenerateTitle: '预生成账单',
+      period: '期号',
+      periodStart: '账期开始',
+      periodEnd: '账期结束',
+      selectPeriodTip: '请勾选要预生成的期次，必须从第 1 期开始连续勾选',
+      continuousTip: '预生成期次必须连续，已自动补齐中间的期次',
+      continuousRequired: '预生成期次必须从第 1 期开始连续勾选',
+      noAvailablePeriod: '暂无可预生成期次',
+      preGenerateSuccess: '已生成 {count} 期账单',
+      preGenerateFailed: '预生成账单失败'
     },
 simplifyHisFee: {
       feeItem: '费用项',
@@ -1177,7 +1201,19 @@ simplifyHisFee: {
       payment: '繳費',
       prePayFee: '預付收款',
       paymentHistory: '繳費歷史',
-      splitFee: '拆費'
+      splitFee: '拆費',
+      preGenerate: '預生成',
+      preGenerateConfirmTip: '是否為該費用項目預生成帳單？',
+      preGenerateTitle: '預生成帳單',
+      period: '期號',
+      periodStart: '帳期開始',
+      periodEnd: '帳期結束',
+      selectPeriodTip: '請勾選要預生成的期次，必須從第 1 期開始連續勾選',
+      continuousTip: '預生成期次必須連續，已自動補齊中間的期次',
+      continuousRequired: '預生成期次必須從第 1 期開始連續勾選',
+      noAvailablePeriod: '暫無可預生成期次',
+      preGenerateSuccess: '已生成 {count} 期帳單',
+      preGenerateFailed: '預生成帳單失敗'
     },
 simplifyHisFee: {
       feeItem: '費用項目',

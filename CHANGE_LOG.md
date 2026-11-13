@@ -692,3 +692,23 @@ LIMIT 2000;
 
 
 
+## 2026-11-13 — 房屋设置费用页「预生成账单」（周期性勾选连续期次 / 一次性一键出账）
+
+无 DDL、无字典、无菜单变更；新增 2 个 serviceCode 注册。方案：`.txcode/plan-code/20261113125042/20261113125042_方案.md`
+
+```sql
+-- 服务注册（独立脚本：docs/sql/fee/20261113_pre_generate_fee_service.sql，执行后刷新 AppRouteCache 或重启 service-api）
+DELETE FROM `c_service` WHERE `service_code` IN ('fee.queryPreGenerateFeePeriods','fee.preGenerateFee');
+INSERT INTO `c_service` VALUES ('2127','982026111309000001','fee.queryPreGenerateFeePeriods','API','查询预生成账单期次','1',null,'CMD','http://fee-service','GET','60','3','8000418002','2026-11-13 09:00:00','0');
+INSERT INTO `c_service` VALUES ('2128','982026111309000002','fee.preGenerateFee','API','预生成费用账单','1',null,'CMD','http://fee-service','POST','60','3','8000418002','2026-11-13 09:00:00','0');
+INSERT INTO `c_route` VALUES ('3109','8000418004','982026111309000001','Q','1000','S','2026-11-13 09:00:00','0');
+INSERT INTO `c_route` VALUES ('3110','8000418004','982026111309000002','D','1000','S','2026-11-13 09:00:00','0');
+```
+
+- 新增 `java110-bean/.../dto/fee/PreGenerateFeePeriodDto.java`：期次 DTO（`seq`/`startTime`/`endTime`）。
+- 后端 `service-fee/.../bill/ICycleConvertOnceFee`、`CycleConvertOnceFeeImpl`：新增 `preGeneratePayFee(rule, periods)`（免账单日校验，按指定期次逐期复用 `doGeneratorPayFee`/`saveFeeAndAttrs` 出账，推进 `end_time`/`cur_year_month`，达 `max_time` 置 `2009001`）与 `generateOncePayFeeByRule(rule)`（一次性出 1 张账单后规则置结束，已有 `rule_id` 账单则拒绝）。
+- 新增 `service-fee/.../bmo/fee/IPreGenerateFeeBMO.java`、`.../bmo/fee/impl/PreGenerateFeeBMOImpl.java`：`queryPeriods` 自 `pay_fee_rule.end_time` 起按 `payment_cycle` 递推最多 12 期（上限取 `min(rule.max_time, 费用项 end_time)`，末期截断），不查 `pay_fee`；`validatePeriods` 强校验「不掐头、不跳期、期次落在重算集合内」，并按 `rule_id + start_time` 兜底拦重复出账；`preGenerate` 用重算期次覆盖前端账期后再出账。
+- 新增 `service-fee/.../cmd/fee/QueryPreGenerateFeePeriodsCmd.java`（`fee.queryPreGenerateFeePeriods`，GET）、`PreGenerateFeeCmd.java`（`fee.preGenerateFee`，POST，`@Java110Transactional`），出参统一 `ResultVo`。
+- 前端新增 `pc-web/src/api/fee/preGenerateFeeApi.js`、`pc-web/src/components/fee/preGenerateFee.vue`（期次多选弹窗，勾选第 i 期自动补齐第 1~i 期、取消第 i 期自动取消 i 之后期次，提交前再校验连续）。
+- 前端 `pc-web/src/components/fee/simplifyRoomFee.vue`：子行操作列新增「预生成」按钮（仅 `state=2008001` 且 `ruleId` 非空、权限 `502020082314267912` 显示）；一次性费用走 `$confirm` 直接出账，周期性费用先查期次再弹窗勾选，`periods` 为空提示「暂无可预生成期次」。
+- 前端 `pc-web/src/views/fee/roomCreateFeeLang.js`：`simplifyRoomFee` 三语新增 `preGenerate`/`preGenerateConfirmTip`/`preGenerateTitle`/`period`/`periodStart`/`periodEnd`/`selectPeriodTip`/`continuousTip`/`continuousRequired`/`noAvailablePeriod`/`preGenerateSuccess`/`preGenerateFailed`。
