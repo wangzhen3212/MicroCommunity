@@ -712,3 +712,25 @@ INSERT INTO `c_route` VALUES ('3110','8000418004','982026111309000002','D','1000
 - 前端新增 `pc-web/src/api/fee/preGenerateFeeApi.js`、`pc-web/src/components/fee/preGenerateFee.vue`（期次多选弹窗，勾选第 i 期自动补齐第 1~i 期、取消第 i 期自动取消 i 之后期次，提交前再校验连续）。
 - 前端 `pc-web/src/components/fee/feeDetailFeeRule.vue`（「设置费用」tab）：规则行操作列新增「预生成」按钮（仅规则 `state=2008001` 有效、权限 `502020082314267912` 显示）；一次性费用走 `$confirm` 直接出账，周期性费用先查期次再弹窗勾选，`periods` 为空提示「暂无可预生成期次」。
 - 前端 `pc-web/src/views/fee/roomCreateFeeLang.js`：`simplifyRoomFee` 三语新增 `preGenerate`/`preGenerateConfirmTip`/`preGenerateTitle`/`period`/`periodStart`/`periodEnd`/`selectPeriodTip`/`continuousTip`/`continuousRequired`/`noAvailablePeriod`/`preGenerateSuccess`/`preGenerateFailed`。
+
+## 2026-11-13 — 房产菜单补录「关注用户」（公众号关注用户同步）
+
+无 DDL、无字典变更；补录 2 个 serviceCode 注册 + 1 条数据总线 + 菜单/权限。方案：`.txcode/plan-code/20261113132427/20261113132427_方案.md`
+
+```sql
+-- 运行时配置补录（独立脚本：docs/sql/user/20261113_wechat_subscribe_register.sql，执行后刷新 AppRouteCache 或重启 service-api，重启 service-job 使数据总线生效）
+DELETE FROM `c_service` WHERE `service_code` IN ('wechat.listWechatSubscribe','wechat.synchronizeWechatSubscribe');
+INSERT INTO `c_service` VALUES ('2129','982026111309000003','wechat.listWechatSubscribe','API','查询公众号关注用户','1',null,'CMD','http://user-service','GET','60','3','8000418002',NOW(),'0');
+INSERT INTO `c_service` VALUES ('2130','982026111309000004','wechat.synchronizeWechatSubscribe','API','同步公众号关注用户','1',null,'CMD','http://user-service','POST','60','3','8000418002',NOW(),'0');
+INSERT INTO `c_route` VALUES ('3111','8000418004','982026111309000003','Q','1000','S',NOW(),'0');
+INSERT INTO `c_route` VALUES ('3112','8000418004','982026111309000004','D','1000','S',NOW(),'0');
+INSERT INTO `c_business_databus` (`databus_id`,`databus_name`,`business_type_cd`,`bean_name`,`seq`,`state`,`create_time`,`status_cd`)
+VALUES ('122026111300000001','获取公众号关注用户','synchronizeWechatSubscribe','synchronizeWechatSubscribeAdapt','92','1001',NOW(),'0');
+INSERT INTO `m_menu` VALUES ('702026111300000001','关注用户','800201904006','/#/pages/community/wechatSubscribe','19','502026111300000001','公众号关注用户同步与查看',NOW(),'0','Y');
+INSERT INTO `p_privilege` VALUES ('502026111300000001','关注用户','同步并查看公众号关注用户',NOW(),'0','800900000003','/#/pages/community/wechatSubscribe','702026111300000001');
+```
+
+- 后端/前端业务代码无改动：`ListWechatSubscribeCmd`(`wechat.listWechatSubscribe`)、`SynchronizeWechatSubscribeCmd`(`wechat.synchronizeWechatSubscribe`)、`SynchronizeWechatSubscribeAdapt`(`@Component("synchronizeWechatSubscribeAdapt")`)、`pc-web` 页面/组件/API/路由均已存在。
+- 新增 `docs/sql/user/20261113_wechat_subscribe_register.sql`：幂等补录 `c_service`（2129/2130）、`c_route`（3111/3112，物业端 `8000418004`，GET→`Q`、POST→`D`）、`c_business_databus`（`business_type_cd=synchronizeWechatSubscribe` → `bean_name=synchronizeWechatSubscribeAdapt`，seq 92）、`m_menu`（房产组 `800201904006`，seq 19）、`p_privilege`（domain `800900000003`）与 `p_privilege_rel`（授权物业端全部有效权限组，`rel_id` 自增）。
+- 前端 `pc-web/src/i18n/menuLang.js`：`menu` 字典三语新增菜单名键「关注用户」（en `Follow Users` / zh-TW `關注用戶`）。
+- 前置校验（未改代码，仅说明）：同步接口要求小区已配置 `WECHAT_TYPE_PUBLIC` 公众号（`/pages/community/communityWechat` 录入 appId/appSecret 且公众号配置 IP 白名单），否则提示「未配置公众号」；菜单可见性还依赖 `m_menu_group_community` 中房产组已授权小区。
