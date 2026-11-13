@@ -71,6 +71,14 @@
       <el-table-column :label="$t('common.operation')" align="center" v-if="hasPrivilege">
         <template slot-scope="scope">
           <el-button
+            v-if="scope.row.state === '2008001' && hasPrivilege('502020082314267912')"
+            type="text"
+            size="small"
+            @click="_preGenerateFee(scope.row)"
+          >
+            {{ $t('simplifyRoomFee.preGenerate') }}
+          </el-button>
+          <el-button
             v-if="hasPrivilege('502020090427190001')"
             type="text"
             size="small"
@@ -119,11 +127,13 @@
     <room-create-fee-add ref="roomCreateFeeAdd" @success="loadData"></room-create-fee-add>
     <add-meter-water ref="addMeterWater" @success="loadData"></add-meter-water>
     <add-proxy-fee ref="addProxyFee" @success="loadData"></add-proxy-fee>
+    <pre-generate-fee ref="preGenerateFee" @success="loadData"></pre-generate-fee>
   </div>
 </template>
 
 <script>
 import { listPayFeeRule } from '@/api/fee/feeDetailFeeRuleApi'
+import { queryPreGenerateFeePeriods, preGenerateFee as preGenerateFeeApi } from '@/api/fee/preGenerateFeeApi'
 import EditFeeRule from './editFeeRule'
 import FinishFeeRule from './finishFeeRule'
 import DeleteFeeRule from './deleteFeeRule'
@@ -131,6 +141,7 @@ import TempImportRoomFee from './tempImportRoomFee'
 import RoomCreateFeeAdd from './roomCreateFeeAdd'
 import AddMeterWater from './addMeterWater'
 import AddProxyFee from './addProxyFee'
+import PreGenerateFee from './preGenerateFee'
 import { getCommunityId } from '@/api/community/communityApi'
 
 export default {
@@ -142,7 +153,8 @@ export default {
     TempImportRoomFee,
     RoomCreateFeeAdd,
     AddMeterWater,
-    AddProxyFee
+    AddProxyFee,
+    PreGenerateFee
   },
   props: {
     feeId: {
@@ -248,6 +260,55 @@ export default {
         roomId: this.feeDetailFeeRuleInfo.roomId,
         roomName: this.feeDetailFeeRuleInfo.roomName,
         ownerName: this.feeDetailFeeRuleInfo.ownerName
+      })
+    },
+    _preGenerateFee(rule) {
+      const communityId = getCommunityId()
+      queryPreGenerateFeePeriods({
+        communityId: communityId,
+        ruleId: rule.ruleId
+      }).then(res => {
+        const data = res.data
+        if (!data) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        // 一次性费用确认后直接生成账单
+        if (data.feeFlag == '2006012') {
+          this.$confirm(this.$t('simplifyRoomFee.preGenerateConfirmTip'), this.$t('simplifyRoomFee.preGenerate'), {
+            confirmButtonText: this.$t('common.confirm'),
+            cancelButtonText: this.$t('common.cancel'),
+            type: 'warning'
+          }).then(() => {
+            preGenerateFeeApi({
+              communityId: communityId,
+              ruleId: rule.ruleId,
+              periods: []
+            }).then(response => {
+              this.$message.success(this.$t('simplifyRoomFee.preGenerateSuccess', { count: response.data }))
+              this.loadData()
+            }).catch(error => {
+              this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
+            })
+          }).catch(() => {})
+          return
+        }
+        // 周期性费用勾选期次预生成
+        if (!data.periods || data.periods.length < 1) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        if (this.$refs.preGenerateFee) {
+          this.$refs.preGenerateFee.open({
+            communityId: communityId,
+            ruleId: rule.ruleId,
+            feeName: rule.feeName,
+            endTime: data.endTime,
+            periods: data.periods
+          })
+        }
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
       })
     },
     open(params) {
