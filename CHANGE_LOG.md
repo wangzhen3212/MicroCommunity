@@ -711,6 +711,7 @@ INSERT INTO `c_route` VALUES ('3110','8000418004','982026111309000002','D','1000
 - 新增 `service-fee/.../cmd/fee/QueryPreGenerateFeePeriodsCmd.java`（`fee.queryPreGenerateFeePeriods`，GET）、`PreGenerateFeeCmd.java`（`fee.preGenerateFee`，POST，`@Java110Transactional`），出参统一 `ResultVo`。
 - 前端新增 `pc-web/src/api/fee/preGenerateFeeApi.js`、`pc-web/src/components/fee/preGenerateFee.vue`（**卡片式**期次选择：每个期次一张卡片展示期号与账期起止，点击第 i 期自动补齐第 1~i 期、再次点击自动取消 i 之后所有期次，提交前再校验连续）。
 - 前端 `pc-web/src/components/fee/feeDetailFeeRule.vue`（「设置费用」tab）：规则行操作列新增「预生成」按钮（仅规则 `state=2008001` 有效、权限 `502020082314267912` 显示）；一次性费用走 `$confirm` 直接出账，周期性费用先查期次再弹窗勾选，`periods` 为空提示「暂无可预生成期次」。
+- 前端 `pc-web/src/components/fee/{feeDetailParkingSpaceFeeRule,feeDetailShopFeeRule,feeDetailContractFeeRule}.vue`：车位（`/pages/property/parkingSpaceCreateFee`）、商铺（`/pages/property/shopCreateFee`）、合同（`/pages/property/contractCreateFee`）的「设置费用」tab 规则行操作列同样新增「预生成」按钮，逻辑与房屋一致（操作列宽度 200→260）。
 - 前端 `pc-web/src/views/fee/roomCreateFeeLang.js`：`simplifyRoomFee` 三语新增 `preGenerate`/`preGenerateConfirmTip`/`preGenerateTitle`/`period`/`periodStart`/`periodEnd`/`selectPeriodTip`/`continuousTip`/`continuousRequired`/`noAvailablePeriod`/`preGenerateSuccess`/`preGenerateFailed`。
 
 ## 2026-11-13 — 房产菜单补录「关注用户」（公众号关注用户同步）

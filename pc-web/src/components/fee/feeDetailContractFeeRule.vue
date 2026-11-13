@@ -54,9 +54,13 @@
       <el-table-column :label="$t('feeDetailContractFeeRule.billCycle')" align="center">
         <template>{{ $t('feeDetailContractFeeRule.monthly') }}</template>
       </el-table-column>
-      <el-table-column :label="$t('feeDetailContractFeeRule.operation')" align="center" width="200">
+      <el-table-column :label="$t('feeDetailContractFeeRule.operation')" align="center" width="260">
         <template slot-scope="scope">
           <div v-if="scope.row.state !== '2009001'">
+            <el-button v-if="scope.row.state === '2008001' && hasPrivilege('502020082314267912')" type="text" size="mini"
+              @click="_preGenerateFee(scope.row)">
+              {{ $t('simplifyRoomFee.preGenerate') }}
+            </el-button>
             <el-button v-if="hasPrivilege('502020090427190001')" type="text" size="mini"
               @click="_updateFeeRule(scope.row)">
               {{ $t('feeDetailContractFeeRule.change') }}
@@ -90,6 +94,7 @@
     <finish-fee-rule ref="finishFeeRule" @success="handleSuccess" />
     <temp-import-room-fee ref="tempImportRoomFee" @success="handleSuccess" />
     <contract-create-fee-add ref="contractCreateFeeAdd" @success="handleSuccess" />
+    <pre-generate-fee ref="preGenerateFee" @success="handleSuccess" />
 
   </div>
 </template>
@@ -97,11 +102,13 @@
 <script>
 import { getCommunityId } from '@/api/community/communityApi'
 import { listPayFeeRule } from '@/api/fee/parkingSpaceCreateFeeApi'
+import { queryPreGenerateFeePeriods, preGenerateFee as preGenerateFeeApi } from '@/api/fee/preGenerateFeeApi'
 import DeleteFeeRule from './deleteFeeRule.vue'
 import EditFeeRule from './editFeeRule.vue'
 import FinishFeeRule from './finishFeeRule.vue'
 import TempImportRoomFee from './tempImportRoomFee.vue'
 import ContractCreateFeeAdd from '@/components/fee/contractCreateFeeAdd'
+import PreGenerateFee from './preGenerateFee'
 
 export default {
   name: 'FeeDetailContractFeeRule',
@@ -110,7 +117,8 @@ export default {
     EditFeeRule,
     FinishFeeRule,
     ContractCreateFeeAdd,
-    TempImportRoomFee
+    TempImportRoomFee,
+    PreGenerateFee
   },
 
   data() {
@@ -197,6 +205,56 @@ export default {
 
     _finishFeeRule(fee) {
       this.$refs.finishFeeRule.open(fee)
+    },
+
+    _preGenerateFee(rule) {
+      const communityId = getCommunityId()
+      queryPreGenerateFeePeriods({
+        communityId: communityId,
+        ruleId: rule.ruleId
+      }).then(res => {
+        const data = res.data
+        if (!data) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        // 一次性费用确认后直接生成账单
+        if (data.feeFlag == '2006012') {
+          this.$confirm(this.$t('simplifyRoomFee.preGenerateConfirmTip'), this.$t('simplifyRoomFee.preGenerate'), {
+            confirmButtonText: this.$t('common.confirm'),
+            cancelButtonText: this.$t('common.cancel'),
+            type: 'warning'
+          }).then(() => {
+            preGenerateFeeApi({
+              communityId: communityId,
+              ruleId: rule.ruleId,
+              periods: []
+            }).then(response => {
+              this.$message.success(this.$t('simplifyRoomFee.preGenerateSuccess', { count: response.data }))
+              this.handleSuccess()
+            }).catch(error => {
+              this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
+            })
+          }).catch(() => {})
+          return
+        }
+        // 周期性费用勾选期次预生成
+        if (!data.periods || data.periods.length < 1) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        if (this.$refs.preGenerateFee) {
+          this.$refs.preGenerateFee.open({
+            communityId: communityId,
+            ruleId: rule.ruleId,
+            feeName: rule.feeName,
+            endTime: data.endTime,
+            periods: data.periods
+          })
+        }
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
+      })
     },
 
     _openTempImportContractFeeModal() {
