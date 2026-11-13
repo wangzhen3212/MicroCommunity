@@ -24,6 +24,7 @@ import com.java110.fee.feeMonth.IPayFeeMonth;
 import com.java110.intf.fee.IPayFeeV1InnerServiceSMO;
 import com.java110.po.fee.PayFeePo;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.StringUtil;
 import com.java110.core.base.smo.BaseServiceSMO;
 import com.java110.dto.PageDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 类表述： 服务之前调用的接口实现类，不对外提供接口能力 只用于接口建调用
@@ -42,6 +44,8 @@ import java.util.List;
  */
 @RestController
 public class PayFeeV1InnerServiceSMOImpl extends BaseServiceSMO implements IPayFeeV1InnerServiceSMO {
+
+    private static final int OWNER_SYNC_BATCH_ROW = 2000;
 
     @Autowired
     private IPayFeeV1ServiceDao payFeeV1ServiceDaoImpl;
@@ -108,6 +112,40 @@ public class PayFeeV1InnerServiceSMOImpl extends BaseServiceSMO implements IPayF
         List<ComputeDiscountDto> computeDiscountDtos = computeFeeDiscountImpl.compute(payFeeDtos);
 
         return computeDiscountDtos;
+    }
+
+    /**
+     * 按业主批量同步账单业主信息，按批次循环更新避免长事务
+     *
+     * @param payFeeDto 同步参数
+     * @return 影响行数
+     */
+    @Override
+    public int updatePayFeeOwner(@RequestBody PayFeeDto payFeeDto) {
+        if (payFeeDto == null || StringUtil.isEmpty(payFeeDto.getCommunityId())) {
+            return 0;
+        }
+        if (StringUtil.isEmpty(payFeeDto.getOldOwnerId())) {
+            payFeeDto.setOldOwnerId(payFeeDto.getOwnerId());
+        }
+        if (StringUtil.isEmpty(payFeeDto.getOldOwnerId())) {
+            return 0;
+        }
+        if (StringUtil.isEmpty(payFeeDto.getOwnerId()) && StringUtil.isEmpty(payFeeDto.getOwnerName())) {
+            return 0;
+        }
+        if (payFeeDto.getOldOwnerId().equals(payFeeDto.getOwnerId()) && StringUtil.isEmpty(payFeeDto.getOwnerName())) {
+            return 0;
+        }
+        Map info = BeanConvertUtil.beanCovertMap(payFeeDto);
+        info.put("row", OWNER_SYNC_BATCH_ROW);
+        int totalFlag = 0;
+        int flag;
+        do {
+            flag = payFeeV1ServiceDaoImpl.updatePayFeeOwnerInfo(info);
+            totalFlag += flag;
+        } while (flag >= OWNER_SYNC_BATCH_ROW);
+        return totalFlag;
     }
 
 }

@@ -104,5 +104,17 @@ public class PayFeeV1ServiceDaoImpl extends BaseServiceDao implements IPayFeeV1S
         return Integer.parseInt(businessPayFeeInfos.get(0).get("count").toString());
     }
 
+    /**
+     * 按业主批量同步费用明细业主信息
+     * @param info 同步信息
+     * @return 影响行数
+     */
+    @Override
+    public int updatePayFeeOwnerInfo(Map info) {
+        logger.debug("修改 updatePayFeeOwnerInfo 入参 info : {}",info);
+
+        return sqlSessionTemplate.update("payFeeV1ServiceDaoImpl.updatePayFeeOwnerInfo", info);
+    }
+
 
 }

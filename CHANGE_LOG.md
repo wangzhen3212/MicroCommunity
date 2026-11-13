@@ -656,5 +656,39 @@ DELETE FROM business_pay_fee WHERE b_id = '202026110907400396' AND operate = 'AD
 - 后端 `service-job/src/main/java/com/java110/job/adapt/fee/FloorShareReadingAdapt.java`：删除未使用的 `javax.script` import。
 - 后端 `springboot/src/main/java/com/java110/boot/BootApplicationStart.java`：启动后打印一次 `FormulaUtil.engineInfo()`，便于确认运行通道（正常为 `OpenJDK Nashorn 15.4`，缺失时为「未获取到公式引擎(nashorn 缺失)」）。
 
+## 2026-11-13 — 业主名称/owner_id 变更同步 pay_fee、pay_fee_rule 业主信息
+
+无 DDL/字典/服务注册变更（仅代码 + 存量校准 SQL）。方案：`.txcode/plan-code/20261113115753/20261113115753_方案.md`
+
+```sql
+-- 存量校准：业主改名后历史账单/规则的 owner_name 未同步，分批执行（示例 2000 行/批）
+UPDATE pay_fee pf
+  JOIN building_owner bo ON pf.owner_id = bo.owner_id AND bo.status_cd = '0'
+SET pf.owner_name = bo.name
+WHERE pf.status_cd = '0' AND (pf.owner_name IS NULL OR pf.owner_name <> bo.name)
+LIMIT 2000;
+
+UPDATE pay_fee_rule pfr
+  JOIN building_owner bo ON pfr.owner_id = bo.owner_id AND bo.status_cd = '0'
+SET pfr.owner_name = bo.name
+WHERE pfr.status_cd = '0' AND (pfr.owner_name IS NULL OR pfr.owner_name <> bo.name)
+LIMIT 2000;
+
+-- 建议（可选，执行前请 DBA 确认索引现状，避免大表全扫）：按业主同步的过滤列补索引
+-- ALTER TABLE pay_fee ADD INDEX i_pf_owner_id (owner_id);
+-- ALTER TABLE pay_fee_rule ADD INDEX i_pfr_owner_id (owner_id);
+```
+
+- 后端 `java110-bean/.../dto/fee/PayFeeDto.java`、`java110-bean/.../dto/payFee/PayFeeRuleDto.java`：新增 `oldOwnerId`（变更前业主ID），用于「旧 owner_id → 新 owner_id」定位。
+- 后端 `java110-interface/intf/fee/IPayFeeV1InnerServiceSMO`、`IPayFeeRuleV1InnerServiceSMO`：新增 `updatePayFeeOwner`（`/payFeeV1Api`）、`updatePayFeeRuleOwner`（`/payFeeRuleV1Api`），返回同步影响行数。
+- 后端 `service-fee/dao/{IPayFeeV1ServiceDao,IPayFeeRuleV1ServiceDao}` + `dao/impl/*Impl`：新增 `updatePayFeeOwnerInfo` / `updatePayFeeRuleOwnerInfo`，委托 `sqlSessionTemplate.update`。
+- 后端 `java110-db/mapper/fee/PayFeeV1ServiceDaoImplMapper.xml`、`PayFeeRuleV1ServiceDaoImplMapper.xml`：新增 `updatePayFeeOwnerInfo` / `updatePayFeeRuleOwnerInfo`，按 `community_id + owner_id` 批量改 `owner_id`/`owner_name`；`ownerName` 条件过滤 `(owner_name is null or owner_name <> 新名称)` 保证分批可收敛，`limit #{row}` 控制单批行数。
+- 后端 `service-fee/smo/impl/PayFeeV1InnerServiceSMOImpl`、`PayFeeRuleV1InnerServiceSMOImpl`：新增 `updatePayFeeOwner` / `updatePayFeeRuleOwner`，校验入参（`communityId`、`oldOwnerId` 缺省回退 `ownerId`）后按 2000 行/批循环更新，累计返回影响行数；无可更新字段直接返回 0。
+- 新增 `service-user/.../bmo/owner/IOwnerFeeSyncBMO.java`、`.../bmo/owner/impl/OwnerFeeSyncBMOImpl.java`：比对 `name`/`ownerId` 有变化才通过 Feign 调 fee 服务两个同步接口；家庭成员（`memberId != ownerId`，与业主共用 `owner_id`）跳过；同步异常记录 error 日志并抛 `CmdException`，使业主修改事务回滚。
+- 后端 `service-user/.../cmd/owner/EditOwnerCmd`：`doCmd` 先按 `memberId + communityId` 查原业主（`Assert.listOnlyOne`），`updateOwner` 成功后触发 `IOwnerFeeSyncBMO.syncOwnerToFee`。
+- 后端 `service-user/.../cmd/owner/SaveHandoverCmd`：传 `ownerId` 走 `updateOwner` 的分支先查原业主，更新成功后同样触发同步（新建业主分支不涉及历史账单，不触发）。
+- 未回改的业务快照表：`fee_receipt`、`account_receipt`、`pay_fee_order`、`pay_fee_detail_month`、`owe_fee_callable` 保留单据当时业主名；`DeleteOwnerCmd` 删旧建新（新 `owner_id`）不会自动关联老账单，需用上方存量校准 SQL 或手工指定 `oldOwnerId` 处理。
+
+
 
 

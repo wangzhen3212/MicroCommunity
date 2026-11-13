@@ -24,6 +24,7 @@ import com.java110.po.owner.OwnerAppUserPo;
 import com.java110.po.owner.OwnerAttrPo;
 import com.java110.po.owner.OwnerPo;
 import com.java110.po.user.UserPo;
+import com.java110.user.bmo.owner.IOwnerFeeSyncBMO;
 import com.java110.utils.cache.MappingCache;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
@@ -109,6 +110,10 @@ public class EditOwnerCmd extends Cmd {
     @Autowired
     private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
 
+    @Autowired
+    private IOwnerFeeSyncBMO ownerFeeSyncBMOImpl;
+
+
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
         Assert.jsonObjectHaveKey(reqJson, "memberId", "请求报文中未包含ownerId");
@@ -168,6 +173,12 @@ public class EditOwnerCmd extends Cmd {
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        //todo 查询变更前业主信息
+        OwnerDto oldOwnerDto = new OwnerDto();
+        oldOwnerDto.setMemberId(reqJson.getString("memberId"));
+        oldOwnerDto.setCommunityId(reqJson.getString("communityId"));
+        List<OwnerDto> oldOwnerDtos = ownerInnerServiceSMOImpl.queryOwners(oldOwnerDto);
+        Assert.listOnlyOne(oldOwnerDtos, "未查询到业主信息或查询到多条");
 
         //todo 修改 业主信息
         OwnerPo ownerPo = BeanConvertUtil.covertBean(reqJson, OwnerPo.class);
@@ -175,6 +186,10 @@ public class EditOwnerCmd extends Cmd {
         if (flag < 1) {
             throw new CmdException("修改业主失败");
         }
+
+        //todo 业主名称或ownerId变更时同步费用规则、账单的业主信息
+        ownerFeeSyncBMOImpl.syncOwnerToFee(oldOwnerDtos.get(0), BeanConvertUtil.covertBean(reqJson, OwnerDto.class));
+
 
         //todo 修改账户
         updateAccount(reqJson);

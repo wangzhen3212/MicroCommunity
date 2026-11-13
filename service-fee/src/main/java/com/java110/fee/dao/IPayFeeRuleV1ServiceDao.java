@@ -93,4 +93,12 @@ public interface IPayFeeRuleV1ServiceDao {
      * @return
      */
     int savePayFeeRules(Map info);
+
+    /**
+     * 按业主批量同步费用规则业主信息（owner_id / owner_name）
+     *
+     * @param info ownerId 新业主ID、ownerName 新业主名称、oldOwnerId 原业主ID、communityId 小区ID、row 每批行数
+     * @return 影响行数
+     */
+    int updatePayFeeRuleOwnerInfo(Map info);
 }

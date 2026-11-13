@@ -23,6 +23,7 @@ import com.java110.fee.dao.IPayFeeRuleV1ServiceDao;
 import com.java110.intf.fee.IPayFeeRuleV1InnerServiceSMO;
 import com.java110.po.payFee.PayFeeRulePo;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,6 +42,8 @@ import java.util.Map;
  */
 @RestController
 public class PayFeeRuleV1InnerServiceSMOImpl extends BaseServiceSMO implements IPayFeeRuleV1InnerServiceSMO {
+
+    private static final int OWNER_SYNC_BATCH_ROW = 2000;
 
     @Autowired
     private IPayFeeRuleV1ServiceDao payFeeRuleV1ServiceDaoImpl;
@@ -111,6 +114,40 @@ public class PayFeeRuleV1InnerServiceSMOImpl extends BaseServiceSMO implements I
     @Override
     public int queryManualBillTargetRulesCount(@RequestBody PayFeeRuleDto payFeeRuleDto) {
         return payFeeRuleV1ServiceDaoImpl.queryManualBillTargetRulesCount(BeanConvertUtil.beanCovertMap(payFeeRuleDto));
+    }
+
+    /**
+     * 按业主批量同步费用规则业主信息，按批次循环更新避免长事务
+     *
+     * @param payFeeRuleDto 同步参数
+     * @return 影响行数
+     */
+    @Override
+    public int updatePayFeeRuleOwner(@RequestBody PayFeeRuleDto payFeeRuleDto) {
+        if (payFeeRuleDto == null || StringUtil.isEmpty(payFeeRuleDto.getCommunityId())) {
+            return 0;
+        }
+        if (StringUtil.isEmpty(payFeeRuleDto.getOldOwnerId())) {
+            payFeeRuleDto.setOldOwnerId(payFeeRuleDto.getOwnerId());
+        }
+        if (StringUtil.isEmpty(payFeeRuleDto.getOldOwnerId())) {
+            return 0;
+        }
+        if (StringUtil.isEmpty(payFeeRuleDto.getOwnerId()) && StringUtil.isEmpty(payFeeRuleDto.getOwnerName())) {
+            return 0;
+        }
+        if (payFeeRuleDto.getOldOwnerId().equals(payFeeRuleDto.getOwnerId()) && StringUtil.isEmpty(payFeeRuleDto.getOwnerName())) {
+            return 0;
+        }
+        Map info = BeanConvertUtil.beanCovertMap(payFeeRuleDto);
+        info.put("row", OWNER_SYNC_BATCH_ROW);
+        int totalFlag = 0;
+        int flag;
+        do {
+            flag = payFeeRuleV1ServiceDaoImpl.updatePayFeeRuleOwnerInfo(info);
+            totalFlag += flag;
+        } while (flag >= OWNER_SYNC_BATCH_ROW);
+        return totalFlag;
     }
 
 }

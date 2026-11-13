@@ -37,6 +37,7 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
     private String payerObjId;
     private String ownerId;
     private String ownerName;
+    private String oldOwnerId;
     private String payerObjName;
 
 
@@ -203,6 +204,15 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
     public void setOwnerName(String ownerName) {
         this.ownerName = ownerName;
     }
+
+    public String getOldOwnerId() {
+        return oldOwnerId;
+    }
+
+    public void setOldOwnerId(String oldOwnerId) {
+        this.oldOwnerId = oldOwnerId;
+    }
+
 
     public String getPayerObjName() {
         return payerObjName;

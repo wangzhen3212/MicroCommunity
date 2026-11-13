@@ -89,5 +89,13 @@ public interface IPayFeeRuleV1InnerServiceSMO {
     @RequestMapping(value = "/queryManualBillTargetRulesCount", method = RequestMethod.POST)
     int queryManualBillTargetRulesCount(@RequestBody PayFeeRuleDto payFeeRuleDto);
 
+    /**
+     * 按业主批量同步费用规则业主信息（owner_id / owner_name）
+     *
+     * @param payFeeRuleDto ownerId 新业主ID、ownerName 新业主名称、oldOwnerId 原业主ID、communityId 小区ID
+     * @return 同步影响行数
+     */
+    @RequestMapping(value = "/updatePayFeeRuleOwner", method = RequestMethod.POST)
+    int updatePayFeeRuleOwner(@RequestBody PayFeeRuleDto payFeeRuleDto);
 
 }

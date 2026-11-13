@@ -24,6 +24,7 @@ import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.payFee.PayFeeBatchPo;
 import com.java110.po.payFee.PayFeeRulePo;
 import com.java110.po.room.RoomPo;
+import com.java110.user.bmo.owner.IOwnerFeeSyncBMO;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.*;
 import com.java110.vo.ResultVo;
@@ -60,6 +61,10 @@ public class SaveHandoverCmd extends Cmd {
     @Autowired
     private IRoomV1InnerServiceSMO roomV1InnerServiceSMOImpl;
 
+    @Autowired
+    private IOwnerFeeSyncBMO ownerFeeSyncBMOImpl;
+
+
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
@@ -89,7 +94,15 @@ public class SaveHandoverCmd extends Cmd {
         if (StringUtil.isEmpty(ownerPo.getAge())) {
             ownerPo.setAge(null);
         }
+        OwnerDto oldOwnerDto = null;
         if (reqJson.containsKey("ownerId") && !StringUtil.isEmpty(reqJson.getString("ownerId"))) {
+            //todo 查询变更前业主信息
+            OwnerDto queryOwnerDto = new OwnerDto();
+            queryOwnerDto.setOwnerId(reqJson.getString("ownerId"));
+            queryOwnerDto.setCommunityId(reqJson.getString("communityId"));
+            List<OwnerDto> oldOwnerDtos = ownerV1InnerServiceSMOImpl.queryOwners(queryOwnerDto);
+            Assert.listOnlyOne(oldOwnerDtos, "查询业主信息错误");
+            oldOwnerDto = oldOwnerDtos.get(0);
             ownerPo.setMemberId(ownerPo.getOwnerId());
             flag = ownerV1InnerServiceSMOImpl.updateOwner(ownerPo);
         } else {
@@ -105,6 +118,15 @@ public class SaveHandoverCmd extends Cmd {
         }
         if (flag < 1) {
             throw new CmdException("操作业主失败");
+        }
+        //todo 业主名称或ownerId变更时同步费用规则、账单的业主信息
+        if (oldOwnerDto != null) {
+            OwnerDto newOwnerDto = new OwnerDto();
+            newOwnerDto.setOwnerId(reqJson.getString("ownerId"));
+            newOwnerDto.setMemberId(reqJson.getString("ownerId"));
+            newOwnerDto.setName(reqJson.getString("name"));
+            newOwnerDto.setCommunityId(reqJson.getString("communityId"));
+            ownerFeeSyncBMOImpl.syncOwnerToFee(oldOwnerDto, newOwnerDto);
         }
         JSONArray rooms = reqJson.getJSONArray("rooms");
         OwnerRoomRelPo ownerRoomRelPo = null;

@@ -188,6 +188,28 @@
 
     </update>
 
+    <!-- 按业主批量同步费用规则业主信息 add by txcode 2026-11-13 -->
+    <update id="updatePayFeeRuleOwnerInfo" parameterType="Map">
+        update pay_fee_rule t
+        <set>
+            <if test="ownerId != null and ownerId != ''">
+                t.owner_id = #{ownerId},
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                t.owner_name = #{ownerName},
+            </if>
+        </set>
+        where t.status_cd = '0'
+        and t.community_id = #{communityId}
+        <if test="oldOwnerId != null and oldOwnerId != ''">
+            and t.owner_id = #{oldOwnerId}
+        </if>
+        <if test="ownerName != null and ownerName != ''">
+            and (t.owner_name is null or t.owner_name != #{ownerName})
+        </if>
+        limit #{row}
+    </update>
+
     <!-- 查询费用规则数量 add by wuxw 2018-07-03 -->
     <select id="queryPayFeeRulesCount" parameterType="Map" resultType="Map">
         select count(1) count

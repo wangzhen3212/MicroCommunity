@@ -41,6 +41,8 @@ public class PayFeeDto extends PageDto implements Serializable {
 
     private String ownerName;
 
+    private String oldOwnerId;
+
     private String receivableAmount;
 
     private String oweAmount;
@@ -90,6 +92,15 @@ public class PayFeeDto extends PageDto implements Serializable {
     public void setOwnerName(String ownerName) {
         this.ownerName = ownerName;
     }
+
+    public String getOldOwnerId() {
+        return oldOwnerId;
+    }
+
+    public void setOldOwnerId(String oldOwnerId) {
+        this.oldOwnerId = oldOwnerId;
+    }
+
 
     public String getReceivableAmount() {
         return receivableAmount;

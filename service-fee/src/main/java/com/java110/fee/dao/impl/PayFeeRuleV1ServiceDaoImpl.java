@@ -143,6 +143,18 @@ public class PayFeeRuleV1ServiceDaoImpl extends BaseServiceDao implements IPayFe
         return Integer.parseInt(businessPayFeeRuleInfos.get(0).get("count").toString());
     }
 
+    /**
+     * 按业主批量同步费用规则业主信息
+     * @param info 同步信息
+     * @return 影响行数
+     */
+    @Override
+    public int updatePayFeeRuleOwnerInfo(Map info) {
+        logger.debug("修改 updatePayFeeRuleOwnerInfo 入参 info : {}",info);
+
+        return sqlSessionTemplate.update("payFeeRuleV1ServiceDaoImpl.updatePayFeeRuleOwnerInfo", info);
+    }
+
 
 
 }

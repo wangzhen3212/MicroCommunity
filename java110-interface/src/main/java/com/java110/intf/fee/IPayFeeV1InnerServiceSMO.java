@@ -74,4 +74,13 @@ public interface IPayFeeV1InnerServiceSMO {
      */
     @RequestMapping(value = "/computeDiscount", method = RequestMethod.POST)
     List<ComputeDiscountDto> computeDiscount(@RequestBody List<PayFeeDto> payFeeDtos);
+
+    /**
+     * 按业主批量同步账单业主信息（owner_id / owner_name）
+     *
+     * @param payFeeDto ownerId 新业主ID、ownerName 新业主名称、oldOwnerId 原业主ID、communityId 小区ID
+     * @return 同步影响行数
+     */
+    @RequestMapping(value = "/updatePayFeeOwner", method = RequestMethod.POST)
+    int updatePayFeeOwner(@RequestBody PayFeeDto payFeeDto);
 }
