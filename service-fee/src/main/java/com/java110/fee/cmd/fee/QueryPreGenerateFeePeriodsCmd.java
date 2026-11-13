@@ -22,7 +22,7 @@ import java.util.Map;
  * 查询预生成账单期次
  */
 @Java110CmdDoc(title = "查询预生成账单期次",
-        description = "自费用规则账期终点起按缴费周期试算最多12期，受费用项应收结束时间约束",
+        description = "自费用规则账期终点起按缴费周期试算最多12期，受费用规则最大时间约束",
         httpMethod = "get",
         url = "http://{ip}:{port}/app/fee.queryPreGenerateFeePeriods",
         resource = "feeDoc",

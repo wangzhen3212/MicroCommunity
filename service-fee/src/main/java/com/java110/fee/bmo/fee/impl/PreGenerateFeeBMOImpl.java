@@ -175,7 +175,7 @@ public class PreGenerateFeeBMOImpl implements IPreGenerateFeeBMO {
     }
 
     /**
-     * 试算期次：自规则账期终点起按缴费周期递推，最多 12 期，受规则与费用项结束时间约束
+     * 试算期次：自规则账期终点起按缴费周期递推，最多 12 期，受规则最大时间约束
      *
      * @param payFeeRuleDto 费用规则
      * @param feeConfigDto  费用项
@@ -200,15 +200,13 @@ public class PreGenerateFeeBMOImpl implements IPreGenerateFeeBMO {
             return periods;
         }
 
-        Date limitEnd = computeLimitEnd(payFeeRuleDto.getMaxTime(), feeConfigDto.getEndTime());
-        if (limitEnd == null) {
-            return periods;
-        }
+        //todo 期次上限只取费用规则的最大时间，费用项应收结束时间不参与截断
+        Date limitEnd = parseEndOfDay(payFeeRuleDto.getMaxTime());
 
         int seq = 0;
-        while (seq < MAX_PERIOD_COUNT && startTime.before(limitEnd)) {
+        while (seq < MAX_PERIOD_COUNT && (limitEnd == null || startTime.before(limitEnd))) {
             Date endTime = getAddMonthDate(startTime, ruleCycle);
-            if (!endTime.before(limitEnd)) {
+            if (limitEnd != null && !endTime.before(limitEnd)) {
                 endTime = limitEnd;
             }
             periods.add(new PreGenerateFeePeriodDto(seq + 1,
@@ -266,25 +264,6 @@ public class PreGenerateFeeBMOImpl implements IPreGenerateFeeBMO {
             }
         });
         return sortedPeriods;
-    }
-
-    /**
-     * 计算期次上限：费用项应收结束时间与规则最大时间取较小者
-     *
-     * @param maxTime       规则最大时间
-     * @param configEndTime 费用项应收结束时间
-     * @return 上限时间
-     */
-    private Date computeLimitEnd(String maxTime, String configEndTime) {
-        Date ruleEndTime = parseEndOfDay(maxTime);
-        Date configEnd = parseEndOfDay(configEndTime);
-        if (ruleEndTime == null) {
-            return configEnd;
-        }
-        if (configEnd == null) {
-            return ruleEndTime;
-        }
-        return configEnd.before(ruleEndTime) ? configEnd : ruleEndTime;
     }
 
     /**

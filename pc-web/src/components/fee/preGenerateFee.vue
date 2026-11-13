@@ -1,18 +1,20 @@
 <template>
-  <el-dialog :title="$t('simplifyRoomFee.preGenerateTitle')" :visible.sync="visible" width="60%" @close="handleClose">
+  <el-dialog :title="$t('simplifyRoomFee.preGenerateTitle')" :visible.sync="visible" width="660px" @close="handleClose">
     <div class="ibox-content">
       <div class="margin-bottom text-left">
         <span>{{ feeName }}</span>
         <span class="text-muted" style="margin-left:10px;">{{ endTime }}</span>
       </div>
       <div class="margin-bottom text-left text-muted">{{ $t('simplifyRoomFee.selectPeriodTip') }}</div>
-      <el-table ref="periodTable" :data="periods" border size="small" @select="handleSelect"
-        @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55" align="center" :selectable="selectable"></el-table-column>
-        <el-table-column prop="seq" :label="$t('simplifyRoomFee.period')" align="center" width="120"></el-table-column>
-        <el-table-column prop="startTime" :label="$t('simplifyRoomFee.periodStart')" align="center"></el-table-column>
-        <el-table-column prop="endTime" :label="$t('simplifyRoomFee.periodEnd')" align="center"></el-table-column>
-      </el-table>
+      <div class="period-cards">
+        <div v-for="item in periods" :key="item.seq" class="period-card"
+          :class="{ 'period-card-active': isSelected(item) }" @click="handleSelectPeriod(item)">
+          <i v-if="isSelected(item)" class="el-icon-check period-card-check"></i>
+          <div class="period-card-title">{{ $t('simplifyRoomFee.period') }}{{ item.seq }}</div>
+          <div class="period-card-time">{{ dateFormat(item.startTime) }}</div>
+          <div class="period-card-time">~ {{ dateFormat(item.endTime) }}</div>
+        </div>
+      </div>
     </div>
     <span slot="footer">
       <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
@@ -23,6 +25,7 @@
 
 <script>
 import { preGenerateFee } from '@/api/fee/preGenerateFeeApi'
+import { dateFormat } from '@/utils/dateUtil'
 
 export default {
   name: 'PreGenerateFee',
@@ -35,75 +38,59 @@ export default {
       feeName: '',
       endTime: '',
       periods: [],
-      selectedPeriods: []
+      selectedSeqs: []
     }
   },
   methods: {
+    dateFormat,
     open(data) {
       this.communityId = data.communityId
       this.ruleId = data.ruleId
       this.feeName = data.feeName
       this.endTime = data.endTime
       this.periods = data.periods || []
-      this.selectedPeriods = []
+      this.selectedSeqs = []
       this.visible = true
     },
     handleClose() {
       this.visible = false
       this.loading = false
-      this.selectedPeriods = []
-      if (this.$refs.periodTable) {
-        this.$refs.periodTable.clearSelection()
-      }
+      this.selectedSeqs = []
     },
-    selectable() {
-      return true
+    isSelected(item) {
+      return this.selectedSeqs.indexOf(item.seq) > -1
     },
-    handleSelectionChange(selection) {
-      this.selectedPeriods = selection
-    },
-    handleSelect(selection, row) {
-      const checked = selection.indexOf(row) > -1
-      let changed = false
-      if (checked) {
-        this.periods.forEach(item => {
-          if (item.seq <= row.seq && selection.indexOf(item) < 0) {
-            this.toggleRowSelection(item, true)
-            changed = true
-          }
-        })
-      } else {
-        this.periods.forEach(item => {
-          if (item.seq > row.seq && selection.indexOf(item) > -1) {
-            this.toggleRowSelection(item, false)
-            changed = true
-          }
-        })
-      }
-      if (changed) {
-        this.$message.info(this.$t('simplifyRoomFee.continuousTip'))
-      }
-    },
-    toggleRowSelection(row, selected) {
-      if (!this.$refs.periodTable) {
+    handleSelectPeriod(item) {
+      if (this.isSelected(item)) {
+        // 连锁取消：取消该期及其之后的所有期次
+        this.selectedSeqs = this.selectedSeqs.filter(seq => seq < item.seq)
         return
       }
-      this.$refs.periodTable.toggleRowSelection(row, selected)
+      // 连锁勾选：自动勾选第 1 期至该期
+      const seqs = []
+      this.periods.forEach(period => {
+        if (period.seq <= item.seq) {
+          seqs.push(period.seq)
+        }
+      })
+      if (this.selectedSeqs.length < item.seq - 1) {
+        this.$message.info(this.$t('simplifyRoomFee.continuousTip'))
+      }
+      this.selectedSeqs = seqs
     },
     handleSubmit() {
-      const selectedPeriods = this.selectedPeriods.slice()
+      const selectedPeriods = this.periods.filter(item => this.isSelected(item))
       if (selectedPeriods.length < 1) {
         this.$message.warning(this.$t('simplifyRoomFee.selectPeriodTip'))
         return
       }
 
-      const sortedPeriods = selectedPeriods.sort((a, b) => a.seq - b.seq)
-      if (sortedPeriods[0].seq !== 1) {
+      if (selectedPeriods[0].seq !== 1) {
         this.$message.warning(this.$t('simplifyRoomFee.continuousRequired'))
         return
       }
-      for (let i = 1; i < sortedPeriods.length; i++) {
-        if (sortedPeriods[i].seq !== sortedPeriods[i - 1].seq + 1) {
+      for (let i = 1; i < selectedPeriods.length; i++) {
+        if (selectedPeriods[i].seq !== selectedPeriods[i - 1].seq + 1) {
           this.$message.warning(this.$t('simplifyRoomFee.continuousRequired'))
           return
         }
@@ -112,7 +99,7 @@ export default {
       const data = {
         communityId: this.communityId,
         ruleId: this.ruleId,
-        periods: sortedPeriods.map(item => {
+        periods: selectedPeriods.map(item => {
           return {
             startTime: item.startTime,
             endTime: item.endTime
@@ -134,3 +121,57 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.ibox-content {
+  padding: 5px 10px;
+}
+
+.period-cards {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.period-card {
+  position: relative;
+  width: 132px;
+  padding: 10px 6px;
+  margin: 0 10px 10px 0;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  text-align: center;
+  cursor: pointer;
+  background-color: #fff;
+  transition: all 0.2s;
+}
+
+.period-card:hover {
+  border-color: #409eff;
+}
+
+.period-card-active {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+  color: #409eff;
+}
+
+.period-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.period-card-time {
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.period-card-check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 14px;
+  color: #409eff;
+}
+</style>

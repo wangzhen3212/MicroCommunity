@@ -707,9 +707,9 @@ INSERT INTO `c_route` VALUES ('3110','8000418004','982026111309000002','D','1000
 
 - 新增 `java110-bean/.../dto/fee/PreGenerateFeePeriodDto.java`：期次 DTO（`seq`/`startTime`/`endTime`）。
 - 后端 `service-fee/.../bill/ICycleConvertOnceFee`、`CycleConvertOnceFeeImpl`：新增 `preGeneratePayFee(rule, periods)`（免账单日校验，按指定期次逐期复用 `doGeneratorPayFee`/`saveFeeAndAttrs` 出账，推进 `end_time`/`cur_year_month`，达 `max_time` 置 `2009001`）与 `generateOncePayFeeByRule(rule)`（一次性出 1 张账单后规则置结束，已有 `rule_id` 账单则拒绝）。
-- 新增 `service-fee/.../bmo/fee/IPreGenerateFeeBMO.java`、`.../bmo/fee/impl/PreGenerateFeeBMOImpl.java`：`queryPeriods` 自 `pay_fee_rule.end_time` 起按 `payment_cycle` 递推最多 12 期（上限取 `min(rule.max_time, 费用项 end_time)`，末期截断），不查 `pay_fee`；`validatePeriods` 强校验「不掐头、不跳期、期次落在重算集合内」，并按 `rule_id + start_time` 兜底拦重复出账；`preGenerate` 用重算期次覆盖前端账期后再出账。
+- 新增 `service-fee/.../bmo/fee/IPreGenerateFeeBMO.java`、`.../bmo/fee/impl/PreGenerateFeeBMOImpl.java`：`queryPeriods` 自 `pay_fee_rule.end_time` 起按 `payment_cycle` 递推最多 12 期（上限只取 `rule.max_time`，**不按费用项 `end_time` 截断**，末期超出 `max_time` 时截断到 `max_time`），不查 `pay_fee`；`validatePeriods` 强校验「不掐头、不跳期、期次落在重算集合内」，并按 `rule_id + start_time` 兜底拦重复出账；`preGenerate` 用重算期次覆盖前端账期后再出账。
 - 新增 `service-fee/.../cmd/fee/QueryPreGenerateFeePeriodsCmd.java`（`fee.queryPreGenerateFeePeriods`，GET）、`PreGenerateFeeCmd.java`（`fee.preGenerateFee`，POST，`@Java110Transactional`），出参统一 `ResultVo`。
-- 前端新增 `pc-web/src/api/fee/preGenerateFeeApi.js`、`pc-web/src/components/fee/preGenerateFee.vue`（期次多选弹窗，勾选第 i 期自动补齐第 1~i 期、取消第 i 期自动取消 i 之后期次，提交前再校验连续）。
+- 前端新增 `pc-web/src/api/fee/preGenerateFeeApi.js`、`pc-web/src/components/fee/preGenerateFee.vue`（**卡片式**期次选择：每个期次一张卡片展示期号与账期起止，点击第 i 期自动补齐第 1~i 期、再次点击自动取消 i 之后所有期次，提交前再校验连续）。
 - 前端 `pc-web/src/components/fee/feeDetailFeeRule.vue`（「设置费用」tab）：规则行操作列新增「预生成」按钮（仅规则 `state=2008001` 有效、权限 `502020082314267912` 显示）；一次性费用走 `$confirm` 直接出账，周期性费用先查期次再弹窗勾选，`periods` 为空提示「暂无可预生成期次」。
 - 前端 `pc-web/src/views/fee/roomCreateFeeLang.js`：`simplifyRoomFee` 三语新增 `preGenerate`/`preGenerateConfirmTip`/`preGenerateTitle`/`period`/`periodStart`/`periodEnd`/`selectPeriodTip`/`continuousTip`/`continuousRequired`/`noAvailablePeriod`/`preGenerateSuccess`/`preGenerateFailed`。
 
