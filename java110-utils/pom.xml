@@ -144,5 +144,10 @@
             <artifactId>pinyin4j</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+        </dependency>
+
     </dependencies>
 </project>

@@ -19,6 +19,7 @@ import com.java110.intf.community.IRoomInnerServiceSMO;
 import com.java110.intf.store.IContractRoomInnerServiceSMO;
 import com.java110.utils.constant.FeeConfigConstant;
 import com.java110.utils.util.Assert;
+import com.java110.utils.util.FormulaUtil;
 import com.java110.utils.util.ListUtil;
 import com.java110.utils.util.MoneyUtil;
 import com.java110.utils.util.StringUtil;
@@ -26,8 +27,6 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -216,18 +215,8 @@ public class FeeFormulaCustomImpl implements IFeeFormula {
             value = value.replace("L", roomDto.getLayer());
         }
 
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine engine = manager.getEngineByName("JavaScript");
-        BigDecimal valueObj = null;
         logger.debug("计算公式为：{}", value);
-        try {
-            value = engine.eval(value).toString();
-            valueObj = new BigDecimal(Double.parseDouble(value));
-        } catch (Exception e) {
-            //throw new IllegalArgumentException("公式计算异常，公式为【" + feeDto.getComputingFormulaText() + "】,计算 【" + value + "】异常");
-            logger.error("公式计算异常，公式为【" + feeConfigDto.getComputingFormulaText() + "】,计算 【" + value + "】异常", e);
-            valueObj = new BigDecimal(0);
-        }
+        BigDecimal valueObj = FormulaUtil.evalAmount(value, feeConfigDto.getComputingFormulaText());
 
         if (valueObj.doubleValue() < 0) {
             return new BigDecimal(0);
@@ -265,16 +254,7 @@ public class FeeFormulaCustomImpl implements IFeeFormula {
             value = value.replace("R", StringUtil.isEmpty(parkingSpaceDto.getArea()) ? "0" : parkingSpaceDto.getArea());
         }
 
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine engine = manager.getEngineByName("JavaScript");
-        BigDecimal valueObj = null;
-        try {
-            value = engine.eval(value).toString();
-            valueObj = new BigDecimal(Double.parseDouble(value));
-        } catch (Exception e) {
-            //throw new IllegalArgumentException("公式计算异常，公式为【" + feeDto.getComputingFormulaText() + "】,计算 【" + value + "】异常");
-            valueObj = new BigDecimal(0);
-        }
+        BigDecimal valueObj = FormulaUtil.evalAmount(value, feeConfigDto.getComputingFormulaText());
 
         if (valueObj.doubleValue() < 0) {
             return new BigDecimal(0);
@@ -352,17 +332,8 @@ public class FeeFormulaCustomImpl implements IFeeFormula {
             value = value.replace("R", shopDto.getBuiltUpArea() != null ? shopDto.getBuiltUpArea() : "0");
         }
 
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine engine = manager.getEngineByName("JavaScript");
-        BigDecimal valueObj = null;
         logger.debug("商铺计算公式为：{}", value);
-        try {
-            value = engine.eval(value).toString();
-            valueObj = new BigDecimal(Double.parseDouble(value));
-        } catch (Exception e) {
-            logger.error("商铺公式计算异常，公式为【" + feeConfigDto.getComputingFormulaText() + "】,计算 【" + value + "】异常", e);
-            valueObj = new BigDecimal(0);
-        }
+        BigDecimal valueObj = FormulaUtil.evalAmount(value, feeConfigDto.getComputingFormulaText());
 
         if (valueObj.doubleValue() < 0) {
             return new BigDecimal(0);

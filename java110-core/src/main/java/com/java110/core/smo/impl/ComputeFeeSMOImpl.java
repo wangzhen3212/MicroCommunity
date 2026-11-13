@@ -41,8 +41,6 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -1534,16 +1532,7 @@ public class ComputeFeeSMOImpl implements IComputeFeeSMO {
             }
         }
 
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine engine = manager.getEngineByName("JavaScript");
-        BigDecimal valueObj = null;
-        try {
-            value = engine.eval(value).toString();
-            valueObj = new BigDecimal(Double.parseDouble(value));
-        } catch (Exception e) {
-            //throw new IllegalArgumentException("公式计算异常，公式为【" + feeDto.getComputingFormulaText() + "】,计算 【" + value + "】异常");
-            valueObj = new BigDecimal(0);
-        }
+        BigDecimal valueObj = FormulaUtil.evalAmount(value, feeDto.getComputingFormulaText());
 
         if (valueObj.doubleValue() < 0) {
             return new BigDecimal(0);
@@ -1630,18 +1619,8 @@ public class ComputeFeeSMOImpl implements IComputeFeeSMO {
             value = value.replace("L", roomDto.getLayer());
         }
 
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine engine = manager.getEngineByName("JavaScript");
-        BigDecimal valueObj = null;
         logger.debug("计算公式为：{}", value);
-        try {
-            value = engine.eval(value).toString();
-            valueObj = new BigDecimal(Double.parseDouble(value));
-        } catch (Exception e) {
-            //throw new IllegalArgumentException("公式计算异常，公式为【" + feeDto.getComputingFormulaText() + "】,计算 【" + value + "】异常");
-            logger.error("公式计算异常，公式为【" + feeDto.getComputingFormulaText() + "】,计算 【" + value + "】异常", e);
-            valueObj = new BigDecimal(0);
-        }
+        BigDecimal valueObj = FormulaUtil.evalAmount(value, feeDto.getComputingFormulaText());
 
         if (valueObj.doubleValue() < 0) {
             return new BigDecimal(0);

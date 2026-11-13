@@ -27,14 +27,13 @@ import com.java110.po.payFee.PayFeeBatchPo;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.DateUtil;
+import com.java110.utils.util.FormulaUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -284,20 +283,11 @@ public class FeeSharingBMOImpl implements IFeeSharingBMO {
                 .replaceAll("C", communityDto.getCommunityArea());
 
 
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine engine = manager.getEngineByName("JavaScript");
-        String value = "";
-        double amount = 0.0;
-        try {
-            value = engine.eval(formulaValue).toString();
-            BigDecimal valueObj = new BigDecimal(Double.parseDouble(value));
-            BigDecimal priceObj = new BigDecimal(price);
-            priceObj = valueObj.multiply(priceObj).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-            amount = priceObj.doubleValue();
-            value = valueObj.setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue() + "";
-        } catch (Exception e) {
-            throw new IllegalArgumentException("公式计算异常，公式为【" + orgFormulaValue + "】,计算 【" + formulaValue + "】异常");
-        }
+        BigDecimal valueObj = FormulaUtil.evalAmount(formulaValue, orgFormulaValue);
+        String value = valueObj.setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue() + "";
+        BigDecimal priceObj = valueObj.multiply(new BigDecimal(price));
+        priceObj = priceObj.setScale(2, BigDecimal.ROUND_HALF_EVEN);
+        double amount = priceObj.doubleValue();
 
         PayFeePo payFeePo = new PayFeePo();
         payFeePo.setFeeId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_feeId));

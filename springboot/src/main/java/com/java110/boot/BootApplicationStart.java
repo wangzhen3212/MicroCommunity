@@ -32,6 +32,7 @@ import com.java110.service.init.ServiceStartInit;
 import com.java110.utils.cache.MappingCache;
 import com.java110.utils.constant.MappingConstant;
 import com.java110.utils.factory.ApplicationContextFactory;
+import com.java110.utils.util.FormulaUtil;
 import com.java110.utils.util.StringUtil;
 import okhttp3.ConnectionPool;
 import org.slf4j.Logger;
@@ -206,6 +207,10 @@ public class BootApplicationStart {
             ServiceStartInit.initSystemConfig(context);
 
             Environment.setSystemStartWay(Environment.SPRING_BOOT);
+
+            //公式计算引擎自检
+            logger.info("公式计算引擎：{}", FormulaUtil.engineInfo());
+
 
             //刷新缓存
             flushMainCache(args);

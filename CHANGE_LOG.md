@@ -637,4 +637,24 @@ DELETE FROM business_pay_fee WHERE b_id = '202026110907400396' AND operate = 'AD
 - 后端 `java110-db/.../Java110MybatisInterceptor.java`：INSERT 分支改为走 `SqlInsertParser`，不再用「列序号 = 参数序号」硬配对；`dealInsertSql` 支持多行 `afterValues`（有序 `JSONObject(true)`），解析失败仅 warn 并跳过写日志（宁缺勿错）；`replaceFirst` 正则替换改为 `buildSqlWithValues` 顺序重建（跳过单引号内 `?`，值含 `$`/`\`/`?` 不再异常）；`getParameterValue`/`dealReturnMap` 对字符串值做 `'` → `''` 转义。
 - 后端 `service-order/.../AsynNotifySubServiceImpl.java`、`service-order/.../OIdServiceSMOImpl.java`：`business_*` 历史表/回退 SQL 的列顺序由 `JSONObject.keySet()` 改为 `TreeMap` 字典序，避免列顺序随 hash 变化。
 
+## 2026-11-13 — Java 17 自定义公式金额为 0（内置 nashorn 引擎被移除）修复
+
+无 DDL/字典/服务注册变更，仅代码与 Maven 依赖调整。
+
+```sql
+-- 本次无数据库变更
+-- 说明：Java 15+（含 17）已按 JEP 372 移除内置 nashorn 引擎，
+--      javax.script 取不到 JavaScript 引擎导致公式求值 NPE 后被 catch 吞掉，应收金额恒为 0。
+--      改为依赖 org.openjdk.nashorn:nashorn-core:15.4，由 java110-utils 统一提供求值入口。
+```
+
+- 新增 `java110-utils/src/main/java/com/java110/utils/util/FormulaUtil.java`：公式求值统一入口。`getEngine()` 按 `nashorn`/`JavaScript`/`javascript` 顺序获取引擎并用 `ThreadLocal` 线程内复用；`normalize()` 去换行与首尾空格；`evalAmount(expression[, formulaText])` 求值并按 `FeeConfigConstant.FEE_SCALE` 四舍五入，异常（含引擎为 null、非法公式）统一记录 error 日志（公式原文 + 替换后表达式 + 堆栈）后返回 0，不向上抛；`engineInfo()` 供启动自检与运维排查。
+- 根 `pom.xml`：`dependencyManagement` 新增 `org.openjdk.nashorn:nashorn-core:15.4`；`java110-utils/pom.xml` 增加该依赖（compile 硬依赖，随 `springboot` 聚合包一起发布）。nashorn 传递依赖 `org.ow2.asm 7.3.1`（asm/asm-commons/asm-tree/asm-util/asm-analysis），项目内无 compile 作用域的 asm 竞争，故不做 asm 版本锁定。
+- 后端 `service-fee/src/main/java/com/java110/fee/bill/formula/FeeFormulaCustomImpl.java`：房屋/车位/商铺三处 `ScriptEngineManager` 调用替换为 `FormulaUtil.evalAmount(...)`，保留「负数归 0」与 `remark` 拼公式逻辑，删除 `javax.script` import。
+- 后端 `java110-core/src/main/java/com/java110/core/smo/impl/ComputeFeeSMOImpl.java`：车位、房屋（合同复用房屋方法）两处替换为 `FormulaUtil.evalAmount(...)`，保留「负数归 0」逻辑。
+- 后端 `service-fee/src/main/java/com/java110/fee/bmo/importFee/impl/FeeSharingBMOImpl.java`：导入分摊公式改为 `FormulaUtil.evalAmount(...)`，`公摊用量` 与 `公摊公式` 记录口径不变（2 位小数四舍六入五成双），公式异常不再抛「公式计算异常」，改为返回 0 并记录 error 日志。
+- 后端 `service-job/src/main/java/com/java110/job/adapt/fee/FloorShareReadingAdapt.java`：删除未使用的 `javax.script` import。
+- 后端 `springboot/src/main/java/com/java110/boot/BootApplicationStart.java`：启动后打印一次 `FormulaUtil.engineInfo()`，便于确认运行通道（正常为 `OpenJDK Nashorn 15.4`，缺失时为「未获取到公式引擎(nashorn 缺失)」）。
+
+
 
