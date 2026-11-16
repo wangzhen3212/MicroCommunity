@@ -9,16 +9,15 @@
       <el-form-item :label="$t('roomCreateFeeAdd.feeType')" prop="feeTypeCd">
         <el-select v-model="formData.feeTypeCd" @change="handleFeeTypeChange"
           :placeholder="$t('roomCreateFeeAdd.feeTypePlaceholder')" style="width: 100%">
-          <template v-for="item in feeTypeOptions">
-            <el-option v-if="item.statusCd != '888800010017'" :key="item.statusCd" :label="item.name"
-              :value="item.statusCd"></el-option>
-          </template>
+          <el-option v-for="item in feeTypeOptions" :key="item.statusCd" :label="item.name"
+            :value="item.statusCd"></el-option>
         </el-select>
       </el-form-item>
 
       <el-form-item v-if="formData.feeTypeCd" :label="$t('roomCreateFeeAdd.feeItem')" prop="configId">
         <el-select v-model="formData.configId" @change="handleConfigChange"
-          :placeholder="$t('roomCreateFeeAdd.feeItemPlaceholder')" style="width: 100%">
+          :placeholder="$t('roomCreateFeeAdd.feeItemPlaceholder')"
+          :no-data-text="$t('roomCreateFeeAdd.feeItemEmptyTip')" style="width: 100%">
           <el-option v-for="item in feeConfigOptions" :key="item.configId" :label="item.feeName"
             :value="item.configId"></el-option>
         </el-select>
@@ -66,6 +65,7 @@
 import { saveRoomCreateFee, listFeeConfigs } from '@/api/fee/roomCreateFeeAddApi'
 import { getDict, getCommunityId } from '@/api/community/communityApi'
 import { dateFormat, addMonth } from '@/utils/dateUtil'
+import { filterFeeConfigsByFormula } from '@/utils/feeUtil'
 
 export default {
   name: 'RoomCreateFeeAdd',
@@ -128,9 +128,7 @@ export default {
 
     loadFeeTypes() {
       getDict('pay_fee_config', 'fee_type_cd').then(data => {
-        this.feeTypeOptions = data.filter(item =>
-          item.statusCd !== '888800010015' && item.statusCd !== '888800010016'
-        )
+        this.feeTypeOptions = data || []
       })
     },
 
@@ -153,7 +151,7 @@ export default {
         isDefault: 'F',
         state: 'Y'
       }).then(response => {
-        this.feeConfigOptions = response.feeConfigs
+        this.feeConfigOptions = filterFeeConfigsByFormula(response && response.feeConfigs)
       })
     },
 

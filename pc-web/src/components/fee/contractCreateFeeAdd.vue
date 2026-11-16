@@ -4,16 +4,13 @@
       <el-form-item :label="$t('contractCreateFeeAdd.feeTypeCd')" prop="feeTypeCd">
         <el-select v-model="formData.feeTypeCd" :placeholder="$t('contractCreateFeeAdd.selectFeeType')"
           style="width: 100%" @change="handleFeeTypeChange">
-          <el-option v-for="item in feeTypeOptions" :key="item.statusCd" :label="item.name" :value="item.statusCd"
-            :disabled="item.statusCd === '888800010008' ||
-              item.statusCd === '888800010017'
-              " />
+          <el-option v-for="item in feeTypeOptions" :key="item.statusCd" :label="item.name" :value="item.statusCd" />
         </el-select>
       </el-form-item>
 
       <el-form-item :label="$t('contractCreateFeeAdd.configId')" prop="configId">
         <el-select v-model="formData.configId" :placeholder="$t('contractCreateFeeAdd.selectFeeConfig')"
-          style="width: 100%" @change="handleConfigChange">
+          :no-data-text="$t('contractCreateFeeAdd.feeItemEmptyTip')" style="width: 100%" @change="handleConfigChange">
           <el-option v-for="item in feeConfigOptions" :key="item.configId" :label="item.feeName"
             :value="item.configId" />
         </el-select>
@@ -74,6 +71,7 @@
 <script>
 import { saveContractCreateFee, listFeeConfigs } from '@/api/fee/contractCreateFeeApi'
 import { getCommunityId, getDict } from '@/api/community/communityApi'
+import { filterFeeConfigsByFormula } from '@/utils/feeUtil'
 
 export default {
   name: 'ContractCreateFeeAdd',
@@ -140,10 +138,7 @@ export default {
     async loadFeeTypes() {
       try {
         const data = await getDict('pay_fee_config', 'fee_type_cd')
-        this.feeTypeOptions = data.filter(
-          item =>
-            item.statusCd !== '888800010015' && item.statusCd !== '888800010016'
-        )
+        this.feeTypeOptions = data || []
       } catch (error) {
         console.error('Failed to load fee types:', error)
       }
@@ -153,14 +148,14 @@ export default {
       try {
         const params = {
           page: 1,
-          row: 50,
+          row: 500,
           communityId: getCommunityId(),
           feeTypeCd: value,
           isDefault: 'F',
           valid: '1'
         }
         const { feeConfigs } = await listFeeConfigs(params)
-        this.feeConfigOptions = feeConfigs
+        this.feeConfigOptions = filterFeeConfigsByFormula(feeConfigs)
       } catch (error) {
         console.error('Failed to load fee configs:', error)
       }

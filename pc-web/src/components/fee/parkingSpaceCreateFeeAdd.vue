@@ -11,13 +11,14 @@
         <el-form-item :label="$t('parkingSpaceCreateFeeAdd.feeType')" prop="feeTypeCd">
           <el-select v-model="parkingSpaceCreateFeeAddInfo.feeTypeCd" @change="_changeParkingSpaceFeeTypeCd" style="width:100%">
             <el-option :label="$t('parkingSpaceCreateFeeAdd.selectFeeType')" value="" disabled></el-option>
-            <el-option v-for="(item, index) in filteredFeeTypeCds" :key="index" :label="item.name"
+            <el-option v-for="(item, index) in parkingSpaceCreateFeeAddInfo.feeTypeCds" :key="index" :label="item.name"
               :value="item.statusCd"></el-option>
           </el-select>
         </el-form-item>
 
         <el-form-item :label="$t('parkingSpaceCreateFeeAdd.feeItem')" prop="configId">
-          <el-select v-model="parkingSpaceCreateFeeAddInfo.configId" @change="_parkingSpaceCreateFeeAddIfOnceFee" style="width:100%">
+          <el-select v-model="parkingSpaceCreateFeeAddInfo.configId" @change="_parkingSpaceCreateFeeAddIfOnceFee"
+            :no-data-text="$t('parkingSpaceCreateFeeAdd.feeItemEmptyTip')" style="width:100%">
             <el-option :label="$t('parkingSpaceCreateFeeAdd.selectFeeItem')" value="" disabled></el-option>
             <el-option v-for="(item, index) in parkingSpaceCreateFeeAddInfo.feeConfigs" :key="index" :label="item.feeName"
               :value="item.configId"></el-option>
@@ -58,6 +59,7 @@
 import { getCommunityId } from '@/api/community/communityApi'
 import { getDict } from '@/api/community/communityApi'
 import { saveParkingSpaceCreateFee, listFeeConfigs, listParkingAreas } from '@/api/fee/parkingSpaceCreateFeeApi'
+import { filterFeeConfigsByFormula } from '@/utils/feeUtil'
 
 export default {
   name: 'ParkingSpaceCreateFeeAdd',
@@ -105,13 +107,6 @@ export default {
           { pattern: /^\d+(\.\d{1,2})?$/, message: this.$t('parkingSpaceCreateFeeAdd.amountFormatError'), trigger: 'blur' }
         ]
       }
-    }
-  },
-  computed: {
-    filteredFeeTypeCds() {
-      return (this.parkingSpaceCreateFeeAddInfo.feeTypeCds || []).filter(item =>
-        item.statusCd !== '888800010009' && item.statusCd !== '888800010011'
-      )
     }
   },
   async created() {
@@ -172,7 +167,7 @@ export default {
       try {
         const params = {
           page: 1,
-          row: 20,
+          row: 500,
           communityId: this.communityId,
           feeTypeCd: feeTypeCd,
           isDefault: 'F',
@@ -180,7 +175,7 @@ export default {
         }
 
         const response = await listFeeConfigs(params)
-        this.parkingSpaceCreateFeeAddInfo.feeConfigs = response.feeConfigs || []
+        this.parkingSpaceCreateFeeAddInfo.feeConfigs = filterFeeConfigsByFormula(response && response.feeConfigs)
       } catch (error) {
         console.error('获取费用配置失败:', error)
       }

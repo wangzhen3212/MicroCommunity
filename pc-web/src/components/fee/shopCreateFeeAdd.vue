@@ -10,13 +10,14 @@
         <el-form-item :label="$t('shopCreateFeeAdd.feeType')" prop="feeTypeCd">
           <el-select v-model="shopCreateFeeAddInfo.feeTypeCd" @change="_changeShopFeeTypeCd" style="width:100%">
             <el-option :label="$t('shopCreateFeeAdd.selectFeeType')" value="" disabled></el-option>
-            <el-option v-for="(item, index) in filteredFeeTypeCds" :key="index" :label="item.name"
+            <el-option v-for="(item, index) in shopCreateFeeAddInfo.feeTypeCds" :key="index" :label="item.name"
               :value="item.statusCd"></el-option>
           </el-select>
         </el-form-item>
 
         <el-form-item :label="$t('shopCreateFeeAdd.feeItem')" prop="configId">
-          <el-select v-model="shopCreateFeeAddInfo.configId" @change="_shopCreateFeeAddIfOnceFee" style="width:100%">
+          <el-select v-model="shopCreateFeeAddInfo.configId" @change="_shopCreateFeeAddIfOnceFee"
+            :no-data-text="$t('shopCreateFeeAdd.feeItemEmptyTip')" style="width:100%">
             <el-option :label="$t('shopCreateFeeAdd.selectFeeItem')" value="" disabled></el-option>
             <el-option v-for="(item, index) in shopCreateFeeAddInfo.feeConfigs" :key="index" :label="item.feeName"
               :value="item.configId"></el-option>
@@ -56,6 +57,7 @@
 <script>
 import { getCommunityId, getDict } from '@/api/community/communityApi'
 import { listFeeConfigs, saveShopCreateFee } from '@/api/shop/shopCreateFeeApi'
+import { filterFeeConfigsByFormula } from '@/utils/feeUtil'
 
 export default {
   name: 'ShopCreateFeeAdd',
@@ -94,13 +96,6 @@ export default {
       }
     }
   },
-  computed: {
-    filteredFeeTypeCds() {
-      return (this.shopCreateFeeAddInfo.feeTypeCds || []).filter(item =>
-        item.statusCd !== '888800010009' && item.statusCd !== '888800010011'
-      )
-    }
-  },
   async created() {
     this.communityId = getCommunityId()
     await this.loadDictData()
@@ -136,7 +131,7 @@ export default {
       try {
         const params = {
           page: 1,
-          row: 20,
+          row: 500,
           communityId: this.communityId,
           feeTypeCd: feeTypeCd,
           isDefault: 'F',
@@ -144,7 +139,7 @@ export default {
         }
 
         const response = await listFeeConfigs(params)
-        this.shopCreateFeeAddInfo.feeConfigs = response.feeConfigs || []
+        this.shopCreateFeeAddInfo.feeConfigs = filterFeeConfigsByFormula(response && response.feeConfigs)
       } catch (error) {
         console.error('Failed to load fee configs:', error)
       }
