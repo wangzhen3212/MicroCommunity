@@ -65,6 +65,7 @@ export const messages = {
       op: {
         detail: 'Detail',
         edit: 'Edit',
+        audit: 'Approve',
         performance: 'Performance',
         print: 'Print',
         stop: 'Stop',
@@ -193,6 +194,7 @@ export const messages = {
       op: {
         detail: '详情',
         edit: '编辑',
+        audit: '审核',
         performance: '履约',
         print: '打印',
         stop: '终止',
@@ -321,6 +323,7 @@ export const messages = {
       op: {
         detail: '詳情',
         edit: '編輯',
+        audit: '審核',
         performance: '履約',
         print: '打印',
         stop: '終止',

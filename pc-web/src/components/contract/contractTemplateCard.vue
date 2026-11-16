@@ -1,5 +1,5 @@
 <template>
-  <div class="cc-tpl-card">
+  <div class="cc-card cc-tpl-card">
     <div class="cc-tpl-head">
       <div class="cc-tpl-name">{{ template.templateName || $t('contractTemplate.title') }}</div>
       <span class="cc-badge" :class="categoryClass">{{ categoryText }}</span>
@@ -84,15 +84,6 @@ export default {
 
 <style lang="scss" scoped>
 .cc-tpl-card {
-  padding: 16px;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  background: #fff;
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-
   .cc-tpl-head {
     display: flex;
     align-items: center;
@@ -119,6 +110,7 @@ export default {
   }
 
   .cc-tpl-desc {
+    flex: 1;
     font-size: 12px;
     line-height: 1.7;
     color: #606266;
@@ -136,11 +128,15 @@ export default {
   }
 
   .cc-tpl-actions {
-    margin-top: auto;
-    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #ebeef5;
 
-    .el-button {
-      margin-left: 6px;
+    .el-button+.el-button {
+      margin-left: 0;
     }
   }
 }

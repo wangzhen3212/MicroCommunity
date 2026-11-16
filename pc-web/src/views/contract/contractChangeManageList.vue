@@ -1,13 +1,12 @@
 <template>
-  <div class="contract-change-center">
+  <div class="contract-change-center cc-page">
     <div class="cc-page-head">
       <div>
         <div class="cc-page-title">{{ $t('contractChangeManage.title') }}</div>
         <div class="cc-page-subtitle">{{ $t('contractChangeManage.note') }}</div>
       </div>
-      <div>
-        <el-button type="primary" size="small" @click="handleApply">
-          <i class="el-icon-plus"></i>
+      <div class="cc-page-actions">
+        <el-button type="primary" @click="handleApply">
           {{ $t('contractChangeManage.apply.title') }}
         </el-button>
       </div>
@@ -41,12 +40,10 @@
         :placeholder="$t('contractChangeManage.search.contractCode')"
         @keyup.enter.native="handleSearch"
       />
-      <el-button type="primary" size="small" @click="handleSearch">
-        <i class="el-icon-search"></i>
+      <el-button type="primary" @click="handleSearch">
         {{ $t('common.search') }}
       </el-button>
-      <el-button size="small" @click="handleReset">
-        <i class="el-icon-refresh"></i>
+      <el-button @click="handleReset">
         {{ $t('common.reset') }}
       </el-button>
     </div>
@@ -79,11 +76,17 @@
           <span class="cc-badge" :class="stateClass(scope.row.state)">{{ scope.row.stateName || '-' }}</span>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('common.operation')" align="center" width="170" fixed="right">
+      <el-table-column :label="$t('common.operation')" align="center" width="200" fixed="right">
         <template slot-scope="scope">
           <el-button type="text" size="mini" @click="handleView(scope.row)">
             {{ $t('contractChangeManage.op.view') }}
           </el-button>
+          <el-button
+            v-if="String(scope.row.state) === '11'"
+            type="text"
+            size="mini"
+            @click="handleAudit(scope.row)"
+          >{{ $t('contractChangeManage.op.audit') }}</el-button>
           <el-button
             v-if="canDelete(scope.row)"
             type="text"
@@ -97,12 +100,12 @@
     <div v-if="!loading && !plans.length" class="cc-empty">{{ $t('contractChangeManage.empty') }}</div>
 
     <el-pagination
+      class="cc-pagination"
       :current-page="page.current"
       :page-sizes="[10, 20, 30, 50]"
       :page-size="page.size"
       :total="page.total"
       layout="total, sizes, prev, pager, next, jumper"
-      style="margin-top: 16px; text-align: right"
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
     />
@@ -290,6 +293,15 @@ export default {
     handleView(row) {
       this.$router.push(`/views/contract/contractChangeDetails?planId=${row.planId}`)
     },
+    handleAudit(row) {
+      this.$router.push({
+        path: '/pages/admin/contractApplyAuditOrders',
+        query: {
+          bizId: row.planId,
+          auditType: '2'
+        }
+      })
+    },
     handleDelete(row) {
       this.$refs.deleteDialog.open(row)
     }
@@ -299,59 +311,6 @@ export default {
 
 <style lang="scss" scoped>
 .contract-change-center {
-  padding: 16px;
-
-  .cc-page-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
-
-    .cc-page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .cc-page-subtitle {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #909399;
-    }
-  }
-
-  .cc-tabs {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #ebeef5;
-    margin-bottom: 12px;
-
-    .cc-tab {
-      padding: 10px 16px;
-      font-size: 14px;
-      color: #606266;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-
-      &.is-active {
-        color: #4f46e5;
-        border-bottom-color: #4f46e5;
-      }
-
-      .cc-tab-count {
-        margin-left: 6px;
-        font-size: 12px;
-        color: #909399;
-      }
-    }
-  }
-
-  .cc-toolbar {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-
   .cc-cell-code {
     font-weight: 600;
     color: #303133;

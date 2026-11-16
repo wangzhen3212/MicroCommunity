@@ -370,3 +370,61 @@ FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `task_template` WHERE `template_id` = 
 | 七 |  |  | 执行后刷新 AppRouteCache |
 | 八 |  |  | 需核对 pg_id / domain |
 | 九 |  |  | 需在定时任务页面新增每日任务 |
+| 十一 |  |  | 合同菜单对齐原型：改名/排序/下线起草合同/新增合同审核菜单与权限，执行后重启 service-user |
+
+## 十一、菜单与原型对齐
+
+> 目标：合同菜单组 `802020091723050020` 下仅 7 项，顺序为 合同甲方 → 合同模板 → 合同台账 → 合同履约 → 合同变更 → 到期提醒 → 合同审核。
+> 只改数据（`m_menu` / `p_privilege` / `p_privilege_rel` / `m_menu_user`），不删物理行，回滚把 `status_cd` 改回 `'0'`、`is_show` 改回 `'Y'` 即可。
+> 全部语句幂等，可重复执行。
+
+```sql
+-- 11.1 菜单重命名与排序（合同组 802020091723050020）
+UPDATE `m_menu` SET seq='1' WHERE m_id='702021042214040302'; -- 合同甲方（名称不变，仅排序）
+UPDATE `m_menu` SET name='合同模板', seq='2' WHERE m_id='702020091843810076';
+UPDATE `m_menu` SET name='合同台账', seq='3' WHERE m_id='702020091785290021';
+UPDATE `m_menu` SET name='合同履约', seq='4' WHERE m_id='702026111600000001';
+UPDATE `m_menu` SET name='合同变更', seq='5' WHERE m_id='702021033017840295';
+UPDATE `m_menu` SET name='到期提醒', seq='6' WHERE m_id='702021033149670076';
+
+-- 11.2 下线「起草合同」菜单（原型无该入口；起草走合同台账「新建合同」，路由 /#/pages/admin/newContractManage 保留）
+UPDATE `m_menu` SET status_cd='1', is_show='N' WHERE m_id='702021033187310391';
+UPDATE `p_privilege` SET status_cd='1' WHERE m_id='702021033187310391';
+
+-- 11.3 新增「合同审核」菜单
+INSERT INTO `m_menu` (`m_id`,`name`,`g_id`,`url`,`seq`,`p_id`,`description`,`create_time`,`status_cd`,`is_show`)
+SELECT '702026111600000002','合同审核','802020091723050020','/#/pages/admin/contractApplyAuditOrders',
+       '7','-1','待我审批/已通过/已驳回（合同与变更统一审核）',NOW(),'0','Y'
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `m_menu` WHERE `m_id`='702026111600000002');
+
+-- 11.4 菜单权限 + 按钮权限归位
+INSERT INTO `p_privilege` (`p_id`,`name`,`description`,`create_time`,`status_cd`,`domain`,`resource`,`m_id`)
+SELECT '502026111600000008','合同审核','合同审核菜单查看',NOW(),'0','800900000003',
+       '/#/pages/admin/contractApplyAuditOrders','702026111600000002'
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `p_privilege` WHERE `p_id`='502026111600000008');
+
+-- 「合同审核人设置」按钮权限改挂到「合同审核」菜单
+UPDATE `p_privilege` SET m_id='702026111600000002' WHERE p_id='502026111600000003';
+
+-- 11.5 权限名称同步（合同甲方权限名保持原样）+ 修正历史 resource 指向
+UPDATE `p_privilege` SET name='合同模板' WHERE p_id='502020091858500077';
+UPDATE `p_privilege` SET name='合同台账' WHERE p_id='502020091779900022';
+UPDATE `p_privilege` SET name='到期提醒', resource='/#/pages/admin/expirationContractManage'
+ WHERE p_id='502021033136470077';
+
+-- 11.6 权限组授权（pg_id 按实际合同管理员权限组替换；或到「权限分配」页面勾选）
+INSERT INTO `p_privilege_rel` (`p_id`,`pg_id`,`create_time`,`status_cd`)
+SELECT '502026111600000008','权限组ID',NOW(),'0' FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `p_privilege_rel` WHERE p_id='502026111600000008' AND pg_id='权限组ID');
+
+-- 11.7 收藏项名称同步（前端菜单收藏显示新名称）
+UPDATE `m_menu_user` SET name='合同台账' WHERE m_id='702020091785290021';
+UPDATE `m_menu_user` SET name='合同模板' WHERE m_id='702020091843810076';
+UPDATE `m_menu_user` SET name='到期提醒' WHERE m_id='702021033149670076';
+```
+
+> 执行顺序建议：先跑 11.1~11.5（菜单改名/排序/新增审核菜单），观察菜单结构后，再按权限组执行 11.6 授权。
+> 执行完成后必须刷新菜单缓存：重启 `service-user`（或清 `AppRouteCache`），前端重新登录以刷新菜单树。
+> 「合同审核」未授权时仅超级管理员可见（`p_privilege_rel` 未写入即不展示）。
+
+

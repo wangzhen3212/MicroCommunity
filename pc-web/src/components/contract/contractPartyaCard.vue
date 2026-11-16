@@ -11,7 +11,7 @@
       </span>
     </div>
 
-    <div class="cc-card-meta">
+    <div class="cc-card-meta cc-kv-grid">
       <div v-if="partya.shortName" class="cc-kv">
         <span class="cc-kv-label">{{ $t('contractPartyaCenter.shortName') }}</span>
         <span class="cc-kv-value">{{ partya.shortName }}</span>
@@ -81,12 +81,6 @@ export default {
 
 <style lang="scss" scoped>
 .cc-card {
-  padding: 16px;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  background: #fff;
-  margin-bottom: 16px;
-
   &.is-default {
     border-color: #4f46e5;
     box-shadow: 0 2px 10px rgba(79, 70, 229, 0.12);
@@ -94,23 +88,6 @@ export default {
 
   &.is-disabled {
     background: #fafafa;
-  }
-
-  .cc-card-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-
-    .cc-card-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: #303133;
-    }
-  }
-
-  .cc-card-meta {
-    font-size: 13px;
   }
 }
 </style>

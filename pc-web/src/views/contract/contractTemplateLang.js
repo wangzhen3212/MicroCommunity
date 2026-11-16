@@ -1,10 +1,11 @@
 export const messages = {
   en: {
     contractTemplate: {
-      title: 'Contract Template Center',
+      title: 'Contract Templates',
       subtitle: 'Template skeleton + variables, one-click generation of contract text',
       variableTip: 'Variables: {{amount}} contract amount, {{startTime}} effective date, {{endTime}} expiry date, {{partyB}} Party B, {{houses}} house list',
       newTemplate: 'New Template',
+      typeMaintain: 'Contract Types',
       searchPlaceholder: 'Template name',
       edit: 'Edit',
       preview: 'Preview',
@@ -53,8 +54,9 @@ export const messages = {
       }
     },
     contractPartyaCenter: {
-      title: 'Party A Settings',
+      title: 'Party A',
       subtitle: 'Maintain Party A entity info, default entity is used when drafting contracts',
+      tip: 'Party A is the "our side" of the contract. It is filled in by default when creating a contract and can be switched per contract, which goes through the Party A change process.',
       add: 'Add Party A',
       searchPlaceholder: 'Entity name / short name',
       fullName: 'Entity Name',
@@ -106,10 +108,11 @@ export const messages = {
   },
   zh: {
     contractTemplate: {
-      title: '合同模板中心',
+      title: '合同模板',
       subtitle: '模板骨架 + 变量，一键生成合同正文',
       variableTip: '可用变量：{{amount}} 合同金额、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名称、{{houses}} 房屋清单',
       newTemplate: '新建模板',
+      typeMaintain: '类型维护',
       searchPlaceholder: '模板名称',
       edit: '编辑',
       preview: '预览',
@@ -158,8 +161,9 @@ export const messages = {
       }
     },
     contractPartyaCenter: {
-      title: '合同甲方设置',
+      title: '合同甲方',
       subtitle: '维护甲方主体资料，起草合同时默认带出默认主体',
+      tip: '甲方主体即合同中的「我方」，新建合同时默认带入，可在单份合同中按需切换，切换需走主体变更流程。',
       add: '新增甲方主体',
       searchPlaceholder: '主体全称 / 简称',
       fullName: '主体全称',
@@ -211,10 +215,11 @@ export const messages = {
   },
   'zh-TW': {
     contractTemplate: {
-      title: '合同模板中心',
+      title: '合同模板',
       subtitle: '模板骨架 + 變量，一鍵生成合同正文',
       variableTip: '可用變量：{{amount}} 合同金額、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名稱、{{houses}} 房屋清單',
       newTemplate: '新建模板',
+      typeMaintain: '類型維護',
       searchPlaceholder: '模板名稱',
       edit: '編輯',
       preview: '預覽',
@@ -263,8 +268,9 @@ export const messages = {
       }
     },
     contractPartyaCenter: {
-      title: '合同甲方設置',
+      title: '合同甲方',
       subtitle: '維護甲方主體資料，起草合同時默認帶出默認主體',
+      tip: '甲方主體即合同中的「我方」，新建合同時默認帶入，可在單份合同中按需切換，切換需走主體變更流程。',
       add: '新增甲方主體',
       searchPlaceholder: '主體全稱 / 簡稱',
       fullName: '主體全稱',

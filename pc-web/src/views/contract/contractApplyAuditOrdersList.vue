@@ -1,14 +1,13 @@
 <template>
-  <div class="contract-audit-center">
+  <div class="contract-audit-center cc-page">
     <div class="cc-page-head">
       <div>
         <div class="cc-page-title">{{ $t('contractAuditCenter.title') }}</div>
         <div class="cc-page-subtitle">{{ $t('contractAuditCenter.subtitle') }}</div>
       </div>
-      <div>
-        <el-button v-if="hasPrivilege('502026111600000003')" size="small" @click="openConfig">
-          <i class="el-icon-setting"></i>
-          {{ $t('contractAuditCenter.auditorConfig') }}
+      <div class="cc-page-actions">
+        <el-button v-if="hasPrivilege('502026111600000003')" @click="openConfig">
+          {{ $t('contractAuditCenter.ruleSetting') }}
         </el-button>
       </div>
     </div>
@@ -26,6 +25,7 @@
         {{ $t(tab.labelKey) }}
         <span class="cc-tab-count">{{ tab.count }}</span>
       </div>
+      <p class="cc-tabs-tip">{{ $t('contractAuditCenter.nodeTip') }}</p>
     </div>
 
     <div class="cc-toolbar">
@@ -36,12 +36,20 @@
         :placeholder="$t('contractAuditCenter.filter.keywordPlaceholder')"
         @keyup.enter.native="handleSearch"
       />
-      <el-button type="primary" size="small" @click="handleSearch">
-        <i class="el-icon-search"></i>
+      <el-select
+        v-model="condition.auditType"
+        style="width: 150px"
+        clearable
+        :placeholder="$t('contractAuditCenter.filter.auditType')"
+      >
+        <el-option :label="$t('contractAuditCenter.filter.auditTypeAll')" value="" />
+        <el-option :label="$t('contractAuditCenter.typeContract')" value="1" />
+        <el-option :label="$t('contractAuditCenter.typeChange')" value="2" />
+      </el-select>
+      <el-button type="primary" @click="handleSearch">
         {{ $t('common.search') }}
       </el-button>
-      <el-button size="small" @click="handleReset">
-        <i class="el-icon-refresh"></i>
+      <el-button @click="handleReset">
         {{ $t('common.reset') }}
       </el-button>
     </div>
@@ -72,12 +80,12 @@
     </div>
 
     <el-pagination
+      class="cc-pagination"
       :current-page="page.current"
       :page-sizes="[10, 20, 30, 50]"
       :page-size="page.size"
       :total="page.total"
       layout="total, sizes, prev, pager, next, jumper"
-      style="margin-top: 16px; text-align: right"
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
     />
@@ -118,8 +126,14 @@ export default {
       items: [],
       activeTab: 'pending',
       currentUserId: '',
+      directHandled: false,
+      directParams: {
+        auditId: '',
+        bizId: ''
+      },
       condition: {
-        searchText: ''
+        searchText: '',
+        auditType: ''
       },
       page: {
         current: 1,
@@ -151,6 +165,16 @@ export default {
   },
   created() {
     this.currentUserId = getUserId()
+    const query = this.$route.query || {}
+    if (query.auditType) {
+      this.condition.auditType = String(query.auditType)
+    }
+    if (query.auditId) {
+      this.directParams.auditId = String(query.auditId)
+    }
+    if (query.bizId) {
+      this.directParams.bizId = String(query.bizId)
+    }
     this.loadStatistics()
     this.getList()
   },
@@ -167,6 +191,15 @@ export default {
         row: this.page.size,
         searchText: this.condition.searchText
       }
+      if (this.condition.auditType) {
+        params.auditType = this.condition.auditType
+      }
+      if (this.directParams.auditId) {
+        params.auditId = this.directParams.auditId
+      }
+      if (this.directParams.bizId) {
+        params.bizId = this.directParams.bizId
+      }
       if (this.activeTab === 'pass') {
         params.state = '1'
       } else if (this.activeTab === 'reject') {
@@ -180,6 +213,7 @@ export default {
       request(this.buildParams()).then(res => {
         this.items = res.data || []
         this.page.total = res.total || 0
+        this.handleDirectTarget()
       }).catch(error => {
         this.items = []
         this.page.total = 0
@@ -187,6 +221,32 @@ export default {
       }).finally(() => {
         this.loading = false
       })
+    },
+    handleDirectTarget() {
+      if (this.directHandled) {
+        return
+      }
+      const auditId = this.directParams.auditId
+      const bizId = this.directParams.bizId
+      if (!auditId && !bizId) {
+        return
+      }
+      this.directHandled = true
+      const target = this.items.find(item => {
+        const audit = (item && item.audit) || {}
+        if (auditId) {
+          return String(audit.auditId) === String(auditId)
+        }
+        return String(audit.bizId) === String(bizId)
+      })
+      if (!target) {
+        return
+      }
+      if (this.canAudit(target)) {
+        this.openAuditDialog(target)
+      } else {
+        this.$message.warning(this.$t('contractAuditCenter.msg.noPrivilege'))
+      }
     },
     loadStatistics() {
       listContractAuditStatistics({}).then(data => {
@@ -205,6 +265,11 @@ export default {
     },
     handleReset() {
       this.condition.searchText = ''
+      this.condition.auditType = ''
+      this.directParams = {
+        auditId: '',
+        bizId: ''
+      }
       this.handleSearch()
     },
     switchTab(tab) {
@@ -286,57 +351,11 @@ export default {
 
 <style lang="scss" scoped>
 .contract-audit-center {
-  padding: 16px;
-
-  .cc-page-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
-
-    .cc-page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .cc-page-subtitle {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #909399;
-    }
-  }
-
-  .cc-tabs {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #ebeef5;
-    margin-bottom: 12px;
-
-    .cc-tab {
-      padding: 10px 16px;
-      font-size: 14px;
-      color: #606266;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-
-      &.is-active {
-        color: #4f46e5;
-        border-bottom-color: #4f46e5;
-      }
-
-      .cc-tab-count {
-        margin-left: 6px;
-        font-size: 12px;
-        color: #909399;
-      }
-    }
-  }
-
-  .cc-toolbar {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
+  .cc-tabs-tip {
+    margin-left: auto;
+    padding-bottom: 10px;
+    font-size: 12px;
+    color: #909399;
   }
 
   .cc-audit-list {
@@ -346,9 +365,10 @@ export default {
   .cc-audit-row {
     display: flex;
     align-items: flex-start;
+    background: #fff;
     border: 1px solid #ebeef5;
-    border-radius: 8px;
-    padding: 8px;
+    border-radius: 12px;
+    padding: 12px 8px;
     margin-bottom: 12px;
 
     .cc-audit-ops {

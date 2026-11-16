@@ -1,19 +1,31 @@
 <template>
   <div class="cc-stat-row">
-    <div class="cc-stat-card" @click="$emit('change', 'pending')">
-      <div class="cc-stat-label">{{ $t('contractAuditCenter.stat.pending') }}</div>
-      <div class="cc-stat-value">{{ pending }}</div>
-      <div class="cc-stat-extra">{{ $t('contractAuditCenter.tab.pending') }}</div>
+    <div class="cc-stat-card has-icon" @click="$emit('change', 'pending')">
+      <div class="cc-stat-icon is-warning">
+        <i class="el-icon-time"></i>
+      </div>
+      <div class="cc-stat-body">
+        <div class="cc-stat-label">{{ $t('contractAuditCenter.stat.pending') }}</div>
+        <div class="cc-stat-value">{{ pending }}</div>
+      </div>
     </div>
-    <div class="cc-stat-card" @click="$emit('change', 'pass')">
-      <div class="cc-stat-label">{{ $t('contractAuditCenter.stat.monthPass') }}</div>
-      <div class="cc-stat-value">{{ monthPass }}</div>
-      <div class="cc-stat-extra">{{ $t('contractAuditCenter.tab.pass') }}</div>
+    <div class="cc-stat-card has-icon" @click="$emit('change', 'pass')">
+      <div class="cc-stat-icon is-success">
+        <i class="el-icon-check"></i>
+      </div>
+      <div class="cc-stat-body">
+        <div class="cc-stat-label">{{ $t('contractAuditCenter.stat.monthPass') }}</div>
+        <div class="cc-stat-value">{{ monthPass }}</div>
+      </div>
     </div>
-    <div class="cc-stat-card" @click="$emit('change', 'reject')">
-      <div class="cc-stat-label">{{ $t('contractAuditCenter.stat.monthReject') }}</div>
-      <div class="cc-stat-value">{{ monthReject }}</div>
-      <div class="cc-stat-extra">{{ $t('contractAuditCenter.tab.reject') }}</div>
+    <div class="cc-stat-card has-icon" @click="$emit('change', 'reject')">
+      <div class="cc-stat-icon is-danger">
+        <i class="el-icon-close"></i>
+      </div>
+      <div class="cc-stat-body">
+        <div class="cc-stat-label">{{ $t('contractAuditCenter.stat.monthReject') }}</div>
+        <div class="cc-stat-value">{{ monthReject }}</div>
+      </div>
     </div>
   </div>
 </template>

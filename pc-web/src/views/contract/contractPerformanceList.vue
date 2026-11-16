@@ -1,9 +1,14 @@
 <template>
-  <div class="contract-performance">
+  <div class="contract-performance cc-page">
     <div class="cc-page-head">
       <div>
         <div class="cc-page-title">{{ $t('contractPerformance.title') }}</div>
         <div class="cc-page-subtitle">{{ $t('contractPerformance.subtitle') }}</div>
+      </div>
+      <div class="cc-page-actions">
+        <el-button @click="handleExport">
+          {{ $t('contractPerformance.filter.export') }}
+        </el-button>
       </div>
     </div>
 
@@ -58,16 +63,10 @@
         <el-option :label="$t('contractPerformance.payState.overdue')" value="2" />
       </el-select>
       <el-button type="primary" @click="handleSearch">
-        <i class="el-icon-search"></i>
         {{ $t('common.search') }}
       </el-button>
       <el-button @click="handleReset">
-        <i class="el-icon-refresh"></i>
         {{ $t('common.reset') }}
-      </el-button>
-      <el-button @click="handleExport">
-        <i class="el-icon-download"></i>
-        {{ $t('contractPerformance.filter.export') }}
       </el-button>
     </div>
 
@@ -117,12 +116,12 @@
     <div v-if="!loading && !performances.length" class="cc-empty">{{ $t('contractPerformance.empty') }}</div>
 
     <el-pagination
+      class="cc-pagination"
       :current-page="page.current"
       :page-sizes="[10, 20, 30, 50]"
       :page-size="page.size"
       :total="page.total"
       layout="total, sizes, prev, pager, next, jumper"
-      style="margin-top: 16px; text-align: right"
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
     />
@@ -286,24 +285,6 @@ export default {
 
 <style lang="scss" scoped>
 .contract-performance {
-  padding: 16px;
-
-  .cc-page-head {
-    margin-bottom: 16px;
-
-    .cc-page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .cc-page-subtitle {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #909399;
-    }
-  }
-
   .cc-cell-code {
     font-weight: 600;
     color: #303133;

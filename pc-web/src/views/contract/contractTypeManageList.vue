@@ -1,85 +1,95 @@
 <template>
-  <div class="contract-template-center">
-    <el-tabs v-model="activeTab">
-      <el-tab-pane :label="$t('contractTemplate.title')" name="template">
-        <div class="cc-page-head">
-          <div>
-            <div class="cc-page-title">{{ $t('contractTemplate.title') }}</div>
-            <div class="cc-page-subtitle">{{ $t('contractTemplate.subtitle') }}</div>
-          </div>
-          <div>
-            <el-input
-              style="width: 200px; margin-right: 8px"
-              v-model="conditions.templateNameLike"
-              :placeholder="$t('contractTemplate.searchPlaceholder')"
-              clearable
-              @keyup.enter.native="handleSearch"
-            />
-            <el-button type="primary" size="small" @click="openEditor()">
-              <i class="el-icon-plus"></i>
-              {{ $t('contractTemplate.newTemplate') }}
-            </el-button>
-          </div>
-        </div>
-
-        <div class="cc-variable-tip">{{ $t('contractTemplate.variableTip') }}</div>
-
-        <div class="cc-tabs">
-          <div
-            v-for="tab in categoryTabs"
-            :key="tab.key"
-            class="cc-tab"
-            :class="{ 'is-active': conditions.category === tab.key }"
-            @click="switchCategory(tab.key)"
-          >
-            {{ $t(tab.labelKey) }}
-            <span class="cc-tab-count">{{ tab.count }}</span>
-          </div>
-        </div>
-
-        <el-row :gutter="16" v-loading="loading">
-          <el-col
-            v-for="item in templates"
-            :key="item.templateId"
-            :xs="24"
-            :sm="12"
-            :md="8"
-            :lg="8"
-          >
-            <contract-template-card
-              :template="item"
-              @edit="openEditor"
-              @preview="openPreview"
-              @copy="copyTemplate"
-              @disable="disableTemplate"
-            />
-          </el-col>
-        </el-row>
-
-        <div v-if="!loading && !templates.length" class="cc-empty">{{ $t('contractTemplate.empty') }}</div>
-
-        <el-pagination
-          :current-page="page.current"
-          :page-sizes="[9, 18, 36]"
-          :page-size="page.size"
-          :total="page.total"
-          layout="total, sizes, prev, pager, next"
-          style="margin-top: 8px; text-align: right"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
+  <div class="contract-template-center cc-page">
+    <div class="cc-page-head">
+      <div>
+        <div class="cc-page-title">{{ $t('contractTemplate.title') }}</div>
+        <div class="cc-page-subtitle">{{ $t('contractTemplate.subtitle') }}</div>
+      </div>
+      <div class="cc-page-actions">
+        <el-input
+          style="width: 200px"
+          v-model="conditions.templateNameLike"
+          :placeholder="$t('contractTemplate.searchPlaceholder')"
+          clearable
+          @keyup.enter.native="handleSearch"
         />
-      </el-tab-pane>
+        <el-button @click="openTypeDrawer">{{ $t('contractTemplate.typeMaintain') }}</el-button>
+        <el-button type="primary" @click="openEditor()">{{ $t('contractTemplate.newTemplate') }}</el-button>
+      </div>
+    </div>
 
-      <el-tab-pane :label="$t('contractTypeManage.list.title')" name="type">
+    <div class="cc-tip-bar">
+      <div class="cc-tip-icon">
+        <i class="el-icon-document"></i>
+      </div>
+      <p class="cc-tip-text">{{ $t('contractTemplate.variableTip') }}</p>
+    </div>
+
+    <div class="cc-tabs is-pill">
+      <div
+        v-for="tab in categoryTabs"
+        :key="tab.key"
+        class="cc-tab"
+        :class="{ 'is-active': conditions.category === tab.key }"
+        @click="switchCategory(tab.key)"
+      >
+        {{ $t(tab.labelKey) }}
+        <span class="cc-tab-count">{{ tab.count }}</span>
+      </div>
+    </div>
+
+    <div class="cc-card-grid">
+      <el-row :gutter="16" v-loading="loading">
+        <el-col
+          v-for="item in templates"
+          :key="item.templateId"
+          :xs="24"
+          :sm="12"
+          :lg="8"
+        >
+          <contract-template-card
+            :template="item"
+            @edit="openEditor"
+            @preview="openPreview"
+            @copy="copyTemplate"
+            @disable="disableTemplate"
+          />
+        </el-col>
+      </el-row>
+    </div>
+
+    <div v-if="!loading && !templates.length" class="cc-empty">{{ $t('contractTemplate.empty') }}</div>
+
+    <el-pagination
+      class="cc-pagination"
+      :current-page="page.current"
+      :page-sizes="[9, 18, 36]"
+      :page-size="page.size"
+      :total="page.total"
+      layout="total, sizes, prev, pager, next, jumper"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+    />
+
+    <el-drawer
+      :title="$t('contractTemplate.typeMaintain')"
+      :visible.sync="typeDrawerVisible"
+      size="760px"
+      custom-class="cc-drawer"
+      :append-to-body="true"
+      @close="handleTypeDrawerClose"
+    >
+      <div class="cc-type-drawer">
         <div class="cc-toolbar">
           <el-input
-            style="width: 200px"
+            style="width: 180px"
             v-model="typeConditions.typeName"
             :placeholder="$t('contractTypeManage.search.typeNamePlaceholder')"
             clearable
+            @keyup.enter.native="queryContractTypeMethod"
           />
           <el-select
-            style="width: 160px"
+            style="width: 150px"
             v-model="typeConditions.audit"
             :placeholder="$t('contractTypeManage.search.auditPlaceholder')"
             clearable
@@ -87,36 +97,33 @@
             <el-option v-for="item in audits" :key="item.statusCd" :label="item.name" :value="item.statusCd" />
           </el-select>
           <el-button type="primary" @click="queryContractTypeMethod">
-            <i class="el-icon-search"></i>
             {{ $t('common.search') }}
           </el-button>
           <el-button @click="resetContractTypeMethod">
-            <i class="el-icon-refresh"></i>
             {{ $t('common.reset') }}
           </el-button>
           <el-button type="primary" @click="openAddContractType">
-            <i class="el-icon-plus"></i>
             {{ $t('common.add') }}
           </el-button>
         </div>
 
         <el-table :data="contractTypes" border style="width: 100%">
-          <el-table-column prop="typeName" :label="$t('contractTypeManage.table.typeName')" align="center" />
-          <el-table-column prop="auditName" :label="$t('contractTypeManage.table.audit')" align="center" />
-          <el-table-column prop="remark" :label="$t('contractTypeManage.table.remark')" align="center" />
-          <el-table-column prop="createTime" :label="$t('contractTypeManage.table.createTime')" align="center" />
+          <el-table-column prop="typeName" :label="$t('contractTypeManage.table.typeName')" min-width="140" />
+          <el-table-column prop="auditName" :label="$t('contractTypeManage.table.audit')" align="center" width="100" />
+          <el-table-column prop="remark" :label="$t('contractTypeManage.table.remark')" min-width="140" />
+          <el-table-column prop="createTime" :label="$t('contractTypeManage.table.createTime')" align="center" width="160" />
           <el-table-column :label="$t('common.operation')" align="center" width="300">
             <template slot-scope="scope">
-              <el-button size="mini" @click="openTypeSpec(scope.row)">
+              <el-button type="text" size="mini" @click="openTypeSpec(scope.row)">
                 {{ $t('contractTypeManage.table.specInfo') }}
               </el-button>
-              <el-button size="mini" @click="openTypeTemplate(scope.row)">
+              <el-button type="text" size="mini" @click="openTypeTemplate(scope.row)">
                 {{ $t('contractTypeManage.table.template') }}
               </el-button>
-              <el-button size="mini" type="primary" @click="openEditContractType(scope.row)">
+              <el-button type="text" size="mini" @click="openEditContractType(scope.row)">
                 {{ $t('common.edit') }}
               </el-button>
-              <el-button size="mini" type="danger" @click="openDeleteContractType(scope.row)">
+              <el-button type="text" size="mini" @click="openDeleteContractType(scope.row)">
                 {{ $t('common.delete') }}
               </el-button>
             </template>
@@ -124,17 +131,17 @@
         </el-table>
 
         <el-pagination
+          class="cc-pagination"
           :current-page="typePage.current"
           :page-sizes="[10, 20, 30, 50]"
           :page-size="typePage.size"
           :total="typePage.total"
           layout="total, sizes, prev, pager, next, jumper"
-          style="margin-top: 16px; text-align: right"
           @size-change="handleTypeSizeChange"
           @current-change="handleTypeCurrentChange"
         />
-      </el-tab-pane>
-    </el-tabs>
+      </div>
+    </el-drawer>
 
     <contract-template-editor
       ref="templateEditor"
@@ -179,8 +186,8 @@ export default {
   },
   data() {
     return {
-      activeTab: 'template',
       loading: false,
+      typeDrawerVisible: false,
       templates: [],
       allTemplates: [],
       contractTypes: [],
@@ -374,64 +381,22 @@ export default {
     },
     openTypeTemplate(row) {
       this.$refs.addTemplateView.open(row)
+    },
+    openTypeDrawer() {
+      this.typeDrawerVisible = true
+      if (!this.contractTypes.length) {
+        this.queryContractTypes()
+      }
+    },
+    handleTypeDrawerClose() {
+      this.loadTemplates()
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.contract-template-center {
-  padding: 16px;
-
-  .cc-page-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 12px;
-
-    .cc-page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .cc-page-subtitle {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #909399;
-    }
-  }
-
-  .cc-variable-tip {
-    font-size: 12px;
-    color: #909399;
-    margin-bottom: 10px;
-  }
-
-  .cc-tabs {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #ebeef5;
-    margin-bottom: 16px;
-
-    .cc-tab {
-      padding: 8px 16px;
-      font-size: 14px;
-      color: #606266;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-
-      &.is-active {
-        color: #4f46e5;
-        border-bottom-color: #4f46e5;
-      }
-
-      .cc-tab-count {
-        margin-left: 6px;
-        font-size: 12px;
-        color: #909399;
-      }
-    }
-  }
+.cc-type-drawer {
+  padding: 0 4px 8px;
 }
 </style>

@@ -1,12 +1,12 @@
 <template>
-  <div class="contract-ledger">
+  <div class="contract-ledger cc-page">
     <div class="cc-page-head">
       <div>
         <div class="cc-page-title">{{ $t('contractLedger.title') }}</div>
         <div class="cc-page-subtitle">{{ $t('contractLedger.subtitle') }}</div>
       </div>
-      <div>
-        <el-button type="primary" size="small" @click="createContract">
+      <div class="cc-page-actions">
+        <el-button type="primary" @click="createContract">
           <i class="el-icon-plus"></i>
           {{ $t('contractWorkbench.titleNew') }}
         </el-button>
@@ -109,6 +109,12 @@
             size="mini"
             @click="openPerformance(scope.row)"
           >{{ $t('contractLedger.op.performance') }}</el-button>
+          <el-button
+            v-if="String(scope.row.state) === CONTRACT_STATE.AUDIT"
+            type="text"
+            size="mini"
+            @click="goAudit(scope.row)"
+          >{{ $t('contractLedger.op.audit') }}</el-button>
           <el-button type="text" size="mini" @click="printContract(scope.row)">{{ $t('contractLedger.op.print') }}</el-button>
           <el-button
             v-if="canStop(scope.row)"
@@ -129,12 +135,12 @@
     <div v-if="!loading && !contracts.length" class="cc-empty">{{ $t('contractLedger.empty') }}</div>
 
     <el-pagination
+      class="cc-pagination"
       :current-page="page.current"
       :page-sizes="[10, 20, 30, 50]"
       :page-size="page.size"
       :total="page.total"
       layout="total, sizes, prev, pager, next, jumper"
-      style="margin-top: 16px; text-align: right"
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
     />
@@ -457,6 +463,15 @@ export default {
         query: { contractId: contract.contractId }
       })
     },
+    goAudit(contract) {
+      this.$router.push({
+        path: '/pages/admin/contractApplyAuditOrders',
+        query: {
+          bizId: contract.contractId,
+          auditType: '1'
+        }
+      })
+    },
     openPerformance(contract) {
       this.$router.push({
         path: '/pages/admin/contractPerformance',
@@ -475,53 +490,6 @@ export default {
 
 <style lang="scss" scoped>
 .contract-ledger {
-  padding: 16px;
-
-  .cc-page-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
-
-    .cc-page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .cc-page-subtitle {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #909399;
-    }
-  }
-
-  .cc-tabs {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #ebeef5;
-    margin-bottom: 12px;
-
-    .cc-tab {
-      padding: 10px 16px;
-      font-size: 14px;
-      color: #606266;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-
-      &.is-active {
-        color: #4f46e5;
-        border-bottom-color: #4f46e5;
-      }
-
-      .cc-tab-count {
-        margin-left: 6px;
-        font-size: 12px;
-        color: #909399;
-      }
-    }
-  }
-
   .cc-cell-code {
     font-weight: 600;
     color: #303133;

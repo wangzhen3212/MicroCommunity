@@ -1,7 +1,7 @@
 export default [
     {
         path: '/pages/admin/contractTypeManage',
-        meta: { title: '合同类型' },
+        meta: { title: '合同模板' },
         name: '/pages/admin/contractTypeManage',
         component: () => import('@/views/contract/contractTypeManageList.vue')
     },
@@ -29,7 +29,7 @@ export default [
     },
     {
         path: '/pages/admin/contractManage',
-        meta: { title: '合同查询' },
+        meta: { title: '合同台账' },
         name: '/pages/admin/contractManage',
         component: () => import('@/views/contract/contractManageList.vue')
     },
@@ -52,7 +52,7 @@ export default [
     },
     {
         path: '/pages/admin/expirationContractManage',
-        meta: { title: '到期合同' },
+        meta: { title: '到期提醒' },
         name: '/pages/admin/expirationContractManage',
         component: () => import('@/views/contract/expirationContractManageList.vue')
     },
@@ -68,6 +68,7 @@ export default [
     },
     {
         path: '/pages/admin/contractApplyAuditOrders',
+        meta: { title: '合同审核' },
         name: '/pages/admin/contractApplyAuditOrders',
         component: () => import('@/views/contract/contractApplyAuditOrdersList.vue')
     },

@@ -57,6 +57,7 @@ export const messages = {
       },
       op: {
         view: 'View',
+        audit: 'Approve',
         submit: 'Submit',
         delete: 'Delete Draft'
       },
@@ -149,6 +150,7 @@ zh: {
       },
       op: {
         view: '查看',
+        audit: '审核',
         submit: '提交',
         delete: '删除草稿'
       },
@@ -241,6 +243,7 @@ zh: {
       },
       op: {
         view: '查看',
+        audit: '審核',
         submit: '提交',
         delete: '刪除草稿'
       },

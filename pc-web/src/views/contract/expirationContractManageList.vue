@@ -1,13 +1,12 @@
 <template>
-  <div class="contract-remind">
+  <div class="contract-remind cc-page">
     <div class="cc-page-head">
       <div>
         <div class="cc-page-title">{{ $t('contractRemind.title') }}</div>
         <div class="cc-page-subtitle">{{ $t('contractRemind.subtitle') }}</div>
       </div>
-      <div>
-        <el-button v-if="hasPrivilege('502026111600000004')" size="small" @click="handleExport">
-          <i class="el-icon-download"></i>
+      <div class="cc-page-actions">
+        <el-button v-if="hasPrivilege('502026111600000004')" @click="handleExport">
           {{ $t('contractRemind.filter.export') }}
         </el-button>
       </div>
@@ -37,12 +36,10 @@
         <el-option :label="$t('contractRemind.filter.days') + ' 90'" value="90" />
       </el-select>
       <el-checkbox v-model="includeExpired">{{ $t('contractRemind.filter.includeExpired') }}</el-checkbox>
-      <el-button type="primary" size="small" @click="handleSearch">
-        <i class="el-icon-search"></i>
+      <el-button type="primary" @click="handleSearch">
         {{ $t('common.search') }}
       </el-button>
-      <el-button size="small" @click="handleReset">
-        <i class="el-icon-refresh"></i>
+      <el-button @click="handleReset">
         {{ $t('common.reset') }}
       </el-button>
       <div class="cc-bulk-actions">
@@ -51,13 +48,12 @@
         </span>
         <el-button
           v-if="hasPrivilege('502026111600000006')"
-          size="small"
           :disabled="!selection.length"
           @click="openPushDialog"
         >
           {{ $t('contractRemind.bulk.push') }}
         </el-button>
-        <el-button size="small" :disabled="!selection.length" @click="handleBatchRenew">
+        <el-button :disabled="!selection.length" @click="handleBatchRenew">
           {{ $t('contractRemind.bulk.renew') }}
         </el-button>
       </div>
@@ -130,12 +126,12 @@
     <div v-if="!loading && !reminds.length" class="cc-empty">{{ $t('contractRemind.empty') }}</div>
 
     <el-pagination
+      class="cc-pagination"
       :current-page="page.current"
       :page-sizes="[10, 20, 30, 50]"
       :page-size="page.size"
       :total="page.total"
       layout="total, sizes, prev, pager, next, jumper"
-      style="margin-top: 16px; text-align: right"
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
     />
@@ -345,33 +341,7 @@ export default {
 
 <style lang="scss" scoped>
 .contract-remind {
-  padding: 16px;
-
-  .cc-page-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
-
-    .cc-page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .cc-page-subtitle {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #909399;
-    }
-  }
-
   .cc-toolbar {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-
     .cc-bulk-actions {
       margin-left: auto;
 

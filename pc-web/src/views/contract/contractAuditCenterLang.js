@@ -18,11 +18,14 @@ export const messages = {
         keyword: 'Keyword',
         keywordPlaceholder: 'Approval code / contract code / name',
         search: 'Search',
-        reset: 'Reset'
+        reset: 'Reset',
+        auditType: 'Document Type',
+        auditTypeAll: 'All Types'
       },
       table: {
         auditCode: 'Approval Code',
         contract: 'Contract',
+        contractType: 'Contract Type',
         type: 'Type',
         amount: 'Amount',
         partyB: 'Party B',
@@ -50,6 +53,8 @@ export const messages = {
       resultPass: 'Passed',
       resultReject: 'Rejected',
       auditorConfig: 'Auditor Settings',
+      ruleSetting: 'Approval Rule Settings',
+      nodeTip: 'Approval nodes: Applicant submits -> Legal Review -> Leader Approval',
       dialog: {
         title: 'Approval',
         pass: 'Pass',
@@ -80,6 +85,7 @@ export const messages = {
       },
       empty: 'No approval record',
       msg: {
+        noPrivilege: 'You have no permission to approve this document',
         fetchError: 'Failed to load approval list',
         statError: 'Failed to load audit statistics',
         flowError: 'Failed to load approval chain'
@@ -118,11 +124,14 @@ export const messages = {
         keyword: '关键字',
         keywordPlaceholder: '审批单号 / 合同编号 / 名称',
         search: '查询',
-        reset: '重置'
+        reset: '重置',
+        auditType: '单据类型',
+        auditTypeAll: '全部类型'
       },
       table: {
         auditCode: '审批单号',
         contract: '合同',
+        contractType: '合同类型',
         type: '类型',
         amount: '金额',
         partyB: '签约对象',
@@ -150,6 +159,8 @@ export const messages = {
       resultPass: '已通过',
       resultReject: '已驳回',
       auditorConfig: '审核人设置',
+      ruleSetting: '审批规则设置',
+      nodeTip: '审核节点：经办人提交 → 法务校对 → 领导审核',
       dialog: {
         title: '审批操作',
         pass: '通过',
@@ -180,6 +191,7 @@ export const messages = {
       },
       empty: '暂无审批记录',
       msg: {
+        noPrivilege: '您没有该单据的审批权限',
         fetchError: '获取审批列表失败',
         statError: '获取审核统计失败',
         flowError: '获取审批链失败'
@@ -218,11 +230,14 @@ export const messages = {
         keyword: '關鍵字',
         keywordPlaceholder: '審批單號 / 合同編號 / 名稱',
         search: '查詢',
-        reset: '重置'
+        reset: '重置',
+        auditType: '單據類型',
+        auditTypeAll: '全部類型'
       },
       table: {
         auditCode: '審批單號',
         contract: '合同',
+        contractType: '合同類型',
         type: '類型',
         amount: '金額',
         partyB: '簽約對象',
@@ -250,6 +265,8 @@ export const messages = {
       resultPass: '已通過',
       resultReject: '已駁回',
       auditorConfig: '審核人設置',
+      ruleSetting: '審批規則設置',
+      nodeTip: '審核節點：經辦人提交 → 法務校對 → 領導審核',
       dialog: {
         title: '審批操作',
         pass: '通過',
@@ -280,6 +297,7 @@ export const messages = {
       },
       empty: '暫無審批記錄',
       msg: {
+        noPrivilege: '您沒有該單據的審批權限',
         fetchError: '獲取審批列表失敗',
         statError: '獲取審核統計失敗',
         flowError: '獲取審批鏈失敗'

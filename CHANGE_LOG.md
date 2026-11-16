@@ -730,3 +730,41 @@ VALUES ('122026111300000001','获取公众号关注用户','synchronizeWechatSub
 INSERT INTO `m_menu` VALUES ('702026111300000001','关注用户','800201904006','/#/pages/community/wechatSubscribe','19','502026111300000001','公众号关注用户同步与查看',NOW(),'0','Y');
 INSERT INTO `p_privilege` VALUES ('502026111300000001','关注用户','同步并查看公众号关注用户',NOW(),'0','800900000003','/#/pages/community/wechatSubscribe','702026111300000001');
 ```
+## 2026-11-16 — 合同模块菜单与原型对齐（菜单/权限 + 页面布局基线）
+
+无 DDL、无字典变更；菜单/权限数据见 `docs/sql/contract/change_log.md`「十一、菜单与原型对齐」（执行后重启 `service-user` 刷新菜单缓存，前端重新登录）。方案：`.txcode/plan-code/20261116140507/20261116140507_方案.md`
+
+```sql
+-- 菜单组 802020091723050020 对齐原型 7 项：合同甲方 / 合同模板 / 合同台账 / 合同履约 / 合同变更 / 到期提醒 / 合同审核
+UPDATE `m_menu` SET seq='1' WHERE m_id='702021042214040302';
+UPDATE `m_menu` SET name='合同模板', seq='2' WHERE m_id='702020091843810076';
+UPDATE `m_menu` SET name='合同台账', seq='3' WHERE m_id='702020091785290021';
+UPDATE `m_menu` SET name='合同履约', seq='4' WHERE m_id='702026111600000001';
+UPDATE `m_menu` SET name='合同变更', seq='5' WHERE m_id='702021033017840295';
+UPDATE `m_menu` SET name='到期提醒', seq='6' WHERE m_id='702021033149670076';
+-- 下线「起草合同」（路由与页面保留，起草走台账「新建合同」）
+UPDATE `m_menu` SET status_cd='1', is_show='N' WHERE m_id='702021033187310391';
+UPDATE `p_privilege` SET status_cd='1' WHERE m_id='702021033187310391';
+-- 新增「合同审核」菜单 + 菜单查看权限 + 审核人设置按钮权限归位
+INSERT INTO `m_menu` (`m_id`,`name`,`g_id`,`url`,`seq`,`p_id`,`description`,`create_time`,`status_cd`,`is_show`)
+SELECT '702026111600000002','合同审核','802020091723050020','/#/pages/admin/contractApplyAuditOrders','7','-1','待我审批/已通过/已驳回（合同与变更统一审核）',NOW(),'0','Y'
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `m_menu` WHERE `m_id`='702026111600000002');
+INSERT INTO `p_privilege` (`p_id`,`name`,`description`,`create_time`,`status_cd`,`domain`,`resource`,`m_id`)
+SELECT '502026111600000008','合同审核','合同审核菜单查看',NOW(),'0','800900000003','/#/pages/admin/contractApplyAuditOrders','702026111600000002'
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `p_privilege` WHERE `p_id`='502026111600000008');
+UPDATE `p_privilege` SET m_id='702026111600000002' WHERE p_id='502026111600000003';
+-- 权限名称/历史 resource 修正 + 收藏项名称同步
+UPDATE `p_privilege` SET name='合同模板' WHERE p_id='502020091858500077';
+UPDATE `p_privilege` SET name='合同台账' WHERE p_id='502020091779900022';
+UPDATE `p_privilege` SET name='到期提醒', resource='/#/pages/admin/expirationContractManage' WHERE p_id='502021033136470077';
+UPDATE `m_menu_user` SET name='合同台账' WHERE m_id='702020091785290021';
+```
+
+- 前端 `pc-web/src/styles/contract.scss`：布局基线统一——`.cc-page`（24px 留白/浅灰底）、`.cc-page-head`（22px 标题 + 13px 灰副标题 + 右上操作区 36px）、`.cc-tip-bar` 说明条、`.cc-tabs/.cc-tab/.is-active` 下划线 tab（保留 `.cc-tabs.is-pill` 胶囊变体）、`.cc-card/.cc-card-head/.cc-card-meta/.cc-card-footer/.cc-card-grid`、`.cc-kv/.cc-kv-grid` 全局化、`.cc-toolbar` 与 `.cc-pagination` 尺寸统一；旧类名 `.cc-page-header/.cc-tab-bar/.cc-tab-item` 已无引用，直接移除。
+- 前端 `pc-web/src/views/contract/contractTypeManageList.vue`：去掉「合同模板/合同类型」双 tab，改为单页模板中心（胶囊分类 tab + 卡片网格），类型维护收敛到页头「类型维护」抽屉（类型查询/新增/编辑/删除 + 类型规格/类型模板入口）。
+- 前端 `pc-web/src/views/contract/contractApplyAuditOrdersList.vue`：页头「审批规则设置」、tab 右侧审核节点说明、工具条新增「单据类型」筛选（`auditType` 1 合同 / 2 变更，后端已支持）、支持 `?auditId=` / `?bizId=&auditType=` 直达定位（无审批权限提示）。
+- 前端 `pc-web/src/views/contract/contractManageList.vue`：行操作新增「审核」（`state=11` 显示，跳 `/pages/admin/contractApplyAuditOrders?bizId={contractId}&auditType=1`）。
+- 前端 `pc-web/src/views/contract/contractChangeManageList.vue`：变更审批入口统一跳审核页（`?bizId={planId}&auditType=2`）。
+- 前端 `contractPartyaManageList.vue`、`contractPartyaCard.vue`、`contractTemplateCard.vue`、`contractPerformanceList.vue`、`expirationContractManageList.vue`、`contractAuditStat.vue`、`contractAuditItem.vue`：页头/说明条/卡片网格/KV 两列/工具条/分页/汇总卡按原型对齐；审核行补合同类型与签约对象。
+- 前端 `contractRouter.js`：`meta.title` 对齐菜单（合同模板/合同台账/到期提醒/合同审核）。
+- 前端三语文案：`contractAuditCenterLang.js`（`filter.auditType`、`filter.auditTypeAll`、`nodeTip`、`ruleSetting`、`table.contractType`、`msg.noPrivilege`）、`contractTemplateLang.js`（`typeMaintain`、`contractPartyaCenter.title/tip`）、`contractLedgerLang.js`（`op.audit`）、`contractChangeManageLang.js`（`op.audit`）。

@@ -8,7 +8,9 @@
       <span class="cc-audit-amount">{{ formatAmount(audit.bizAmount) }}</span>
     </div>
     <div class="cc-audit-item-meta">
-      {{ $t('contractAuditCenter.table.submitter') }}：{{ audit.submitStaffName || '-' }}
+      {{ $t('contractAuditCenter.table.contractType') }}：{{ audit.bizContractTypeName || '-' }}
+      · {{ $t('contractAuditCenter.table.partyB') }}：{{ audit.bizPartyB || '-' }}
+      · {{ $t('contractAuditCenter.table.submitter') }}：{{ audit.submitStaffName || '-' }}
       · {{ formatTime(audit.submitTime) }}
       · {{ $t('contractAuditCenter.table.currentStep') }}：{{ currentStepText }}
     </div>

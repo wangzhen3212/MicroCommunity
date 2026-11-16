@@ -1,57 +1,65 @@
 <template>
-  <div class="contract-partya-center">
+  <div class="contract-partya-center cc-page">
     <div class="cc-page-head">
       <div>
         <div class="cc-page-title">{{ $t('contractPartyaCenter.title') }}</div>
         <div class="cc-page-subtitle">{{ $t('contractPartyaCenter.subtitle') }}</div>
       </div>
-      <div>
-        <el-button type="primary" size="small" @click="handleAdd">
-          <i class="el-icon-plus"></i>
+      <div class="cc-page-actions">
+        <el-button type="primary" @click="handleAdd">
           {{ $t('contractPartyaCenter.add') }}
         </el-button>
       </div>
     </div>
 
+    <div class="cc-tip-bar">
+      <div class="cc-tip-icon">
+        <i class="el-icon-office-building"></i>
+      </div>
+      <p class="cc-tip-text">{{ $t('contractPartyaCenter.tip') }}</p>
+      <el-button type="primary" @click="handleAdd">
+        {{ $t('contractPartyaCenter.add') }}
+      </el-button>
+    </div>
+
     <div class="cc-toolbar">
       <el-input
         v-model="searchForm.partyA"
-        class="cc-toolbar-item"
         style="width: 260px"
         clearable
         :placeholder="$t('contractPartyaCenter.searchPlaceholder')"
         @keyup.enter.native="handleSearch"
       />
-      <el-button type="primary" size="small" @click="handleSearch">
-        <i class="el-icon-search"></i>
+      <el-button type="primary" @click="handleSearch">
         {{ $t('common.search') }}
       </el-button>
-      <el-button size="small" @click="handleReset">
-        <i class="el-icon-refresh"></i>
+      <el-button @click="handleReset">
         {{ $t('common.reset') }}
       </el-button>
     </div>
 
     <div v-loading="loading" class="cc-partya-list">
-      <el-row v-if="partyas.length" :gutter="16">
-        <el-col v-for="item in partyas" :key="item.partyaId" :xs="24" :sm="12" :md="12" :lg="8">
-          <contract-partya-card
-            :partya="item"
-            @edit="handleEdit"
-            @set-default="handleSetDefault"
-            @delete="handleDelete"
-          />
-        </el-col>
-      </el-row>
+      <div v-if="partyas.length" class="cc-card-grid">
+        <el-row :gutter="16">
+          <el-col v-for="item in partyas" :key="item.partyaId" :xs="24" :sm="12" :lg="8">
+            <contract-partya-card
+              :partya="item"
+              @edit="handleEdit"
+              @set-default="handleSetDefault"
+              @delete="handleDelete"
+            />
+          </el-col>
+        </el-row>
+      </div>
       <div v-else-if="!loading" class="cc-empty">{{ $t('contractPartyaCenter.empty') }}</div>
 
       <el-pagination
+        class="cc-pagination"
         :current-page="page.current"
         :page-sizes="[12, 24, 36, 48]"
         :page-size="page.size"
         :total="page.total"
         layout="total, sizes, prev, pager, next, jumper"
-        style="margin-top: 16px; text-align: right"
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
       />
@@ -169,33 +177,6 @@ export default {
 
 <style lang="scss" scoped>
 .contract-partya-center {
-  padding: 16px;
-
-  .cc-page-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
-
-    .cc-page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .cc-page-subtitle {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #909399;
-    }
-  }
-
-  .cc-toolbar {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-
   .cc-partya-list {
     min-height: 200px;
   }
