@@ -8,7 +8,7 @@ export const messages = {
         aLink: 'Contact Phone'
       },
       list: {
-        title: 'Contract Party A'
+        title: 'Contract Party A Settings'
       },
       table: {
         partyA: 'Party A',
@@ -54,7 +54,7 @@ zh: {
         aLink: '联系电话'
       },
       list: {
-        title: '合同甲方'
+        title: '合同甲方设置'
       },
       table: {
         partyA: '甲方',
@@ -100,7 +100,7 @@ zh: {
         aLink: '聯繫電話'
       },
       list: {
-        title: '合同甲方'
+        title: '合同甲方設定'
       },
       table: {
         partyA: '甲方',

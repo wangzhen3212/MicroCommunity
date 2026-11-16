@@ -14,27 +14,56 @@
 
     <div class="cc-stat-row">
       <div class="cc-stat-card">
-        <div class="cc-stat-label">{{ $t('contractPerformance.stat.performing') }}</div>
-        <div class="cc-stat-value">{{ summary.performingCount || 0 }}</div>
+        <div class="cc-stat-head">
+          <div class="cc-stat-body">
+            <div class="cc-stat-label">{{ $t('contractPerformance.stat.performing') }}</div>
+            <div class="cc-stat-value">{{ summary.performingCount || 0 }}</div>
+          </div>
+          <div class="cc-stat-icon is-primary">
+            <i class="el-icon-document"></i>
+          </div>
+        </div>
         <div class="cc-stat-extra">{{ $t('contractPerformance.stat.performingExtra') }}</div>
       </div>
       <div class="cc-stat-card">
-        <div class="cc-stat-label">{{ $t('contractPerformance.stat.paid') }}</div>
-        <div class="cc-stat-value">{{ formatAmount(summary.paidAmount) }}</div>
+        <div class="cc-stat-head">
+          <div class="cc-stat-body">
+            <div class="cc-stat-label">{{ $t('contractPerformance.stat.paid') }}</div>
+            <div class="cc-stat-value is-success">¥ {{ formatAmount(summary.paidAmount) }}</div>
+          </div>
+          <div class="cc-stat-icon is-success">
+            <i class="el-icon-circle-check"></i>
+          </div>
+        </div>
         <div class="cc-stat-extra">{{ $t('contractPerformance.stat.paidExtra') }}</div>
       </div>
       <div class="cc-stat-card">
-        <div class="cc-stat-label">{{ $t('contractPerformance.stat.unpaid') }}</div>
-        <div class="cc-stat-value">{{ formatAmount(summary.unpaidAmount) }}</div>
+        <div class="cc-stat-head">
+          <div class="cc-stat-body">
+            <div class="cc-stat-label">{{ $t('contractPerformance.stat.unpaid') }}</div>
+            <div class="cc-stat-value">¥ {{ formatAmount(summary.unpaidAmount) }}</div>
+          </div>
+          <div class="cc-stat-icon is-sky">
+            <i class="el-icon-time"></i>
+          </div>
+        </div>
         <div class="cc-stat-extra">{{ $t('contractPerformance.stat.unpaidExtra') }}</div>
       </div>
       <div class="cc-stat-card">
-        <div class="cc-stat-label">{{ $t('contractPerformance.stat.overdue') }}</div>
-        <div class="cc-stat-value">{{ summary.overdueCount || 0 }}</div>
+        <div class="cc-stat-head">
+          <div class="cc-stat-body">
+            <div class="cc-stat-label">{{ $t('contractPerformance.stat.overdue') }}</div>
+            <div class="cc-stat-value is-danger">{{ summary.overdueCount || 0 }}</div>
+          </div>
+          <div class="cc-stat-icon is-danger">
+            <i class="el-icon-warning-outline"></i>
+          </div>
+        </div>
         <div class="cc-stat-extra">{{ $t('contractPerformance.stat.overdueExtra') }}</div>
       </div>
     </div>
 
+    <div class="cc-surface">
     <div class="cc-toolbar">
       <el-input
         style="width: 220px"
@@ -70,7 +99,7 @@
       </el-button>
     </div>
 
-    <el-table :data="performances" border v-loading="loading" style="width: 100%">
+    <el-table :data="performances" v-loading="loading" :empty-text="$t('contractPerformance.empty')" style="width: 100%">
       <el-table-column :label="$t('contractPerformance.table.code')" min-width="200">
         <template slot-scope="scope">
           <div class="cc-cell-code">{{ scope.row.contractCode }}</div>
@@ -105,7 +134,7 @@
           <span class="cc-badge" :class="stateClass(scope.row)">{{ stateText(scope.row) }}</span>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('contractPerformance.table.operation')" align="center" width="160">
+      <el-table-column :label="$t('contractPerformance.table.operation')" align="right" width="160">
         <template slot-scope="scope">
           <el-button type="text" size="mini" @click="openDetail(scope.row)">{{ $t('contractPerformance.op.detail') }}</el-button>
           <el-button type="text" size="mini" @click="openPayment(scope.row)">{{ $t('contractPerformance.op.pay') }}</el-button>
@@ -113,18 +142,19 @@
       </el-table-column>
     </el-table>
 
-    <div v-if="!loading && !performances.length" class="cc-empty">{{ $t('contractPerformance.empty') }}</div>
-
-    <el-pagination
-      class="cc-pagination"
-      :current-page="page.current"
-      :page-sizes="[10, 20, 30, 50]"
-      :page-size="page.size"
-      :total="page.total"
-      layout="total, sizes, prev, pager, next, jumper"
-      @size-change="handleSizeChange"
-      @current-change="handleCurrentChange"
-    />
+    <div class="cc-surface-foot">
+      <el-pagination
+        class="cc-pagination"
+        :current-page="page.current"
+        :page-sizes="[10, 20, 30, 50]"
+        :page-size="page.size"
+        :total="page.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
+    </div>
+    </div>
 
     <contract-payment-dialog ref="paymentDialog" @success="handleSearch" />
     <contract-detail-drawer ref="detailDrawer" @edit="editContract" @print="printContract" />

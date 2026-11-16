@@ -1,18 +1,28 @@
 <template>
   <div class="cc-workbench">
     <div class="cc-wb-head">
-      <div class="cc-wb-head-left">
-        <el-button size="mini" @click="handleBack">
-          <i class="el-icon-back"></i>
-          {{ $t('contractWorkbench.back') }}
-        </el-button>
-        <div class="cc-wb-breadcrumb">
-          <span>{{ $t('contractWorkbench.breadcrumbRoot') }}</span>
-          <span class="cc-wb-sep">/</span>
-          <span class="is-current">{{ pageTitle }}</span>
+      <button
+        type="button"
+        class="cc-wb-back"
+        :title="$t('contractWorkbench.back')"
+        @click="handleBack"
+      >
+        <i class="el-icon-arrow-left"></i>
+      </button>
+      <div class="cc-wb-title">
+        <div class="cc-wb-title-row">
+          <span class="cc-wb-name">{{ pageTitle }}</span>
+          <span class="cc-wb-tag" :class="auditState ? 'is-audit' : 'is-draft'">
+            {{ auditState ? $t('contractState.auditing') : $t('contractState.draft') }}
+          </span>
         </div>
-        <span class="cc-badge is-info">{{ form.contractCode || $t('contractWorkbench.msg.codeEmpty') }}</span>
-        <span v-if="auditState" class="cc-badge is-warning">{{ $t('contractState.auditing') }}</span>
+        <p class="cc-wb-sub">
+          {{ $t('contractWorkbench.field.contractCode') }}
+          <span class="cc-wb-sub-strong">{{ form.contractCode || '-' }}</span>
+          <span class="cc-wb-dot">·</span>
+          {{ $t('contractWorkbench.field.template') }}
+          <span class="cc-wb-sub-strong">{{ templateName || '-' }}</span>
+        </p>
       </div>
       <div class="cc-wb-head-actions">
         <span class="cc-wb-tip">{{ $t('contractWorkbench.autoSaveTip') }}</span>
@@ -24,71 +34,97 @@
       </div>
     </div>
 
-    <div class="cc-wb-body">
+    <div class="cc-wb-body" v-loading="loading">
       <div class="cc-wb-main">
         <div class="cc-panel">
-          <div class="cc-panel-title">{{ $t('contractWorkbench.section.base') }}</div>
-          <el-form label-width="110px">
-            <contract-base-info-form
-              :form="form"
-              :contract-types="contractTypes"
-              :partyas="partyas"
-              :templates="templates"
-              @regenerate-code="handleGenerateCode"
-              @type-change="handleTypeChange"
-              @template-change="handleTemplateChange"
-              @partya-change="handlePartyaChange"
-              @amount-change="handleAmountChange"
+          <div class="cc-panel-head">
+            <span class="cc-panel-index">01</span>
+            <h4 class="cc-panel-title">{{ $t('contractWorkbench.section.base') }}</h4>
+          </div>
+          <div class="cc-panel-body">
+            <el-form label-position="top" class="cc-wb-form">
+              <contract-base-info-form
+                :form="form"
+                :contract-types="contractTypes"
+                :partyas="partyas"
+                :templates="templates"
+                @regenerate-code="handleGenerateCode"
+                @type-change="handleTypeChange"
+                @template-change="handleTemplateChange"
+                @partya-change="handlePartyaChange"
+                @amount-change="handleAmountChange"
+              />
+            </el-form>
+          </div>
+        </div>
+
+        <div class="cc-panel">
+          <div class="cc-panel-head">
+            <span class="cc-panel-index">02</span>
+            <h4 class="cc-panel-title">{{ $t('contractWorkbench.section.target') }}</h4>
+          </div>
+          <div class="cc-panel-body">
+            <contract-target-table
+              :category="form.category"
+              :rooms="rooms"
+              :targets="targets"
+              @add-house="openHouseDialog"
+              @remove-house="removeHouse"
+              @add-target="addTarget"
+              @remove-target="removeTarget"
+              @fill-amount="handleFillAmount"
+              @clear="clearTargets"
             />
-          </el-form>
+          </div>
         </div>
 
         <div class="cc-panel">
-          <div class="cc-panel-title">{{ $t('contractWorkbench.section.target') }}</div>
-          <contract-target-table
-            :category="form.category"
-            :rooms="rooms"
-            :targets="targets"
-            @add-house="openHouseDialog"
-            @remove-house="removeHouse"
-            @add-target="addTarget"
-            @remove-target="removeTarget"
-            @fill-amount="handleFillAmount"
-            @clear="clearTargets"
-          />
+          <div class="cc-panel-head">
+            <span class="cc-panel-index">03</span>
+            <h4 class="cc-panel-title">{{ $t('contractWorkbench.section.plan') }}</h4>
+          </div>
+          <div class="cc-panel-body">
+            <contract-fee-plan-panel
+              :category="form.category"
+              :rooms="rooms"
+              :plans="plans"
+              :amount="form.amount"
+              :start-time="form.startTime"
+              :end-time="form.endTime"
+              :pay-mode="form.payMode"
+              @amount-change="handleAmountChange"
+              @plan-change="handlePlanChange"
+              @fee-change="handleFeeChange"
+            />
+          </div>
         </div>
 
         <div class="cc-panel">
-          <div class="cc-panel-title">{{ $t('contractWorkbench.section.plan') }}</div>
-          <contract-fee-plan-panel
-            :category="form.category"
-            :rooms="rooms"
-            :plans="plans"
-            :amount="form.amount"
-            :start-time="form.startTime"
-            :end-time="form.endTime"
-            :pay-mode="form.payMode"
-            @amount-change="handleAmountChange"
-            @plan-change="handlePlanChange"
-            @fee-change="handleFeeChange"
-          />
+          <div class="cc-panel-head">
+            <span class="cc-panel-index">04</span>
+            <h4 class="cc-panel-title">{{ $t('contractWorkbench.section.doc') }}</h4>
+          </div>
+          <div class="cc-panel-body">
+            <contract-doc-editor
+              v-model="content"
+              :template-content="templateContent"
+              :variables="docVariables"
+              :readonly="readonly"
+            />
+          </div>
         </div>
 
         <div class="cc-panel">
-          <div class="cc-panel-title">{{ $t('contractWorkbench.section.doc') }}</div>
-          <contract-doc-editor
-            v-model="content"
-            :template-content="templateContent"
-            :variables="docVariables"
-            :readonly="readonly"
-          />
-        </div>
-
-        <div class="cc-panel">
-          <div class="cc-panel-title">{{ $t('contractWorkbench.section.file') }}</div>
-          <contract-file-panel :files="files" :readonly="readonly" @change="handleFileChange" />
+          <div class="cc-panel-head">
+            <span class="cc-panel-index">05</span>
+            <h4 class="cc-panel-title">{{ $t('contractWorkbench.section.file') }}</h4>
+          </div>
+          <div class="cc-panel-body">
+            <contract-file-panel :files="files" :readonly="readonly" @change="handleFileChange" />
+          </div>
         </div>
       </div>
+
 
       <div class="cc-wb-side">
         <contract-summary-panel
@@ -187,6 +223,17 @@ export default {
     auditState() {
       return String(this.form.state) === '11'
     },
+    templateName() {
+      if (!this.form.templateId) {
+        return ''
+      }
+      const template = this.templates.filter(item => item.templateId === this.form.templateId)[0]
+      if (!template) {
+        return ''
+      }
+      const version = template.templateVersion ? ' ' + template.templateVersion : ''
+      return (template.templateName || '') + version
+    },
     readonly() {
       return this.auditState
     },
@@ -253,6 +300,10 @@ export default {
     }
     if (query.parentContractId) {
       this.loadParentContract(query.parentContractId)
+      return
+    }
+    if (query.templateId) {
+      this.applyTemplate(query.templateId)
       return
     }
     this.handleGenerateCode()
@@ -419,6 +470,29 @@ export default {
         this.form.category = String(matched.category)
       }
       this.handleGenerateCode()
+    },
+    applyTemplate(templateId) {
+      this.form.templateId = templateId
+      this.handleGenerateCode()
+      queryContractTypeTemplate({ templateId, page: 1, row: 1 }).then(list => {
+        const template = (list || [])[0]
+        if (!template) {
+          return
+        }
+        this.form.category = guessCategory({
+          category: template.category,
+          contractTypeName: template.contractTypeName
+        })
+        if (template.contractTypeId) {
+          this.form.contractType = template.contractTypeId
+        }
+        this.templateContent = template.context || ''
+        if (this.templateContent && !this.content) {
+          this.content = this.templateContent
+        }
+      }).catch(() => {
+        this.templateContent = ''
+      })
     },
     handleTemplateChange(templateId) {
       if (!templateId) {
@@ -613,49 +687,112 @@ export default {
 
 <style lang="scss" scoped>
 .cc-workbench {
-  padding: 16px;
+  min-height: calc(100vh - 140px);
+  background: #f5f7fa;
 
   .cc-wb-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
+    gap: 12px;
+    padding: 10px 24px;
+    background: #fff;
+    border-bottom: 1px solid #ebeef5;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
 
-    .cc-wb-head-left {
-      display: flex;
-      align-items: center;
+  .cc-wb-back {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: #606266;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color .2s;
+
+    &:hover {
+      background: #f5f7fa;
+    }
+  }
+
+  .cc-wb-title {
+    min-width: 0;
+  }
+
+  .cc-wb-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cc-wb-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 22px;
+    color: #303133;
+  }
+
+  .cc-wb-tag {
+    height: 18px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+
+    &.is-draft {
+      color: #7c3aed;
+      background: #f3e8ff;
     }
 
-    .cc-wb-breadcrumb {
-      margin: 0 12px;
-      font-size: 13px;
-      color: #909399;
+    &.is-audit {
+      color: #e6a23c;
+      background: #fdf6ec;
+    }
+  }
 
-      .cc-wb-sep {
-        margin: 0 6px;
-      }
+  .cc-wb-sub {
+    margin: 2px 0 0;
+    font-size: 11px;
+    line-height: 16px;
+    color: #909399;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 
-      .is-current {
-        color: #303133;
-      }
+    .cc-wb-sub-strong {
+      color: #606266;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
     }
 
-    .cc-wb-head-actions {
-      display: flex;
-      align-items: center;
+    .cc-wb-dot {
+      margin: 0 6px;
+      color: #dcdfe6;
+    }
+  }
 
-      .cc-wb-tip {
-        margin-right: 12px;
-        font-size: 12px;
-        color: #909399;
-      }
+  .cc-wb-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+
+    .cc-wb-tip {
+      font-size: 11px;
+      color: #67c23a;
     }
   }
 
   .cc-wb-body {
     display: flex;
     align-items: flex-start;
+    padding: 16px 24px 24px;
 
     .cc-wb-main {
       flex: 1;
@@ -666,8 +803,65 @@ export default {
       width: 320px;
       margin-left: 16px;
       position: sticky;
-      top: 16px;
+      top: 76px;
     }
+  }
+
+  .cc-panel {
+    background: #fff;
+    border: 1px solid #ebeef5;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+
+    .cc-panel-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-bottom: 1px solid #f2f3f5;
+    }
+
+    .cc-panel-index {
+      width: 20px;
+      height: 20px;
+      flex: none;
+      border-radius: 6px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 20px;
+      text-align: center;
+    }
+
+    .cc-panel-title {
+      margin: 0;
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 20px;
+      color: #303133;
+    }
+
+    .cc-panel-body {
+      padding: 20px;
+    }
+  }
+
+  .cc-wb-form ::v-deep .el-form-item {
+    margin-bottom: 14px;
+  }
+
+  .cc-wb-form ::v-deep .el-form-item__label {
+    padding-bottom: 4px;
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 500;
+    color: #606266;
+  }
+
+  .cc-wb-form ::v-deep .el-form-item.is-required .el-form-item__label::before {
+    margin-right: 2px;
   }
 
   @media (max-width: 1280px) {

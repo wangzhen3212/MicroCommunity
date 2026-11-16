@@ -12,6 +12,7 @@
       </div>
     </div>
 
+    <div class="cc-surface">
     <div class="cc-toolbar">
       <el-input
         v-model="condition.searchText"
@@ -63,7 +64,7 @@
       ref="table"
       v-loading="loading"
       :data="reminds"
-      border
+      :empty-text="$t('contractRemind.empty')"
       style="width: 100%"
       @selection-change="handleSelectionChange"
     >
@@ -108,7 +109,7 @@
           <span v-else class="cc-remind-empty">{{ $t('contractRemind.log.empty') }}</span>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('contractRemind.table.operation')" align="center" width="180" fixed="right">
+      <el-table-column :label="$t('contractRemind.table.operation')" align="right" width="180" fixed="right">
         <template slot-scope="scope">
           <el-button type="text" size="mini" @click="handleDetail(scope.row)">
             {{ $t('contractRemind.op.detail') }}
@@ -123,18 +124,19 @@
       </el-table-column>
     </el-table>
 
-    <div v-if="!loading && !reminds.length" class="cc-empty">{{ $t('contractRemind.empty') }}</div>
-
-    <el-pagination
-      class="cc-pagination"
-      :current-page="page.current"
-      :page-sizes="[10, 20, 30, 50]"
-      :page-size="page.size"
-      :total="page.total"
-      layout="total, sizes, prev, pager, next, jumper"
-      @size-change="handleSizeChange"
-      @current-change="handleCurrentChange"
-    />
+    <div class="cc-surface-foot">
+      <el-pagination
+        class="cc-pagination"
+        :current-page="page.current"
+        :page-sizes="[10, 20, 30, 50]"
+        :page-size="page.size"
+        :total="page.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
+    </div>
+    </div>
 
     <el-dialog :title="$t('contractRemind.push.title')" :visible.sync="pushDialog" width="460px">
       <el-form label-width="90px">

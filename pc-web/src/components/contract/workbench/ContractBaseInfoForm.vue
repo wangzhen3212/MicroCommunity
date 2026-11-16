@@ -1,12 +1,12 @@
 <template>
   <div>
     <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :span="10">
         <el-form-item :label="$t('contractWorkbench.field.contractName')" required>
           <el-input v-model="form.contractName" maxlength="100" />
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="7">
         <el-form-item :label="$t('contractWorkbench.field.contractCode')" required>
           <el-input v-model="form.contractCode" disabled>
             <el-button slot="append" size="mini" @click="$emit('regenerate-code')">
@@ -15,22 +15,7 @@
           </el-input>
         </el-form-item>
       </el-col>
-      <el-col :span="8">
-        <el-form-item :label="$t('contractWorkbench.field.contractType')" required>
-          <el-select v-model="form.contractType" style="width: 100%" @change="$emit('type-change', form.contractType)">
-            <el-option
-              v-for="item in contractTypes"
-              :key="item.contractTypeId"
-              :label="item.typeName"
-              :value="item.contractTypeId"
-            />
-          </el-select>
-        </el-form-item>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :span="7">
         <el-form-item :label="$t('contractWorkbench.field.template')">
           <el-select
             v-model="form.templateId"
@@ -47,7 +32,22 @@
           </el-select>
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="6">
+        <el-form-item :label="$t('contractWorkbench.field.contractType')" required>
+          <el-select v-model="form.contractType" style="width: 100%" @change="$emit('type-change', form.contractType)">
+            <el-option
+              v-for="item in contractTypes"
+              :key="item.contractTypeId"
+              :label="item.typeName"
+              :value="item.contractTypeId"
+            />
+          </el-select>
+        </el-form-item>
+      </el-col>
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.partyA')" required>
           <el-select
             v-model="form.partyaId"
@@ -65,15 +65,12 @@
           </el-select>
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.contacts')">
           <el-input v-model="form.aContacts" disabled />
         </el-form-item>
       </el-col>
-    </el-row>
-
-    <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.partyB')" required>
           <el-input v-model="form.partyB" :disabled="isRent">
             <el-button v-if="isRent" slot="append" size="mini" @click="$emit('select-owner')">
@@ -82,32 +79,27 @@
           </el-input>
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.creditCode')">
           <el-input v-model="form.creditCode" maxlength="18" />
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.contacts')">
           <el-input v-model="form.bContacts" />
         </el-form-item>
       </el-col>
-    </el-row>
-
-    <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.tel')">
           <el-input v-model="form.bLink" maxlength="20" />
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.amount')" required>
           <el-input v-model="form.amount" @input="$emit('amount-change', form.amount)" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="8">
-        <el-form-item :label="$t('contractWorkbench.field.amountText')">
-          <el-input :value="amountText" disabled />
         </el-form-item>
       </el-col>
     </el-row>
@@ -153,30 +145,30 @@
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.operator')" required>
           <el-input v-model="form.operator" maxlength="50" />
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.operatorLink')">
           <el-input v-model="form.operatorLink" maxlength="20" />
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.payMode')">
           <el-input :value="form.payMode" disabled />
+        </el-form-item>
+      </el-col>
+      <el-col :span="6">
+        <el-form-item :label="$t('contractWorkbench.field.place')">
+          <el-input v-model="form.place" maxlength="100" />
         </el-form-item>
       </el-col>
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="8">
-        <el-form-item :label="$t('contractWorkbench.field.place')">
-          <el-input v-model="form.place" maxlength="100" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="16">
+      <el-col :span="24">
         <el-form-item :label="$t('contractWorkbench.field.remark')">
           <el-input v-model="form.remark" maxlength="200" />
         </el-form-item>

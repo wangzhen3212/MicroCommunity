@@ -413,9 +413,13 @@ UPDATE `p_privilege` SET name='到期提醒', resource='/#/pages/admin/expiratio
  WHERE p_id='502021033136470077';
 
 -- 11.6 权限组授权（pg_id 按实际合同管理员权限组替换；或到「权限分配」页面勾选）
+-- 需授权的菜单/按钮权限：合同履约 502026111600000001、合同履约-查看 502026111600000002、
+-- 合同审核 502026111600000008、合同审核人设置 502026111600000003、合同导出 502026111600000004、
+-- 合同批量终止 502026111600000005、合同推送提醒 502026111600000006、合同登记付款 502026111600000007
 INSERT INTO `p_privilege_rel` (`p_id`,`pg_id`,`create_time`,`status_cd`)
 SELECT '502026111600000008','权限组ID',NOW(),'0' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `p_privilege_rel` WHERE p_id='502026111600000008' AND pg_id='权限组ID');
+
 
 -- 11.7 收藏项名称同步（前端菜单收藏显示新名称）
 UPDATE `m_menu_user` SET name='合同台账' WHERE m_id='702020091785290021';

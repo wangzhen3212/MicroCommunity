@@ -58,7 +58,7 @@
       <i class="el-icon-refresh"></i>
       {{ $t('common.reset') }}
     </el-button>
-    <el-button v-if="showExport" class="cc-toolbar-item" @click="$emit('export')">
+    <el-button v-if="showExport" class="cc-toolbar-item cc-toolbar-right" @click="$emit('export')">
       <i class="el-icon-download"></i>
       {{ $t('contractLedger.filter.export') }}
     </el-button>

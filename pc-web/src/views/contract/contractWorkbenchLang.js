@@ -16,11 +16,11 @@ export const messages = {
       autoSaveTip: 'Draft saved automatically by clicking "Save Draft"',
       regenerate: 'Regenerate',
       section: {
-        base: '01 Basic Information',
-        target: '02 Related Targets',
-        plan: '03 Fee Composition & Payment Plan',
-        doc: '04 Contract Text',
-        file: '05 Attachments'
+        base: 'Contract Basic Information',
+        target: 'Related Targets',
+        plan: 'Fee Composition & Payment Plan',
+        doc: 'Contract Text',
+        file: 'Attachments'
       },
       field: {
         contractName: 'Contract Name',
@@ -179,11 +179,11 @@ export const messages = {
       autoSaveTip: '点击「保存草稿」可随时保存',
       regenerate: '重新生成',
       section: {
-        base: '01 基本信息',
-        target: '02 关联标的',
-        plan: '03 费用构成与收款计划',
-        doc: '04 合同正文',
-        file: '05 附件'
+        base: '合同基本信息',
+        target: '关联标的',
+        plan: '费用构成与收款计划',
+        doc: '合同正文',
+        file: '附件'
       },
       field: {
         contractName: '合同名称',
@@ -342,11 +342,11 @@ export const messages = {
       autoSaveTip: '點擊「保存草稿」可隨時保存',
       regenerate: '重新生成',
       section: {
-        base: '01 基本信息',
-        target: '02 關聯標的',
-        plan: '03 費用構成與收款計劃',
-        doc: '04 合同正文',
-        file: '05 附件'
+        base: '合同基本信息',
+        target: '關聯標的',
+        plan: '費用構成與收款計劃',
+        doc: '合同正文',
+        file: '附件'
       },
       field: {
         contractName: '合同名稱',

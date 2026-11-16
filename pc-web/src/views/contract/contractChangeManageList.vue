@@ -6,98 +6,85 @@
         <div class="cc-page-subtitle">{{ $t('contractChangeManage.note') }}</div>
       </div>
       <div class="cc-page-actions">
+        <el-input
+          style="width: 220px"
+          v-model="condition.contractName"
+          clearable
+          :placeholder="$t('contractChangeManage.search.contractName')"
+          @keyup.enter.native="handleSearch"
+        />
+        <el-button @click="handleSearch">{{ $t('common.search') }}</el-button>
+        <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
         <el-button type="primary" @click="handleApply">
           {{ $t('contractChangeManage.apply.title') }}
         </el-button>
       </div>
     </div>
 
-    <div class="cc-tabs">
-      <div
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="cc-tab"
-        :class="{ 'is-active': condition.planType === tab.key }"
-        @click="switchTab(tab.key)"
-      >
-        {{ $t(tab.labelKey) }}
-        <span class="cc-tab-count">{{ tab.count }}</span>
+    <div class="cc-change-card">
+      <div class="cc-change-card-head">
+        <div class="cc-tabs">
+          <div
+            v-for="tab in tabs"
+            :key="tab.key"
+            class="cc-tab"
+            :class="{ 'is-active': condition.planType === tab.key }"
+            @click="switchTab(tab.key)"
+          >
+            {{ $t(tab.labelKey) }}
+            <span class="cc-tab-count">{{ tab.count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-loading="loading" class="cc-change-list">
+        <div v-for="plan in plans" :key="plan.planId" class="cc-change-row">
+          <div class="cc-change-main">
+            <div class="cc-change-tags">
+              <span class="cc-change-kind" :class="kindClass(plan)">{{ kindText(plan) }}</span>
+              <span class="cc-change-no">{{ plan.planId }}</span>
+              <span class="cc-change-state" :class="stateClass(plan.state)">{{ plan.stateName || '-' }}</span>
+            </div>
+            <p class="cc-change-name">{{ plan.contractName }}</p>
+            <p class="cc-change-sub">
+              {{ plan.contractCode }}
+              <span class="cc-change-dot">·</span>
+              {{ $t('contractChangeManage.table.changePerson') }} {{ plan.changePersonName || '-' }}
+              <span class="cc-change-dot">·</span>
+              {{ formatTime(plan.createTime) }}
+            </p>
+          </div>
+          <div class="cc-change-content">
+            <p class="cc-change-label">{{ $t('contractChangeManage.content') }}</p>
+            <p class="cc-change-value">{{ changeContent(plan) }}</p>
+            <p v-if="plan.remark" class="cc-change-reason">{{ plan.remark }}</p>
+          </div>
+          <div class="cc-change-ops">
+            <button type="button" class="cc-change-btn" @click="handleView(plan)">
+              {{ $t('contractChangeManage.op.view') }}
+            </button>
+            <button
+              v-if="String(plan.state) === '11'"
+              type="button"
+              class="cc-change-btn is-primary"
+              @click="handleAudit(plan)"
+            >{{ $t('contractChangeManage.op.audit') }}</button>
+            <button
+              v-if="canDelete(plan)"
+              type="button"
+              class="cc-change-btn is-danger"
+              @click="handleDelete(plan)"
+            >{{ $t('contractChangeManage.op.delete') }}</button>
+          </div>
+        </div>
+        <div v-if="!loading && !plans.length" class="cc-empty">{{ $t('contractChangeManage.empty') }}</div>
+      </div>
+
+      <div class="cc-change-foot">
+        <span>{{ $t('contractChangeManage.footNote') }}</span>
+        <span>{{ $t('contractChangeManage.totalCount', { total: page.total }) }}</span>
       </div>
     </div>
-
-    <div class="cc-toolbar">
-      <el-input
-        v-model="condition.contractName"
-        style="width: 240px"
-        clearable
-        :placeholder="$t('contractChangeManage.search.contractName')"
-        @keyup.enter.native="handleSearch"
-      />
-      <el-input
-        v-model="condition.contractCode"
-        style="width: 220px"
-        clearable
-        :placeholder="$t('contractChangeManage.search.contractCode')"
-        @keyup.enter.native="handleSearch"
-      />
-      <el-button type="primary" @click="handleSearch">
-        {{ $t('common.search') }}
-      </el-button>
-      <el-button @click="handleReset">
-        {{ $t('common.reset') }}
-      </el-button>
-    </div>
-
-    <el-table v-loading="loading" :data="plans" border style="width: 100%">
-      <el-table-column :label="$t('contractChangeManage.table.contractName')" min-width="200">
-        <template slot-scope="scope">
-          <div class="cc-cell-code">{{ scope.row.contractCode }}</div>
-          <div class="cc-cell-name">{{ scope.row.contractName }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column :label="$t('contractChangeManage.table.changeType')" align="center" width="120">
-        <template slot-scope="scope">
-          <span class="cc-badge is-info">{{ scope.row.planTypeName || '-' }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column :label="$t('contractChangeManage.after')" min-width="260">
-        <template slot-scope="scope">
-          <span class="cc-change-after">{{ changeContent(scope.row) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column :label="$t('contractChangeManage.table.changePerson')" align="center" width="120">
-        <template slot-scope="scope">{{ scope.row.changePersonName || '-' }}</template>
-      </el-table-column>
-      <el-table-column :label="$t('contractChangeManage.table.applyTime')" align="center" width="170">
-        <template slot-scope="scope">{{ formatTime(scope.row.createTime) }}</template>
-      </el-table-column>
-      <el-table-column :label="$t('contractChangeManage.table.state')" align="center" width="110">
-        <template slot-scope="scope">
-          <span class="cc-badge" :class="stateClass(scope.row.state)">{{ scope.row.stateName || '-' }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column :label="$t('common.operation')" align="center" width="200" fixed="right">
-        <template slot-scope="scope">
-          <el-button type="text" size="mini" @click="handleView(scope.row)">
-            {{ $t('contractChangeManage.op.view') }}
-          </el-button>
-          <el-button
-            v-if="String(scope.row.state) === '11'"
-            type="text"
-            size="mini"
-            @click="handleAudit(scope.row)"
-          >{{ $t('contractChangeManage.op.audit') }}</el-button>
-          <el-button
-            v-if="canDelete(scope.row)"
-            type="text"
-            size="mini"
-            @click="handleDelete(scope.row)"
-          >{{ $t('contractChangeManage.op.delete') }}</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <div v-if="!loading && !plans.length" class="cc-empty">{{ $t('contractChangeManage.empty') }}</div>
 
     <el-pagination
       class="cc-pagination"
@@ -206,6 +193,29 @@ export default {
       }
       return 'is-info'
     },
+    kindText(plan) {
+      const planType = String(plan.planType)
+      if (planType === PLAN_TYPE.MAIN_BODY) {
+        return this.$t('contractChangeManage.tabs.mainBody')
+      }
+      if (planType === PLAN_TYPE.LEASE) {
+        return this.$t('contractChangeManage.tabs.lease')
+      }
+      if (planType === PLAN_TYPE.ASSETS) {
+        return this.$t('contractChangeManage.tabs.assets')
+      }
+      return plan.planTypeName || '-'
+    },
+    kindClass(plan) {
+      const planType = String(plan.planType)
+      if (planType === PLAN_TYPE.MAIN_BODY) {
+        return 'is-primary'
+      }
+      if (planType === PLAN_TYPE.LEASE) {
+        return 'is-warning'
+      }
+      return 'is-success'
+    },
     canDelete(row) {
       const state = String(row.state)
       return state === '10' || state === '11'
@@ -311,19 +321,210 @@ export default {
 
 <style lang="scss" scoped>
 .contract-change-center {
-  .cc-cell-code {
-    font-weight: 600;
+  .cc-change-card {
+    background: #fff;
+    border: 1px solid #ebeef5;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .cc-change-card-head {
+    padding: 8px 20px 0;
+    border-bottom: 1px solid #f2f3f5;
+
+    .cc-tabs {
+      margin-bottom: 0;
+      border-bottom: none;
+    }
+  }
+
+  .cc-change-list {
+    min-height: 120px;
+  }
+
+  .cc-change-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f5f6f8;
+    transition: background-color .2s;
+
+    &:hover {
+      background: #fafbfc;
+    }
+  }
+
+  .cc-change-main {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .cc-change-tags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .cc-change-kind {
+    height: 18px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+
+    &.is-primary {
+      color: #4f46e5;
+      background: #eef2ff;
+    }
+
+    &.is-warning {
+      color: #e6a23c;
+      background: #fdf6ec;
+    }
+
+    &.is-success {
+      color: #67c23a;
+      background: #f0f9eb;
+    }
+  }
+
+  .cc-change-no {
+    font-size: 11px;
+    color: #909399;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cc-change-state {
+    height: 18px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    font-size: 10px;
+
+    &.is-warning {
+      color: #e6a23c;
+      background: #fdf6ec;
+    }
+
+    &.is-success {
+      color: #67c23a;
+      background: #f0f9eb;
+    }
+
+    &.is-danger {
+      color: #f56c6c;
+      background: #fef0f0;
+    }
+
+    &.is-info {
+      color: #909399;
+      background: #f4f4f5;
+    }
+  }
+
+  .cc-change-name {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 20px;
     color: #303133;
   }
 
-  .cc-cell-name {
-    font-size: 12px;
-    color: #606266;
+  .cc-change-sub {
+    margin: 2px 0 0;
+    font-size: 11px;
+    line-height: 16px;
+    color: #909399;
+
+    .cc-change-dot {
+      margin: 0 6px;
+      color: #dcdfe6;
+    }
   }
 
-  .cc-change-after {
-    color: #4f46e5;
-    font-weight: 500;
+  .cc-change-content {
+    flex: 1;
+    min-width: 240px;
+  }
+
+  .cc-change-label {
+    margin: 0 0 4px;
+    font-size: 11px;
+    color: #909399;
+  }
+
+  .cc-change-value {
+    display: inline-block;
+    margin: 0;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: #f0f9eb;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: #303133;
+  }
+
+  .cc-change-reason {
+    margin: 6px 0 0;
+    font-size: 11px;
+    line-height: 16px;
+    color: #909399;
+  }
+
+  .cc-change-ops {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    margin-left: auto;
+  }
+
+  .cc-change-btn {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 12px;
+    color: #606266;
+    cursor: pointer;
+    transition: color .2s, border-color .2s, background-color .2s;
+
+    &:hover {
+      border-color: #c7d2fe;
+      color: #4f46e5;
+    }
+
+    &.is-primary {
+      border-color: #4f46e5;
+      background: #4f46e5;
+      color: #fff;
+
+      &:hover {
+        border-color: #6366f1;
+        background: #6366f1;
+        color: #fff;
+      }
+    }
+
+    &.is-danger:hover {
+      border-color: #fbc4c4;
+      color: #f56c6c;
+    }
+  }
+
+  .cc-change-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid #f2f3f5;
+    font-size: 12px;
+    color: #909399;
   }
 }
+
 </style>

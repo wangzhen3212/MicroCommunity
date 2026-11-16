@@ -14,28 +14,37 @@
           @keyup.enter.native="handleSearch"
         />
         <el-button @click="openTypeDrawer">{{ $t('contractTemplate.typeMaintain') }}</el-button>
-        <el-button type="primary" @click="openEditor()">{{ $t('contractTemplate.newTemplate') }}</el-button>
+        <el-button @click="handleImportWord">
+          <i class="el-icon-document-copy"></i>
+          <span>{{ $t('contractTemplate.editor.pasteWord') }}</span>
+        </el-button>
+        <el-button type="primary" @click="openEditor()">
+          <i class="el-icon-plus"></i>
+          <span>{{ $t('contractTemplate.newTemplate') }}</span>
+        </el-button>
       </div>
     </div>
 
-    <div class="cc-tip-bar">
-      <div class="cc-tip-icon">
-        <i class="el-icon-document"></i>
+    <div class="cc-tpl-bar">
+      <div class="cc-tabs is-segment">
+        <div
+          v-for="tab in categoryTabs"
+          :key="tab.key"
+          class="cc-tab"
+          :class="{ 'is-active': conditions.category === tab.key }"
+          @click="switchCategory(tab.key)"
+        >
+          {{ $t(tab.labelKey) }}
+          <span class="cc-tab-count">{{ tab.count }}</span>
+        </div>
       </div>
-      <p class="cc-tip-text">{{ $t('contractTemplate.variableTip') }}</p>
-    </div>
-
-    <div class="cc-tabs is-pill">
-      <div
-        v-for="tab in categoryTabs"
-        :key="tab.key"
-        class="cc-tab"
-        :class="{ 'is-active': conditions.category === tab.key }"
-        @click="switchCategory(tab.key)"
-      >
-        {{ $t(tab.labelKey) }}
-        <span class="cc-tab-count">{{ tab.count }}</span>
-      </div>
+      <p class="cc-tpl-legend">
+        <span class="cc-tpl-legend-label">{{ $t('contractTemplate.variableLabel') }}</span>
+        <span v-for="item in templateVariables" :key="item.token" class="cc-var-item">
+          <code class="cc-var-chip">{{ item.token }}</code>
+          <em class="cc-var-name">{{ $t('contractTemplate.variables.' + item.key) }}</em>
+        </span>
+      </p>
     </div>
 
     <div class="cc-card-grid">
@@ -51,6 +60,7 @@
             :template="item"
             @edit="openEditor"
             @preview="openPreview"
+            @use="handleUseTemplate"
             @copy="copyTemplate"
             @disable="disableTemplate"
           />
@@ -143,11 +153,6 @@
       </div>
     </el-drawer>
 
-    <contract-template-editor
-      ref="templateEditor"
-      :contract-types="contractTypes"
-      @success="handleSearch"
-    />
     <contract-template-preview ref="templatePreview" />
     <add-template-view ref="addTemplateView" @success="handleSearch" />
     <add-contract-type ref="addContractType" @success="handleSuccess" />
@@ -158,7 +163,6 @@
 
 <script>
 import ContractTemplateCard from '@/components/contract/contractTemplateCard'
-import ContractTemplateEditor from '@/components/contract/contractTemplateEditor'
 import ContractTemplatePreview from '@/components/contract/contractTemplatePreview'
 import AddTemplateView from '@/components/contract/addTemplateView'
 import AddContractType from '@/components/contract/addContractType'
@@ -177,7 +181,6 @@ export default {
   name: 'ContractTypeManageList',
   components: {
     ContractTemplateCard,
-    ContractTemplateEditor,
     ContractTemplatePreview,
     AddTemplateView,
     AddContractType,
@@ -213,6 +216,15 @@ export default {
     }
   },
   computed: {
+    templateVariables() {
+      return [
+        { token: '{{amount}}', key: 'amount' },
+        { token: '{{startTime}}', key: 'startTime' },
+        { token: '{{endTime}}', key: 'endTime' },
+        { token: '{{partyB}}', key: 'partyB' },
+        { token: '{{houses}}', key: 'houses' }
+      ]
+    },
     categoryTabs() {
       return [
         { key: '', labelKey: 'contractCategory.all', count: this.allTemplates.length },
@@ -274,16 +286,26 @@ export default {
       this.page.current = current
       this.loadTemplates()
     },
+    handleImportWord() {
+      this.$router.push({
+        path: '/views/contract/templateEditor',
+        query: { paste: '1' }
+      })
+    },
     openEditor(template) {
       if (!template || !template.templateId) {
-        this.$refs.templateEditor.open(null)
+        this.$router.push({ path: '/views/contract/templateEditor' })
         return
       }
-      queryContractTypeTemplate({ templateId: template.templateId, page: 1, row: 1 }).then(list => {
-        const detail = (list || [])[0] || template
-        this.$refs.templateEditor.open({ ...template, ...detail })
-      }).catch(() => {
-        this.$refs.templateEditor.open(template)
+      this.$router.push({
+        path: '/views/contract/templateEditor',
+        query: { templateId: template.templateId }
+      })
+    },
+    handleUseTemplate(template) {
+      this.$router.push({
+        path: '/views/contract/addContract',
+        query: { templateId: template.templateId }
       })
     },
     openPreview(template) {
@@ -295,20 +317,9 @@ export default {
       })
     },
     copyTemplate(template) {
-      queryContractTypeTemplate({ templateId: template.templateId, page: 1, row: 1 }).then(list => {
-        const detail = (list || [])[0] || template
-        this.$refs.templateEditor.open({
-          templateId: '',
-          templateName: detail.templateName + ' (副本)',
-          contractTypeId: detail.contractTypeId,
-          category: detail.category,
-          templateVersion: detail.templateVersion,
-          templateDesc: detail.templateDesc,
-          context: detail.context,
-          sourceType: detail.sourceType
-        })
-      }).catch(error => {
-        this.$message.error(error.message)
+      this.$router.push({
+        path: '/views/contract/templateEditor',
+        query: { copyFrom: template.templateId }
       })
     },
     disableTemplate(template) {
@@ -398,5 +409,55 @@ export default {
 <style lang="scss" scoped>
 .cc-type-drawer {
   padding: 0 4px 8px;
+}
+
+.cc-tpl-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .cc-tabs {
+    margin-bottom: 0;
+  }
+
+  .cc-tpl-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 18px;
+    color: #9ca3af;
+    text-align: right;
+  }
+
+  .cc-tpl-legend-label {
+    margin-right: 2px;
+  }
+
+  .cc-var-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .cc-var-chip {
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: #eef0f4;
+    color: #606266;
+    font-size: 11px;
+    font-family: Consolas, Monaco, monospace;
+  }
+
+  .cc-var-name {
+    font-style: normal;
+    font-size: 11px;
+    color: #b1b3b8;
+  }
 }
 </style>

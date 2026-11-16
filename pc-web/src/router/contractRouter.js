@@ -6,6 +6,12 @@ export default [
         component: () => import('@/views/contract/contractTypeManageList.vue')
     },
     {
+        path: '/views/contract/templateEditor',
+        meta: { title: '合同模板编辑' },
+        name: '/views/contract/templateEditor',
+        component: () => import('@/views/contract/contractTemplateEditorList.vue')
+    },
+    {
         path: '/views/contract/contractTypeSpecManage',
         name: '/views/contract/contractTypeSpecManage',
         component: () => import('@/views/contract/contractTypeSpecManageList.vue')

@@ -8,142 +8,157 @@
       <div class="cc-page-actions">
         <el-button type="primary" @click="createContract">
           <i class="el-icon-plus"></i>
-          {{ $t('contractWorkbench.titleNew') }}
+          <span>{{ $t('contractWorkbench.titleNew') }}</span>
         </el-button>
       </div>
     </div>
 
     <contract-ledger-stat :statistics="statistics" @filter-auditing="filterAuditing" />
 
-    <div class="cc-tabs">
-      <div
-        v-for="tab in categoryTabs"
-        :key="tab.key"
-        class="cc-tab"
-        :class="{ 'is-active': conditions.category === tab.key }"
-        @click="switchCategory(tab.key)"
+    <div class="cc-surface">
+      <div class="cc-tabs">
+        <div
+          v-for="tab in categoryTabs"
+          :key="tab.key"
+          class="cc-tab"
+          :class="{ 'is-active': conditions.category === tab.key }"
+          @click="switchCategory(tab.key)"
+        >
+          {{ $t(tab.labelKey) }}
+          <span class="cc-tab-count">{{ tab.count }}</span>
+        </div>
+      </div>
+
+      <contract-filter-bar
+        :value="conditions"
+        :partyas="partyas"
+        @search="handleSearch"
+        @reset="handleReset"
+        @export="handleExport"
+      />
+
+      <contract-bulk-bar
+        :count="selection.length"
+        @submit="handleBatchSubmit"
+        @export="handleExport"
+        @stop="handleBatchStop"
+        @clear="clearSelection"
+      />
+
+      <el-table
+        ref="table"
+        :data="contracts"
+        v-loading="loading"
+        :empty-text="$t('contractLedger.empty')"
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
       >
-        {{ $t(tab.labelKey) }}
-        <span class="cc-tab-count">{{ tab.count }}</span>
+        <el-table-column type="selection" width="46" />
+        <el-table-column :label="$t('contractLedger.table.code')" min-width="240">
+          <template slot-scope="scope">
+            <div class="cc-cell-title-row">
+              <span class="cc-cell-dot" :class="'is-' + categoryKey(scope.row)"></span>
+              <span class="cc-cell-title">{{ scope.row.contractName }}</span>
+              <span v-if="scope.row.changed === '1'" class="cc-cell-flag">{{ $t('contractLedger.filter.changedYes') }}</span>
+            </div>
+            <div class="cc-cell-meta-row">
+              <span class="cc-cell-code">{{ scope.row.contractCode }}</span>
+              <span class="cc-cell-cat" :class="'is-' + categoryKey(scope.row)">{{ categoryText(scope.row) }}</span>
+              <span v-if="scope.row.contractParentId" class="cc-cell-cat is-info">{{ $t('contractLedger.op.renew') }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('contractLedger.table.partya')" min-width="150">
+          <template slot-scope="scope">{{ scope.row.partyA || '-' }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('contractLedger.table.partyB')" min-width="150">
+          <template slot-scope="scope">{{ scope.row.partyB || '-' }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('contractLedger.table.amount')" align="right" width="130">
+          <template slot-scope="scope">{{ formatAmount(scope.row.amount) }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('contractLedger.table.term')" min-width="210">
+          <template slot-scope="scope">
+            <div class="cc-cell-term">{{ formatTerm(scope.row.startTime, scope.row.endTime) }}</div>
+            <div class="cc-cell-progress">
+              <div class="cc-cell-progress-bar">
+                <div
+                  class="cc-cell-progress-inner"
+                  :class="progressClass(scope.row)"
+                  :style="{ width: progressPercent(scope.row) + '%' }"
+                ></div>
+              </div>
+              <span
+                v-if="daysOf(scope.row) !== null"
+                class="cc-cell-days"
+                :class="'is-' + daysLeftType(daysOf(scope.row))"
+              >{{ daysText(daysOf(scope.row)) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column :label="$t('contractLedger.table.state')" align="center" width="150">
+          <template slot-scope="scope">
+            <contract-status-tag
+              :state="scope.row.state"
+              :state-name="scope.row.stateName"
+              :category="scope.row.category"
+              show-category
+            />
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('contractLedger.table.operation')" align="right" width="220" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="mini" @click="openDetail(scope.row)">{{ $t('contractLedger.op.detail') }}</el-button>
+            <el-button
+              v-if="canEdit(scope.row)"
+              type="text"
+              size="mini"
+              @click="editContract(scope.row)"
+            >{{ $t('contractLedger.op.edit') }}</el-button>
+            <el-button
+              v-if="String(scope.row.category) !== '1'"
+              type="text"
+              size="mini"
+              @click="openPerformance(scope.row)"
+            >{{ $t('contractLedger.op.performance') }}</el-button>
+            <el-button
+              v-if="String(scope.row.state) === CONTRACT_STATE.AUDIT"
+              type="text"
+              size="mini"
+              @click="goAudit(scope.row)"
+            >{{ $t('contractLedger.op.audit') }}</el-button>
+            <el-button type="text" size="mini" @click="printContract(scope.row)">{{ $t('contractLedger.op.print') }}</el-button>
+            <el-button
+              v-if="canStop(scope.row)"
+              type="text"
+              size="mini"
+              @click="stopContract(scope.row)"
+            >{{ $t('contractLedger.op.stop') }}</el-button>
+            <el-button
+              v-if="canEdit(scope.row)"
+              type="text"
+              size="mini"
+              @click="deleteContractMethod(scope.row)"
+            >{{ $t('contractLedger.op.delete') }}</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="cc-surface-foot">
+        <el-pagination
+          class="cc-pagination"
+          :current-page="page.current"
+          :page-sizes="[10, 20, 30, 50]"
+          :page-size="page.size"
+          :total="page.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
       </div>
     </div>
 
-    <contract-filter-bar
-      :value="conditions"
-      :partyas="partyas"
-      @search="handleSearch"
-      @reset="handleReset"
-      @export="handleExport"
-    />
-
-    <contract-bulk-bar
-      :count="selection.length"
-      @submit="handleBatchSubmit"
-      @export="handleExport"
-      @stop="handleBatchStop"
-      @clear="clearSelection"
-    />
-
-    <el-table
-      ref="table"
-      :data="contracts"
-      border
-      v-loading="loading"
-      style="width: 100%; margin-top: 12px"
-      @selection-change="handleSelectionChange"
-    >
-      <el-table-column type="selection" width="46" />
-      <el-table-column :label="$t('contractLedger.table.code')" min-width="200">
-        <template slot-scope="scope">
-          <div class="cc-cell-code">
-            <span>{{ scope.row.contractCode }}</span>
-            <span v-if="scope.row.contractParentId" class="cc-badge is-info">{{ $t('contractLedger.op.renew') }}</span>
-          </div>
-          <div class="cc-cell-name">
-            {{ scope.row.contractName }}
-            <span v-if="scope.row.changed === '1'" class="cc-badge is-warning">{{ $t('contractLedger.filter.changedYes') }}</span>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column :label="$t('contractLedger.table.partya')" min-width="150">
-        <template slot-scope="scope">{{ scope.row.partyA || '-' }}</template>
-      </el-table-column>
-      <el-table-column :label="$t('contractLedger.table.partyB')" min-width="150">
-        <template slot-scope="scope">{{ scope.row.partyB || '-' }}</template>
-      </el-table-column>
-      <el-table-column :label="$t('contractLedger.table.amount')" align="right" width="130">
-        <template slot-scope="scope">{{ formatAmount(scope.row.amount) }}</template>
-      </el-table-column>
-      <el-table-column :label="$t('contractLedger.table.term')" min-width="210">
-        <template slot-scope="scope">
-          <div>{{ formatTerm(scope.row.startTime, scope.row.endTime) }}</div>
-          <span
-            v-if="daysOf(scope.row) !== null"
-            class="cc-badge"
-            :class="'is-' + daysLeftType(daysOf(scope.row))"
-          >{{ daysText(daysOf(scope.row)) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column :label="$t('contractLedger.table.state')" align="center" width="150">
-        <template slot-scope="scope">
-          <contract-status-tag
-            :state="scope.row.state"
-            :state-name="scope.row.stateName"
-            :category="scope.row.category"
-            show-category
-          />
-        </template>
-      </el-table-column>
-      <el-table-column :label="$t('contractLedger.table.operation')" align="center" width="220" fixed="right">
-        <template slot-scope="scope">
-          <el-button type="text" size="mini" @click="openDetail(scope.row)">{{ $t('contractLedger.op.detail') }}</el-button>
-          <el-button
-            v-if="canEdit(scope.row)"
-            type="text"
-            size="mini"
-            @click="editContract(scope.row)"
-          >{{ $t('contractLedger.op.edit') }}</el-button>
-          <el-button
-            v-if="String(scope.row.category) !== '1'"
-            type="text"
-            size="mini"
-            @click="openPerformance(scope.row)"
-          >{{ $t('contractLedger.op.performance') }}</el-button>
-          <el-button
-            v-if="String(scope.row.state) === CONTRACT_STATE.AUDIT"
-            type="text"
-            size="mini"
-            @click="goAudit(scope.row)"
-          >{{ $t('contractLedger.op.audit') }}</el-button>
-          <el-button type="text" size="mini" @click="printContract(scope.row)">{{ $t('contractLedger.op.print') }}</el-button>
-          <el-button
-            v-if="canStop(scope.row)"
-            type="text"
-            size="mini"
-            @click="stopContract(scope.row)"
-          >{{ $t('contractLedger.op.stop') }}</el-button>
-          <el-button
-            v-if="canEdit(scope.row)"
-            type="text"
-            size="mini"
-            @click="deleteContractMethod(scope.row)"
-          >{{ $t('contractLedger.op.delete') }}</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <div v-if="!loading && !contracts.length" class="cc-empty">{{ $t('contractLedger.empty') }}</div>
-
-    <el-pagination
-      class="cc-pagination"
-      :current-page="page.current"
-      :page-sizes="[10, 20, 30, 50]"
-      :page-size="page.size"
-      :total="page.total"
-      layout="total, sizes, prev, pager, next, jumper"
-      @size-change="handleSizeChange"
-      @current-change="handleCurrentChange"
-    />
 
     <contract-detail-drawer
       ref="detailDrawer"
@@ -173,6 +188,7 @@ import {
   queryContractStatistics
 } from '@/api/contract/contractLedgerApi'
 import {
+  CONTRACT_CATEGORY,
   CONTRACT_STATE,
   addMonths,
   daysLeft,
@@ -237,6 +253,41 @@ export default {
     formatAmount,
     formatTerm,
     daysLeftType,
+    categoryKey(row) {
+      const category = String(row.category || '')
+      if (category === CONTRACT_CATEGORY.RENT) {
+        return 'rent'
+      }
+      if (category === CONTRACT_CATEGORY.MAINTAIN) {
+        return 'maintain'
+      }
+      return 'purchase'
+    },
+    categoryText(row) {
+      return this.$t('contractCategory.' + this.categoryKey(row))
+    },
+    progressPercent(row) {
+      const start = new Date(String(row.startTime || '').replace(/-/g, '/')).getTime()
+      const end = new Date(String(row.endTime || '').replace(/-/g, '/')).getTime()
+      if (!start || !end || end <= start) {
+        return 0
+      }
+      const percent = ((Date.now() - start) / (end - start)) * 100
+      if (percent < 0) {
+        return 0
+      }
+      return percent > 100 ? 100 : Math.round(percent)
+    },
+    progressClass(row) {
+      const days = this.daysOf(row)
+      if (days === null) {
+        return 'is-normal'
+      }
+      if (days < 0) {
+        return 'is-expired'
+      }
+      return days <= 30 ? 'is-warning' : 'is-normal'
+    },
     daysOf(row) {
       if (String(row.state) !== CONTRACT_STATE.EFFECTIVE) {
         return null
@@ -490,14 +541,148 @@ export default {
 
 <style lang="scss" scoped>
 .contract-ledger {
-  .cc-cell-code {
-    font-weight: 600;
-    color: #303133;
+  .cc-cell-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
   }
 
-  .cc-cell-name {
+  .cc-cell-dot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+
+    &.is-rent {
+      background: #4f46e5;
+    }
+
+    &.is-purchase {
+      background: #0ea5e9;
+    }
+
+    &.is-maintain {
+      background: #e6a23c;
+    }
+  }
+
+  .cc-cell-title {
+    font-weight: 600;
+    color: #303133;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .cc-cell-flag {
+    flex: none;
+    height: 18px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #0284c7;
+    background: #e0f2fe;
+  }
+
+  .cc-cell-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .cc-cell-code {
+    font-size: 11px;
+    color: #909399;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cc-cell-cat {
+    height: 18px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 10px;
+
+    &.is-rent {
+      color: #4f46e5;
+      background: #eef2ff;
+    }
+
+    &.is-purchase {
+      color: #0ea5e9;
+      background: #e0f2fe;
+    }
+
+    &.is-maintain {
+      color: #e6a23c;
+      background: #fdf6ec;
+    }
+
+    &.is-info {
+      color: #909399;
+      background: #f4f4f5;
+    }
+  }
+
+  .cc-cell-term {
     font-size: 12px;
     color: #606266;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cc-cell-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .cc-cell-progress-bar {
+    flex: 1;
+    min-width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: #f2f3f5;
+    overflow: hidden;
+  }
+
+  .cc-cell-progress-inner {
+    height: 100%;
+    border-radius: 2px;
+
+    &.is-normal {
+      background: #67c23a;
+    }
+
+    &.is-warning {
+      background: #e6a23c;
+    }
+
+    &.is-expired {
+      background: #c0c4cc;
+    }
+  }
+
+  .cc-cell-days {
+    flex: none;
+    font-size: 10px;
+    white-space: nowrap;
+
+    &.is-danger {
+      color: #f56c6c;
+    }
+
+    &.is-warning {
+      color: #e6a23c;
+    }
+
+    &.is-info {
+      color: #909399;
+    }
   }
 }
+
 </style>
