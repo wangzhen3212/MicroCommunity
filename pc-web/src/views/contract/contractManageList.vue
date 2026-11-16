@@ -1,156 +1,208 @@
 <template>
-  <div class="contract-manage-container animated fadeInRight">
-    <el-row :gutter="20">
-      <el-col :span="4" class="left-panel">
-        <el-card class="type-card">
-          <div class="type-list-wrapper">
-            <div class="type-list-item" :class="{ 'selected': selectedType === '' }"
-              @click="switchType('')">
-              {{ $t('contractManage.allTypes') }}
-            </div>
-            <div v-for="(item, index) in contractManageInfo.contractTypes" :key="index"
-              class="type-list-item"
-              :class="{ 'selected': selectedType === item.contractTypeId }"
-              @click="switchType(item.contractTypeId)">
-              {{ item.typeName }}
-            </div>
+  <div class="contract-ledger">
+    <div class="cc-page-head">
+      <div>
+        <div class="cc-page-title">{{ $t('contractLedger.title') }}</div>
+        <div class="cc-page-subtitle">{{ $t('contractLedger.subtitle') }}</div>
+      </div>
+      <div>
+        <el-button type="primary" size="small" @click="createContract">
+          <i class="el-icon-plus"></i>
+          {{ $t('contractWorkbench.titleNew') }}
+        </el-button>
+      </div>
+    </div>
+
+    <contract-ledger-stat :statistics="statistics" @filter-auditing="filterAuditing" />
+
+    <div class="cc-tabs">
+      <div
+        v-for="tab in categoryTabs"
+        :key="tab.key"
+        class="cc-tab"
+        :class="{ 'is-active': conditions.category === tab.key }"
+        @click="switchCategory(tab.key)"
+      >
+        {{ $t(tab.labelKey) }}
+        <span class="cc-tab-count">{{ tab.count }}</span>
+      </div>
+    </div>
+
+    <contract-filter-bar
+      :value="conditions"
+      :partyas="partyas"
+      @search="handleSearch"
+      @reset="handleReset"
+      @export="handleExport"
+    />
+
+    <contract-bulk-bar
+      :count="selection.length"
+      @submit="handleBatchSubmit"
+      @export="handleExport"
+      @stop="handleBatchStop"
+      @clear="clearSelection"
+    />
+
+    <el-table
+      ref="table"
+      :data="contracts"
+      border
+      v-loading="loading"
+      style="width: 100%; margin-top: 12px"
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="46" />
+      <el-table-column :label="$t('contractLedger.table.code')" min-width="200">
+        <template slot-scope="scope">
+          <div class="cc-cell-code">
+            <span>{{ scope.row.contractCode }}</span>
+            <span v-if="scope.row.contractParentId" class="cc-badge is-info">{{ $t('contractLedger.op.renew') }}</span>
           </div>
-        </el-card>
-      </el-col>
-
-      <el-col :span="20" class="right-panel">
-        <el-card class="search-card">
-          <div slot="header" class="flex justify-between">
-            <span>{{ $t('contractManage.search.title') }}</span>
-            <el-button type="text" style="float: right; padding: 3px 0" @click="toggleMoreCondition">
-              {{ moreCondition ? $t('contractManage.search.hide') : $t('contractManage.search.more') }}
-            </el-button>
+          <div class="cc-cell-name">
+            {{ scope.row.contractName }}
+            <span v-if="scope.row.changed === '1'" class="cc-badge is-warning">{{ $t('contractLedger.filter.changedYes') }}</span>
           </div>
-          <el-row :gutter="20">
-            <el-col :span="4">
-              <el-input v-model="contractManageInfo.conditions.contractNameLike"
-                :placeholder="$t('contractManage.contractNamePlaceholder')" clearable />
-            </el-col>
-            <el-col :span="4">
-              <el-input v-model="contractManageInfo.conditions.contractCodeLike"
-                :placeholder="$t('contractManage.contractCodePlaceholder')" clearable />
-            </el-col>
-            <el-col :span="4">
-              <el-date-picker v-model="contractManageInfo.conditions.queryStartTime" type="datetime" value-format="yyyy-MM-dd HH:mm:ss"
-                :placeholder="$t('contractManage.startTimePlaceholder')" style="width:100%" />
-            </el-col>
-            <el-col :span="4">
-              <el-date-picker v-model="contractManageInfo.conditions.queryEndTime" type="datetime" value-format="yyyy-MM-dd HH:mm:ss"
-                :placeholder="$t('contractManage.endTimePlaceholder')" style="width:100%" />
-            </el-col>
-            <el-col :span="4">
-              <el-button type="primary" @click="queryContractMethod">
-                <i class="el-icon-search"></i>
-                {{ $t('common.search') }}
-              </el-button>
-              <el-button @click="resetContractMethod">
-                <i class="el-icon-refresh"></i>
-                {{ $t('common.reset') }}
-              </el-button>
-            </el-col>
-          </el-row>
-          <el-row v-if="moreCondition" :gutter="20" class="margin-top-xs">
-            <el-col :span="4">
-              <el-input v-model="contractManageInfo.conditions.partyBLike"
-                :placeholder="$t('contractManage.partyBPlaceholder')" clearable />
-            </el-col>
-            <el-col :span="4">
-              <el-input v-model="contractManageInfo.conditions.parentContractCodeLike"
-                :placeholder="$t('contractManage.parentContractCodePlaceholder')" clearable />
-            </el-col>
-          </el-row>
-        </el-card>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('contractLedger.table.partya')" min-width="150">
+        <template slot-scope="scope">{{ scope.row.partyA || '-' }}</template>
+      </el-table-column>
+      <el-table-column :label="$t('contractLedger.table.partyB')" min-width="150">
+        <template slot-scope="scope">{{ scope.row.partyB || '-' }}</template>
+      </el-table-column>
+      <el-table-column :label="$t('contractLedger.table.amount')" align="right" width="130">
+        <template slot-scope="scope">{{ formatAmount(scope.row.amount) }}</template>
+      </el-table-column>
+      <el-table-column :label="$t('contractLedger.table.term')" min-width="210">
+        <template slot-scope="scope">
+          <div>{{ formatTerm(scope.row.startTime, scope.row.endTime) }}</div>
+          <span
+            v-if="daysOf(scope.row) !== null"
+            class="cc-badge"
+            :class="'is-' + daysLeftType(daysOf(scope.row))"
+          >{{ daysText(daysOf(scope.row)) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('contractLedger.table.state')" align="center" width="150">
+        <template slot-scope="scope">
+          <contract-status-tag
+            :state="scope.row.state"
+            :state-name="scope.row.stateName"
+            :category="scope.row.category"
+            show-category
+          />
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('contractLedger.table.operation')" align="center" width="220" fixed="right">
+        <template slot-scope="scope">
+          <el-button type="text" size="mini" @click="openDetail(scope.row)">{{ $t('contractLedger.op.detail') }}</el-button>
+          <el-button
+            v-if="canEdit(scope.row)"
+            type="text"
+            size="mini"
+            @click="editContract(scope.row)"
+          >{{ $t('contractLedger.op.edit') }}</el-button>
+          <el-button
+            v-if="String(scope.row.category) !== '1'"
+            type="text"
+            size="mini"
+            @click="openPerformance(scope.row)"
+          >{{ $t('contractLedger.op.performance') }}</el-button>
+          <el-button type="text" size="mini" @click="printContract(scope.row)">{{ $t('contractLedger.op.print') }}</el-button>
+          <el-button
+            v-if="canStop(scope.row)"
+            type="text"
+            size="mini"
+            @click="stopContract(scope.row)"
+          >{{ $t('contractLedger.op.stop') }}</el-button>
+          <el-button
+            v-if="canEdit(scope.row)"
+            type="text"
+            size="mini"
+            @click="deleteContractMethod(scope.row)"
+          >{{ $t('contractLedger.op.delete') }}</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
 
-        <el-card class="table-card">
-          <el-table :data="contractManageInfo.contracts" border style="width: 100%" v-loading="loading">
-            <el-table-column prop="contractName" :label="$t('contractManage.table.contractName')" align="center" />
-            <el-table-column prop="contractCode" :label="$t('contractManage.table.contractCode')" align="center" />
-            <el-table-column prop="parentContractCode" :label="$t('contractManage.table.parentContractCode')" align="center">
-              <template slot-scope="scope">
-                {{ scope.row.parentContractCode || '-' }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="contractTypeName" :label="$t('contractManage.table.contractType')" align="center" />
-            <el-table-column prop="operator" :label="$t('contractManage.table.operator')" align="center">
-              <template slot-scope="scope">
-                {{ scope.row.operator }}({{ scope.row.operatorLink }})
-              </template>
-            </el-table-column>
-            <el-table-column prop="amount" :label="$t('contractManage.table.amount')" align="center" />
-            <el-table-column prop="partyB" :label="$t('contractManage.table.partyB')" align="center">
-              <template slot-scope="scope">
-                {{ scope.row.partyB }}({{ scope.row.bLink }})
-              </template>
-            </el-table-column>
-            <el-table-column :label="$t('contractManage.table.validityPeriod')" align="center">
-              <template slot-scope="scope">
-                {{ scope.row.startTime }}<br />~{{ scope.row.endTime }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="createTime" :label="$t('contractManage.table.createTime')" align="center" />
-            <el-table-column prop="stateName" :label="$t('contractManage.table.status')" align="center" />
-            <el-table-column :label="$t('contractManage.table.operation')" align="center" width="220">
-              <template slot-scope="scope">
-                <el-button-group>
-                  <el-button size="mini" @click="viewContract(scope.row)">
-                    {{ $t('contractManage.operation.view') }}
-                  </el-button>
-                  <el-button size="mini" @click="printContract(scope.row)">
-                    {{ $t('contractManage.operation.print') }}
-                  </el-button>
-                  <el-button size="mini" type="danger" @click="openDeleteContractModel(scope.row)">
-                    {{ $t('contractManage.operation.delete') }}
-                  </el-button>
-                </el-button-group>
-              </template>
-            </el-table-column>
-          </el-table>
+    <div v-if="!loading && !contracts.length" class="cc-empty">{{ $t('contractLedger.empty') }}</div>
 
-          <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange" :current-page="page.current"
-            :page-sizes="[10, 20, 30, 50]" :page-size="page.size" layout="total, sizes, prev, pager, next, jumper"
-            :total="page.total" style="margin-top:20px;text-align:right" />
-        </el-card>
-      </el-col>
-    </el-row>
+    <el-pagination
+      :current-page="page.current"
+      :page-sizes="[10, 20, 30, 50]"
+      :page-size="page.size"
+      :total="page.total"
+      layout="total, sizes, prev, pager, next, jumper"
+      style="margin-top: 16px; text-align: right"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+    />
 
-    <edit-contract ref="editContract" @success="handleSuccess" />
-    <delete-contract ref="deleteContract" @success="handleSuccess" />
+    <contract-detail-drawer
+      ref="detailDrawer"
+      @edit="editContract"
+      @submit="submitContract"
+      @stop="stopContract"
+      @delete="deleteContractMethod"
+      @print="printContract"
+    />
+    <delete-contract ref="deleteContract" @success="refreshAll" />
   </div>
 </template>
 
 <script>
-import { queryContract, queryContractType } from '@/api/contract/contractManageApi'
-import EditContract from '@/components/contract/editContract'
+import ContractLedgerStat from '@/components/contract/contractLedgerStat'
+import ContractFilterBar from '@/components/contract/contractFilterBar'
+import ContractBulkBar from '@/components/contract/contractBulkBar'
+import ContractStatusTag from '@/components/contract/contractStatusTag'
+import ContractDetailDrawer from '@/components/contract/contractDetailDrawer'
 import DeleteContract from '@/components/contract/deleteContract'
+import { queryContract, queryContractType } from '@/api/contract/contractManageApi'
+import { queryContractPartya } from '@/api/contract/contractPartyaApi'
+import {
+  batchStopContract,
+  batchSubmitContract,
+  exportContracts,
+  queryContractStatistics
+} from '@/api/contract/contractLedgerApi'
+import {
+  CONTRACT_STATE,
+  addMonths,
+  daysLeft,
+  daysLeftType,
+  formatAmount,
+  formatDate,
+  formatTerm,
+  saveBase64File
+} from '@/utils/contractUtil'
 
 export default {
   name: 'ContractManageList',
   components: {
-    EditContract,
+    ContractLedgerStat,
+    ContractFilterBar,
+    ContractBulkBar,
+    ContractStatusTag,
+    ContractDetailDrawer,
     DeleteContract
   },
   data() {
     return {
       loading: false,
-      moreCondition: false,
-      selectedType: '',
-      contractManageInfo: {
-        contracts: [],
-        conditions: {
-          contractNameLike: '',
-          contractCodeLike: '',
-          contractType: '',
-          partyBLike: '',
-          queryStartTime: '',
-          queryEndTime: '',
-          parentContractCodeLike: ''
-        },
-        contractTypes: []
+      statistics: {},
+      partyas: [],
+      contractTypes: [],
+      contracts: [],
+      selection: [],
+      conditions: {
+        searchText: '',
+        state: '',
+        partyaId: '',
+        changed: '',
+        category: '',
+        endTimeBegin: '',
+        endTimeEnd: ''
       },
       page: {
         current: 1,
@@ -159,159 +211,325 @@ export default {
       }
     }
   },
+  computed: {
+    categoryTabs() {
+      return [
+        { key: '', labelKey: 'contractCategory.all', count: this.statistics.total || 0 },
+        { key: '1', labelKey: 'contractCategory.rent', count: this.statistics.rentCount || 0 },
+        { key: '2', labelKey: 'contractCategory.purchase', count: this.statistics.purchaseCount || 0 },
+        { key: '3', labelKey: 'contractCategory.maintain', count: this.statistics.maintainCount || 0 }
+      ]
+    }
+  },
   created() {
+    this.loadStatistics()
+    this.loadPartyas()
+    this.loadContractTypes()
     this.listContracts()
-    this.listContractTypes()
   },
   methods: {
-    async listContracts() {
-      try {
-        this.loading = true
-        const params = {
-          page: this.page.current,
-          row: this.page.size,
-          ...this.contractManageInfo.conditions
-        }
-        const { data, total } = await queryContract(params)
-        this.contractManageInfo.contracts = data
-        this.page.total = total
-      } catch (error) {
-        this.$message.error(this.$t('contractManage.fetchError'))
-      } finally {
-        this.loading = false
+    formatAmount,
+    formatTerm,
+    daysLeftType,
+    daysOf(row) {
+      if (String(row.state) !== CONTRACT_STATE.EFFECTIVE) {
+        return null
       }
+      return daysLeft(row.endTime)
     },
-    async listContractTypes() {
-      try {
-        const params = {
-          page: 1,
-          row: 50
-        }
-        const { data } = await queryContractType(params)
-        this.contractManageInfo.contractTypes = data
-      } catch (error) {
-        console.error('获取合同类型失败:', error)
+    daysText(days) {
+      if (days < 0) {
+        return this.$t('contractLedger.daysLeft.expired', { days: Math.abs(days) })
       }
+      return this.$t('contractLedger.daysLeft.remain', { days: days })
     },
-    queryContractMethod() {
-      this.page.current = 1
-      this.listContracts()
+    canEdit(row) {
+      const state = String(row.state)
+      return state === CONTRACT_STATE.DRAFT || state === CONTRACT_STATE.FAIL
     },
-    toggleMoreCondition() {
-      this.moreCondition = !this.moreCondition
+    canStop(row) {
+      const state = String(row.state)
+      return state === CONTRACT_STATE.DRAFT ||
+        state === CONTRACT_STATE.AUDIT ||
+        state === CONTRACT_STATE.EFFECTIVE
     },
-    resetContractMethod() {
-      this.contractManageInfo.conditions = {
-        contractNameLike: '',
-        contractCodeLike: '',
-        contractType: this.selectedType,
-        partyBLike: '',
-        queryStartTime: '',
-        queryEndTime: '',
-        parentContractCodeLike: ''
-      }
-      this.listContracts()
-    },
-    switchType(contractTypeId) {
-      this.selectedType = contractTypeId
-      this.contractManageInfo.conditions.contractType = contractTypeId
-      this.page.current = 1
-      this.listContracts()
-    },
-    handleSizeChange(val) {
-      this.page.size = val
-      this.listContracts()
-    },
-    handleCurrentChange(val) {
-      this.page.current = val
-      this.listContracts()
-    },
-    openContractFee(contract) {
-      this.$router.push({
-        path: '/property/listContractFee',
-        query: {
-          contractId: contract.contractId,
-          contractCode: contract.contractCode
-        }
+    loadStatistics() {
+      queryContractStatistics({}).then(data => {
+        this.statistics = data || {}
+      }).catch(() => {
+        this.$message.error(this.$t('contractLedger.msg.statError'))
       })
     },
-    viewContract(contract) {
+    loadPartyas() {
+      queryContractPartya({ page: 1, row: 200 }).then(res => {
+        this.partyas = res.data || []
+      }).catch(() => {
+        this.partyas = []
+      })
+    },
+    loadContractTypes() {
+      queryContractType({ page: 1, row: 100 }).then(res => {
+        this.contractTypes = res.data || []
+      }).catch(() => {
+        this.contractTypes = []
+      })
+    },
+    buildParams() {
+      const params = {
+        page: this.page.current,
+        row: this.page.size,
+        searchText: this.conditions.searchText,
+        partyaId: this.conditions.partyaId,
+        changed: this.conditions.changed,
+        category: this.conditions.category
+      }
+      const state = this.conditions.state
+      if (state === 'expiring') {
+        params.state = CONTRACT_STATE.EFFECTIVE
+        params.endTimeBegin = formatDate(new Date())
+        params.endTimeEnd = addMonths(formatDate(new Date()), 1)
+      } else if (state === 'expired') {
+        params.state = CONTRACT_STATE.EFFECTIVE
+        params.endTimeEnd = formatDate(new Date(Date.now() - 24 * 3600 * 1000))
+      } else if (state) {
+        params.state = state
+      }
+      return params
+    },
+    listContracts() {
+      this.loading = true
+      queryContract(this.buildParams()).then(res => {
+        this.contracts = res.data || []
+        this.page.total = res.total || 0
+      }).catch(error => {
+        this.contracts = []
+        this.page.total = 0
+        this.$message.error(error.message || this.$t('contractLedger.msg.fetchError'))
+      }).finally(() => {
+        this.loading = false
+      })
+    },
+    handleSearch() {
+      this.page.current = 1
+      this.listContracts()
+    },
+    handleReset() {
+      this.conditions = {
+        searchText: '',
+        state: '',
+        partyaId: '',
+        changed: '',
+        category: this.conditions.category,
+        endTimeBegin: '',
+        endTimeEnd: ''
+      }
+      this.handleSearch()
+    },
+    switchCategory(category) {
+      this.conditions.category = category
+      this.handleSearch()
+    },
+    filterAuditing() {
+      this.conditions.state = CONTRACT_STATE.AUDIT
+      this.handleSearch()
+    },
+    handleSelectionChange(rows) {
+      this.selection = rows
+    },
+    clearSelection() {
+      this.selection = []
+      if (this.$refs.table) {
+        this.$refs.table.clearSelection()
+      }
+    },
+    handleSizeChange(size) {
+      this.page.size = size
+      this.listContracts()
+    },
+    handleCurrentChange(current) {
+      this.page.current = current
+      this.listContracts()
+    },
+    refreshAll() {
+      this.loadStatistics()
+      this.listContracts()
+    },
+    handleExport() {
+      const params = this.buildParams()
+      delete params.page
+      delete params.row
+      if (this.selection.length) {
+        params.contractIds = this.selection.map(item => item.contractId)
+      }
+      exportContracts({ ...params, exportType: 'ledger' }).then(data => {
+        saveBase64File(data.base64, data.fileName)
+        this.$message.success(this.$t('contractLedger.msg.exportSuccess'))
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('contractLedger.msg.exportError'))
+      })
+    },
+    handleBatchSubmit() {
+      if (!this.selection.length) {
+        this.$message.warning(this.$t('contractLedger.msg.noSelection'))
+        return
+      }
+      this.$confirm(this.$t('contractLedger.msg.submitConfirm'), '提示', { type: 'warning' }).then(() => {
+        batchSubmitContract({
+          contractIds: this.selection.map(item => item.contractId)
+        }).then(data => {
+          this.$message.success(this.$t('contractLedger.msg.submitSuccess', {
+            success: data.successCount || 0,
+            fail: data.failCount || 0
+          }))
+          this.notifyFails(data.failList)
+          this.clearSelection()
+          this.refreshAll()
+        }).catch(error => {
+          this.$message.error(error.message)
+        })
+      }).catch(() => {
+      })
+    },
+    handleBatchStop() {
+      if (!this.selection.length) {
+        this.$message.warning(this.$t('contractLedger.msg.noSelection'))
+        return
+      }
+      this.$confirm(this.$t('contractLedger.msg.stopConfirm'), '提示', { type: 'warning' }).then(() => {
+        batchStopContract({
+          contractIds: this.selection.map(item => item.contractId)
+        }).then(data => {
+          this.$message.success(this.$t('contractLedger.msg.stopSuccess', {
+            success: data.successCount || 0,
+            fail: data.failCount || 0
+          }))
+          this.notifyFails(data.failList)
+          this.clearSelection()
+          this.refreshAll()
+        }).catch(error => {
+          this.$message.error(error.message)
+        })
+      }).catch(() => {
+      })
+    },
+    notifyFails(failList) {
+      if (!failList || !failList.length) {
+        return
+      }
+      this.$alert(failList.map(item => item.msg).join('；'), '提示', { type: 'warning' })
+    },
+    submitContract(contract) {
+      batchSubmitContract({ contractIds: [contract.contractId] }).then(data => {
+        this.$message.success(this.$t('contractLedger.msg.submitSuccess', {
+          success: data.successCount || 0,
+          fail: data.failCount || 0
+        }))
+        this.notifyFails(data.failList)
+        this.refreshAll()
+      }).catch(error => {
+        this.$message.error(error.message)
+      })
+    },
+    stopContract(contract) {
+      this.$confirm(this.$t('contractLedger.msg.stopConfirm'), '提示', { type: 'warning' }).then(() => {
+        batchStopContract({ contractIds: [contract.contractId] }).then(data => {
+          this.$message.success(this.$t('contractLedger.msg.stopSuccess', {
+            success: data.successCount || 0,
+            fail: data.failCount || 0
+          }))
+          this.notifyFails(data.failList)
+          this.refreshAll()
+        }).catch(error => {
+          this.$message.error(error.message)
+        })
+      }).catch(() => {
+      })
+    },
+    openDetail(contract) {
+      this.$refs.detailDrawer.open(contract)
+    },
+    createContract() {
+      this.$router.push({ path: '/views/contract/addContract' })
+    },
+    editContract(contract) {
       this.$router.push({
-        path: '/views/contract/contractDetail',
-        query: {
-          contractId: contract.contractId
-        }
+        path: '/views/contract/addContract',
+        query: { contractId: contract.contractId }
+      })
+    },
+    openPerformance(contract) {
+      this.$router.push({
+        path: '/pages/admin/contractPerformance',
+        query: { contractId: contract.contractId }
       })
     },
     printContract(contract) {
       window.open(`/#/views/contract/printContract?contractTypeId=${contract.contractType}&contractId=${contract.contractId}`)
     },
-    openDeleteContractModel(contract) {
+    deleteContractMethod(contract) {
       this.$refs.deleteContract.open(contract)
-    },
-    handleSuccess() {
-      this.listContracts()
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.contract-manage-container {
-  padding: 20px;
+.contract-ledger {
+  padding: 16px;
 
-  .left-panel {
-    .type-card {
-      .type-list-wrapper {
-        max-height: 600px;
-        overflow-y: auto;
+  .cc-page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
 
-        &::-webkit-scrollbar {
-          width: 4px;
-        }
+    .cc-page-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #303133;
+    }
 
-        &::-webkit-scrollbar-thumb {
-          background: #dcdfe6;
-          border-radius: 2px;
-        }
+    .cc-page-subtitle {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #909399;
+    }
+  }
 
-        &::-webkit-scrollbar-track {
-          background: transparent;
-        }
+  .cc-tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #ebeef5;
+    margin-bottom: 12px;
 
-        .type-list-item {
-          padding: 10px;
-          text-align: center;
-          cursor: pointer;
-          border-radius: 4px;
-          margin-bottom: 5px;
-          transition: all 0.3s;
-          font-size: 14px;
-          color: #606266;
+    .cc-tab {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #606266;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
 
-          &:hover {
-            background-color: #f5f7fa;
-          }
+      &.is-active {
+        color: #4f46e5;
+        border-bottom-color: #4f46e5;
+      }
 
-          &.selected {
-            background-color: #409eff;
-            color: white;
-          }
-        }
+      .cc-tab-count {
+        margin-left: 6px;
+        font-size: 12px;
+        color: #909399;
       }
     }
   }
 
-  .right-panel {
-    padding-left: 5px;
+  .cc-cell-code {
+    font-weight: 600;
+    color: #303133;
   }
 
-  .search-card {
-    margin-bottom: 20px;
-  }
-
-  .margin-top-xs {
-    margin-top: 15px;
+  .cc-cell-name {
+    font-size: 12px;
+    color: #606266;
   }
 }
 </style>

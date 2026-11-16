@@ -94,5 +94,11 @@ public class ContractCollectionPlanServiceDaoImpl extends BaseServiceDao impleme
         return Integer.parseInt(businessContractCollectionPlanInfos.get(0).get("count").toString());
     }
 
+    @Override
+    public List<Map> queryContractCollectionPlanStatistics(Map info) {
+        logger.debug("查询收款计划期次统计 入参 info : {}", info);
+        return sqlSessionTemplate.selectList("contractCollectionPlanServiceDaoImpl.queryContractCollectionPlanStatistics", info);
+    }
+
 
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @ClassName IContractCollectionPlanInnerServiceSMO
@@ -50,4 +51,12 @@ public interface IContractCollectionPlanInnerServiceSMO {
      */
     @RequestMapping(value = "/queryContractCollectionPlansCount", method = RequestMethod.POST)
     int queryContractCollectionPlansCount(@RequestBody ContractCollectionPlanDto contractCollectionPlanDto);
+
+    /**
+     * 收款计划期次统计（已付金额/待付金额/逾期节点数/已付期次/总期次/下一节点）
+     *
+     * @param info 查询条件（contractIds / storeId）
+     */
+    @RequestMapping(value = "/queryContractCollectionPlanStatistics", method = RequestMethod.POST)
+    List<Map> queryContractCollectionPlanStatistics(@RequestBody Map info);
 }

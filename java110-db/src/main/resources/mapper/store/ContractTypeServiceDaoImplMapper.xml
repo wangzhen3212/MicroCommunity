@@ -5,14 +5,15 @@
 
     <!-- 保存合同类型信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractTypeInfo" parameterType="Map">
-        insert into contract_type(audit, type_name, remark, store_id, contract_type_id)
-        values (#{audit}, #{typeName}, #{remark}, #{storeId}, #{contractTypeId})
+        insert into contract_type(audit, type_name, category, remark, store_id, contract_type_id)
+        values (#{audit}, #{typeName}, ifnull(#{category},'2'), #{remark}, #{storeId}, #{contractTypeId})
     </insert>
 
     <!-- 查询合同类型信息 add by wuxw 2018-07-03 -->
     <select id="getContractTypeInfo" parameterType="Map" resultType="Map">
         select t.audit,t.type_name,t.type_name typeName,t.remark,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id
-        storeId,t.contract_type_id,t.contract_type_id contractTypeId,td.`name` auditName,t.create_time createTime
+        storeId,t.contract_type_id,t.contract_type_id contractTypeId,td.`name` auditName,t.create_time createTime,
+        ifnull(t.category,'2') category
         from contract_type t
         LEFT JOIN t_dict td on td.table_name = 'contract_type' and td.table_columns = 'audit' and t.audit = td.status_cd
         where 1 =1
@@ -21,6 +22,9 @@
         </if>
         <if test="typeName !=null and typeName != ''">
             and t.type_name like concat('%',#{typeName},'%')
+        </if>
+        <if test="category !=null and category != ''">
+            and ifnull(t.category,'2') = #{category}
         </if>
         <if test="remark !=null and remark != ''">
             and t.remark= #{remark}
@@ -55,6 +59,9 @@
         <if test="remark !=null and remark != ''">
             , t.remark= #{remark}
         </if>
+        <if test="category !=null and category != ''">
+            , t.category= #{category}
+        </if>
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
@@ -74,6 +81,9 @@
         </if>
         <if test="typeName !=null and typeName != ''">
             and t.type_name like concat('%',#{typeName},'%')
+        </if>
+        <if test="category !=null and category != ''">
+            and ifnull(t.category,'2') = #{category}
         </if>
         <if test="remark !=null and remark != ''">
             and t.remark= #{remark}

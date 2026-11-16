@@ -13,18 +13,16 @@
                 <el-form-item :label="$t('roomCreatePayFee.feeType')">
                   <el-select v-model="roomCreatePayFeeInfo.feeTypeCd" @change="changeFeeTypeCd" style="width:100%"
                     :placeholder="$t('roomCreatePayFee.selectFeeType')">
-                    <template v-for="(item, index) in roomCreatePayFeeInfo.feeTypeCds">
-                      <el-option :key="index" :label="item.name" :value="item.statusCd"
-                        v-if="item.statusCd != '888800010017'">
-                      </el-option>
-                    </template>
+                    <el-option v-for="(item, index) in roomCreatePayFeeInfo.feeTypeCds" :key="index"
+                      :label="item.name" :value="item.statusCd"></el-option>
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item :label="$t('roomCreatePayFee.feeItem')">
                   <el-select v-model="roomCreatePayFeeInfo.configId" @change="roomCreatePayFeeIfOnceFee"
-                    style="width:100%" :placeholder="$t('roomCreatePayFee.selectFeeItem')">
+                    style="width:100%" :placeholder="$t('roomCreatePayFee.selectFeeItem')"
+                    :no-data-text="$t('roomCreatePayFee.feeItemEmptyTip')">
                     <template v-for="(item, index) in roomCreatePayFeeInfo.feeConfigs">
                       <el-option :key="index" :label="item.feeName" :value="item.configId">
                       </el-option>
@@ -156,6 +154,7 @@ import {
   saveRoomCreatePayFee
 } from '@/api/fee/roomCreatePayFeeApi'
 import { dateFormat, addMonth } from '@/utils/dateUtil'
+import { filterFeeConfigsByFormula } from '@/utils/feeUtil'
 
 export default {
   name: 'RoomCreatePayFeeList',
@@ -198,9 +197,7 @@ export default {
     async loadFeeTypeCds() {
       try {
         const data = await getDict('pay_fee_config', 'fee_type_cd')
-        this.roomCreatePayFeeInfo.feeTypeCds = data.filter(item =>
-          item.statusCd !== "888800010015" && item.statusCd !== "888800010016"
-        )
+        this.roomCreatePayFeeInfo.feeTypeCds = data || []
       } catch (error) {
         console.error('Failed to load fee types:', error)
       }
@@ -235,7 +232,7 @@ export default {
           valid: '1'
         }
         const { feeConfigs } = await listFeeConfigs(params)
-        this.roomCreatePayFeeInfo.feeConfigs = feeConfigs
+        this.roomCreatePayFeeInfo.feeConfigs = filterFeeConfigsByFormula(feeConfigs)
       } catch (error) {
         console.error('Failed to load fee configs:', error)
       }

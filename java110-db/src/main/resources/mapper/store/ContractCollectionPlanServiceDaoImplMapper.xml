@@ -8,9 +8,11 @@
     <!-- 保存合同收款计划信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractCollectionPlanInfo" parameterType="Map">
         insert into contract_collection_plan(
-        contract_id,fee_name,plan_name,plan_id,remark,store_id,fee_id
+        contract_id,fee_name,plan_name,plan_id,remark,store_id,fee_id,
+        plan_seq,plan_time,plan_amount,ratio,pay_state,pay_time,trigger_desc,fee_type
         ) values (
-        #{contractId},#{feeName},#{planName},#{planId},#{remark},#{storeId},#{feeId}
+        #{contractId},#{feeName},#{planName},#{planId},#{remark},#{storeId},#{feeId},
+        #{planSeq},#{planTime},#{planAmount},#{ratio},ifnull(#{payState},'0'),#{payTime},#{triggerDesc},#{feeType}
         )
     </insert>
 
@@ -19,11 +21,20 @@
     <select id="getContractCollectionPlanInfo" parameterType="Map" resultType="Map">
         select t.contract_id,t.contract_id contractId,t.fee_name,t.fee_name feeName,t.plan_name,t.plan_name
         planName,t.plan_id,t.plan_id planId,t.remark,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id
-        storeId,t.fee_id,t.fee_id feeId
+        storeId,t.fee_id,t.fee_id feeId,
+        t.plan_seq planSeq, t.plan_time planTime, t.plan_amount planAmount, t.ratio ratio,
+        case when ifnull(t.pay_state,'0') = '0' and t.plan_time &lt; now() then '2' else ifnull(t.pay_state,'0') end payState, t.pay_time payTime, t.trigger_desc triggerDesc, t.fee_type feeType,
+        t.create_time createTime
         from contract_collection_plan t
         where 1 =1
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
+        </if>
+        <if test="contractIds !=null">
+            and t.contract_id in
+            <foreach collection="contractIds" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="feeName !=null and feeName != ''">
             and t.fee_name= #{feeName}
@@ -46,7 +57,22 @@
         <if test="feeId !=null and feeId != ''">
             and t.fee_id= #{feeId}
         </if>
-        order by t.create_time desc
+        <if test="payState !=null and payState != ''">
+            and ifnull(t.pay_state,'0') = #{payState}
+        </if>
+        <if test="payStates !=null">
+            and ifnull(t.pay_state,'0') in
+            <foreach collection="payStates" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="planTimeBegin !=null and planTimeBegin != ''">
+            and t.plan_time &gt;= #{planTimeBegin}
+        </if>
+        <if test="planTimeEnd !=null and planTimeEnd != ''">
+            and t.plan_time &lt;= #{planTimeEnd}
+        </if>
+        order by t.plan_seq asc, t.create_time asc
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
         </if>
@@ -78,9 +104,42 @@
         <if test="feeId !=null and feeId != ''">
             , t.fee_id= #{feeId}
         </if>
+        <if test="planSeq !=null and planSeq != ''">
+            , t.plan_seq= #{planSeq}
+        </if>
+        <if test="planTime !=null and planTime != ''">
+            , t.plan_time= #{planTime}
+        </if>
+        <if test="planAmount !=null and planAmount != ''">
+            , t.plan_amount= #{planAmount}
+        </if>
+        <if test="ratio !=null and ratio != ''">
+            , t.ratio= #{ratio}
+        </if>
+        <if test="payState !=null and payState != ''">
+            , t.pay_state= #{payState}
+        </if>
+        <if test='payState == "0"'>
+            , t.pay_time= null
+        </if>
+        <if test="payTime !=null and payTime != ''">
+            , t.pay_time= #{payTime}
+        </if>
+        <if test="clearPayTime !=null and clearPayTime != ''">
+            , t.pay_time= null
+        </if>
+        <if test="triggerDesc !=null and triggerDesc != ''">
+            , t.trigger_desc= #{triggerDesc}
+        </if>
+        <if test="feeType !=null and feeType != ''">
+            , t.fee_type= #{feeType}
+        </if>
         where 1=1
         <if test="planId !=null and planId != ''">
             and t.plan_id= #{planId}
+        </if>
+        <if test="contractId !=null and contractId != ''">
+            and t.contract_id= #{contractId}
         </if>
 
     </update>
@@ -92,6 +151,12 @@
         where 1 =1
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
+        </if>
+        <if test="contractIds !=null">
+            and t.contract_id in
+            <foreach collection="contractIds" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="feeName !=null and feeName != ''">
             and t.fee_name= #{feeName}
@@ -114,8 +179,38 @@
         <if test="feeId !=null and feeId != ''">
             and t.fee_id= #{feeId}
         </if>
+        <if test="payState !=null and payState != ''">
+            and ifnull(t.pay_state,'0') = #{payState}
+        </if>
 
 
+    </select>
+
+    <!-- 收款计划期次统计（履约进度） -->
+    <select id="queryContractCollectionPlanStatistics" parameterType="Map" resultType="Map">
+        select p.contract_id contractId,
+        ifnull(sum(case when p.pay_state = '1' then p.plan_amount else 0 end), 0) paidAmount,
+        ifnull(sum(case when ifnull(p.pay_state, '0') &lt;&gt; '1' then p.plan_amount else 0 end), 0) unpaidAmount,
+        ifnull(sum(case when p.pay_state = '2' or (ifnull(p.pay_state,'0') = '0' and p.plan_time &lt; now()) then 1 else 0 end), 0) overdueCount,
+        ifnull(sum(case when p.pay_state = '1' then 1 else 0 end), 0) paidCount,
+        count(p.plan_id) planCount,
+        ifnull(sum(p.plan_amount), 0) totalAmount,
+        min(case when ifnull(p.pay_state, '0') &lt;&gt; '1' then p.plan_time end) nextPlanTime
+        from contract_collection_plan p
+        where p.status_cd = '0'
+        <if test="contractId != null and contractId != ''">
+            and p.contract_id = #{contractId}
+        </if>
+        <if test="contractIds != null">
+            and p.contract_id in
+            <foreach collection="contractIds" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="storeId != null and storeId != ''">
+            and p.store_id = #{storeId}
+        </if>
+        group by p.contract_id
     </select>
 
 </mapper>

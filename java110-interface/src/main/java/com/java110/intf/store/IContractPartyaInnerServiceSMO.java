@@ -50,4 +50,10 @@ public interface IContractPartyaInnerServiceSMO {
      */
     @RequestMapping(value = "/queryContractPartyasCount", method = RequestMethod.POST)
     int queryContractPartyasCount(@RequestBody ContractPartyaDto contractPartyaDto);
+
+    /**
+     * 清除其它默认主体（设置默认主体前调用，保证唯一性）
+     */
+    @RequestMapping(value = "/clearDefaultContractPartya", method = RequestMethod.POST)
+    int clearDefaultContractPartya(@RequestBody ContractPartyaPo contractPartyaPo);
 }

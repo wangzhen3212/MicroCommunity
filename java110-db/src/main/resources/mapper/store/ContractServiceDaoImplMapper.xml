@@ -9,12 +9,12 @@
                              party_a, b_link, party_b,
                              contract_id, obj_id, contract_name, start_time, end_time, state, contract_code, obj_type,
                              operator_link, contract_parent_id,
-                             obj_name, obj_person_name, obj_person_id, start_user_id)
+                             obj_name, obj_person_name, obj_person_id, start_user_id, partya_id, template_id, pay_mode)
         values (#{aLink}, #{aContacts}, #{amount}, #{contractType}, #{storeId}, #{operator}, #{signingTime},
                 #{bContacts}, #{partyA}, #{bLink}, #{partyB},
                 #{contractId}, #{objId}, #{contractName}, #{startTime}, #{endTime}, #{state}, #{contractCode},
                 #{objType}, #{operatorLink}, #{contractParentId},
-                #{objName}, #{objPersonName}, #{objPersonId}, #{startUserId})
+                #{objName}, #{objPersonName}, #{objPersonId}, #{startUserId}, #{partyaId}, #{templateId}, #{payMode})
     </insert>
 
     <!-- 查询合同管理信息 add by wuxw 2018-07-03 -->
@@ -29,7 +29,8 @@
         objType,t.operator_link,t.operator_link operatorLink,ct.type_name contractTypeName,ct.audit,td.`name`
         stateName,t.state_desc stateDesc,t.contract_parent_id contractParentId,tt.contract_code parentContractCode,
         tt.contract_name parentContractName,t.obj_name objName, t.obj_person_name objPersonName, t.obj_person_id
-        objPersonId,t.start_user_id startUserId,t.create_time createTime
+        objPersonId,t.start_user_id startUserId,t.create_time createTime,
+        t.partya_id partyaId, t.template_id templateId, t.pay_mode payMode, ifnull(ct.category, '2') category
         from contract t
         LEFT JOIN contract_type ct on t.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
         t.store_id
@@ -136,6 +137,39 @@
         <if test="parentContractCodeLike !=null and parentContractCodeLike != ''">
             and tt.contract_code like concat('%',#{parentContractCodeLike},'%')
         </if>
+        <if test="partyaId !=null and partyaId != ''">
+            and t.partya_id = #{partyaId}
+        </if>
+        <if test="category !=null and category != ''">
+            and ifnull(ct.category, '2') = #{category}
+        </if>
+        <if test="categories !=null">
+            and ifnull(ct.category, '2') in
+            <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="payMode !=null and payMode != ''">
+            and t.pay_mode = #{payMode}
+        </if>
+        <if test='changed != null and changed == "1"'>
+            and exists (select 1 from contract_change_plan cp where cp.contract_id = t.contract_id and cp.status_cd = '0')
+        </if>
+        <if test='changed != null and changed == "0"'>
+            and not exists (select 1 from contract_change_plan cp where cp.contract_id = t.contract_id and cp.status_cd = '0')
+        </if>
+        <if test="searchText !=null and searchText != ''">
+            and (t.contract_name like concat('%',#{searchText},'%')
+            or t.contract_code like concat('%',#{searchText},'%')
+            or t.party_b like concat('%',#{searchText},'%')
+            or t.party_a like concat('%',#{searchText},'%'))
+        </if>
+        <if test="endTimeBegin !=null and endTimeBegin != ''">
+            and t.end_time &gt;= #{endTimeBegin}
+        </if>
+        <if test="endTimeEnd !=null and endTimeEnd != ''">
+            and t.end_time &lt;= #{endTimeEnd}
+        </if>
         order by t.create_time desc
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
@@ -217,6 +251,15 @@
         <if test="operatorLink !=null and operatorLink != ''">
             , t.operator_link= #{operatorLink}
         </if>
+        <if test="partyaId !=null and partyaId != ''">
+            , t.partya_id= #{partyaId}
+        </if>
+        <if test="templateId !=null and templateId != ''">
+            , t.template_id= #{templateId}
+        </if>
+        <if test="payMode !=null and payMode != ''">
+            , t.pay_mode= #{payMode}
+        </if>
         where 1=1
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
@@ -228,6 +271,8 @@
         select count(1) count
         from contract t
         left join contract tt on t.contract_parent_id = tt.contract_id and tt.status_cd = '0' and tt.store_id =
+        t.store_id
+        left join contract_type ct on t.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
         t.store_id
         where 1 =1
         <if test="aLink !=null and aLink != ''">
@@ -329,6 +374,39 @@
         <if test="parentContractCodeLike !=null and parentContractCodeLike != ''">
             and tt.contract_code like concat('%',#{parentContractCodeLike},'%')
         </if>
+        <if test="partyaId !=null and partyaId != ''">
+            and t.partya_id = #{partyaId}
+        </if>
+        <if test="category !=null and category != ''">
+            and ifnull(ct.category, '2') = #{category}
+        </if>
+        <if test="categories !=null">
+            and ifnull(ct.category, '2') in
+            <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="payMode !=null and payMode != ''">
+            and t.pay_mode = #{payMode}
+        </if>
+        <if test='changed != null and changed == "1"'>
+            and exists (select 1 from contract_change_plan cp where cp.contract_id = t.contract_id and cp.status_cd = '0')
+        </if>
+        <if test='changed != null and changed == "0"'>
+            and not exists (select 1 from contract_change_plan cp where cp.contract_id = t.contract_id and cp.status_cd = '0')
+        </if>
+        <if test="searchText !=null and searchText != ''">
+            and (t.contract_name like concat('%',#{searchText},'%')
+            or t.contract_code like concat('%',#{searchText},'%')
+            or t.party_b like concat('%',#{searchText},'%')
+            or t.party_a like concat('%',#{searchText},'%'))
+        </if>
+        <if test="endTimeBegin !=null and endTimeBegin != ''">
+            and t.end_time &gt;= #{endTimeBegin}
+        </if>
+        <if test="endTimeEnd !=null and endTimeEnd != ''">
+            and t.end_time &lt;= #{endTimeEnd}
+        </if>
     </select>
 
     <select id="queryContractsByOwnerIds" parameterType="Map" resultType="Map">
@@ -340,5 +418,201 @@
             #{item}
         </foreach>
         group by t.obj_id
+    </select>
+
+    <!-- 合同台账统计（不 join contract_content） -->
+    <select id="queryContractStatistics" parameterType="Map" resultType="Map">
+        select
+        count(1) total,
+        ifnull(sum(case when t.state = '22' then 1 else 0 end), 0) effective,
+        ifnull(sum(case when t.state = '11' then 1 else 0 end), 0) auditing,
+        ifnull(sum(case when t.state = '10' then 1 else 0 end), 0) draft,
+        ifnull(sum(t.amount), 0) totalAmount,
+        ifnull(sum(case when ifnull(ct.category, '2') = '1' then 1 else 0 end), 0) rentCount,
+        ifnull(sum(case when ifnull(ct.category, '2') = '2' then 1 else 0 end), 0) purchaseCount,
+        ifnull(sum(case when ifnull(ct.category, '2') = '3' then 1 else 0 end), 0) maintainCount,
+        ifnull(sum(case when ifnull(ct.category, '2') = '1' then t.amount else 0 end), 0) rentAmount,
+        ifnull(sum(case when ifnull(ct.category, '2') = '2' then t.amount else 0 end), 0) purchaseAmount,
+        ifnull(sum(case when ifnull(ct.category, '2') = '3' then t.amount else 0 end), 0) maintainAmount,
+        (select count(distinct cr.room_id) from contract_room cr
+        join contract c2 on c2.contract_id = cr.contract_id and c2.status_cd = '0'
+        where cr.status_cd = '0'
+        <if test="storeId != null and storeId != ''">
+            and cr.store_id = #{storeId}
+        </if>
+        ) roomCount
+        from contract t
+        left join contract_type ct on t.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        t.store_id
+        where t.status_cd = '0'
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+    </select>
+
+    <!-- 合同履约汇总（采购/维保合同按付款节点跟踪） -->
+    <select id="queryContractPerformances" parameterType="Map" resultType="Map">
+        select c.contract_id contractId, c.contract_code contractCode, c.contract_name contractName,
+        c.pay_mode payMode, c.amount amount, c.start_time startTime, c.end_time endTime, c.operator operator,
+        c.party_b partyB, c.state state, ct.type_name contractTypeName, ifnull(ct.category, '2') category,
+        ifnull(sum(case when p.pay_state = '1' then p.plan_amount else 0 end), 0) paidAmount,
+        ifnull(sum(case when ifnull(p.pay_state, '0') &lt;&gt; '1' then p.plan_amount else 0 end), 0) unpaidAmount,
+        ifnull(sum(case when p.pay_state = '2' or (ifnull(p.pay_state,'0') = '0' and p.plan_time &lt; now()) then 1 else 0 end), 0) overdueCount,
+        ifnull(sum(case when p.pay_state = '1' then 1 else 0 end), 0) paidCount,
+        count(p.plan_id) planCount,
+        min(case when ifnull(p.pay_state, '0') &lt;&gt; '1' then p.plan_time end) nextPlanTime,
+        (select p2.plan_name from contract_collection_plan p2
+        where p2.contract_id = c.contract_id and p2.status_cd = '0' and ifnull(p2.pay_state, '0') &lt;&gt; '1'
+        order by p2.plan_time asc limit 0, 1) nextPlanName
+        from contract c
+        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        c.store_id
+        left join contract_collection_plan p on p.contract_id = c.contract_id and p.status_cd = '0'
+        where c.status_cd = '0'
+        <if test="storeId != null and storeId != ''">
+            and c.store_id = #{storeId}
+        </if>
+        <if test="category != null and category != ''">
+            and ifnull(ct.category, '2') = #{category}
+        </if>
+        <if test="categories != null">
+            and ifnull(ct.category, '2') in
+            <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="payState != null and payState != ''">
+            and exists (select 1 from contract_collection_plan p3
+            where p3.contract_id = c.contract_id and p3.status_cd = '0' and ifnull(p3.pay_state, '0') = #{payState})
+        </if>
+        <if test="searchText != null and searchText != ''">
+            and (c.contract_code like concat('%', #{searchText}, '%')
+            or c.contract_name like concat('%', #{searchText}, '%')
+            or c.party_b like concat('%', #{searchText}, '%'))
+        </if>
+        <if test="contractId != null and contractId != ''">
+            and c.contract_id = #{contractId}
+        </if>
+        group by c.contract_id, c.contract_code, c.contract_name, c.pay_mode, c.amount, c.start_time, c.end_time,
+        c.operator, c.party_b, c.state, ct.type_name, ct.category
+        order by c.create_time desc
+        <if test="page != -1 and page != null ">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <select id="queryContractPerformancesCount" parameterType="Map" resultType="Map">
+        select count(1) count from (
+        select c.contract_id
+        from contract c
+        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        c.store_id
+        where c.status_cd = '0'
+        <if test="storeId != null and storeId != ''">
+            and c.store_id = #{storeId}
+        </if>
+        <if test="category != null and category != ''">
+            and ifnull(ct.category, '2') = #{category}
+        </if>
+        <if test="categories != null">
+            and ifnull(ct.category, '2') in
+            <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="payState != null and payState != ''">
+            and exists (select 1 from contract_collection_plan p3
+            where p3.contract_id = c.contract_id and p3.status_cd = '0' and ifnull(p3.pay_state, '0') = #{payState})
+        </if>
+        <if test="searchText != null and searchText != ''">
+            and (c.contract_code like concat('%', #{searchText}, '%')
+            or c.contract_name like concat('%', #{searchText}, '%')
+            or c.party_b like concat('%', #{searchText}, '%'))
+        </if>
+        <if test="contractId != null and contractId != ''">
+            and c.contract_id = #{contractId}
+        </if>
+        group by c.contract_id
+        ) tmp
+    </select>
+
+    <!-- 到期提醒清单（按剩余天数升序） -->
+    <select id="queryContractReminds" parameterType="Map" resultType="Map">
+        select c.contract_id contractId, c.contract_code contractCode, c.contract_name contractName,
+        c.end_time endTime, c.start_time startTime, c.amount amount, c.operator operator, c.party_b partyB,
+        c.state state, ct.type_name contractTypeName, ifnull(ct.category, '2') category, c.store_id storeId,
+        datediff(c.end_time, now()) daysLeft,
+        (select count(1) from contract_remind_log l where l.contract_id = c.contract_id and l.status_cd = '0') remindCount
+        from contract c
+        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        c.store_id
+        where c.status_cd = '0' and c.state = '22' and c.end_time is not null
+        <if test="storeId != null and storeId != ''">
+            and c.store_id = #{storeId}
+        </if>
+        <if test="category != null and category != ''">
+            and ifnull(ct.category, '2') = #{category}
+        </if>
+        <if test="searchText != null and searchText != ''">
+            and (c.contract_code like concat('%', #{searchText}, '%')
+            or c.contract_name like concat('%', #{searchText}, '%')
+            or c.party_b like concat('%', #{searchText}, '%'))
+        </if>
+        and datediff(c.end_time, now()) &lt;= ifnull(#{days}, 30)
+        <if test='includeExpired == null or includeExpired != "1"'>
+            and datediff(c.end_time, now()) &gt;= 0
+        </if>
+        order by daysLeft asc
+        <if test="page != -1 and page != null ">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <select id="queryContractRemindsCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from contract c
+        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        c.store_id
+        where c.status_cd = '0' and c.state = '22' and c.end_time is not null
+        <if test="storeId != null and storeId != ''">
+            and c.store_id = #{storeId}
+        </if>
+        <if test="category != null and category != ''">
+            and ifnull(ct.category, '2') = #{category}
+        </if>
+        <if test="searchText != null and searchText != ''">
+            and (c.contract_code like concat('%', #{searchText}, '%')
+            or c.contract_name like concat('%', #{searchText}, '%')
+            or c.party_b like concat('%', #{searchText}, '%'))
+        </if>
+        and datediff(c.end_time, now()) &lt;= ifnull(#{days}, 30)
+        <if test='includeExpired == null or includeExpired != "1"'>
+            and datediff(c.end_time, now()) &gt;= 0
+        </if>
+    </select>
+
+    <insert id="saveContractRemindLog" parameterType="Map">
+        insert into contract_remind_log(log_id, contract_id, remind_type, channel, send_time, receive_tel, content,
+                                        store_id, status_cd, create_time)
+        values (#{logId}, #{contractId}, #{remindType}, #{channel}, #{sendTime}, #{receiveTel}, #{content},
+                #{storeId}, '0', now())
+    </insert>
+
+    <select id="queryContractRemindLogs" parameterType="Map" resultType="Map">
+        select t.log_id logId, t.contract_id contractId, t.remind_type remindType, t.channel channel,
+        t.send_time sendTime, t.receive_tel receiveTel, t.content content, t.status_cd statusCd,
+        t.create_time createTime
+        from contract_remind_log t
+        where t.status_cd = '0'
+        <if test="contractId != null and contractId != ''">
+            and t.contract_id = #{contractId}
+        </if>
+        <if test="contractIds != null">
+            and t.contract_id in
+            <foreach collection="contractIds" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        order by t.create_time desc
     </select>
 </mapper>

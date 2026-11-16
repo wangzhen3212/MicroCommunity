@@ -22,6 +22,14 @@ public class UpdateContractPartyaBMOImpl implements IUpdateContractPartyaBMO {
     @Java110Transactional
     public ResponseEntity<String> update(ContractPartyaPo contractPartyaPo) {
 
+        // 默认主体唯一：设置为默认时先清除其它默认
+        if ("1".equals(contractPartyaPo.getDefaultFlag())) {
+            ContractPartyaPo clearPo = new ContractPartyaPo();
+            clearPo.setPartyaId(contractPartyaPo.getPartyaId());
+            clearPo.setStoreId(contractPartyaPo.getStoreId());
+            contractPartyaInnerServiceSMOImpl.clearDefaultContractPartya(clearPo);
+        }
+
         int flag = contractPartyaInnerServiceSMOImpl.updateContractPartya(contractPartyaPo);
 
         if (flag > 0) {

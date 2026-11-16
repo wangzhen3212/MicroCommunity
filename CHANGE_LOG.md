@@ -730,8 +730,3 @@ VALUES ('122026111300000001','获取公众号关注用户','synchronizeWechatSub
 INSERT INTO `m_menu` VALUES ('702026111300000001','关注用户','800201904006','/#/pages/community/wechatSubscribe','19','502026111300000001','公众号关注用户同步与查看',NOW(),'0','Y');
 INSERT INTO `p_privilege` VALUES ('502026111300000001','关注用户','同步并查看公众号关注用户',NOW(),'0','800900000003','/#/pages/community/wechatSubscribe','702026111300000001');
 ```
-
-- 后端/前端业务代码无改动：`ListWechatSubscribeCmd`(`wechat.listWechatSubscribe`)、`SynchronizeWechatSubscribeCmd`(`wechat.synchronizeWechatSubscribe`)、`SynchronizeWechatSubscribeAdapt`(`@Component("synchronizeWechatSubscribeAdapt")`)、`pc-web` 页面/组件/API/路由均已存在。
-- 新增 `docs/sql/user/20261113_wechat_subscribe_register.sql`：幂等补录 `c_service`（2129/2130）、`c_route`（3111/3112，物业端 `8000418004`，GET→`Q`、POST→`D`）、`c_business_databus`（`business_type_cd=synchronizeWechatSubscribe` → `bean_name=synchronizeWechatSubscribeAdapt`，seq 92）、`m_menu`（房产组 `800201904006`，seq 19）、`p_privilege`（domain `800900000003`）与 `p_privilege_rel`（授权物业端全部有效权限组，`rel_id` 自增）。
-- 前端 `pc-web/src/i18n/menuLang.js`：`menu` 字典三语新增菜单名键「关注用户」（en `Follow Users` / zh-TW `關注用戶`）。
-- 前置校验（未改代码，仅说明）：同步接口要求小区已配置 `WECHAT_TYPE_PUBLIC` 公众号（`/pages/community/communityWechat` 录入 appId/appSecret 且公众号配置 IP 白名单），否则提示「未配置公众号」；菜单可见性还依赖 `m_menu_group_community` 中房产组已授权小区。

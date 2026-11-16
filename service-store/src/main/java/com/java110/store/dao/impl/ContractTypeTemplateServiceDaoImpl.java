@@ -93,5 +93,11 @@ public class ContractTypeTemplateServiceDaoImpl extends BaseServiceDao implement
         return Integer.parseInt(businessContractTypeTemplateInfos.get(0).get("count").toString());
     }
 
+    @Override
+    public int addContractTypeTemplateUseCount(Map info) {
+        logger.debug("模板使用次数+1 入参 info : {}", info);
+        return sqlSessionTemplate.update("contractTypeTemplateServiceDaoImpl.addContractTypeTemplateUseCount", info);
+    }
+
 
 }

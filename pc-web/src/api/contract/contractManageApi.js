@@ -9,10 +9,14 @@ export function queryContract(params) {
       params
     }).then(response => {
       const res = response.data
-      resolve({
-        data: res.data,
-        total: res.total
-      })
+      if (res.code === 0) {
+        resolve({
+          data: res.data || [],
+          total: res.total || 0
+        })
+      } else {
+        reject(new Error(res.msg || 'error'))
+      }
     }).catch(error => {
       reject(error)
     })

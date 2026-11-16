@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="contractAuditConfigServiceDaoImpl">
+
+    <insert id="saveContractAuditConfigInfo" parameterType="Map">
+        insert into contract_audit_config(config_id, step, staff_id, staff_name, staff_tel, store_id, status_cd, create_time)
+        values (#{configId}, #{step}, #{staffId}, #{staffName}, #{staffTel}, #{storeId}, '0', now())
+    </insert>
+
+    <update id="updateContractAuditConfigInfo" parameterType="Map">
+        update contract_audit_config t
+        <trim prefix="set" suffixOverrides=",">
+            <if test="step != null and step != ''">
+                t.step = #{step},
+            </if>
+            <if test="staffId != null and staffId != ''">
+                t.staff_id = #{staffId},
+            </if>
+            <if test="staffName != null and staffName != ''">
+                t.staff_name = #{staffName},
+            </if>
+            <if test="staffTel != null and staffTel != ''">
+                t.staff_tel = #{staffTel},
+            </if>
+            <if test="statusCd != null and statusCd != ''">
+                t.status_cd = #{statusCd},
+            </if>
+        </trim>
+        where 1 = 1
+        <if test="configId != null and configId != ''">
+            and t.config_id = #{configId}
+        </if>
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+        <if test="step != null and step != ''">
+            and t.step = #{step}
+        </if>
+    </update>
+
+    <select id="getContractAuditConfigInfo" parameterType="Map" resultType="Map">
+        select t.config_id configId, t.step step, t.staff_id staffId, t.staff_name staffName,
+        t.staff_tel staffTel, t.store_id storeId, t.status_cd statusCd, t.create_time createTime
+        from contract_audit_config t
+        where 1 = 1
+        <if test="configId != null and configId != ''">
+            and t.config_id = #{configId}
+        </if>
+        <if test="step != null and step != ''">
+            and t.step = #{step}
+        </if>
+        <if test="staffId != null and staffId != ''">
+            and t.staff_id = #{staffId}
+        </if>
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+        <if test="statusCd != null and statusCd != ''">
+            and t.status_cd = #{statusCd}
+        </if>
+        order by t.step asc, t.create_time asc
+        <if test="page != -1 and page != null ">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <select id="queryContractAuditConfigsCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from contract_audit_config t
+        where 1 = 1
+        <if test="step != null and step != ''">
+            and t.step = #{step}
+        </if>
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+        <if test="statusCd != null and statusCd != ''">
+            and t.status_cd = #{statusCd}
+        </if>
+    </select>
+</mapper>

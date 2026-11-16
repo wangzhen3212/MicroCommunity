@@ -1,461 +1,685 @@
-﻿<template>
-  <div class="add-contract-container">
-    <el-card class="box-card">
-      <div slot="header" class="flex justify-between">
-        <span>{{ addContractInfo.parentContractCode ? $t('contract.renewContract') : $t('contract.draftContract')
-        }}</span>
-        <el-button style="float: right; padding: 3px 0" type="text" @click="_goBack">
-          <i class="el-icon-close"></i>{{ $t('common.back') }}
+<template>
+  <div class="cc-workbench">
+    <div class="cc-wb-head">
+      <div class="cc-wb-head-left">
+        <el-button size="mini" @click="handleBack">
+          <i class="el-icon-back"></i>
+          {{ $t('contractWorkbench.back') }}
+        </el-button>
+        <div class="cc-wb-breadcrumb">
+          <span>{{ $t('contractWorkbench.breadcrumbRoot') }}</span>
+          <span class="cc-wb-sep">/</span>
+          <span class="is-current">{{ pageTitle }}</span>
+        </div>
+        <span class="cc-badge is-info">{{ form.contractCode || $t('contractWorkbench.msg.codeEmpty') }}</span>
+        <span v-if="auditState" class="cc-badge is-warning">{{ $t('contractState.auditing') }}</span>
+      </div>
+      <div class="cc-wb-head-actions">
+        <span class="cc-wb-tip">{{ $t('contractWorkbench.autoSaveTip') }}</span>
+        <el-button size="small" :loading="saving" @click="handleSaveDraft">{{ $t('contractWorkbench.saveDraft') }}</el-button>
+        <el-button size="small" :loading="previewing" @click="handlePreview">{{ $t('contractWorkbench.preview') }}</el-button>
+        <el-button size="small" type="primary" :loading="submitting" @click="handleSubmit">
+          {{ $t('contractWorkbench.submit') }}
         </el-button>
       </div>
+    </div>
 
-      <el-form ref="form" :model="addContractInfo" label-width="120px" class="text-left" :rules="rules">
-        <!-- Parent Contract Info -->
-        <el-row v-if="addContractInfo.parentContractCode" :gutter="20">
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.parentContractName')">
-              <el-input v-model="addContractInfo.parentContractName" disabled></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.parentContractCode')">
-              <el-input v-model="addContractInfo.parentContractCode" disabled></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.parentContractStatus')">
-              <el-input v-model="addContractInfo.parentStateName" disabled></el-input>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Basic Contract Info -->
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.contractName')" prop="contractName" required>
-              <el-input v-model="addContractInfo.contractName"
-                :placeholder="$t('contract.requiredContractName')"></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.contractCode')" prop="contractCode" required>
-              <el-input v-model="addContractInfo.contractCode"
-                :placeholder="$t('contract.requiredContractCode')"></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.contractType')" prop="contractType" required>
-              <el-select v-model="addContractInfo.contractType" :placeholder="$t('contract.requiredContractType')"
-                style="width:100%" @change="_changeContractType">
-                <el-option v-for="item in addContractInfo.contractTypes" :key="item.contractTypeId" :label="item.typeName"
-                  :value="item.contractTypeId">
-                </el-option>
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Party A Info -->
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.partyA')" prop="partyA" required>
-              <el-select v-model="addContractInfo.partyA" :placeholder="$t('contract.requiredPartyA')" style="width:100%"
-                @change="_changeContractPartyA">
-                <el-option v-for="item in addContractInfo.contractPartyAs" :key="item.partyA" :label="item.partyA"
-                  :value="item.partyA">
-                </el-option>
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.partyAContact')" prop="aContacts" required>
-              <el-input v-model="addContractInfo.aContacts" disabled></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.partyAPhone')" prop="aLink" required>
-              <el-input v-model="addContractInfo.aLink" disabled></el-input>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Party B Info -->
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.partyB')" prop="partyB" required>
-              <el-input v-model="addContractInfo.partyB" disabled style="width:70%"></el-input>
-              <el-button type="primary" size="small" @click="_searchOwner">{{ $t('contract.select') }}</el-button>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.partyBContact')" prop="bContacts" required>
-              <el-input v-model="addContractInfo.bContacts" disabled></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.partyBPhone')" prop="bLink" required>
-              <el-input v-model="addContractInfo.bLink" disabled></el-input>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Operator Info -->
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.operator')" prop="operator" required>
-              <el-input v-model="addContractInfo.operator" :placeholder="$t('contract.requiredOperator')"></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.operatorPhone')" prop="operatorLink" required>
-                <el-input v-model="addContractInfo.operatorLink" :placeholder="$t('contract.requiredOperatorPhone')"></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.contractAmount')">
-              <el-input v-model="addContractInfo.amount" :placeholder="$t('contract.requiredContractAmount')"></el-input>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Time Info -->
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.startTime')" prop="startTime" required>
-              <el-date-picker v-model="addContractInfo.startTime" type="date" value-format="yyyy-MM-dd" style="width:100%"
-                :placeholder="$t('contract.requiredStartTime')">
-              </el-date-picker>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.endTime')" prop="endTime" required>
-              <el-date-picker v-model="addContractInfo.endTime" type="date" value-format="yyyy-MM-dd" style="width:100%"
-                :placeholder="$t('contract.requiredEndTime')">
-              </el-date-picker>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item :label="$t('contract.signingTime')" prop="signingTime" required>
-              <el-date-picker v-model="addContractInfo.signingTime" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" style="width:100%"
-                :placeholder="$t('contract.requiredSigningTime')">
-              </el-date-picker>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Contract Specs -->
-        <div v-for="(item, index) in addContractInfo.contractTypeSpecs" :key="index">
-          <el-row :gutter="20" v-if="index % 3 == 0">
-            <el-col :span="8" v-for="i in 3" :key="i">
-              <el-form-item :label="addContractInfo.contractTypeSpecs[index + i - 1].specName"
-                v-if="index + i - 1 < addContractInfo.contractTypeSpecs.length">
-                <el-input v-model="addContractInfo.contractTypeSpecs[index + i - 1].value"></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
+    <div class="cc-wb-body">
+      <div class="cc-wb-main">
+        <div class="cc-panel">
+          <div class="cc-panel-title">{{ $t('contractWorkbench.section.base') }}</div>
+          <el-form label-width="110px">
+            <contract-base-info-form
+              :form="form"
+              :contract-types="contractTypes"
+              :partyas="partyas"
+              :templates="templates"
+              @regenerate-code="handleGenerateCode"
+              @type-change="handleTypeChange"
+              @template-change="handleTemplateChange"
+              @partya-change="handlePartyaChange"
+              @amount-change="handleAmountChange"
+            />
+          </el-form>
         </div>
 
-        <!-- Contract Attachments -->
-        <el-form-item :label="$t('contract.contractAttachments')">
-          <el-button type="primary" @click="addFileStep">
-            <i class="el-icon-plus"></i>{{ $t('contract.addAttachment') }}
-          </el-button>
-          <div v-for="(item, index) in addContractInfo.contractFilePo" :key="index" style="margin-top:10px">
-            <el-row>
-              <el-col :span="2">
-                <span>{{ $t('contract.attachment') }}{{ index + 1 }}</span>
-              </el-col>
-              <el-col :span="10">
-                <input type="file" @change="getFile($event, index)" accept=".png,.pdf,.jpg">
-              </el-col>
-              <el-col :span="10">
-                <span>{{ item.fileRealName }}</span>
-              </el-col>
-              <el-col :span="2">
-                <el-button type="text" @click="deleteStep(item)">{{ $t('contract.deleteAttachment') }}</el-button>
-              </el-col>
-            </el-row>
-          </div>
-        </el-form-item>
-      </el-form>
-    </el-card>
+        <div class="cc-panel">
+          <div class="cc-panel-title">{{ $t('contractWorkbench.section.target') }}</div>
+          <contract-target-table
+            :category="form.category"
+            :rooms="rooms"
+            :targets="targets"
+            @add-house="openHouseDialog"
+            @remove-house="removeHouse"
+            @add-target="addTarget"
+            @remove-target="removeTarget"
+            @fill-amount="handleFillAmount"
+            @clear="clearTargets"
+          />
+        </div>
 
-    <!-- Related Rooms -->
-    <el-card class="box-card" style="margin-top:20px">
-      <div slot="header" class="flex justify-between">
-        <span>{{ $t('contract.relatedRooms') }}</span>
-        <el-button style="float: right; padding: 3px 0" type="text" @click="_selectRoom">
-          <i class="el-icon-plus"></i>{{ $t('contract.add') }}
-        </el-button>
+        <div class="cc-panel">
+          <div class="cc-panel-title">{{ $t('contractWorkbench.section.plan') }}</div>
+          <contract-fee-plan-panel
+            :category="form.category"
+            :rooms="rooms"
+            :plans="plans"
+            :amount="form.amount"
+            :start-time="form.startTime"
+            :end-time="form.endTime"
+            :pay-mode="form.payMode"
+            @amount-change="handleAmountChange"
+            @plan-change="handlePlanChange"
+            @fee-change="handleFeeChange"
+          />
+        </div>
+
+        <div class="cc-panel">
+          <div class="cc-panel-title">{{ $t('contractWorkbench.section.doc') }}</div>
+          <contract-doc-editor
+            v-model="content"
+            :template-content="templateContent"
+            :variables="docVariables"
+            :readonly="readonly"
+          />
+        </div>
+
+        <div class="cc-panel">
+          <div class="cc-panel-title">{{ $t('contractWorkbench.section.file') }}</div>
+          <contract-file-panel :files="files" :readonly="readonly" @change="handleFileChange" />
+        </div>
       </div>
 
-      <el-table :data="addContractInfo.rooms" border style="width:100%">
-        <el-table-column prop="floorNum" :label="$t('contract.room')" align="center">
-          <template slot-scope="scope">
-            {{ scope.row.floorNum }}-{{ scope.row.unitNum }}-{{ scope.row.roomNum }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="ownerName" :label="$t('contract.owner')" align="center"></el-table-column>
-        <el-table-column prop="link" :label="$t('contract.phone')" align="center"></el-table-column>
-        <el-table-column prop="builtUpArea" :label="$t('contract.builtUpArea')" align="center">
-          <template slot-scope="scope">
-            {{ scope.row.builtUpArea }}{{ $t('contract.squareMeter') }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="stateName" :label="$t('contract.roomStatus')" align="center"></el-table-column>
-        <el-table-column :label="$t('common.operation')" align="center" width="120">
-          <template slot-scope="scope">
-            <el-button size="mini" type="danger" @click="_openDelRoomModel(scope.row)">{{ $t('common.delete')
-            }}</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <!-- Approvers -->
-    <div v-show="addContractInfo.audit == '1001'">
-      <purchase-approvers ref="purchaseApprovers" :flow-type="50005" @notify3="handleNotify"></purchase-approvers>
+      <div class="cc-wb-side">
+        <contract-summary-panel
+          ref="summaryPanel"
+          :form="form"
+          :target-count="targetCount"
+          :plan-count="plans.length"
+          :has-content="!!content"
+          :audit="audit"
+          :records="records"
+        />
+      </div>
     </div>
 
-    <!-- Buttons -->
-    <div class="text-right" style="margin-top:20px">
-      <el-button @click="_goBack" style="margin-right:20px">{{ $t('common.back') }}</el-button>
-      <el-button type="primary" @click="saveContractInfo">{{ $t('common.submit') }}</el-button>
-    </div>
-
-    <!-- Modals -->
-    <search-room ref="searchRoom" @chooseRoom="handleChooseRoom"></search-room>
-    <search-owner ref="searchOwner" @chooseOwner="handleChooseOwner"></search-owner>
+    <contract-house-dialog ref="houseDialog" @choose="handleChooseRooms" />
+    <contract-template-preview ref="templatePreview" />
   </div>
 </template>
 
 <script>
-import { getCommunityId } from '@/api/community/communityApi'
-import { saveContract, queryContractType, queryContractPartya, queryContractTypeSpec, queryContractRoom } from '@/api/contract/addContractApi'
-import PurchaseApprovers from '@/components/contract/purchaseApprovers'
-import SearchRoom from '@/components/room/searchRoom'
-import SearchOwner from '@/components/owner/SearchOwner'
-import { uploadFile } from '@/api/system/paymentPoolApi'
+import ContractBaseInfoForm from '@/components/contract/workbench/ContractBaseInfoForm'
+import ContractTargetTable from '@/components/contract/workbench/ContractTargetTable'
+import ContractHouseDialog from '@/components/contract/workbench/ContractHouseDialog'
+import ContractFeePlanPanel from '@/components/contract/workbench/ContractFeePlanPanel'
+import ContractDocEditor from '@/components/contract/workbench/ContractDocEditor'
+import ContractFilePanel from '@/components/contract/workbench/ContractFilePanel'
+import ContractSummaryPanel from '@/components/contract/workbench/ContractSummaryPanel'
+import ContractTemplatePreview from '@/components/contract/contractTemplatePreview'
+import { queryContract, queryContractType } from '@/api/contract/contractManageApi'
+import { queryContractPartya } from '@/api/contract/contractPartyaApi'
+import { listContractTemplates, queryContractTypeTemplate } from '@/api/contract/contractTemplateApi'
+import {
+  generateContractCode,
+  previewContractContent,
+  queryContractContent,
+  saveContract,
+  updateContract
+} from '@/api/contract/contractWorkbenchApi'
+import { listContractCollectionPlans } from '@/api/contract/contractPerformanceApi'
+import { queryContractAuditFlow, submitContractAudit } from '@/api/contract/contractAuditApi'
+import { queryContractRoom } from '@/api/contract/contractDetailRoomApi'
+import { queryContractFile } from '@/api/contract/contractDetailFileApi'
+import { amountToChinese, guessCategory, sanitizeHtml } from '@/utils/contractUtil'
 
 export default {
   name: 'AddContractList',
   components: {
-    PurchaseApprovers,
-    SearchRoom,
-    SearchOwner
+    ContractBaseInfoForm,
+    ContractTargetTable,
+    ContractHouseDialog,
+    ContractFeePlanPanel,
+    ContractDocEditor,
+    ContractFilePanel,
+    ContractSummaryPanel,
+    ContractTemplatePreview
   },
   data() {
     return {
-      addContractInfo: {
-        contractId: '',
-        contractName: '',
-        contractCode: '',
-        contractType: '',
-        partyA: '',
-        partyB: '',
-        aContacts: '',
-        bContacts: '',
-        aLink: '',
-        bLink: '',
-        operator: '',
-        operatorLink: '',
-        amount: '',
-        startTime: '',
-        endTime: '',
-        signingTime: '',
-        contractTypes: [],
-        contractTypeSpecs: [],
-        objType: '1111',
-        objId: '-1',
-        contractParentId: '',
-        parentContractCode: '',
-        parentContractName: '',
-        parentStateName: '',
-        rooms: [],
-        contractFilePo: [],
-        tempfile: '',
-        contractPartyAs: [],
-        audit: '',
-        staffName: '',
-        nextUserId: ''
-      },
-      communityId: '',
-      rules: {
-        contractName: [{ required: true, message: this.$t('contract.requiredContractName'), trigger: 'blur' }],
-        contractCode: [{ required: true, message: this.$t('contract.requiredContractCode'), trigger: 'blur' }],
-        contractType: [{ required: true, message: this.$t('contract.requiredContractType'), trigger: 'blur' }],
-        operator: [{ required: true, message: this.$t('contract.requiredOperator'), trigger: 'blur' }],
-        operatorLink: [{ required: true, message: this.$t('contract.requiredOperatorPhone'), trigger: 'blur' }],
-        amount: [{ required: true, message: this.$t('contract.requiredContractAmount'), trigger: 'blur' }],
-        startTime: [{ required: true, message: this.$t('contract.requiredStartTime'), trigger: 'blur' }],
-        endTime: [{ required: true, message: this.$t('contract.requiredEndTime'), trigger: 'blur' }],
-        signingTime: [{ required: true, message: this.$t('contract.requiredSigningTime'), trigger: 'blur' }],
-        partyA: [{ required: true, message: this.$t('contract.requiredPartyA'), trigger: 'blur' }],
+      saving: false,
+      submitting: false,
+      previewing: false,
+      loading: false,
+      dirty: false,
+      initializing: true,
+      contractTypes: [],
+      partyas: [],
+      templates: [],
+      templateContent: '',
+      rooms: [],
+      targets: [],
+      plans: [],
+      files: [],
+      content: '',
+      audit: null,
+      records: [],
+      form: this.createEmptyForm(),
+      parentContract: null
+    }
+  },
+  computed: {
+    isEdit() {
+      return !!this.form.contractId
+    },
+    isRenew() {
+      return !this.form.contractId && !!this.parentContract
+    },
+    pageTitle() {
+      if (this.isEdit) {
+        return this.$t('contractWorkbench.titleEdit')
+      }
+      if (this.isRenew) {
+        return this.$t('contractWorkbench.titleRenew')
+      }
+      return this.$t('contractWorkbench.titleNew')
+    },
+    auditState() {
+      return String(this.form.state) === '11'
+    },
+    readonly() {
+      return this.auditState
+    },
+    targetCount() {
+      return String(this.form.category) === '1' ? this.rooms.length : this.targets.length
+    },
+    docVariables() {
+      return {
+        amount: this.form.amount,
+        amountText: amountToChinese(this.form.amount),
+        startTime: this.form.startTime,
+        endTime: this.form.endTime,
+        partyB: this.form.partyB,
+        houses: this.rooms
+          .map(room => room.roomName || ((room.floorNum || '') + '-' + (room.unitNum || '') + '-' + (room.roomNum || '')))
+          .join('、')
+      }
+    }
+  },
+  watch: {
+    form: {
+      deep: true,
+      handler() {
+        this.markDirty()
+      }
+    },
+    content() {
+      this.markDirty()
+    },
+    rooms: {
+      deep: true,
+      handler() {
+        this.markDirty()
+      }
+    },
+    plans: {
+      deep: true,
+      handler() {
+        this.markDirty()
+      }
+    },
+    targets: {
+      deep: true,
+      handler() {
+        this.markDirty()
+      }
+    },
+    files: {
+      deep: true,
+      handler() {
+        this.markDirty()
       }
     }
   },
   created() {
-    this.communityId = getCommunityId()
-    this._loadAddContractType()
-    this._loadAddContractParkA()
-    if (this.$route.query.contractId) {
-      this.addContractInfo.contractParentId = this.$route.query.contractId
-      this.addContractInfo.parentContractCode = this.$route.query.contractCode
-      this.addContractInfo.parentContractName = this.$route.query.contractName
-      this.addContractInfo.parentStateName = this.$route.query.stateName
-      this._queryRoom()
-      this._listContracts()
+    this.loadBaseData()
+    const query = this.$route.query || {}
+    setTimeout(() => {
+      this.initializing = false
+    }, 1500)
+    if (query.contractId) {
+      this.loadContract(query.contractId)
+      return
     }
+    if (query.parentContractId) {
+      this.loadParentContract(query.parentContractId)
+      return
+    }
+    this.handleGenerateCode()
   },
   methods: {
-    _loadAddContractType() {
-      queryContractType({ page: 1, row: 100 }).then(response => {
-        this.addContractInfo.contractTypes = response.data
+    markDirty() {
+      if (this.initializing) {
+        return
+      }
+      this.dirty = true
+    },
+    createEmptyForm() {
+      return {
+        contractId: '',
+        contractName: '',
+        contractCode: '',
+        contractType: '',
+        category: '2',
+        templateId: '',
+        partyaId: '',
+        partyA: '',
+        aContacts: '',
+        aLink: '',
+        partyB: '',
+        bContacts: '',
+        bLink: '',
+        creditCode: '',
+        amount: '',
+        signingTime: '',
+        startTime: '',
+        endTime: '',
+        operator: '',
+        operatorLink: '',
+        payMode: '',
+        place: '',
+        remark: '',
+        state: '',
+        objType: '1111',
+        objId: '-1'
+      }
+    },
+    loadBaseData() {
+      queryContractType({ page: 1, row: 100 }).then(res => {
+        this.contractTypes = res.data || []
+      }).catch(() => {
+        this.contractTypes = []
+      })
+      queryContractPartya({ page: 1, row: 200 }).then(res => {
+        this.partyas = res.data || []
+        const defaultPartya = this.partyas.filter(item => String(item.defaultFlag) === '1')[0]
+        if (defaultPartya && !this.form.partyaId) {
+          this.handlePartyaChange(defaultPartya.partyaId)
+        }
+      }).catch(() => {
+        this.partyas = []
+      })
+      listContractTemplates({ page: 1, row: 100 }).then(res => {
+        this.templates = res.data || []
+      }).catch(() => {
+        this.templates = []
       })
     },
-    _loadAddContractParkA() {
-      queryContractPartya({ page: 1, row: 100 }).then(response => {
-        this.addContractInfo.contractPartyAs = response.data
+    loadContract(contractId) {
+      this.loading = true
+      queryContract({ contractId, page: 1, row: 1 }).then(res => {
+        const contract = (res.data || [])[0]
+        if (!contract) {
+          return
+        }
+        this.fillForm(contract)
+        this.loadRooms(contractId)
+        this.loadPlans(contractId)
+        this.loadFiles(contractId)
+        this.loadContent(contractId)
+        this.loadAuditFlow(contractId)
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.loadError'))
+      }).finally(() => {
+        this.loading = false
       })
     },
-    _changeContractType() {
-      this.addContractInfo.contractTypes.forEach(item => {
-        if (this.addContractInfo.contractType == item.contractTypeId) {
-          this.addContractInfo.audit = item.audit
+    loadParentContract(contractId) {
+      queryContract({ contractId, page: 1, row: 1 }).then(res => {
+        const contract = (res.data || [])[0]
+        if (!contract) {
+          return
+        }
+        this.parentContract = contract
+        this.fillForm(contract, true)
+        this.handleGenerateCode()
+        this.loadRooms(contractId)
+        this.loadContent(contractId)
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.loadError'))
+      })
+    },
+    fillForm(contract, isRenew) {
+      const form = this.createEmptyForm()
+      Object.keys(form).forEach(key => {
+        if (contract[key] !== undefined && contract[key] !== null) {
+          form[key] = contract[key]
         }
       })
-
-      this.addContractInfo.contractTypeSpecs = []
-      queryContractTypeSpec({
-        page: 1,
-        row: 100,
-        contractTypeId: this.addContractInfo.contractType
-      }).then(response => {
-        response.data.forEach(item => {
-          item.value = ''
-          if (item.specShow == 'Y') {
-            item.values = []
-            this.addContractInfo.contractTypeSpecs.push(item)
-          }
+      form.contractCode = (contract.contractCode || '') + (isRenew ? '-R' : '')
+      form.category = guessCategory(contract)
+      form.partyA = contract.partyA || ''
+      if (isRenew) {
+        form.contractId = ''
+        form.state = ''
+        form.contractParentId = contract.contractId
+        form.startTime = contract.endTime ? contract.endTime.substring(0, 10) : ''
+      } else {
+        form.contractId = contract.contractId
+      }
+      this.form = form
+    },
+    loadRooms(contractId) {
+      queryContractRoom({ contractId, page: 1, row: 200 }).then(res => {
+        this.rooms = (res && res.data) || []
+      }).catch(() => {
+        this.rooms = []
+      })
+    },
+    loadPlans(contractId) {
+      listContractCollectionPlans({ contractId }).then(data => {
+        this.plans = data.plans || []
+      }).catch(() => {
+        this.plans = []
+      })
+    },
+    loadFiles(contractId) {
+      queryContractFile({ contractId, page: 1, row: 100 }).then(res => {
+        this.files = (res && res.data) || []
+      }).catch(() => {
+        this.files = []
+      })
+    },
+    loadContent(contractId) {
+      queryContractContent({ contractId }).then(data => {
+        this.content = data.content || ''
+      }).catch(() => {
+        this.content = ''
+      })
+    },
+    loadAuditFlow(contractId) {
+      queryContractAuditFlow({ bizId: contractId, auditType: '1' }).then(data => {
+        this.audit = data.audit || null
+        this.records = data.records || []
+      }).catch(() => {
+        this.audit = null
+        this.records = []
+      })
+    },
+    handleGenerateCode() {
+      generateContractCode({ category: this.form.category || '2' }).then(data => {
+        this.form.contractCode = data.contractCode || ''
+      }).catch(error => {
+        this.$message.error(error.message)
+      })
+    },
+    handleTypeChange(contractTypeId) {
+      const matched = this.contractTypes.filter(item => item.contractTypeId === contractTypeId)[0]
+      if (matched && matched.category) {
+        this.form.category = String(matched.category)
+      }
+      this.handleGenerateCode()
+    },
+    handleTemplateChange(templateId) {
+      if (!templateId) {
+        this.templateContent = ''
+        return
+      }
+      queryContractTypeTemplate({ templateId, page: 1, row: 1 }).then(list => {
+        const template = (list || [])[0]
+        this.templateContent = template ? template.context : ''
+        if (this.templateContent && !this.content) {
+          this.content = this.templateContent
+        }
+      }).catch(() => {
+        this.templateContent = ''
+      })
+    },
+    handlePartyaChange(partyaId) {
+      const matched = this.partyas.filter(item => item.partyaId === partyaId)[0]
+      if (!matched) {
+        return
+      }
+      this.form.partyaId = matched.partyaId
+      this.form.partyA = matched.partyA
+      this.form.aContacts = matched.contactPerson || matched.aContacts || ''
+      this.form.aLink = matched.contactTel || matched.aLink || ''
+    },
+    handleAmountChange(amount) {
+      this.form.amount = amount
+    },
+    handlePlanChange(plans) {
+      this.plans = plans
+      this.dirty = true
+      if (this.plans.length) {
+        this.form.payMode = this.plans.length + ' 期'
+      }
+    },
+    handleFeeChange(fee) {
+      if (fee && fee.total !== undefined) {
+        this.form.amount = fee.total
+      }
+    },
+    openHouseDialog() {
+      this.$refs.houseDialog.open(this.rooms)
+    },
+    handleChooseRooms(rooms) {
+      this.rooms = rooms || []
+    },
+    removeHouse(index) {
+      this.rooms.splice(index, 1)
+    },
+    addTarget() {
+      this.targets.push({
+        name: '',
+        spec: '',
+        num: 1,
+        price: '',
+        amount: ''
+      })
+    },
+    removeTarget(index) {
+      this.targets.splice(index, 1)
+    },
+    handleFillAmount(total) {
+      this.form.amount = total
+    },
+    clearTargets() {
+      if (String(this.form.category) === '1') {
+        this.rooms = []
+        return
+      }
+      this.targets = []
+    },
+    handleFileChange(files) {
+      this.files = files
+    },
+    handlePreview() {
+      if (!this.content && !this.form.templateId) {
+        this.$message.warning(this.$t('contractWorkbench.msg.previewError'))
+        return
+      }
+      this.previewing = true
+      previewContractContent({
+        content: this.content,
+        templateId: this.form.templateId,
+        variables: this.docVariables
+      }).then(data => {
+        this.$refs.templatePreview.open(sanitizeHtml(data.content), this.form.contractName)
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.previewError'))
+      }).finally(() => {
+        this.previewing = false
+      })
+    },
+    buildPayload(state) {
+      return {
+        ...this.form,
+        state: state,
+        rooms: this.rooms,
+        plans: this.plans,
+        targets: this.targets,
+        content: this.content,
+        contractFilePo: this.files
+      }
+    },
+    handleSaveDraft() {
+      if (!this.form.contractName) {
+        this.$message.error(this.$t('contractWorkbench.msg.required', {
+          fields: this.$t('contractWorkbench.field.contractName')
+        }))
+        return
+      }
+      if (!this.form.contractCode) {
+        this.$message.error(this.$t('contractWorkbench.msg.codeEmpty'))
+        return
+      }
+      this.saving = true
+      const payload = this.buildPayload('10')
+      const request = this.isEdit ? updateContract(payload) : saveContract(payload)
+      request.then(() => {
+        this.$message.success(this.$t('contractWorkbench.msg.saveSuccess'))
+        this.dirty = false
+        if (!this.isEdit) {
+          this.loadSavedContractId()
+        }
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.saveError'))
+      }).finally(() => {
+        this.saving = false
+      })
+    },
+    loadSavedContractId() {
+      this.initializing = true
+      queryContract({ contractCode: this.form.contractCode, page: 1, row: 1 }).then(res => {
+        const contract = (res.data || [])[0]
+        if (contract) {
+          this.form.contractId = contract.contractId
+        }
+      }).catch(() => {
+      }).finally(() => {
+        this.initializing = false
+        this.dirty = false
+      })
+    },
+    handleSubmit() {
+      const failed = this.$refs.summaryPanel ? this.$refs.summaryPanel.failedLabels() : []
+      if (failed.length) {
+        this.$message.error(this.$t('contractWorkbench.msg.integrityError', { fields: failed.join('、') }))
+        return
+      }
+      this.submitting = true
+      const payload = this.buildPayload('')
+      const save = this.isEdit ? updateContract(payload) : saveContract(payload)
+      save.then(() => {
+        if (!this.isEdit) {
+          this.$message.success(this.$t('contractWorkbench.msg.submitSuccess'))
+          this.leavePage()
+          return
+        }
+        submitContractAudit({
+          auditType: '1',
+          bizId: this.form.contractId
+        }).then(() => {
+          this.$message.success(this.$t('contractWorkbench.msg.submitSuccess'))
+          this.leavePage()
+        }).catch(error => {
+          this.$message.error(error.message || this.$t('contractWorkbench.msg.auditorMissing'))
         })
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.submitError'))
+      }).finally(() => {
+        this.submitting = false
       })
     },
-    _queryRoom() {
-      queryContractRoom({
-        contractId: this.$route.query.contractId,
-        page: 1,
-        row: 100
-      }).then(response => {
-        this.addContractInfo.rooms = response.data
-      })
-    },
-    _selectRoom() {
-      this.$refs.searchRoom.open()
-    },
-    _searchOwner() {
-      this.$refs.searchOwner.open()
-    },
-    handleChooseRoom(room) {
-      this.addContractInfo.rooms.push(room)
-    },
-    handleChooseOwner(owner) {
-      this.addContractInfo.partyB = owner.name
-      this.addContractInfo.bContacts = owner.name
-      this.addContractInfo.bLink = owner.link
-      this.addContractInfo.objId = owner.ownerId
-    },
-    handleNotify(info) {
-      this.addContractInfo.nextUserId = info.staffId
-      this.addContractInfo.staffName = info.staffName
-    },
-    _openDelRoomModel(room) {
-      this.addContractInfo.rooms = this.addContractInfo.rooms.filter(item => item.roomId != room.roomId)
-    },
-    addFileStep() {
-      this.addContractInfo.contractFilePo.push({
-        seq: this.addContractInfo.contractFilePo.length,
-        fileSaveName: '',
-        fileRealName: ''
-      })
-    },
-    deleteStep(step) {
-      this.addContractInfo.contractFilePo = this.addContractInfo.contractFilePo.filter(item => item.seq != step.seq)
-    },
-    getFile(e, index) {
-      this.addContractInfo.tempfile = e.target.files[0]
-      this.addContractInfo.contractFilePo[index].fileRealName = this.addContractInfo.tempfile.name
-      this._importData(index)
-    },
-   async _importData(index) {
-      console.log(index)
-      const _fileName = this.addContractInfo.tempfile.name
-      const _suffix = _fileName.substring(_fileName.lastIndexOf('.') + 1)
-      if (!this.checkFileType(_suffix.toLowerCase())) {
-        this.$message.error(this.$t('contract.invalidFileType'))
+    handleBack() {
+      if (!this.dirty) {
+        this.leavePage()
         return
       }
-
-      const formData = new FormData()
-      formData.append("uploadFile", this.addContractInfo.tempfile)
-      const  data  = await uploadFile(formData, {})
-      this.addContractInfo.contractFilePo[index].fileSaveName = data.realFileName
-      // 这里需要实现文件上传逻辑
-      // uploadContactFile(formData).then(response => {
-      //   this.addContractInfo.contractFilePo[index].fileSaveName = response.data
-      //   this.$message.success(this.$t('common.operationSuccess'))
-      // })
-    },
-    checkFileType(fileType) {
-      return ['png', 'pdf', 'jpg'].includes(fileType)
-    },
-    _changeContractPartyA() {
-      const partyA = this.addContractInfo.partyA
-      this.addContractInfo.contractPartyAs.forEach(item => {
-        if (partyA == item.partyA) {
-          this.addContractInfo.aLink = item.aLink
-          this.addContractInfo.aContacts = item.aContacts
-        }
+      this.$confirm(this.$t('contractWorkbench.backConfirm'), '提示', {
+        type: 'warning'
+      }).then(() => {
+        this.leavePage()
+      }).catch(() => {
       })
     },
-    _listContracts() {
-      // 需要实现查询合同详情逻辑
-    },
-    saveContractInfo() {
-      if (!this.validateForm()) {
-        return
-      }
-
-      this.addContractInfo.communityId = this.communityId
-      saveContract(this.addContractInfo).then(response => {
-        if (response.code === 0) {
-          this.$message.success(this.$t('common.operationSuccess'))
-          this._goBack()
-        } else {
-          this.$message.error(response.msg)
-        }
-      })
-    },
-    validateForm() {
-      // 实现表单验证逻辑
-      return true
-    },
-    _goBack() {
-      this.$router.go(-1)
+    leavePage() {
+      this.$router.push({ path: '/pages/admin/contractManage' })
     }
   }
 }
 </script>
 
-<style scoped>
-.add-contract-container {
-  padding: 20px;
-}
+<style lang="scss" scoped>
+.cc-workbench {
+  padding: 16px;
 
-.box-card {
-  margin-bottom: 20px;
-}
+  .cc-wb-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
 
-.text-right {
-  text-align: right;
+    .cc-wb-head-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .cc-wb-breadcrumb {
+      margin: 0 12px;
+      font-size: 13px;
+      color: #909399;
+
+      .cc-wb-sep {
+        margin: 0 6px;
+      }
+
+      .is-current {
+        color: #303133;
+      }
+    }
+
+    .cc-wb-head-actions {
+      display: flex;
+      align-items: center;
+
+      .cc-wb-tip {
+        margin-right: 12px;
+        font-size: 12px;
+        color: #909399;
+      }
+    }
+  }
+
+  .cc-wb-body {
+    display: flex;
+    align-items: flex-start;
+
+    .cc-wb-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .cc-wb-side {
+      width: 320px;
+      margin-left: 16px;
+      position: sticky;
+      top: 16px;
+    }
+  }
+
+  @media (max-width: 1280px) {
+    .cc-wb-body {
+      display: block;
+
+      .cc-wb-side {
+        width: auto;
+        margin: 16px 0 0;
+        position: static;
+      }
+    }
+  }
 }
 </style>

@@ -9,6 +9,11 @@ public class ContractTypeTemplatePo implements Serializable {
     private String storeId;
     private String contractTypeId;
     private String templateId;
+    private String templateName;
+    private String templateVersion;
+    private String templateDesc;
+    private String useCount;
+    private String sourceType;
 
     public String getContext() {
         return context;
@@ -48,5 +53,45 @@ public class ContractTypeTemplatePo implements Serializable {
 
     public void setTemplateId(String templateId) {
         this.templateId = templateId;
+    }
+
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName;
+    }
+
+    public String getTemplateVersion() {
+        return templateVersion;
+    }
+
+    public void setTemplateVersion(String templateVersion) {
+        this.templateVersion = templateVersion;
+    }
+
+    public String getTemplateDesc() {
+        return templateDesc;
+    }
+
+    public void setTemplateDesc(String templateDesc) {
+        this.templateDesc = templateDesc;
+    }
+
+    public String getUseCount() {
+        return useCount;
+    }
+
+    public void setUseCount(String useCount) {
+        this.useCount = useCount;
+    }
+
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(String sourceType) {
+        this.sourceType = sourceType;
     }
 }

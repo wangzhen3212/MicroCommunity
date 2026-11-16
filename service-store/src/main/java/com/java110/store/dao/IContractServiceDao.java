@@ -55,4 +55,60 @@ public interface IContractServiceDao {
     int queryContractsCount(Map info);
 
     List<Map> queryContractsByOwnerIds(Map info);
+
+    /**
+     * 合同台账统计（总数 / 分类计数 / 生效数 / 待审数 / 总金额）
+     *
+     * @param info 查询条件
+     * @return 统计结果
+     */
+    List<Map> queryContractStatistics(Map info);
+
+    /**
+     * 合同履约汇总列表
+     *
+     * @param info 查询条件
+     * @return 履约汇总
+     */
+    List<Map> queryContractPerformances(Map info);
+
+    /**
+     * 合同履约汇总数量
+     *
+     * @param info 查询条件
+     * @return 数量
+     */
+    int queryContractPerformancesCount(Map info);
+
+    /**
+     * 到期提醒清单
+     *
+     * @param info 查询条件
+     * @return 清单
+     */
+    List<Map> queryContractReminds(Map info);
+
+    /**
+     * 到期提醒清单数量
+     *
+     * @param info 查询条件
+     * @return 数量
+     */
+    int queryContractRemindsCount(Map info);
+
+    /**
+     * 保存到期提醒日志
+     *
+     * @param info 日志信息
+     * @return 保存条数
+     */
+    int saveContractRemindLog(Map info);
+
+    /**
+     * 查询到期提醒日志
+     *
+     * @param info 查询条件
+     * @return 日志列表
+     */
+    List<Map> queryContractRemindLogs(Map info);
 }

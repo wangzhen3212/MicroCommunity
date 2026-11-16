@@ -94,5 +94,11 @@ public class ContractPartyaServiceDaoImpl extends BaseServiceDao implements ICon
         return Integer.parseInt(businessContractPartyaInfos.get(0).get("count").toString());
     }
 
+    @Override
+    public int clearDefaultContractPartyaInfo(Map info) {
+        logger.debug("清除默认甲方主体 入参 info : {}", info);
+        return sqlSessionTemplate.update("contractPartyaServiceDaoImpl.clearDefaultContractPartyaInfo", info);
+    }
+
 
 }

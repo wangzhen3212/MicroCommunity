@@ -1,7 +1,6 @@
 package com.java110.po.contract;
 
 import java.io.Serializable;
-import java.util.Date;
 
 public class ContractTypePo implements Serializable {
 
@@ -11,6 +10,7 @@ private String remark;
 private String statusCd = "0";
 private String storeId;
 private String contractTypeId;
+private String category;
 public String getAudit() {
         return audit;
     }
@@ -46,6 +46,12 @@ public String getContractTypeId() {
     }
 public void setContractTypeId(String contractTypeId) {
         this.contractTypeId = contractTypeId;
+    }
+public String getCategory() {
+        return category;
+    }
+public void setCategory(String category) {
+        this.category = category;
     }
 
 

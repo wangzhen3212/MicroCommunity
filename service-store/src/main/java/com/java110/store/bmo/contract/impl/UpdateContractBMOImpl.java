@@ -10,6 +10,7 @@ import com.java110.dto.contract.ContractAttrDto;
 import com.java110.dto.contract.ContractChangePlanDto;
 import com.java110.dto.contract.ContractChangePlanDetailDto;
 import com.java110.dto.contract.ContractChangePlanRoomDto;
+import com.java110.dto.contract.ContractCollectionPlanDto;
 import com.java110.dto.contract.ContractRoomDto;
 import com.java110.dto.fee.FeeDto;
 import com.java110.dto.owner.OwnerRoomRelDto;
@@ -22,19 +23,24 @@ import com.java110.intf.store.IContractAttrInnerServiceSMO;
 import com.java110.intf.store.IContractChangePlanDetailInnerServiceSMO;
 import com.java110.intf.store.IContractChangePlanInnerServiceSMO;
 import com.java110.intf.store.IContractChangePlanRoomInnerServiceSMO;
+import com.java110.intf.store.IContractCollectionPlanInnerServiceSMO;
 import com.java110.intf.store.IContractFileInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.intf.store.IContractRoomInnerServiceSMO;
+import com.java110.intf.store.IContractTypeTemplateInnerServiceSMO;
 import com.java110.intf.user.IOwnerRoomRelInnerServiceSMO;
 import com.java110.intf.user.IRentingPoolInnerServiceSMO;
 import com.java110.po.contract.ContractPo;
 import com.java110.po.contract.ContractAttrPo;
 import com.java110.po.contract.ContractChangePlanPo;
+import com.java110.po.contract.ContractCollectionPlanPo;
 import com.java110.po.contract.ContractFilePo;
 import com.java110.po.contract.ContractRoomPo;
+import com.java110.po.contract.ContractTypeTemplatePo;
 import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.renting.RentingPoolPo;
 import com.java110.po.room.RoomPo;
+import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
 import com.java110.store.bmo.contractFile.IDeleteContractFileBMO;
 import com.java110.utils.constant.StatusConstant;
@@ -94,12 +100,32 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     @Autowired
     private IRoomInnerServiceSMO roomInnerServiceSMOImpl;
 
+    @Autowired
+    private IContractContentBMO contractContentBMOImpl;
+
+    @Autowired
+    private IContractCollectionPlanInnerServiceSMO contractCollectionPlanInnerServiceSMOImpl;
+
+    @Autowired
+    private IContractTypeTemplateInnerServiceSMO contractTypeTemplateInnerServiceSMOImpl;
+
+    private static final String PREFIX_PLAN_ID = "95";
+
     /**
      * @param contractPo
      * @return 订单服务能够接受的报文
      */
     @Java110Transactional
     public ResponseEntity<String> update(ContractPo contractPo, JSONObject reqJson) {
+
+        ContractDto queryDto = new ContractDto();
+        queryDto.setContractId(contractPo.getContractId());
+        queryDto.setStatusCd("0");
+        List<ContractDto> oldContractDtos = contractInnerServiceSMOImpl.queryContracts(queryDto);
+        Assert.listOnlyOne(oldContractDtos, "未找到需要修改的合同");
+        if (ContractDto.STATE_AUDIT.equals(oldContractDtos.get(0).getState())) {
+            return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "该合同正在审批中，签约信息已锁定，无法修改");
+        }
 
         int flag = contractInnerServiceSMOImpl.updateContract(contractPo);
 
@@ -126,6 +152,10 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
         noticeRentUpdateState(contractPo);
 
+        saveContractContent(reqJson, contractPo);
+
+        saveContractCollectionPlans(reqJson, contractPo);
+
         if (!reqJson.containsKey("contractTypeSpecs")) {
             return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
         }
@@ -143,6 +173,58 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
 
+    }
+
+    /**
+     * 保存合同正文（独立表 upsert，同时累加模板使用次数）
+     */
+    private void saveContractContent(JSONObject reqJson, ContractPo contractPo) {
+        if (StringUtil.isEmpty(reqJson.getString("content"))) {
+            return;
+        }
+        contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), contractPo.getTemplateId(),
+                reqJson.getString("content"));
+        if (StringUtil.isEmpty(contractPo.getTemplateId())) {
+            return;
+        }
+        ContractTypeTemplatePo templatePo = new ContractTypeTemplatePo();
+        templatePo.setTemplateId(contractPo.getTemplateId());
+        templatePo.setStoreId(contractPo.getStoreId());
+        templatePo.setStatusCd("0");
+        contractTypeTemplateInnerServiceSMOImpl.addContractTypeTemplateUseCount(templatePo);
+    }
+
+    /**
+     * 重建收款计划期次（老期次置为失效后重新写入）
+     */
+    private void saveContractCollectionPlans(JSONObject reqJson, ContractPo contractPo) {
+        if (!reqJson.containsKey("plans")) {
+            return;
+        }
+        JSONArray plans = reqJson.getJSONArray("plans");
+        ContractCollectionPlanPo deletePo = new ContractCollectionPlanPo();
+        deletePo.setContractId(contractPo.getContractId());
+        deletePo.setStoreId(contractPo.getStoreId());
+        deletePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
+        contractCollectionPlanInnerServiceSMOImpl.updateContractCollectionPlan(deletePo);
+        if (plans == null || plans.isEmpty()) {
+            return;
+        }
+        for (int planIndex = 0; planIndex < plans.size(); planIndex++) {
+            JSONObject plan = plans.getJSONObject(planIndex);
+            ContractCollectionPlanPo planPo = BeanConvertUtil.covertBean(plan, ContractCollectionPlanPo.class);
+            planPo.setPlanId(GenerateCodeFactory.getGeneratorId(PREFIX_PLAN_ID));
+            planPo.setContractId(contractPo.getContractId());
+            planPo.setStoreId(contractPo.getStoreId());
+            planPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
+            if (StringUtil.isEmpty(planPo.getPlanSeq())) {
+                planPo.setPlanSeq(String.valueOf(planIndex + 1));
+            }
+            if (StringUtil.isEmpty(planPo.getPayState())) {
+                planPo.setPayState(ContractCollectionPlanDto.PAY_STATE_DOING);
+            }
+            contractCollectionPlanInnerServiceSMOImpl.saveContractCollectionPlan(planPo);
+        }
     }
 
     @Override
@@ -202,28 +284,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             contractChangePlanPo.setState(ContractDto.STATE_AUDIT_FINISH);
             contractChangePlanPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
             contractChangePlanInnerServiceSMOImpl.updateContractChangePlan(contractChangePlanPo);
-            //修改合同信息
-            ContractChangePlanDetailDto contractChangePlanDetailDto = new ContractChangePlanDetailDto();
-            contractChangePlanDetailDto.setPlanId(contractChangePlanDto.getPlanId());
-            contractChangePlanDetailDto.setStoreId(contractChangePlanDto.getStoreId());
-            contractChangePlanDetailDto.setOperate("ADD");
-            List<ContractChangePlanDetailDto> contractChangePlanDetailDtos =
-                    contractChangePlanDetailInnerServiceSMOImpl.queryContractChangePlanDetails(contractChangePlanDetailDto);
-
-            Assert.listOnlyOne(contractChangePlanDetailDtos, "数据错误");
-            ContractPo contractPo = BeanConvertUtil.covertBean(contractChangePlanDetailDtos.get(0), ContractPo.class);
-
-            contractInnerServiceSMOImpl.updateContract(contractPo);
-            //todo 解决合同bug 只有 资产变更时 操作 合同房屋
-            if (ContractChangePlanDto.PLAN_TYPE_CHANGE_ROOM.equals(contractChangePlanDtos.get(0).getPlanType())) {
-                dealContractChangePlanRoom(contractChangePlanDto, contractDtos.get(0));
-            }
-
-            //todo 如果是租期变更时 将房屋的时间修改为变更后的时间
-            if (ContractChangePlanDto.PLAN_TYPE_CHANGE_RENT_DATE.equals(contractChangePlanDtos.get(0).getPlanType())) {
-                changeRoomEndTime(contractChangePlanDto, contractDtos.get(0));
-            }
-
+            applyChangePlan(contractChangePlanDto.getPlanId(), contractChangePlanDto.getStoreId());
         } else { //修改为审核中
             ContractChangePlanPo contractChangePlanPo = new ContractChangePlanPo();
             contractChangePlanPo.setPlanId(contractChangePlanDto.getPlanId());
@@ -232,6 +293,51 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             contractChangePlanInnerServiceSMOImpl.updateContractChangePlan(contractChangePlanPo);
         }
         return ResultVo.success();
+    }
+
+    /**
+     * 两级审批全部通过后回写变更到合同主表（租期变更同步房屋关系时间，资产变更同步合同房屋）
+     */
+    @Override
+    @Java110Transactional
+    public void applyChangePlan(String planId, String storeId) {
+
+        ContractChangePlanDto queryPlanDto = new ContractChangePlanDto();
+        queryPlanDto.setPlanId(planId);
+        queryPlanDto.setStoreId(storeId);
+        List<ContractChangePlanDto> planDtos = contractChangePlanInnerServiceSMOImpl.queryContractChangePlans(queryPlanDto);
+        Assert.listOnlyOne(planDtos, "合同变更单不存在");
+        ContractChangePlanDto contractChangePlanDto = planDtos.get(0);
+
+        ContractDto contractQueryDto = new ContractDto();
+        contractQueryDto.setContractId(contractChangePlanDto.getContractId());
+        contractQueryDto.setStoreId(storeId);
+        List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractQueryDto);
+        Assert.listOnlyOne(contractDtos, "合同不存在");
+
+        ContractChangePlanDetailDto contractChangePlanDetailDto = new ContractChangePlanDetailDto();
+        contractChangePlanDetailDto.setPlanId(planId);
+        contractChangePlanDetailDto.setStoreId(storeId);
+        contractChangePlanDetailDto.setOperate("ADD");
+        List<ContractChangePlanDetailDto> contractChangePlanDetailDtos =
+                contractChangePlanDetailInnerServiceSMOImpl.queryContractChangePlanDetails(contractChangePlanDetailDto);
+        Assert.listOnlyOne(contractChangePlanDetailDtos, "变更明细数据错误");
+
+        ContractPo contractPo = BeanConvertUtil.covertBean(contractChangePlanDetailDtos.get(0), ContractPo.class);
+        contractPo.setContractId(contractChangePlanDto.getContractId());
+        contractPo.setStoreId(storeId);
+        contractPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
+        contractInnerServiceSMOImpl.updateContract(contractPo);
+
+        // 只有 资产变更时 操作 合同房屋
+        if (ContractChangePlanDto.PLAN_TYPE_CHANGE_ROOM.equals(contractChangePlanDto.getPlanType())) {
+            dealContractChangePlanRoom(contractChangePlanDto, contractDtos.get(0));
+        }
+
+        // 如果是租期变更时 将房屋的时间修改为变更后的时间
+        if (ContractChangePlanDto.PLAN_TYPE_CHANGE_RENT_DATE.equals(contractChangePlanDto.getPlanType())) {
+            changeRoomEndTime(contractChangePlanDto, contractDtos.get(0));
+        }
     }
 
     /**

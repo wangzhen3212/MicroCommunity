@@ -54,4 +54,12 @@ public interface IContractTypeTemplateServiceDao {
      */
     int queryContractTypeTemplatesCount(Map info);
 
+    /**
+     * 模板使用次数 +1
+     *
+     * @param info templateId / storeId
+     * @return 更新条数
+     */
+    int addContractTypeTemplateUseCount(Map info);
+
 }

@@ -1,5 +1,15 @@
 import request from '@/utils/request'
 
+// 已办列表改读自建两级审批接口，旧工作流历史任务接口仅作兜底
+export {
+  auditContract,
+  cancelContractAudit,
+  listContractAuditHistory,
+  listContractAuditStatistics,
+  queryContractAuditFlow
+} from '@/api/contract/contractAuditApi'
+
+
 /**
  * 查询合同历史任务列表
  * @param {Object} params 查询参数

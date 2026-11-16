@@ -1,0 +1,317 @@
+export const messages = {
+  en: {
+    contractTemplate: {
+      title: 'Contract Template Center',
+      subtitle: 'Template skeleton + variables, one-click generation of contract text',
+      variableTip: 'Variables: {{amount}} contract amount, {{startTime}} effective date, {{endTime}} expiry date, {{partyB}} Party B, {{houses}} house list',
+      newTemplate: 'New Template',
+      searchPlaceholder: 'Template name',
+      edit: 'Edit',
+      preview: 'Preview',
+      copy: 'Copy',
+      disable: 'Disable',
+      enable: 'Enable',
+      useCount: 'Used {count} times',
+      version: 'Version {version}',
+      updatedAt: 'Updated',
+      clauseCount: '{count} clauses',
+      source: {
+        online: 'Online edited',
+        word: 'Word imported',
+        paste: 'Pasted from Word'
+      },
+      empty: 'No template, create one first',
+      fetchError: 'Failed to load templates',
+      editor: {
+        titleCreate: 'New Template',
+        titleEdit: 'Edit Template',
+        name: 'Template Name',
+        namePlaceholder: 'Please enter template name',
+        category: 'Category',
+        contractType: 'Applicable Contract Type',
+        version: 'Version',
+        desc: 'Description',
+        content: 'Template Text',
+        variablePanel: 'Variables',
+        insertVariable: 'Insert Variable',
+        insertClause: 'Insert Clause',
+        validate: 'Check Missing Variables',
+        preview: 'Preview',
+        saveSuccess: 'Template saved',
+        saveError: 'Failed to save template',
+        nameRequired: 'Template name is required',
+        typeRequired: 'Contract type is required',
+        contentRequired: 'Template text is required',
+        missingVars: 'Variables not resolved: {vars}',
+        paste: {
+          title: 'Import from Word',
+          placeholder: 'Paste rich text from Word here, tables and lists are preserved',
+          clean: 'Clean & Generate',
+          success: 'Template text generated',
+          empty: 'Please paste content first'
+        }
+      }
+    },
+    contractPartyaCenter: {
+      title: 'Party A Settings',
+      subtitle: 'Maintain Party A entity info, default entity is used when drafting contracts',
+      add: 'Add Party A',
+      searchPlaceholder: 'Entity name / short name',
+      fullName: 'Entity Name',
+      shortName: 'Short Name',
+      creditCode: 'Credit Code',
+      legalPerson: 'Legal Person',
+      contacts: 'Contact',
+      tel: 'Phone',
+      bankName: 'Bank',
+      bankAccount: 'Account',
+      seal: 'Seal',
+      default: 'Default',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+      op: {
+        edit: 'Edit',
+        setDefault: 'Set Default',
+        enable: 'Enable',
+        disable: 'Disable',
+        delete: 'Delete'
+      },
+      form: {
+        titleAdd: 'Add Party A',
+        titleEdit: 'Edit Party A',
+        fullNamePlaceholder: 'Please enter entity name',
+        creditCodePlaceholder: 'Please enter 18-digit credit code',
+        bankAccountPlaceholder: 'Please enter bank account',
+        sealTip: 'Mark whether the electronic seal is bound'
+      },
+      validate: {
+        fullNameRequired: 'Entity name is required',
+        creditCodeFormat: 'Invalid credit code format',
+        telFormat: 'Invalid phone number format'
+      },
+      msg: {
+        fetchError: 'Failed to load Party A data',
+        saveSuccess: 'Party A saved',
+        saveError: 'Failed to save Party A',
+        setDefaultSuccess: 'Default Party A updated',
+        setDefaultError: 'Failed to set default Party A',
+        deleteConfirm: 'Delete Party A [{name}]?',
+        deleteSuccess: 'Party A deleted',
+        deleteReferenced: 'This Party A is referenced by contracts and cannot be deleted',
+        stateSuccess: 'Status updated',
+        stateError: 'Failed to update status'
+      },
+      empty: 'No Party A entity, please add one'
+    }
+  },
+  zh: {
+    contractTemplate: {
+      title: '合同模板中心',
+      subtitle: '模板骨架 + 变量，一键生成合同正文',
+      variableTip: '可用变量：{{amount}} 合同金额、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名称、{{houses}} 房屋清单',
+      newTemplate: '新建模板',
+      searchPlaceholder: '模板名称',
+      edit: '编辑',
+      preview: '预览',
+      copy: '复制',
+      disable: '停用',
+      enable: '启用',
+      useCount: '已使用 {count} 次',
+      version: '版本 {version}',
+      updatedAt: '更新时间',
+      clauseCount: '{count} 个条款',
+      source: {
+        online: '在线编辑',
+        word: 'Word 导入',
+        paste: 'Word 粘贴导入'
+      },
+      empty: '暂无模板，请先新建',
+      fetchError: '获取模板数据失败',
+      editor: {
+        titleCreate: '新建模板',
+        titleEdit: '编辑模板',
+        name: '模板名称',
+        namePlaceholder: '请输入模板名称',
+        category: '模板分类',
+        contractType: '适用合同类型',
+        version: '版本号',
+        desc: '模板说明',
+        content: '模板正文',
+        variablePanel: '变量面板',
+        insertVariable: '插入变量',
+        insertClause: '插入条款',
+        validate: '校验缺失变量',
+        preview: '预览原稿',
+        saveSuccess: '模板保存成功',
+        saveError: '模板保存失败',
+        nameRequired: '模板名称不能为空',
+        typeRequired: '请选择合同类型',
+        contentRequired: '模板正文不能为空',
+        missingVars: '存在未解析变量：{vars}',
+        paste: {
+          title: '从 Word 粘贴导入',
+          placeholder: '在此粘贴 Word 富文本，将保留表格与有序/无序列表',
+          clean: '清洗并生成正文',
+          success: '模板正文已生成',
+          empty: '请先粘贴内容'
+        }
+      }
+    },
+    contractPartyaCenter: {
+      title: '合同甲方设置',
+      subtitle: '维护甲方主体资料，起草合同时默认带出默认主体',
+      add: '新增甲方主体',
+      searchPlaceholder: '主体全称 / 简称',
+      fullName: '主体全称',
+      shortName: '简称',
+      creditCode: '统一社会信用代码',
+      legalPerson: '法定代表人',
+      contacts: '联系人',
+      tel: '联系电话',
+      bankName: '开户行',
+      bankAccount: '银行账号',
+      seal: '印章',
+      default: '默认主体',
+      enabled: '启用',
+      disabled: '停用',
+      op: {
+        edit: '编辑',
+        setDefault: '设为默认',
+        enable: '启用',
+        disable: '停用',
+        delete: '删除'
+      },
+      form: {
+        titleAdd: '新增甲方主体',
+        titleEdit: '编辑甲方主体',
+        fullNamePlaceholder: '请输入主体全称',
+        creditCodePlaceholder: '请输入 18 位统一社会信用代码',
+        bankAccountPlaceholder: '请输入银行账号',
+        sealTip: '标记是否已绑定电子印章'
+      },
+      validate: {
+        fullNameRequired: '主体全称不能为空',
+        creditCodeFormat: '统一社会信用代码格式不正确',
+        telFormat: '联系电话格式不正确'
+      },
+      msg: {
+        fetchError: '获取甲方主体失败',
+        saveSuccess: '甲方主体保存成功',
+        saveError: '甲方主体保存失败',
+        setDefaultSuccess: '默认甲方主体已更新',
+        setDefaultError: '设置默认主体失败',
+        deleteConfirm: '确定删除甲方主体【{name}】？',
+        deleteSuccess: '甲方主体删除成功',
+        deleteReferenced: '该主体已被合同引用，无法删除',
+        stateSuccess: '状态更新成功',
+        stateError: '状态更新失败'
+      },
+      empty: '暂无甲方主体，请先新增'
+    }
+  },
+  'zh-TW': {
+    contractTemplate: {
+      title: '合同模板中心',
+      subtitle: '模板骨架 + 變量，一鍵生成合同正文',
+      variableTip: '可用變量：{{amount}} 合同金額、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名稱、{{houses}} 房屋清單',
+      newTemplate: '新建模板',
+      searchPlaceholder: '模板名稱',
+      edit: '編輯',
+      preview: '預覽',
+      copy: '複製',
+      disable: '停用',
+      enable: '啟用',
+      useCount: '已使用 {count} 次',
+      version: '版本 {version}',
+      updatedAt: '更新時間',
+      clauseCount: '{count} 個條款',
+      source: {
+        online: '在線編輯',
+        word: 'Word 導入',
+        paste: 'Word 粘貼導入'
+      },
+      empty: '暫無模板，請先新建',
+      fetchError: '獲取模板數據失敗',
+      editor: {
+        titleCreate: '新建模板',
+        titleEdit: '編輯模板',
+        name: '模板名稱',
+        namePlaceholder: '請輸入模板名稱',
+        category: '模板分類',
+        contractType: '適用合同類型',
+        version: '版本號',
+        desc: '模板說明',
+        content: '模板正文',
+        variablePanel: '變量面板',
+        insertVariable: '插入變量',
+        insertClause: '插入條款',
+        validate: '校驗缺失變量',
+        preview: '預覽原稿',
+        saveSuccess: '模板保存成功',
+        saveError: '模板保存失敗',
+        nameRequired: '模板名稱不能為空',
+        typeRequired: '請選擇合同類型',
+        contentRequired: '模板正文不能為空',
+        missingVars: '存在未解析變量：{vars}',
+        paste: {
+          title: '從 Word 粘貼導入',
+          placeholder: '在此粘貼 Word 富文本，將保留表格與有序/無序列表',
+          clean: '清洗並生成正文',
+          success: '模板正文已生成',
+          empty: '請先粘貼內容'
+        }
+      }
+    },
+    contractPartyaCenter: {
+      title: '合同甲方設置',
+      subtitle: '維護甲方主體資料，起草合同時默認帶出默認主體',
+      add: '新增甲方主體',
+      searchPlaceholder: '主體全稱 / 簡稱',
+      fullName: '主體全稱',
+      shortName: '簡稱',
+      creditCode: '統一社會信用代碼',
+      legalPerson: '法定代表人',
+      contacts: '聯繫人',
+      tel: '聯繫電話',
+      bankName: '開戶行',
+      bankAccount: '銀行賬號',
+      seal: '印章',
+      default: '默認主體',
+      enabled: '啟用',
+      disabled: '停用',
+      op: {
+        edit: '編輯',
+        setDefault: '設為默認',
+        enable: '啟用',
+        disable: '停用',
+        delete: '刪除'
+      },
+      form: {
+        titleAdd: '新增甲方主體',
+        titleEdit: '編輯甲方主體',
+        fullNamePlaceholder: '請輸入主體全稱',
+        creditCodePlaceholder: '請輸入 18 位統一社會信用代碼',
+        bankAccountPlaceholder: '請輸入銀行賬號',
+        sealTip: '標記是否已綁定電子印章'
+      },
+      validate: {
+        fullNameRequired: '主體全稱不能為空',
+        creditCodeFormat: '統一社會信用代碼格式不正確',
+        telFormat: '聯繫電話格式不正確'
+      },
+      msg: {
+        fetchError: '獲取甲方主體失敗',
+        saveSuccess: '甲方主體保存成功',
+        saveError: '甲方主體保存失敗',
+        setDefaultSuccess: '默認甲方主體已更新',
+        setDefaultError: '設置默認主體失敗',
+        deleteConfirm: '確定刪除甲方主體【{name}】？',
+        deleteSuccess: '甲方主體刪除成功',
+        deleteReferenced: '該主體已被合同引用，無法刪除',
+        stateSuccess: '狀態更新成功',
+        stateError: '狀態更新失敗'
+      },
+      empty: '暫無甲方主體，請先新增'
+    }
+  }
+}

@@ -102,5 +102,51 @@ public class ContractServiceDaoImpl extends BaseServiceDao implements IContractS
         return result;
     }
 
+    @Override
+    public List<Map> queryContractStatistics(Map info) {
+        logger.debug("查询合同台账统计 入参 info : {}", info);
+        return sqlSessionTemplate.selectList("contractServiceDaoImpl.queryContractStatistics", info);
+    }
+
+    @Override
+    public List<Map> queryContractPerformances(Map info) {
+        logger.debug("查询合同履约汇总 入参 info : {}", info);
+        return sqlSessionTemplate.selectList("contractServiceDaoImpl.queryContractPerformances", info);
+    }
+
+    @Override
+    public int queryContractPerformancesCount(Map info) {
+        List<Map> counts = sqlSessionTemplate.selectList("contractServiceDaoImpl.queryContractPerformancesCount", info);
+        if (counts.size() < 1) {
+            return 0;
+        }
+        return Integer.parseInt(counts.get(0).get("count").toString());
+    }
+
+    @Override
+    public List<Map> queryContractReminds(Map info) {
+        logger.debug("查询合同到期提醒清单 入参 info : {}", info);
+        return sqlSessionTemplate.selectList("contractServiceDaoImpl.queryContractReminds", info);
+    }
+
+    @Override
+    public int queryContractRemindsCount(Map info) {
+        List<Map> counts = sqlSessionTemplate.selectList("contractServiceDaoImpl.queryContractRemindsCount", info);
+        if (counts.size() < 1) {
+            return 0;
+        }
+        return Integer.parseInt(counts.get(0).get("count").toString());
+    }
+
+    @Override
+    public int saveContractRemindLog(Map info) {
+        return sqlSessionTemplate.insert("contractServiceDaoImpl.saveContractRemindLog", info);
+    }
+
+    @Override
+    public List<Map> queryContractRemindLogs(Map info) {
+        return sqlSessionTemplate.selectList("contractServiceDaoImpl.queryContractRemindLogs", info);
+    }
+
 
 }

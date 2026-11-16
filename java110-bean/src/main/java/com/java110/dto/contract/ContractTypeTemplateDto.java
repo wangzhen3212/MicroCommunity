@@ -7,11 +7,7 @@ import java.util.Date;
 
 /**
  * @ClassName FloorDto
- * @Description 合同属性数据层封装
- * @Author wuxw
- * @Date 2019/4/24 8:52
- * @Version 1.0
- * add by wuxw 2019/4/24
+ * @Description 合同模板数据层封装
  **/
 public class ContractTypeTemplateDto extends PageDto implements Serializable {
 
@@ -19,6 +15,15 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
     private String storeId;
     private String contractTypeId;
     private String templateId;
+    private String templateName;
+    private String templateVersion;
+    private String templateDesc;
+    private String useCount;
+    private String sourceType;
+    private String category;
+    private String categoryName;
+    private String contractTypeName;
+    private String templateNameLike;
 
 
     private Date createTime;
@@ -73,5 +78,77 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
 
     public void setTemplateId(String templateId) {
         this.templateId = templateId;
+    }
+
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName;
+    }
+
+    public String getTemplateVersion() {
+        return templateVersion;
+    }
+
+    public void setTemplateVersion(String templateVersion) {
+        this.templateVersion = templateVersion;
+    }
+
+    public String getTemplateDesc() {
+        return templateDesc;
+    }
+
+    public void setTemplateDesc(String templateDesc) {
+        this.templateDesc = templateDesc;
+    }
+
+    public String getUseCount() {
+        return useCount;
+    }
+
+    public void setUseCount(String useCount) {
+        this.useCount = useCount;
+    }
+
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(String sourceType) {
+        this.sourceType = sourceType;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getContractTypeName() {
+        return contractTypeName;
+    }
+
+    public void setContractTypeName(String contractTypeName) {
+        this.contractTypeName = contractTypeName;
+    }
+
+    public String getTemplateNameLike() {
+        return templateNameLike;
+    }
+
+    public void setTemplateNameLike(String templateNameLike) {
+        this.templateNameLike = templateNameLike;
     }
 }

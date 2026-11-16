@@ -58,4 +58,48 @@ public interface IContractInnerServiceSMO {
      */
     @RequestMapping(value = "/queryContractsByOwnerIds", method = RequestMethod.POST)
     List<Map> queryContractsByOwnerIds(@RequestBody Map info);
+
+    /**
+     * 合同台账统计：总数、分类计数、生效数、待审数、总金额
+     *
+     * @param info 查询条件（storeId / category 等）
+     */
+    @RequestMapping(value = "/queryContractStatistics", method = RequestMethod.POST)
+    List<Map> queryContractStatistics(@RequestBody Map info);
+
+    /**
+     * 合同履约汇总列表
+     */
+    @RequestMapping(value = "/queryContractPerformances", method = RequestMethod.POST)
+    List<Map> queryContractPerformances(@RequestBody Map info);
+
+    /**
+     * 合同履约汇总数量
+     */
+    @RequestMapping(value = "/queryContractPerformancesCount", method = RequestMethod.POST)
+    int queryContractPerformancesCount(@RequestBody Map info);
+
+    /**
+     * 合同到期提醒清单（按剩余天数升序）
+     */
+    @RequestMapping(value = "/queryContractReminds", method = RequestMethod.POST)
+    List<Map> queryContractReminds(@RequestBody Map info);
+
+    /**
+     * 合同到期提醒清单数量
+     */
+    @RequestMapping(value = "/queryContractRemindsCount", method = RequestMethod.POST)
+    int queryContractRemindsCount(@RequestBody Map info);
+
+    /**
+     * 保存到期提醒日志
+     */
+    @RequestMapping(value = "/saveContractRemindLog", method = RequestMethod.POST)
+    int saveContractRemindLog(@RequestBody Map info);
+
+    /**
+     * 查询到期提醒日志
+     */
+    @RequestMapping(value = "/queryContractRemindLogs", method = RequestMethod.POST)
+    List<Map> queryContractRemindLogs(@RequestBody Map info);
 }

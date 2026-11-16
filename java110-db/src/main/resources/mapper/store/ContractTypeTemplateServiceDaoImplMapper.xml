@@ -5,21 +5,28 @@
 <mapper namespace="contractTypeTemplateServiceDaoImpl">
 
 
-    <!-- 保存合同属性信息 add by wuxw 2018-07-03 -->
+    <!-- 保存合同模板信息 -->
     <insert id="saveContractTypeTemplateInfo" parameterType="Map">
         insert into contract_type_template(
-        context,store_id,contract_type_id,template_id
+        context,store_id,contract_type_id,template_id,
+        template_name,template_version,template_desc,use_count,source_type
         ) values (
-        #{context},#{storeId},#{contractTypeId},#{templateId}
+        #{context},#{storeId},#{contractTypeId},#{templateId},
+        #{templateName},ifnull(#{templateVersion},'V1.0'),#{templateDesc},ifnull(#{useCount},0),ifnull(#{sourceType},'online')
         )
     </insert>
 
 
-    <!-- 查询合同属性信息 add by wuxw 2018-07-03 -->
+    <!-- 查询合同模板信息 -->
     <select id="getContractTypeTemplateInfo" parameterType="Map" resultType="Map">
         select t.context,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id
-        storeId,t.contract_type_id,t.contract_type_id contractTypeId,t.template_id templateId
+        storeId,t.contract_type_id,t.contract_type_id contractTypeId,t.template_id templateId,
+        t.template_name templateName, t.template_version templateVersion, t.template_desc templateDesc,
+        ifnull(t.use_count,0) useCount, ifnull(t.source_type,'online') sourceType, t.create_time createTime,
+        ifnull(ct.category,'2') category, ct.type_name contractTypeName
         from contract_type_template t
+        left join contract_type ct on ct.contract_type_id = t.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        t.store_id
         where 1 =1
         <if test="context !=null and context != ''">
             and t.context= #{context}
@@ -36,6 +43,12 @@
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
         </if>
+        <if test="category !=null and category != ''">
+            and ifnull(ct.category,'2') = #{category}
+        </if>
+        <if test="templateNameLike !=null and templateNameLike != ''">
+            and t.template_name like concat('%',#{templateNameLike},'%')
+        </if>
         order by t.create_time desc
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
@@ -44,7 +57,7 @@
     </select>
 
 
-    <!-- 修改合同属性信息 add by wuxw 2018-07-03 -->
+    <!-- 修改合同模板信息 -->
     <update id="updateContractTypeTemplateInfo" parameterType="Map">
         update contract_type_template t set t.status_cd = #{statusCd}
         <if test="newBId != null and newBId != ''">
@@ -59,16 +72,33 @@
         <if test="contractTypeId !=null and contractTypeId != ''">
             , t.contract_type_id= #{contractTypeId}
         </if>
+        <if test="templateName !=null and templateName != ''">
+            , t.template_name= #{templateName}
+        </if>
+        <if test="templateVersion !=null and templateVersion != ''">
+            , t.template_version= #{templateVersion}
+        </if>
+        <if test="templateDesc !=null and templateDesc != ''">
+            , t.template_desc= #{templateDesc}
+        </if>
+        <if test="useCount !=null and useCount != ''">
+            , t.use_count= #{useCount}
+        </if>
+        <if test="sourceType !=null and sourceType != ''">
+            , t.source_type= #{sourceType}
+        </if>
         where 1=1
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
         </if>
     </update>
 
-    <!-- 查询合同属性数量 add by wuxw 2018-07-03 -->
+    <!-- 查询合同模板数量 -->
     <select id="queryContractTypeTemplatesCount" parameterType="Map" resultType="Map">
         select count(1) count
         from contract_type_template t
+        left join contract_type ct on ct.contract_type_id = t.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        t.store_id
         where 1 =1
         <if test="context !=null and context != ''">
             and t.context= #{context}
@@ -85,8 +115,26 @@
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
         </if>
+        <if test="category !=null and category != ''">
+            and ifnull(ct.category,'2') = #{category}
+        </if>
+        <if test="templateNameLike !=null and templateNameLike != ''">
+            and t.template_name like concat('%',#{templateNameLike},'%')
+        </if>
 
 
     </select>
+
+    <!-- 模板使用次数 +1 -->
+    <update id="addContractTypeTemplateUseCount" parameterType="Map">
+        update contract_type_template t set t.use_count = ifnull(t.use_count, 0) + 1
+        where 1 = 1
+        <if test="templateId != null and templateId != ''">
+            and t.template_id = #{templateId}
+        </if>
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+    </update>
 
 </mapper>

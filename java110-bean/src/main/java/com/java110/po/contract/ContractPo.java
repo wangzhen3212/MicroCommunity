@@ -32,6 +32,9 @@ public class ContractPo implements Serializable {
     private String objPersonName;
     private String objPersonId;
     private String startUserId;
+    private String partyaId;
+    private String templateId;
+    private String payMode;
     private List<ContractFilePo> contractFilePo;
 
     public String getaLink() {
@@ -255,6 +258,30 @@ public class ContractPo implements Serializable {
 
     public void setContractFilePo(List<ContractFilePo> contractFilePo) {
         this.contractFilePo = contractFilePo;
+    }
+
+    public String getPartyaId() {
+        return partyaId;
+    }
+
+    public void setPartyaId(String partyaId) {
+        this.partyaId = partyaId;
+    }
+
+    public String getTemplateId() {
+        return templateId;
+    }
+
+    public void setTemplateId(String templateId) {
+        this.templateId = templateId;
+    }
+
+    public String getPayMode() {
+        return payMode;
+    }
+
+    public void setPayMode(String payMode) {
+        this.payMode = payMode;
     }
 
 }

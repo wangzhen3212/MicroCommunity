@@ -73,6 +73,11 @@ public class ContractTypeTemplateInnerServiceSMOImpl extends BaseServiceSMO impl
         return contractTypeTemplateServiceDaoImpl.queryContractTypeTemplatesCount(BeanConvertUtil.beanCovertMap(contractTypeTemplateDto));
     }
 
+    @Override
+    public int addContractTypeTemplateUseCount(@RequestBody ContractTypeTemplatePo contractTypeTemplatePo) {
+        return contractTypeTemplateServiceDaoImpl.addContractTypeTemplateUseCount(BeanConvertUtil.beanCovertMap(contractTypeTemplatePo));
+    }
+
     public IContractTypeTemplateServiceDao getContractTypeTemplateServiceDaoImpl() {
         return contractTypeTemplateServiceDaoImpl;
     }

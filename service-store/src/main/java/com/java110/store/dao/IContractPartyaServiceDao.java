@@ -54,4 +54,12 @@ public interface IContractPartyaServiceDao {
      */
     int queryContractPartyasCount(Map info);
 
+    /**
+     * 清除其它默认甲方主体（保证默认主体唯一）
+     *
+     * @param info partyaId / storeId
+     * @return 更新条数
+     */
+    int clearDefaultContractPartyaInfo(Map info);
+
 }

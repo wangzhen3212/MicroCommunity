@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="contractContentServiceDaoImpl">
+
+    <!-- 保存合同正文 -->
+    <insert id="saveContractContentInfo" parameterType="Map">
+        insert into contract_content(content_id, contract_id, template_id, content, content_version, status_cd, create_time)
+        values (#{contentId}, #{contractId}, #{templateId}, #{content}, ifnull(#{contentVersion}, 0), '0', now())
+    </insert>
+
+    <!-- 修改合同正文（按 contract_id upsert，content_version 自增） -->
+    <update id="updateContractContentInfo" parameterType="Map">
+        update contract_content t
+        <trim prefix="set" suffixOverrides=",">
+            t.update_time = now(),
+            <if test="content != null">
+                t.content = #{content},
+            </if>
+            <if test="templateId != null and templateId != ''">
+                t.template_id = #{templateId},
+            </if>
+            <if test="statusCd != null and statusCd != ''">
+                t.status_cd = #{statusCd},
+            </if>
+            t.content_version = ifnull(t.content_version, 0) + 1,
+        </trim>
+        where 1 = 1
+        <if test="contentId != null and contentId != ''">
+            and t.content_id = #{contentId}
+        </if>
+        <if test="contractId != null and contractId != ''">
+            and t.contract_id = #{contractId}
+        </if>
+    </update>
+
+    <!-- 查询合同正文（详情/编辑/预览/打印按需单条查询） -->
+    <select id="getContractContentInfo" parameterType="Map" resultType="Map">
+        select t.content_id contentId, t.contract_id contractId, t.template_id templateId, t.content content,
+        t.content_version contentVersion, t.status_cd statusCd, t.create_time createTime, t.update_time updateTime
+        from contract_content t
+        where 1 = 1
+        <if test="contentId != null and contentId != ''">
+            and t.content_id = #{contentId}
+        </if>
+        <if test="contractId != null and contractId != ''">
+            and t.contract_id = #{contractId}
+        </if>
+        <if test="statusCd != null and statusCd != ''">
+            and t.status_cd = #{statusCd}
+        </if>
+        <if test="page != -1 and page != null ">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <select id="getContractContentCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from contract_content t
+        where 1 = 1
+        <if test="contentId != null and contentId != ''">
+            and t.content_id = #{contentId}
+        </if>
+        <if test="contractId != null and contractId != ''">
+            and t.contract_id = #{contractId}
+        </if>
+        <if test="statusCd != null and statusCd != ''">
+            and t.status_cd = #{statusCd}
+        </if>
+    </select>
+</mapper>

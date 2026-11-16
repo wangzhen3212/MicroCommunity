@@ -25,6 +25,8 @@ public class ContractTypeDto extends PageDto implements Serializable {
     private String remark;
     private String storeId;
     private String contractTypeId;
+    private String category;
+    private String categoryName;
 
 
     private Date createTime;
@@ -95,5 +97,21 @@ public class ContractTypeDto extends PageDto implements Serializable {
 
     public void setAuditName(String auditName) {
         this.auditName = auditName;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
     }
 }

@@ -1,0 +1,425 @@
+/**
+ * 合同中心通用样式（品牌色 / 卡片 / 徽标 / 抽屉 / 工作台栅格）
+ * 仅取原型的配色与间距，不引入 Tailwind，避免与 Element UI 冲突
+ */
+$cc-primary: #4f46e5;
+$cc-primary-light: #eef2ff;
+$cc-border: #ebeef5;
+$cc-text: #303133;
+$cc-text-secondary: #909399;
+$cc-bg: #f7f8fa;
+$cc-danger: #f56c6c;
+$cc-warning: #e6a23c;
+$cc-success: #67c23a;
+
+.contract-center {
+  padding: 16px 20px 24px;
+  background: $cc-bg;
+  min-height: calc(100vh - 60px);
+  box-sizing: border-box;
+}
+
+.cc-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  .cc-page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: $cc-text;
+    display: flex;
+    align-items: center;
+
+    .cc-page-subtitle {
+      margin-left: 12px;
+      font-size: 12px;
+      font-weight: 400;
+      color: $cc-text-secondary;
+    }
+  }
+
+  .cc-page-actions {
+    display: flex;
+    align-items: center;
+
+    >* {
+      margin-left: 8px;
+    }
+  }
+}
+
+.cc-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid $cc-border;
+  padding: 16px;
+  box-sizing: border-box;
+
+  &+.cc-card {
+    margin-top: 16px;
+  }
+
+  .cc-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: $cc-text;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.cc-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -8px 8px;
+
+  .cc-stat-card {
+    flex: 1 1 200px;
+    min-width: 190px;
+    margin: 0 8px 16px;
+    background: #fff;
+    border: 1px solid $cc-border;
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all .2s;
+
+    &:hover {
+      border-color: $cc-primary;
+      box-shadow: 0 2px 12px rgba(79, 70, 229, .12);
+    }
+
+    .cc-stat-label {
+      font-size: 12px;
+      color: $cc-text-secondary;
+    }
+
+    .cc-stat-value {
+      margin-top: 8px;
+      font-size: 24px;
+      font-weight: 600;
+      color: $cc-text;
+    }
+
+    .cc-stat-extra {
+      margin-top: 6px;
+      font-size: 12px;
+      color: $cc-text-secondary;
+      line-height: 18px;
+    }
+  }
+}
+
+.cc-tab-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  .cc-tab-item {
+    padding: 6px 14px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    border-radius: 16px;
+    font-size: 13px;
+    color: #606266;
+    background: #fff;
+    border: 1px solid $cc-border;
+    cursor: pointer;
+    transition: all .2s;
+
+    &:hover {
+      color: $cc-primary;
+      border-color: $cc-primary;
+    }
+
+    &.active {
+      color: #fff;
+      background: $cc-primary;
+      border-color: $cc-primary;
+    }
+
+    .cc-tab-count {
+      margin-left: 4px;
+      opacity: .8;
+    }
+  }
+}
+
+.cc-badge {
+  display: inline-block;
+  padding: 0 8px;
+  height: 20px;
+  line-height: 20px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-left: 6px;
+
+  &.is-primary {
+    color: $cc-primary;
+    background: $cc-primary-light;
+  }
+
+  &.is-success {
+    color: $cc-success;
+    background: #f0f9eb;
+  }
+
+  &.is-warning {
+    color: $cc-warning;
+    background: #fdf6ec;
+  }
+
+  &.is-danger {
+    color: $cc-danger;
+    background: #fef0f0;
+  }
+
+  &.is-info {
+    color: $cc-text-secondary;
+    background: #f4f4f5;
+  }
+}
+
+.cc-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .cc-toolbar-item {
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+.cc-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: $cc-primary-light;
+  color: $cc-primary;
+  font-size: 13px;
+}
+
+.cc-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cc-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: $cc-text-secondary;
+  font-size: 13px;
+}
+
+.cc-drawer {
+  .cc-drawer-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: $cc-text;
+  }
+
+  .cc-drawer-eyebrow {
+    font-size: 12px;
+    color: $cc-text-secondary;
+    margin-top: 4px;
+  }
+
+  .cc-drawer-section {
+    margin-bottom: 18px;
+
+    .cc-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: $cc-text;
+      margin-bottom: 8px;
+      padding-left: 8px;
+      border-left: 3px solid $cc-primary;
+    }
+  }
+
+  .cc-kv {
+    display: flex;
+    font-size: 13px;
+    line-height: 26px;
+
+    .cc-kv-label {
+      width: 90px;
+      color: $cc-text-secondary;
+      flex: none;
+    }
+
+    .cc-kv-value {
+      color: $cc-text;
+      flex: 1;
+      word-break: break-all;
+    }
+  }
+}
+
+.cc-workbench {
+  .cc-section {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid $cc-border;
+    margin-bottom: 16px;
+    padding: 16px;
+
+    .cc-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+
+      .cc-section-index {
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        line-height: 22px;
+        text-align: center;
+        border-radius: 50%;
+        background: $cc-primary;
+        color: #fff;
+        font-size: 12px;
+        margin-right: 8px;
+      }
+
+      .cc-section-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: $cc-text;
+      }
+    }
+  }
+}
+
+.cc-summary-panel {
+  position: sticky;
+  top: 12px;
+
+  .cc-summary-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    line-height: 26px;
+
+    .label {
+      color: $cc-text-secondary;
+    }
+
+    .value {
+      color: $cc-text;
+      font-weight: 500;
+    }
+  }
+
+  .cc-integrity-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    line-height: 24px;
+
+    i {
+      margin-right: 6px;
+    }
+  }
+}
+
+.cc-flow-step {
+  position: relative;
+  padding-left: 20px;
+  padding-bottom: 14px;
+  border-left: 1px dashed #dcdfe6;
+
+  &:last-child {
+    border-left-color: transparent;
+    padding-bottom: 0;
+  }
+
+  .cc-flow-dot {
+    position: absolute;
+    left: -5px;
+    top: 2px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #dcdfe6;
+  }
+
+  &.is-current {
+    .cc-flow-dot {
+      background: $cc-primary;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .18);
+    }
+
+    .cc-flow-name {
+      color: $cc-primary;
+    }
+  }
+
+  &.is-pass .cc-flow-dot {
+    background: $cc-success;
+  }
+
+  &.is-reject .cc-flow-dot {
+    background: $cc-danger;
+  }
+
+  .cc-flow-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: $cc-text;
+  }
+
+  .cc-flow-meta {
+    font-size: 12px;
+    color: $cc-text-secondary;
+    line-height: 20px;
+  }
+}
+
+.cc-doc-editor {
+  border: 1px solid $cc-border;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 320px;
+  max-height: 560px;
+  overflow-y: auto;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1.8;
+  color: $cc-text;
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+
+    td,
+    th {
+      border: 1px solid $cc-border;
+      padding: 4px 8px;
+    }
+  }
+}
+
+.cc-progress-cell {
+  .cc-progress-text {
+    font-size: 12px;
+    color: $cc-text-secondary;
+    margin-top: 2px;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  .cc-stat-row .cc-stat-card {
+    flex: 1 1 45%;
+  }
+}

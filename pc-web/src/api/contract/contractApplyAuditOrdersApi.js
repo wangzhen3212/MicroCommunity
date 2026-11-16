@@ -1,5 +1,19 @@
 import request from '@/utils/request'
 
+// 合同待办/审批已切换为自建两级审批（法务校对 -> 领导审核），旧工作流接口仅作兜底
+export {
+  auditContract,
+  cancelContractAudit,
+  listContractAuditHistory,
+  listContractAuditStatistics,
+  listContractAuditTasks,
+  queryContractAuditFlow,
+  queryContractAuditorConfig,
+  saveContractAuditorConfig,
+  submitContractAudit
+} from '@/api/contract/contractAuditApi'
+
+
 // 查询合同任务列表
 export function queryContractTask(params) {
   return new Promise((resolve, reject) => {

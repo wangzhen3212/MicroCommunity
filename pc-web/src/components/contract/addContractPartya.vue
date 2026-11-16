@@ -1,22 +1,35 @@
 ﻿<template>
   <el-dialog
-    :title="$t('contractPartyaManage.add.title')"
+    :title="$t('contractPartyaCenter.form.titleAdd')"
     :visible.sync="visible"
     width="50%"
     @close="handleClose"
   >
-    <el-form ref="form" :model="formData" :rules="rules" label-width="120px">
+    <el-form ref="form" :model="formData" :rules="rules" label-width="130px">
       <el-form-item
-        :label="$t('contractPartyaManage.form.partyA')"
+        :label="$t('contractPartyaCenter.fullName')"
         prop="partyA"
       >
         <el-input
           v-model="formData.partyA"
-          :placeholder="$t('contractPartyaManage.form.partyAPlaceholder')"
+          :placeholder="$t('contractPartyaCenter.form.fullNamePlaceholder')"
         />
       </el-form-item>
+      <el-form-item :label="$t('contractPartyaCenter.shortName')">
+        <el-input v-model="formData.shortName" maxlength="50" />
+      </el-form-item>
+      <el-form-item :label="$t('contractPartyaCenter.creditCode')" prop="creditCode">
+        <el-input
+          v-model="formData.creditCode"
+          maxlength="18"
+          :placeholder="$t('contractPartyaCenter.form.creditCodePlaceholder')"
+        />
+      </el-form-item>
+      <el-form-item :label="$t('contractPartyaCenter.legalPerson')">
+        <el-input v-model="formData.legalPerson" maxlength="50" />
+      </el-form-item>
       <el-form-item
-        :label="$t('contractPartyaManage.form.aContacts')"
+        :label="$t('contractPartyaCenter.contacts')"
         prop="aContacts"
       >
         <el-input
@@ -25,12 +38,37 @@
         />
       </el-form-item>
       <el-form-item
-        :label="$t('contractPartyaManage.form.aLink')"
+        :label="$t('contractPartyaCenter.tel')"
         prop="aLink"
       >
         <el-input
           v-model="formData.aLink"
           :placeholder="$t('contractPartyaManage.form.aLinkPlaceholder')"
+        />
+      </el-form-item>
+      <el-form-item :label="$t('contractPartyaCenter.bankName')">
+        <el-input v-model="formData.bankName" maxlength="100" />
+      </el-form-item>
+      <el-form-item :label="$t('contractPartyaCenter.bankAccount')">
+        <el-input
+          v-model="formData.bankAccount"
+          maxlength="50"
+          :placeholder="$t('contractPartyaCenter.form.bankAccountPlaceholder')"
+        />
+      </el-form-item>
+      <el-form-item :label="$t('contractPartyaCenter.seal')">
+        <el-switch
+          v-model="formData.sealFlag"
+          active-value="1"
+          inactive-value="0"
+        />
+        <span class="cc-form-tip">{{ $t('contractPartyaCenter.form.sealTip') }}</span>
+      </el-form-item>
+      <el-form-item :label="$t('contractPartyaCenter.default')">
+        <el-switch
+          v-model="formData.defaultFlag"
+          active-value="1"
+          inactive-value="0"
         />
       </el-form-item>
     </el-form>
@@ -56,20 +94,34 @@ export default {
       visible: false,
       formData: {
         partyA: '',
+        shortName: '',
+        creditCode: '',
+        legalPerson: '',
         aContacts: '',
         aLink: '',
+        bankName: '',
+        bankAccount: '',
+        sealFlag: '0',
+        defaultFlag: '0',
         communityId: ''
       },
       rules: {
         partyA: [
           {
             required: true,
-            message: this.$t('contractPartyaManage.validate.partyARequired'),
+            message: this.$t('contractPartyaCenter.validate.fullNameRequired'),
             trigger: 'blur'
           },
           {
             max: 200,
             message: this.$t('contractPartyaManage.validate.partyAMaxLength'),
+            trigger: 'blur'
+          }
+        ],
+        creditCode: [
+          {
+            pattern: /^[0-9A-HJ-NPQRTUWXY]{18}$/,
+            message: this.$t('contractPartyaCenter.validate.creditCodeFormat'),
             trigger: 'blur'
           }
         ],
@@ -93,7 +145,7 @@ export default {
           },
           {
             pattern: /^1[3-9]\d{9}$/,
-            message: this.$t('contractPartyaManage.validate.aLinkFormat'),
+            message: this.$t('contractPartyaCenter.validate.telFormat'),
             trigger: 'blur'
           }
         ]
@@ -102,25 +154,43 @@ export default {
   },
   methods: {
     open() {
+      this.resetForm()
       this.visible = true
       this.formData.communityId = getCommunityId()
+    },
+    resetForm() {
+      this.formData = {
+        partyA: '',
+        shortName: '',
+        creditCode: '',
+        legalPerson: '',
+        aContacts: '',
+        aLink: '',
+        bankName: '',
+        bankAccount: '',
+        sealFlag: '0',
+        defaultFlag: '0',
+        communityId: getCommunityId()
+      }
       this.$nextTick(() => {
-        this.$refs.form && this.$refs.form.resetFields()
+        if (this.$refs.form) {
+          this.$refs.form.clearValidate()
+        }
       })
     },
     handleClose() {
-      this.$refs.form.resetFields()
+      this.resetForm()
     },
     handleSubmit() {
       this.$refs.form.validate(async valid => {
         if (valid) {
           try {
             await saveContractPartya(this.formData)
-            this.$message.success(this.$t('common.operationSuccess'))
+            this.$message.success(this.$t('contractPartyaCenter.msg.saveSuccess'))
             this.visible = false
             this.$emit('success')
           } catch (error) {
-            this.$message.error(error.message || this.$t('common.addFailed'))
+            this.$message.error(error.message || this.$t('contractPartyaCenter.msg.saveError'))
           }
         }
       })
@@ -128,3 +198,11 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.cc-form-tip {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #909399;
+}
+</style>

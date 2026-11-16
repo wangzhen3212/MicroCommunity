@@ -54,4 +54,12 @@ public interface IContractCollectionPlanServiceDao {
      */
     int queryContractCollectionPlansCount(Map info);
 
+    /**
+     * 收款计划期次统计（已付/待付/逾期/已付期次/总期次/下一节点）
+     *
+     * @param info 查询条件
+     * @return 统计结果
+     */
+    List<Map> queryContractCollectionPlanStatistics(Map info);
+
 }

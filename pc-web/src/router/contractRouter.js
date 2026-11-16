@@ -45,6 +45,12 @@ export default [
         component: () => import('@/views/contract/contractChangeDetailList.vue')
     },
     {
+        path: '/pages/admin/contractPerformance',
+        meta: { title: '合同履约' },
+        name: '/pages/admin/contractPerformance',
+        component: () => import('@/views/contract/contractPerformanceList.vue')
+    },
+    {
         path: '/pages/admin/expirationContractManage',
         meta: { title: '到期合同' },
         name: '/pages/admin/expirationContractManage',

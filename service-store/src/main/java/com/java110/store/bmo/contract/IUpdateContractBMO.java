@@ -32,4 +32,12 @@ public interface IUpdateContractBMO {
      * @return
      */
     ResponseEntity<String> needAuditContractPlan(ContractChangePlanDto contractChangePlanDto, JSONObject reqJson);
+
+    /**
+     * 两级审批全部通过后回写变更到合同主表（租期/主体/资产），并同步合同房屋与业主关系
+     *
+     * @param planId  变更单ID
+     * @param storeId 商户ID
+     */
+    void applyChangePlan(String planId, String storeId);
 }

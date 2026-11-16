@@ -79,6 +79,58 @@ public class ContractInnerServiceSMOImpl extends BaseServiceSMO implements ICont
         return contractServiceDaoImpl.queryContractsByOwnerIds(info);
     }
 
+    @Override
+    public List<Map> queryContractStatistics(@RequestBody Map info) {
+        return contractServiceDaoImpl.queryContractStatistics(info);
+    }
+
+    @Override
+    public List<Map> queryContractPerformances(@RequestBody Map info) {
+        // 分页
+        Object pageObj = info.get("page");
+        if (pageObj != null) {
+            int page = Integer.parseInt(pageObj.toString());
+            if (page != PageDto.DEFAULT_PAGE) {
+                int row = Integer.parseInt(String.valueOf(info.get("row")));
+                info.put("page", (page - 1) * row);
+            }
+        }
+        return contractServiceDaoImpl.queryContractPerformances(info);
+    }
+
+    @Override
+    public int queryContractPerformancesCount(@RequestBody Map info) {
+        return contractServiceDaoImpl.queryContractPerformancesCount(info);
+    }
+
+    @Override
+    public List<Map> queryContractReminds(@RequestBody Map info) {
+        Object pageObj = info.get("page");
+        if (pageObj != null) {
+            int page = Integer.parseInt(pageObj.toString());
+            if (page != PageDto.DEFAULT_PAGE) {
+                int row = Integer.parseInt(String.valueOf(info.get("row")));
+                info.put("page", (page - 1) * row);
+            }
+        }
+        return contractServiceDaoImpl.queryContractReminds(info);
+    }
+
+    @Override
+    public int queryContractRemindsCount(@RequestBody Map info) {
+        return contractServiceDaoImpl.queryContractRemindsCount(info);
+    }
+
+    @Override
+    public int saveContractRemindLog(@RequestBody Map info) {
+        return contractServiceDaoImpl.saveContractRemindLog(info);
+    }
+
+    @Override
+    public List<Map> queryContractRemindLogs(@RequestBody Map info) {
+        return contractServiceDaoImpl.queryContractRemindLogs(info);
+    }
+
     public IContractServiceDao getContractServiceDaoImpl() {
         return contractServiceDaoImpl;
     }

@@ -73,6 +73,11 @@ public class ContractPartyaInnerServiceSMOImpl extends BaseServiceSMO implements
         return contractPartyaServiceDaoImpl.queryContractPartyasCount(BeanConvertUtil.beanCovertMap(contractPartyaDto));
     }
 
+    @Override
+    public int clearDefaultContractPartya(@RequestBody ContractPartyaPo contractPartyaPo) {
+        return contractPartyaServiceDaoImpl.clearDefaultContractPartyaInfo(BeanConvertUtil.beanCovertMap(contractPartyaPo));
+    }
+
     public IContractPartyaServiceDao getContractPartyaServiceDaoImpl() {
         return contractPartyaServiceDaoImpl;
     }

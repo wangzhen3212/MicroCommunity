@@ -49,4 +49,10 @@ public interface IContractTypeTemplateInnerServiceSMO {
      */
     @RequestMapping(value = "/queryContractTypeTemplatesCount", method = RequestMethod.POST)
     int queryContractTypeTemplatesCount(@RequestBody ContractTypeTemplateDto contractTypeTemplateDto);
+
+    /**
+     * 模板使用次数 +1
+     */
+    @RequestMapping(value = "/addContractTypeTemplateUseCount", method = RequestMethod.POST)
+    int addContractTypeTemplateUseCount(@RequestBody ContractTypeTemplatePo contractTypeTemplatePo);
 }

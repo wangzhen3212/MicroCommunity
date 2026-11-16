@@ -26,6 +26,16 @@ public class ContractDto extends PageDto implements Serializable {
 
     public static final String STATE_COMPLAINT = "44"; //合同终止
 
+    public static final String STATE_DRAFT = "10"; //草稿
+    public static final String STATE_AUDIT = "11"; //待审核
+
+    /**
+     * 合同类型分类：1 房屋出租 / 2 采购 / 3 维保
+     */
+    public static final String CATEGORY_RENT = "1";
+    public static final String CATEGORY_PURCHASE = "2";
+    public static final String CATEGORY_MAINTAIN = "3";
+
     private String aLink;
     private String aContacts;
     private String amount;
@@ -97,6 +107,46 @@ public class ContractDto extends PageDto implements Serializable {
     private String hasEnd;
 
     private String partyBLike;
+
+    /**
+     * 甲方主体ID
+     */
+    private String partyaId;
+    /**
+     * 合同模板ID
+     */
+    private String templateId;
+    /**
+     * 付款方式
+     */
+    private String payMode;
+    /**
+     * 合同类型分类 1房屋出租 2采购 3维保
+     */
+    private String category;
+    private String[] categories;
+    /**
+     * 到期区间查询
+     */
+    private String endTimeBegin;
+    private String endTimeEnd;
+    /**
+     * 是否存在变更 1 存在
+     */
+    private String changed;
+    /**
+     * 合同类型名称
+     */
+    private String typeNameLike;
+    /**
+     * 履约付款状态过滤（3 全部未付清，含逾期）
+     */
+    private String payState;
+
+    /**
+     * 关键字：合同编号 / 名称 / 签约方
+     */
+    private String searchText;
 
     private List<ContractAttrDto> attrs;
 
@@ -538,5 +588,93 @@ public class ContractDto extends PageDto implements Serializable {
 
     public void setParentContractCodeLike(String parentContractCodeLike) {
         this.parentContractCodeLike = parentContractCodeLike;
+    }
+
+    public String getPartyaId() {
+        return partyaId;
+    }
+
+    public void setPartyaId(String partyaId) {
+        this.partyaId = partyaId;
+    }
+
+    public String getTemplateId() {
+        return templateId;
+    }
+
+    public void setTemplateId(String templateId) {
+        this.templateId = templateId;
+    }
+
+    public String getPayMode() {
+        return payMode;
+    }
+
+    public void setPayMode(String payMode) {
+        this.payMode = payMode;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String[] getCategories() {
+        return categories;
+    }
+
+    public void setCategories(String[] categories) {
+        this.categories = categories;
+    }
+
+    public String getEndTimeBegin() {
+        return endTimeBegin;
+    }
+
+    public void setEndTimeBegin(String endTimeBegin) {
+        this.endTimeBegin = endTimeBegin;
+    }
+
+    public String getEndTimeEnd() {
+        return endTimeEnd;
+    }
+
+    public void setEndTimeEnd(String endTimeEnd) {
+        this.endTimeEnd = endTimeEnd;
+    }
+
+    public String getChanged() {
+        return changed;
+    }
+
+    public void setChanged(String changed) {
+        this.changed = changed;
+    }
+
+    public String getTypeNameLike() {
+        return typeNameLike;
+    }
+
+    public void setTypeNameLike(String typeNameLike) {
+        this.typeNameLike = typeNameLike;
+    }
+
+    public String getPayState() {
+        return payState;
+    }
+
+    public void setPayState(String payState) {
+        this.payState = payState;
+    }
+
+    public String getSearchText() {
+        return searchText;
+    }
+
+    public void setSearchText(String searchText) {
+        this.searchText = searchText;
     }
 }

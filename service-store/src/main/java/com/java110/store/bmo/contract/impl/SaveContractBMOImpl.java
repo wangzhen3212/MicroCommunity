@@ -6,6 +6,8 @@ import com.java110.core.annotation.Java110Transactional;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
+import com.java110.dto.contract.ContractAuditDto;
+import com.java110.dto.contract.ContractCollectionPlanDto;
 import com.java110.dto.contract.ContractTypeDto;
 import com.java110.dto.fee.FeeDto;
 import com.java110.dto.owner.OwnerRoomRelDto;
@@ -19,11 +21,15 @@ import com.java110.intf.user.IOwnerRoomRelInnerServiceSMO;
 import com.java110.intf.user.IRentingPoolInnerServiceSMO;
 import com.java110.po.contract.ContractPo;
 import com.java110.po.contract.ContractAttrPo;
+import com.java110.po.contract.ContractCollectionPlanPo;
 import com.java110.po.contract.ContractFilePo;
 import com.java110.po.contract.ContractRoomPo;
+import com.java110.po.contract.ContractTypeTemplatePo;
 import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.renting.RentingPoolPo;
 import com.java110.po.room.RoomPo;
+import com.java110.store.bmo.contract.IContractAuditBMO;
+import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.store.bmo.contract.ISaveContractBMO;
 import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
@@ -69,6 +75,21 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
     @Autowired
     private IFeeInnerServiceSMO feeInnerServiceSMOImpl;
 
+    @Autowired
+    private IContractContentBMO contractContentBMOImpl;
+
+    @Autowired
+    private IContractAuditBMO contractAuditBMOImpl;
+
+    @Autowired
+    private IContractCollectionPlanInnerServiceSMO contractCollectionPlanInnerServiceSMOImpl;
+
+    @Autowired
+    private IContractTypeTemplateInnerServiceSMO contractTypeTemplateInnerServiceSMOImpl;
+
+    private static final String PREFIX_PLAN_ID = "95";
+
+
     /**
      * 添加小区信息
      *
@@ -90,10 +111,14 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
 
         String audit = contractTypeDtos.get(0).getAudit();
 
-        if (ContractTypeDto.NO_AUDIT.equals(audit)) {
-            contractPo.setState("22");
+        boolean draft = ContractDto.STATE_DRAFT.equals(reqJson.getString("state"));
+
+        if (draft) {
+            contractPo.setState(ContractDto.STATE_DRAFT);
+        } else if (ContractTypeDto.NO_AUDIT.equals(audit)) {
+            contractPo.setState(ContractDto.STATE_AUDIT_FINISH);
         } else {
-            contractPo.setState("11");
+            contractPo.setState(ContractDto.STATE_AUDIT);
         }
         //校验合同编号是否重复
         ContractDto contractDto = new ContractDto();
@@ -122,17 +147,18 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
 
         saveContractRoomRel(reqJson, contractPo);
 
-        //需要审核时才写 工作流
-        if (!ContractTypeDto.NO_AUDIT.equals(audit)) {
-            //提交流程
-            ContractDto tmpContractDto = BeanConvertUtil.covertBean(contractPo, ContractDto.class);
-            tmpContractDto.setCurrentUserId(reqJson.getString("userId"));
-            tmpContractDto.setNextUserId(reqJson.getString("nextUserId"));
-            contractApplyUserInnerServiceSMOImpl.startProcess(tmpContractDto);
+        // 正文与收款计划（同事务写入，正文独立表）
+        saveContractContent(reqJson, contractPo);
+
+        saveContractCollectionPlans(reqJson, contractPo);
+
+        // 非草稿且需要审核时提交两级审批（法务校对 -> 领导审核）
+        if (!draft && !ContractTypeDto.NO_AUDIT.equals(audit)) {
+            submitContractAudit(reqJson, contractPo);
         }
 
 
-        if (StoreDto.STORE_ADMIN.equals(contractPo.getStoreId())) {
+        if (!draft && StoreDto.STORE_ADMIN.equals(contractPo.getStoreId())) {
             noticeRentUpdateState(contractPo, audit);
         }
 
@@ -154,6 +180,67 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
 
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
 
+    }
+
+    /**
+     * 保存合同正文（独立表 upsert，同时累加模板使用次数）
+     */
+    private void saveContractContent(JSONObject reqJson, ContractPo contractPo) {
+        if (StringUtil.isEmpty(reqJson.getString("content"))) {
+            return;
+        }
+        contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), contractPo.getTemplateId(),
+                reqJson.getString("content"));
+        if (StringUtil.isEmpty(contractPo.getTemplateId())) {
+            return;
+        }
+        ContractTypeTemplatePo templatePo = new ContractTypeTemplatePo();
+        templatePo.setTemplateId(contractPo.getTemplateId());
+        templatePo.setStoreId(contractPo.getStoreId());
+        templatePo.setStatusCd("0");
+        contractTypeTemplateInnerServiceSMOImpl.addContractTypeTemplateUseCount(templatePo);
+    }
+
+    /**
+     * 保存收款计划期次（履约节点）
+     */
+    private void saveContractCollectionPlans(JSONObject reqJson, ContractPo contractPo) {
+        if (!reqJson.containsKey("plans")) {
+            return;
+        }
+        JSONArray plans = reqJson.getJSONArray("plans");
+        if (plans == null || plans.isEmpty()) {
+            return;
+        }
+        for (int planIndex = 0; planIndex < plans.size(); planIndex++) {
+            JSONObject plan = plans.getJSONObject(planIndex);
+            ContractCollectionPlanPo planPo = BeanConvertUtil.covertBean(plan, ContractCollectionPlanPo.class);
+            planPo.setPlanId(GenerateCodeFactory.getGeneratorId(PREFIX_PLAN_ID));
+            planPo.setContractId(contractPo.getContractId());
+            planPo.setStoreId(contractPo.getStoreId());
+            if (StringUtil.isEmpty(planPo.getPlanSeq())) {
+                planPo.setPlanSeq(String.valueOf(planIndex + 1));
+            }
+            if (StringUtil.isEmpty(planPo.getPayState())) {
+                planPo.setPayState(ContractCollectionPlanDto.PAY_STATE_DOING);
+            }
+            contractCollectionPlanInnerServiceSMOImpl.saveContractCollectionPlan(planPo);
+        }
+    }
+
+    /**
+     * 提交两级审批（法务校对 -> 领导审核），替代 Activiti 工作流
+     */
+    private void submitContractAudit(JSONObject reqJson, ContractPo contractPo) {
+        JSONObject auditJson = new JSONObject();
+        auditJson.put("auditType", ContractAuditDto.AUDIT_TYPE_CONTRACT);
+        auditJson.put("bizId", contractPo.getContractId());
+        auditJson.put("submitStaffId", StringUtil.isEmpty(reqJson.getString("userId"))
+                ? contractPo.getStartUserId() : reqJson.getString("userId"));
+        auditJson.put("submitStaffName", reqJson.getString("submitStaffName"));
+        auditJson.put("legalAuditorId", reqJson.getString("legalAuditorId"));
+        auditJson.put("leaderAuditorId", reqJson.getString("leaderAuditorId"));
+        contractAuditBMOImpl.submitAudit(auditJson, contractPo.getStoreId());
     }
 
     /**

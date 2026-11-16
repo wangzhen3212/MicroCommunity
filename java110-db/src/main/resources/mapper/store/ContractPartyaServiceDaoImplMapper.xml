@@ -3,20 +3,30 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="contractPartyaServiceDaoImpl">
 
-    <!-- 保存合同房屋信息 add by wuxw 2018-07-03 -->
+    <!-- 保存合同甲方主体信息 -->
     <insert id="saveContractPartyaInfo" parameterType="Map">
-        insert into contract_partya(party_a, a_link, a_contacts, partya_id, store_id)
-        values (#{partyA}, #{aLink}, #{aContacts}, #{partyaId}, #{storeId})
+        insert into contract_partya(party_a, a_link, a_contacts, partya_id, store_id,
+                                    short_name, credit_code, legal_person, bank_name, bank_account,
+                                    contact_person, contact_tel, seal_flag, default_flag)
+        values (#{partyA}, #{aLink}, #{aContacts}, #{partyaId}, #{storeId},
+                #{shortName}, #{creditCode}, #{legalPerson}, #{bankName}, #{bankAccount},
+                #{contactPerson}, #{contactTel}, ifnull(#{sealFlag}, '0'), ifnull(#{defaultFlag}, '0'))
     </insert>
 
-    <!-- 查询合同房屋信息 add by wuxw 2018-07-03 -->
+    <!-- 查询合同甲方主体信息 -->
     <select id="getContractPartyaInfo" parameterType="Map" resultType="Map">
         select t.party_a,t.party_a partyA,t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts
-        aContacts,t.partya_id,t.partya_id partyaId,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id storeId
+        aContacts,t.partya_id,t.partya_id partyaId,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id storeId,
+        t.short_name shortName, t.credit_code creditCode, t.legal_person legalPerson, t.bank_name bankName,
+        t.bank_account bankAccount, t.contact_person contactPerson, t.contact_tel contactTel,
+        ifnull(t.seal_flag,'0') sealFlag, ifnull(t.default_flag,'0') defaultFlag, t.create_time createTime
         from contract_partya t
         where 1 =1
         <if test="partyA !=null and partyA != ''">
             and t.party_a like concat('%',#{partyA},'%')
+        </if>
+        <if test="partyALike !=null and partyALike != ''">
+            and (t.party_a like concat('%',#{partyALike},'%') or t.short_name like concat('%',#{partyALike},'%'))
         </if>
         <if test="aLink !=null and aLink != ''">
             and t.a_link= #{aLink}
@@ -27,19 +37,25 @@
         <if test="partyaId !=null and partyaId != ''">
             and t.partya_id= #{partyaId}
         </if>
+        <if test="creditCode !=null and creditCode != ''">
+            and t.credit_code= #{creditCode}
+        </if>
+        <if test="defaultFlag !=null and defaultFlag != ''">
+            and ifnull(t.default_flag,'0') = #{defaultFlag}
+        </if>
         <if test="statusCd !=null and statusCd != ''">
             and t.status_cd= #{statusCd}
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
-        order by t.create_time desc
+        order by ifnull(t.default_flag,'0') desc, t.create_time desc
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
         </if>
     </select>
 
-    <!-- 修改合同房屋信息 add by wuxw 2018-07-03 -->
+    <!-- 修改合同甲方主体信息 -->
     <update id="updateContractPartyaInfo" parameterType="Map">
         update contract_partya t set t.status_cd = #{statusCd}
         <if test="newBId != null and newBId != ''">
@@ -57,19 +73,49 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
+        <if test="shortName !=null and shortName != ''">
+            , t.short_name= #{shortName}
+        </if>
+        <if test="creditCode !=null and creditCode != ''">
+            , t.credit_code= #{creditCode}
+        </if>
+        <if test="legalPerson !=null and legalPerson != ''">
+            , t.legal_person= #{legalPerson}
+        </if>
+        <if test="bankName !=null and bankName != ''">
+            , t.bank_name= #{bankName}
+        </if>
+        <if test="bankAccount !=null and bankAccount != ''">
+            , t.bank_account= #{bankAccount}
+        </if>
+        <if test="contactPerson !=null and contactPerson != ''">
+            , t.contact_person= #{contactPerson}
+        </if>
+        <if test="contactTel !=null and contactTel != ''">
+            , t.contact_tel= #{contactTel}
+        </if>
+        <if test="sealFlag !=null and sealFlag != ''">
+            , t.seal_flag= #{sealFlag}
+        </if>
+        <if test="defaultFlag !=null and defaultFlag != ''">
+            , t.default_flag= #{defaultFlag}
+        </if>
         where 1=1
         <if test="partyaId !=null and partyaId != ''">
             and t.partya_id= #{partyaId}
         </if>
     </update>
 
-    <!-- 查询合同房屋数量 add by wuxw 2018-07-03 -->
+    <!-- 查询合同甲方主体数量 -->
     <select id="queryContractPartyasCount" parameterType="Map" resultType="Map">
         select count(1) count
         from contract_partya t
         where 1 =1
         <if test="partyA !=null and partyA != ''">
             and t.party_a like concat('%',#{partyA},'%')
+        </if>
+        <if test="partyALike !=null and partyALike != ''">
+            and (t.party_a like concat('%',#{partyALike},'%') or t.short_name like concat('%',#{partyALike},'%'))
         </if>
         <if test="aLink !=null and aLink != ''">
             and t.a_link= #{aLink}
@@ -87,4 +133,16 @@
             and t.store_id= #{storeId}
         </if>
     </select>
+
+    <!-- 清除其它默认主体（保证默认主体唯一） -->
+    <update id="clearDefaultContractPartyaInfo" parameterType="Map">
+        update contract_partya t set t.default_flag = '0'
+        where t.status_cd = '0' and ifnull(t.default_flag, '0') = '1'
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+        <if test="partyaId != null and partyaId != ''">
+            and t.partya_id &lt;&gt; #{partyaId}
+        </if>
+    </update>
 </mapper>

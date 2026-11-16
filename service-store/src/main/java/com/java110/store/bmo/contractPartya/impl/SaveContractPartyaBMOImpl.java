@@ -26,6 +26,13 @@ public class SaveContractPartyaBMOImpl implements ISaveContractPartyaBMO {
     public ResponseEntity<String> save(ContractPartyaPo contractPartyaPo) {
 
         contractPartyaPo.setPartyaId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_partyaId));
+        // 默认主体唯一：新增默认主体时先清除其它默认
+        if ("1".equals(contractPartyaPo.getDefaultFlag())) {
+            ContractPartyaPo clearPo = new ContractPartyaPo();
+            clearPo.setPartyaId(contractPartyaPo.getPartyaId());
+            clearPo.setStoreId(contractPartyaPo.getStoreId());
+            contractPartyaInnerServiceSMOImpl.clearDefaultContractPartya(clearPo);
+        }
         int flag = contractPartyaInnerServiceSMOImpl.saveContractPartya(contractPartyaPo);
 
         if (flag > 0) {
