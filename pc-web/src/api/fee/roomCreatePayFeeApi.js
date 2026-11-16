@@ -32,7 +32,23 @@ export function queryFloors(params) {
   })
 }
 
-// 查询房屋列表
+// 查询单元列表
+export function queryUnits(params) {
+  return new Promise((resolve, reject) => {
+    request({
+      url: '/unit.queryUnits',
+      method: 'get',
+      params
+    }).then(response => {
+      const res = response.data
+      resolve(res)
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}
+
+// 查询房屋列表，支持 unitId / floorId / roomState / 分页参数
 export function queryRooms(params) {
   return new Promise((resolve, reject) => {
     request({
