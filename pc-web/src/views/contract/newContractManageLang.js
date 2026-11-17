@@ -5,7 +5,7 @@ export const messages = {
         title: 'Search Conditions',
         contractNamePlaceholder: 'Please enter contract name',
         contractCodePlaceholder: 'Please enter contract code',
-        contractTypePlaceholder: 'Please select contract type'
+        contractTypePlaceholder: 'Please select contract template'
       },
       allTypes: 'All',
       list: {
@@ -17,7 +17,7 @@ export const messages = {
         contractName: 'Contract Name',
         contractCode: 'Contract Code',
         parentContractCode: 'Parent Contract Code',
-        contractType: 'Contract Type',
+        contractType: 'Contract Template',
         operator: 'Operator',
         amount: 'Contract Amount',
         startTime: 'Start Time',
@@ -31,8 +31,8 @@ export const messages = {
         contractNamePlaceholder: 'Required, please fill in contract name',
         contractCode: 'Contract Code',
         contractCodePlaceholder: 'Required, please fill in contract code',
-        contractType: 'Contract Type',
-        contractTypePlaceholder: 'Required, please select contract type',
+        contractType: 'Contract Template',
+        contractTypePlaceholder: 'Required, please select contract template',
         partyA: 'Party A',
         partyAPlaceholder: 'Required, please fill in Party A',
         partyB: 'Party B',
@@ -107,7 +107,7 @@ export const messages = {
         title: '查询条件',
         contractNamePlaceholder: '请输入合同名称',
         contractCodePlaceholder: '请输入合同编号',
-        contractTypePlaceholder: '请选择合同类型'
+        contractTypePlaceholder: '请选择合同模板'
       },
       allTypes: '全部',
       list: {
@@ -119,7 +119,7 @@ export const messages = {
         contractName: '合同名称',
         contractCode: '合同编号',
         parentContractCode: '父合同编号',
-        contractType: '合同类型',
+        contractType: '合同模板',
         operator: '经办人',
         amount: '合同金额',
         startTime: '开始时间',
@@ -133,8 +133,8 @@ export const messages = {
         contractNamePlaceholder: '必填，请填写合同名称',
         contractCode: '合同编号',
         contractCodePlaceholder: '必填，请填写合同编号',
-        contractType: '合同类型',
-        contractTypePlaceholder: '必填，请选择合同类型',
+        contractType: '合同模板',
+        contractTypePlaceholder: '必填，请选择合同模板',
         partyA: '甲方',
         partyAPlaceholder: '必填，请填写甲方',
         partyB: '乙方',
@@ -209,7 +209,7 @@ fetchError: '获取合同数据失败'
         title: '查詢條件',
         contractNamePlaceholder: '請輸入合同名稱',
         contractCodePlaceholder: '請輸入合同編號',
-        contractTypePlaceholder: '請選擇合同類型'
+        contractTypePlaceholder: '請選擇合同模板'
       },
       allTypes: '全部',
       list: {
@@ -221,7 +221,7 @@ fetchError: '获取合同数据失败'
         contractName: '合同名稱',
         contractCode: '合同編號',
         parentContractCode: '父合同編號',
-        contractType: '合同類型',
+        contractType: '合同模板',
         operator: '經辦人',
         amount: '合同金額',
         startTime: '開始時間',
@@ -235,8 +235,8 @@ fetchError: '获取合同数据失败'
         contractNamePlaceholder: '必填，請填寫合同名稱',
         contractCode: '合同編號',
         contractCodePlaceholder: '必填，請填寫合同編號',
-        contractType: '合同類型',
-        contractTypePlaceholder: '必填，請選擇合同類型',
+        contractType: '合同模板',
+        contractTypePlaceholder: '必填，請選擇合同模板',
         partyA: '甲方',
         partyAPlaceholder: '必填，請填寫甲方',
         partyB: '乙方',

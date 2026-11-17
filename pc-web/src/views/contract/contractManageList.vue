@@ -16,19 +16,6 @@
     <contract-ledger-stat :statistics="statistics" @filter-auditing="filterAuditing" />
 
     <div class="cc-surface">
-      <div class="cc-tabs">
-        <div
-          v-for="tab in categoryTabs"
-          :key="tab.key"
-          class="cc-tab"
-          :class="{ 'is-active': conditions.category === tab.key }"
-          @click="switchCategory(tab.key)"
-        >
-          {{ $t(tab.labelKey) }}
-          <span class="cc-tab-count">{{ tab.count }}</span>
-        </div>
-      </div>
-
       <contract-filter-bar
         :value="conditions"
         :partyas="partyas"
@@ -63,7 +50,6 @@
             </div>
             <div class="cc-cell-meta-row">
               <span class="cc-cell-code">{{ scope.row.contractCode }}</span>
-              <span class="cc-cell-cat" :class="'is-' + categoryKey(scope.row)">{{ categoryText(scope.row) }}</span>
               <span v-if="scope.row.contractParentId" class="cc-cell-cat is-info">{{ $t('contractLedger.op.renew') }}</span>
             </div>
           </template>
@@ -103,7 +89,6 @@
               :state="scope.row.state"
               :state-name="scope.row.stateName"
               :category="scope.row.category"
-              show-category
             />
           </template>
         </el-table-column>
@@ -179,7 +164,7 @@ import ContractBulkBar from '@/components/contract/contractBulkBar'
 import ContractStatusTag from '@/components/contract/contractStatusTag'
 import ContractDetailDrawer from '@/components/contract/contractDetailDrawer'
 import DeleteContract from '@/components/contract/deleteContract'
-import { queryContract, queryContractType } from '@/api/contract/contractManageApi'
+import { queryContract } from '@/api/contract/contractManageApi'
 import { queryContractPartya } from '@/api/contract/contractPartyaApi'
 import {
   batchStopContract,
@@ -214,7 +199,6 @@ export default {
       loading: false,
       statistics: {},
       partyas: [],
-      contractTypes: [],
       contracts: [],
       selection: [],
       conditions: {
@@ -222,7 +206,6 @@ export default {
         state: '',
         partyaId: '',
         changed: '',
-        category: '',
         endTimeBegin: '',
         endTimeEnd: ''
       },
@@ -233,20 +216,9 @@ export default {
       }
     }
   },
-  computed: {
-    categoryTabs() {
-      return [
-        { key: '', labelKey: 'contractCategory.all', count: this.statistics.total || 0 },
-        { key: '1', labelKey: 'contractCategory.rent', count: this.statistics.rentCount || 0 },
-        { key: '2', labelKey: 'contractCategory.purchase', count: this.statistics.purchaseCount || 0 },
-        { key: '3', labelKey: 'contractCategory.maintain', count: this.statistics.maintainCount || 0 }
-      ]
-    }
-  },
   created() {
     this.loadStatistics()
     this.loadPartyas()
-    this.loadContractTypes()
     this.listContracts()
   },
   methods: {
@@ -262,9 +234,6 @@ export default {
         return 'maintain'
       }
       return 'purchase'
-    },
-    categoryText(row) {
-      return this.$t('contractCategory.' + this.categoryKey(row))
     },
     progressPercent(row) {
       const start = new Date(String(row.startTime || '').replace(/-/g, '/')).getTime()
@@ -324,21 +293,13 @@ export default {
         this.partyas = []
       })
     },
-    loadContractTypes() {
-      queryContractType({ page: 1, row: 100 }).then(res => {
-        this.contractTypes = res.data || []
-      }).catch(() => {
-        this.contractTypes = []
-      })
-    },
     buildParams() {
       const params = {
         page: this.page.current,
         row: this.page.size,
         searchText: this.conditions.searchText,
         partyaId: this.conditions.partyaId,
-        changed: this.conditions.changed,
-        category: this.conditions.category
+        changed: this.conditions.changed
       }
       const state = this.conditions.state
       if (state === 'expiring') {
@@ -376,14 +337,9 @@ export default {
         state: '',
         partyaId: '',
         changed: '',
-        category: this.conditions.category,
         endTimeBegin: '',
         endTimeEnd: ''
       }
-      this.handleSearch()
-    },
-    switchCategory(category) {
-      this.conditions.category = category
       this.handleSearch()
     },
     filterAuditing() {
@@ -530,7 +486,7 @@ export default {
       })
     },
     printContract(contract) {
-      window.open(`/#/views/contract/printContract?contractTypeId=${contract.contractType}&contractId=${contract.contractId}`)
+      window.open(`/#/views/contract/printContract?contractId=${contract.contractId}`)
     },
     deleteContractMethod(contract) {
       this.$refs.deleteContract.open(contract)

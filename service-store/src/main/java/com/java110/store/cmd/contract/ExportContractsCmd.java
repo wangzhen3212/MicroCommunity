@@ -39,11 +39,11 @@ public class ExportContractsCmd extends Cmd {
     private static final String EXPORT_REMIND = "remind";
     private static final String DEFAULT_DAYS = "30";
 
-    private static final String[] LEDGER_HEADERS = {"合同编号", "合同名称", "合同类型", "甲方主体", "签约对象",
+    private static final String[] LEDGER_HEADERS = {"合同编号", "合同名称", "合同模板", "甲方主体", "签约对象",
             "合同金额", "开始日期", "结束日期", "状态", "经办人"};
     private static final String[] PERFORMANCE_HEADERS = {"合同编号", "合同名称", "付款方式", "合同金额", "已付金额",
             "待付金额", "付款节点", "下一节点日期", "履约状态"};
-    private static final String[] REMIND_HEADERS = {"合同编号", "合同名称", "合同类型", "签约对象", "到期日期",
+    private static final String[] REMIND_HEADERS = {"合同编号", "合同名称", "合同模板", "签约对象", "到期日期",
             "剩余天数", "合同金额", "经办人"};
 
     @Autowired
@@ -98,7 +98,7 @@ public class ExportContractsCmd extends Cmd {
         }
         for (ContractDto contract : contractDtos) {
             rows.add(new String[]{contract.getContractCode(), contract.getContractName(),
-                    contract.getContractTypeName(), contract.getPartyA(), contract.getPartyB(),
+                    contract.getTemplateName(), contract.getPartyA(), contract.getPartyB(),
                     contract.getAmount(), contract.getStartTime(), contract.getEndTime(),
                     stateNameOf(contract.getState()), contract.getOperator()});
         }
@@ -156,7 +156,7 @@ public class ExportContractsCmd extends Cmd {
         }
         for (Map remind : reminds) {
             rows.add(new String[]{valueOf(remind.get("contractCode")), valueOf(remind.get("contractName")),
-                    valueOf(remind.get("contractTypeName")), valueOf(remind.get("partyB")),
+                    valueOf(remind.get("templateName")), valueOf(remind.get("partyB")),
                     valueOf(remind.get("endTime")), valueOf(remind.get("daysLeft")),
                     valueOf(remind.get("amount")), valueOf(remind.get("operator"))});
         }

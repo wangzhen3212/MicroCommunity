@@ -15,14 +15,11 @@
           </el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item :label="$t('contractManage.edit.contractType')" prop="contractType" required>
-            <el-select v-model="editContractInfo.contractType"
-              :placeholder="$t('contractManage.edit.contractTypePlaceholder')" style="width:100%" disabled>
-              <el-option v-for="item in editContractInfo.contractTypes" :key="item.contractTypeId"
-                :label="item.typeName" :value="item.contractTypeId" />
-            </el-select>
+          <el-form-item :label="$t('contractManage.edit.contractType')">
+            <el-input :value="editContractInfo.templateName || '-'" disabled />
           </el-form-item>
         </el-col>
+
       </el-row>
 
       <el-row :gutter="20">
@@ -104,21 +101,8 @@
         </el-col>
       </el-row>
 
-      <!-- 合同类型规格 -->
-      <div v-for="(item, index) in editContractInfo.contractTypeSpecs" :key="index">
-        <el-row :gutter="20" v-if="index % 3 === 0">
-          <el-col :span="8" v-for="i in 3" :key="i">
-            <div v-if="editContractInfo.contractTypeSpecs[index + i - 1]">
-              <el-form-item :label="editContractInfo.contractTypeSpecs[index + i - 1].specName">
-                <el-input v-model="editContractInfo.contractTypeSpecs[index + i - 1].value"
-                  :placeholder="editContractInfo.contractTypeSpecs[index + i - 1].specHoldplace" />
-              </el-form-item>
-            </div>
-          </el-col>
-        </el-row>
-      </div>
-
       <!-- 合同附件 -->
+
       <el-form-item :label="$t('contractManage.edit.contractFiles')">
         <el-button type="primary" @click="addFileStep">
           {{ $t('contractManage.edit.addFile') }}
@@ -153,7 +137,8 @@
 </template>
 
 <script>
-import { updateContract, queryContractTypeSpec, queryContractFile } from '@/api/contract/contractManageApi'
+import { updateContract, queryContractFile } from '@/api/contract/contractManageApi'
+
 import { uploadFile } from '@/api/system/paymentPoolApi'
 
 export default {
@@ -165,7 +150,7 @@ export default {
         contractId: '',
         contractName: '',
         contractCode: '',
-        contractType: '',
+        templateName: '',
         partyA: '',
         partyB: '',
         aContacts: '',
@@ -178,8 +163,6 @@ export default {
         startTime: '',
         endTime: '',
         signingTime: '',
-        contractTypes: [],
-        contractTypeSpecs: [],
         tempfile: null,
         contractFilePo: []
       }
@@ -190,10 +173,8 @@ export default {
       this.resetForm()
       this.editContractInfo = {
         ...this.editContractInfo,
-        ...contract,
-        contractTypes: this.editContractInfo.contractTypes
+        ...contract
       }
-      this.loadContractType(contract)
       this.loadFiles()
       this.visible = true
     },
@@ -205,7 +186,7 @@ export default {
         contractId: '',
         contractName: '',
         contractCode: '',
-        contractType: '',
+        templateName: '',
         partyA: '',
         partyB: '',
         aContacts: '',
@@ -218,32 +199,13 @@ export default {
         startTime: '',
         endTime: '',
         signingTime: '',
-        contractTypes: this.editContractInfo.contractTypes,
-        contractTypeSpecs: [],
         tempfile: null,
         contractFilePo: []
-      }
-    },
-    async loadContractType(contract) {
-      try {
-        const params = {
-          page: 1,
-          row: 100,
-          contractTypeId: contract.contractType
-        }
-        const { data } = await queryContractTypeSpec(params)
-        this.editContractInfo.contractTypeSpecs = data.map(item => {
-          const attr = contract.attrs.find(attr => attr.specCd === item.specCd) || {}
-          return {
-            ...item,
-            value: attr.value || ''
-          }
-        }).filter(item => item.specShow === 'Y')
-      } catch (error) {
-        console.error('加载合同类型规格失败:', error)
+
       }
     },
     async loadFiles() {
+
       try {
         const params = {
           contractId: this.editContractInfo.contractId,

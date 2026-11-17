@@ -2,13 +2,12 @@ package com.java110.store.bmo.contractTypeTemplate.impl;
 
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.contract.ContractAttrDto;
-import com.java110.dto.contract.ContractTypeSpecDto;
 import com.java110.dto.contract.ContractTypeTemplateDto;
 import com.java110.dto.mapping.Mapping;
 import com.java110.intf.store.IContractAttrInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
-import com.java110.intf.store.IContractTypeSpecInnerServiceSMO;
 import com.java110.intf.store.IContractTypeTemplateInnerServiceSMO;
+
 import com.java110.store.bmo.contractTypeTemplate.IPrintContractTemplateBMO;
 import com.java110.utils.cache.MappingCache;
 import com.java110.vo.ResultVo;
@@ -33,8 +32,6 @@ public class PrintContractTemplateBMOImpl implements IPrintContractTemplateBMO {
     @Autowired
     private IContractTypeTemplateInnerServiceSMO contractTypeTemplateInnerServiceSMOImpl;
 
-    @Autowired
-    private IContractTypeSpecInnerServiceSMO contractTypeSpecInnerServiceSMOImpl;
     //域
     public static final String STORE_CONTRACT = "STORE.CONTRACT";
 
@@ -42,7 +39,8 @@ public class PrintContractTemplateBMOImpl implements IPrintContractTemplateBMO {
      * @param contractTypeTemplateDto
      * @return 订单服务能够接受的报文
      */
-    public ResponseEntity<String> get(ContractTypeTemplateDto contractTypeTemplateDto, ContractDto contractDto, ContractTypeSpecDto contractTypeSpecDto ) {
+    public ResponseEntity<String> get(ContractTypeTemplateDto contractTypeTemplateDto, ContractDto contractDto) {
+
         int count = contractInnerServiceSMOImpl.queryContractsCount(contractDto);
         Map<String, Object> result = new HashMap<String, Object>();
         List<ContractDto> contractDtos = null;
@@ -61,15 +59,8 @@ public class PrintContractTemplateBMOImpl implements IPrintContractTemplateBMO {
             contractTypeTemplateDtos = new ArrayList<>();
         }
         result.put("contractTypeTemplate",contractTypeTemplateDtos);
-        int count3 = contractTypeSpecInnerServiceSMOImpl.queryContractTypeSpecsCount(contractTypeSpecDto);
-        List<ContractTypeSpecDto> contractTypeSpecDtos = null;
-        if (count3 > 0) {
-            contractTypeSpecDtos = contractTypeSpecInnerServiceSMOImpl.queryContractTypeSpecs(contractTypeSpecDto);
-        } else {
-            contractTypeSpecDtos = new ArrayList<>();
-        }
-        result.put("contractTypeSpec",contractTypeSpecDtos);
         List<Mapping> baseRepalce = MappingCache.getValueByDomain(STORE_CONTRACT);
+
         result.put("baseRepalce",baseRepalce);
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) contractTypeTemplateDto.getRow()), count, result);
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);

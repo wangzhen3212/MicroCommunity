@@ -8,7 +8,8 @@
           {{scope.row.parentContractCode?scope.row.parentContractCode:'-'}}
         </template>
       </el-table-column>
-      <el-table-column prop="contractTypeName" :label="$t('ownerDetailContract.contractType')" align="center"></el-table-column>
+      <el-table-column prop="templateName" :label="$t('ownerDetailContract.contractType')" align="center"></el-table-column>
+
       <el-table-column prop="operator" :label="$t('ownerDetailContract.operator')" align="center"></el-table-column>
       <el-table-column prop="amount" :label="$t('ownerDetailContract.amount')" align="center"></el-table-column>
       <el-table-column prop="startTime" :label="$t('ownerDetailContract.startTime')" align="center"></el-table-column>

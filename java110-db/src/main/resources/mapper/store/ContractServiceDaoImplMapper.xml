@@ -5,12 +5,12 @@
 
     <!-- 保存合同管理信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractInfo" parameterType="Map">
-        insert into contract(a_link, a_contacts, amount, contract_type, store_id, operator, signing_time, b_contacts,
+        insert into contract(a_link, a_contacts, amount, store_id, operator, signing_time, b_contacts,
                              party_a, b_link, party_b,
                              contract_id, obj_id, contract_name, start_time, end_time, state, contract_code, obj_type,
                              operator_link, contract_parent_id,
                              obj_name, obj_person_name, obj_person_id, start_user_id, partya_id, template_id, pay_mode)
-        values (#{aLink}, #{aContacts}, #{amount}, #{contractType}, #{storeId}, #{operator}, #{signingTime},
+        values (#{aLink}, #{aContacts}, #{amount}, #{storeId}, #{operator}, #{signingTime},
                 #{bContacts}, #{partyA}, #{bLink}, #{partyB},
                 #{contractId}, #{objId}, #{contractName}, #{startTime}, #{endTime}, #{state}, #{contractCode},
                 #{objType}, #{operatorLink}, #{contractParentId},
@@ -19,20 +19,20 @@
 
     <!-- 查询合同管理信息 add by wuxw 2018-07-03 -->
     <select id="getContractInfo" parameterType="Map" resultType="Map">
-        select t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts aContacts,t.amount,t.contract_type,t.contract_type
-        contractType,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id
+        select t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts aContacts,t.amount,t.status_cd,t.status_cd
+        statusCd,t.store_id,t.store_id
         storeId,t.operator,t.signing_time,t.signing_time signingTime,t.b_contacts,t.b_contacts
         bContacts,t.party_a,t.party_a partyA,t.b_link,t.b_link bLink,t.party_b,t.party_b
         partyB,t.contract_id,t.contract_id contractId,t.obj_id,t.obj_id objId,t.contract_name,t.contract_name
         contractName,t.start_time,t.start_time startTime,t.end_time,t.end_time
         endTime,t.state,t.contract_code,t.contract_code contractCode,t.obj_type,t.obj_type
-        objType,t.operator_link,t.operator_link operatorLink,ct.type_name contractTypeName,ct.audit,td.`name`
+        objType,t.operator_link,t.operator_link operatorLink,ctt.template_name templateName,td.`name`
         stateName,t.state_desc stateDesc,t.contract_parent_id contractParentId,tt.contract_code parentContractCode,
         tt.contract_name parentContractName,t.obj_name objName, t.obj_person_name objPersonName, t.obj_person_id
         objPersonId,t.start_user_id startUserId,t.create_time createTime,
-        t.partya_id partyaId, t.template_id templateId, t.pay_mode payMode, ifnull(ct.category, '2') category
+        t.partya_id partyaId, t.template_id templateId, t.pay_mode payMode, ifnull(ctt.category, '2') category
         from contract t
-        LEFT JOIN contract_type ct on t.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        LEFT JOIN contract_type_template ctt on t.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
         t.store_id
         LEFT JOIN t_dict td on td.status_cd = t.state and td.table_name = 'contract' and td.table_columns = 'state'
         left join contract tt on t.contract_parent_id = tt.contract_id and tt.status_cd = '0' and tt.store_id =
@@ -46,9 +46,6 @@
         </if>
         <if test="amount !=null and amount != ''">
             and t.amount= #{amount}
-        </if>
-        <if test="contractType !=null and contractType != ''">
-            and t.contract_type= #{contractType}
         </if>
         <if test="statusCd !=null and statusCd != ''">
             and t.status_cd= #{statusCd}
@@ -140,11 +137,14 @@
         <if test="partyaId !=null and partyaId != ''">
             and t.partya_id = #{partyaId}
         </if>
+        <if test="templateId !=null and templateId != ''">
+            and t.template_id = #{templateId}
+        </if>
         <if test="category !=null and category != ''">
-            and ifnull(ct.category, '2') = #{category}
+            and ifnull(ctt.category, '2') = #{category}
         </if>
         <if test="categories !=null">
-            and ifnull(ct.category, '2') in
+            and ifnull(ctt.category, '2') in
             <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
                 #{item}
             </foreach>
@@ -190,9 +190,6 @@
         </if>
         <if test="amount !=null and amount != ''">
             , t.amount= #{amount}
-        </if>
-        <if test="contractType !=null and contractType != ''">
-            , t.contract_type= #{contractType}
         </if>
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
@@ -272,7 +269,7 @@
         from contract t
         left join contract tt on t.contract_parent_id = tt.contract_id and tt.status_cd = '0' and tt.store_id =
         t.store_id
-        left join contract_type ct on t.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        left join contract_type_template ctt on t.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
         t.store_id
         where 1 =1
         <if test="aLink !=null and aLink != ''">
@@ -283,9 +280,6 @@
         </if>
         <if test="amount !=null and amount != ''">
             and t.amount= #{amount}
-        </if>
-        <if test="contractType !=null and contractType != ''">
-            and t.contract_type= #{contractType}
         </if>
         <if test="statusCd !=null and statusCd != ''">
             and t.status_cd= #{statusCd}
@@ -377,11 +371,14 @@
         <if test="partyaId !=null and partyaId != ''">
             and t.partya_id = #{partyaId}
         </if>
+        <if test="templateId !=null and templateId != ''">
+            and t.template_id = #{templateId}
+        </if>
         <if test="category !=null and category != ''">
-            and ifnull(ct.category, '2') = #{category}
+            and ifnull(ctt.category, '2') = #{category}
         </if>
         <if test="categories !=null">
-            and ifnull(ct.category, '2') in
+            and ifnull(ctt.category, '2') in
             <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
                 #{item}
             </foreach>
@@ -428,12 +425,12 @@
         ifnull(sum(case when t.state = '11' then 1 else 0 end), 0) auditing,
         ifnull(sum(case when t.state = '10' then 1 else 0 end), 0) draft,
         ifnull(sum(t.amount), 0) totalAmount,
-        ifnull(sum(case when ifnull(ct.category, '2') = '1' then 1 else 0 end), 0) rentCount,
-        ifnull(sum(case when ifnull(ct.category, '2') = '2' then 1 else 0 end), 0) purchaseCount,
-        ifnull(sum(case when ifnull(ct.category, '2') = '3' then 1 else 0 end), 0) maintainCount,
-        ifnull(sum(case when ifnull(ct.category, '2') = '1' then t.amount else 0 end), 0) rentAmount,
-        ifnull(sum(case when ifnull(ct.category, '2') = '2' then t.amount else 0 end), 0) purchaseAmount,
-        ifnull(sum(case when ifnull(ct.category, '2') = '3' then t.amount else 0 end), 0) maintainAmount,
+        ifnull(sum(case when ifnull(ctt.category, '2') = '1' then 1 else 0 end), 0) rentCount,
+        ifnull(sum(case when ifnull(ctt.category, '2') = '2' then 1 else 0 end), 0) purchaseCount,
+        ifnull(sum(case when ifnull(ctt.category, '2') = '3' then 1 else 0 end), 0) maintainCount,
+        ifnull(sum(case when ifnull(ctt.category, '2') = '1' then t.amount else 0 end), 0) rentAmount,
+        ifnull(sum(case when ifnull(ctt.category, '2') = '2' then t.amount else 0 end), 0) purchaseAmount,
+        ifnull(sum(case when ifnull(ctt.category, '2') = '3' then t.amount else 0 end), 0) maintainAmount,
         (select count(distinct cr.room_id) from contract_room cr
         join contract c2 on c2.contract_id = cr.contract_id and c2.status_cd = '0'
         where cr.status_cd = '0'
@@ -442,7 +439,7 @@
         </if>
         ) roomCount
         from contract t
-        left join contract_type ct on t.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        left join contract_type_template ctt on t.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
         t.store_id
         where t.status_cd = '0'
         <if test="storeId != null and storeId != ''">
@@ -454,7 +451,7 @@
     <select id="queryContractPerformances" parameterType="Map" resultType="Map">
         select c.contract_id contractId, c.contract_code contractCode, c.contract_name contractName,
         c.pay_mode payMode, c.amount amount, c.start_time startTime, c.end_time endTime, c.operator operator,
-        c.party_b partyB, c.state state, ct.type_name contractTypeName, ifnull(ct.category, '2') category,
+        c.party_b partyB, c.state state, ctt.template_name templateName, ifnull(ctt.category, '2') category,
         ifnull(sum(case when p.pay_state = '1' then p.plan_amount else 0 end), 0) paidAmount,
         ifnull(sum(case when ifnull(p.pay_state, '0') &lt;&gt; '1' then p.plan_amount else 0 end), 0) unpaidAmount,
         ifnull(sum(case when p.pay_state = '2' or (ifnull(p.pay_state,'0') = '0' and p.plan_time &lt; now()) then 1 else 0 end), 0) overdueCount,
@@ -465,7 +462,7 @@
         where p2.contract_id = c.contract_id and p2.status_cd = '0' and ifnull(p2.pay_state, '0') &lt;&gt; '1'
         order by p2.plan_time asc limit 0, 1) nextPlanName
         from contract c
-        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        left join contract_type_template ctt on c.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
         c.store_id
         left join contract_collection_plan p on p.contract_id = c.contract_id and p.status_cd = '0'
         where c.status_cd = '0'
@@ -473,10 +470,10 @@
             and c.store_id = #{storeId}
         </if>
         <if test="category != null and category != ''">
-            and ifnull(ct.category, '2') = #{category}
+            and ifnull(ctt.category, '2') = #{category}
         </if>
         <if test="categories != null">
-            and ifnull(ct.category, '2') in
+            and ifnull(ctt.category, '2') in
             <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
                 #{item}
             </foreach>
@@ -494,7 +491,7 @@
             and c.contract_id = #{contractId}
         </if>
         group by c.contract_id, c.contract_code, c.contract_name, c.pay_mode, c.amount, c.start_time, c.end_time,
-        c.operator, c.party_b, c.state, ct.type_name, ct.category
+        c.operator, c.party_b, c.state, ctt.template_name, ctt.category
         order by c.create_time desc
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
@@ -505,17 +502,17 @@
         select count(1) count from (
         select c.contract_id
         from contract c
-        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        left join contract_type_template ctt on c.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
         c.store_id
         where c.status_cd = '0'
         <if test="storeId != null and storeId != ''">
             and c.store_id = #{storeId}
         </if>
         <if test="category != null and category != ''">
-            and ifnull(ct.category, '2') = #{category}
+            and ifnull(ctt.category, '2') = #{category}
         </if>
         <if test="categories != null">
-            and ifnull(ct.category, '2') in
+            and ifnull(ctt.category, '2') in
             <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
                 #{item}
             </foreach>
@@ -540,18 +537,18 @@
     <select id="queryContractReminds" parameterType="Map" resultType="Map">
         select c.contract_id contractId, c.contract_code contractCode, c.contract_name contractName,
         c.end_time endTime, c.start_time startTime, c.amount amount, c.operator operator, c.party_b partyB,
-        c.state state, ct.type_name contractTypeName, ifnull(ct.category, '2') category, c.store_id storeId,
+        c.state state, ctt.template_name templateName, ifnull(ctt.category, '2') category, c.store_id storeId,
         datediff(c.end_time, now()) daysLeft,
         (select count(1) from contract_remind_log l where l.contract_id = c.contract_id and l.status_cd = '0') remindCount
         from contract c
-        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        left join contract_type_template ctt on c.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
         c.store_id
         where c.status_cd = '0' and c.state = '22' and c.end_time is not null
         <if test="storeId != null and storeId != ''">
             and c.store_id = #{storeId}
         </if>
         <if test="category != null and category != ''">
-            and ifnull(ct.category, '2') = #{category}
+            and ifnull(ctt.category, '2') = #{category}
         </if>
         <if test="searchText != null and searchText != ''">
             and (c.contract_code like concat('%', #{searchText}, '%')
@@ -571,14 +568,14 @@
     <select id="queryContractRemindsCount" parameterType="Map" resultType="Map">
         select count(1) count
         from contract c
-        left join contract_type ct on c.contract_type = ct.contract_type_id and ct.status_cd = '0' and ct.store_id =
+        left join contract_type_template ctt on c.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
         c.store_id
         where c.status_cd = '0' and c.state = '22' and c.end_time is not null
         <if test="storeId != null and storeId != ''">
             and c.store_id = #{storeId}
         </if>
         <if test="category != null and category != ''">
-            and ifnull(ct.category, '2') = #{category}
+            and ifnull(ctt.category, '2') = #{category}
         </if>
         <if test="searchText != null and searchText != ''">
             and (c.contract_code like concat('%', #{searchText}, '%')

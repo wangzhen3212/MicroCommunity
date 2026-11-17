@@ -94,7 +94,7 @@ export default {
         {
           key: 'base',
           labelKey: 'contractWorkbench.integrity.base',
-          pass: !!(form.contractName && form.contractCode && form.contractType)
+          pass: !!(form.contractName && form.contractCode && form.templateId)
         },
         {
           key: 'partyA',

@@ -7,7 +7,7 @@ public class ContractTypeTemplatePo implements Serializable {
     private String context;
     private String statusCd = "0";
     private String storeId;
-    private String contractTypeId;
+    private String category;
     private String templateId;
     private String templateName;
     private String templateVersion;
@@ -39,12 +39,12 @@ public class ContractTypeTemplatePo implements Serializable {
         this.storeId = storeId;
     }
 
-    public String getContractTypeId() {
-        return contractTypeId;
+    public String getCategory() {
+        return category;
     }
 
-    public void setContractTypeId(String contractTypeId) {
-        this.contractTypeId = contractTypeId;
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public String getTemplateId() {

@@ -14,7 +14,8 @@
             {{ row.parentContractCode || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="contractTypeName" :label="$t('contractDetailSub.contractType')" align="center" />
+        <el-table-column prop="templateName" :label="$t('contractDetailSub.contractType')" align="center" />
+
         <el-table-column :label="$t('contractDetailSub.operator')" align="center">
           <template #default="{ row }">
             {{ row.operator }}({{ row.operatorLink }})

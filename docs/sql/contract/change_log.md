@@ -431,4 +431,51 @@ UPDATE `m_menu_user` SET name='到期提醒' WHERE m_id='702021033149670076';
 > 执行完成后必须刷新菜单缓存：重启 `service-user`（或清 `AppRouteCache`），前端重新登录以刷新菜单树。
 > 「合同审核」未授权时仅超级管理员可见（`p_privilege_rel` 未写入即不展示）。
 
+## 十二、合同类型下线（contract_type / contract_type_spec → 模板 category）
+
+> 迁移脚本：`docs/sql/contract/20261117_contract_type_offline.sql`
+> 执行顺序不可调换：① 模板新增 `category` → ② 按原类型 `category` 回填模板 → ③ 删 `contract_type_template.contract_type_id` → ④ 删 `contract.contract_type` → ⑤ 删 `contract_change_plan_detail.contract_type` → ⑥ 删两表 → ⑦ 清字典与接口注册。
+> 执行前备份四表：`mysqldump -u<user> -p <db> contract contract_type contract_type_spec contract_type_template > contract_type_offline_bak.sql`。
+
+```sql
+-- 1. 模板新增类型（1 房屋出租 / 2 采购 / 3 维保），位置在 contract_type_id 之后
+ALTER TABLE `contract_type_template`
+  ADD COLUMN `category` varchar(12) NOT NULL DEFAULT '2' COMMENT '1房屋出租 2采购 3维保' AFTER `contract_type_id`;
+
+-- 2. 回填（必须在删表之前；contract_type.category 由 2026-11-13 增量脚本提供，缺列先补）
+UPDATE `contract_type_template` t
+LEFT JOIN `contract_type` ct ON ct.`contract_type_id` = t.`contract_type_id`
+SET t.`category` = IFNULL(ct.`category`, '2')
+WHERE t.`status_cd` = '0';
+
+-- 3. 删模板与类型的关联字段
+ALTER TABLE `contract_type_template` DROP COLUMN `contract_type_id`;
+
+-- 4. 删合同上的类型字段（历史合同凭 template_id 追溯形态）
+ALTER TABLE `contract` DROP COLUMN `contract_type`;
+
+-- 5. 删变更明细的类型快照（原 NOT NULL，类型表删除后无法回填）
+ALTER TABLE `contract_change_plan_detail` DROP COLUMN `contract_type`;
+
+-- 6. 删废弃表
+DROP TABLE IF EXISTS `contract_type_spec`;
+DROP TABLE IF EXISTS `contract_type`;
+
+-- 7. 字典与接口注册（模板接口名同样含 ContractType，故用精确清单）
+DELETE FROM `t_dict` WHERE `table_name` = 'contract_type';           -- id 373 / 374
+DELETE FROM `c_route` WHERE `id` IN ('734','735','736','737','738','739','740','741');
+DELETE FROM `c_service` WHERE `id` IN ('499','500','501','502','503','504','505','506');
+```
+
+> 菜单：`m_menu` 中无 `contractTypeSpecManage` 记录（该项无需停用）；`合同类型` 菜单（`702020091843810076` → `/#/pages/admin/contractTypeManage`）实为**合同模板库**入口，保留不动。
+> `docs/db/TT.sql` 基线本次未合并（该文件为历史快照且体量过大），新建库请在全量导入后补执行本小节脚本。
+
+### 代码侧变更（无 DDL）
+
+- 后端：删除 `ContractTypePo/Dto`、`ContractTypeSpecPo/Dto`、`IContractTypeInnerServiceSMO`、`IContractTypeSpecInnerServiceSMO`、两套 DAO/Impl、两套 InnerServiceSMOImpl、`bmo/contractType/`、`bmo/contractTypeSpec/` 与两个 Mapper XML；`ContractTypeTemplatePo/Dto` 去掉 `contractTypeId`、增加 `category`；`ContractPo` 去掉 `contractType`，`ContractDto` 去掉 `contractType/contractTypeName` 改出 `templateName`；`contract_change_plan_detail` 相关 Dto/Po 去掉 `contractType`。
+- Mapper：`ContractServiceDaoImplMapper.xml` 全部合同查询改 `left join contract_type_template ctt on ctt.template_id = t.template_id`，输出 `ctt.template_name templateName` 与 `ifnull(ctt.category,'2') category`，新增 `templateId` 过滤；`ContractTypeTemplateServiceDaoImplMapper.xml` 重写（`category` 读写、去掉类型关联）；审核/变更相关 Mapper 输出 `templateName`；变更明细 Mapper 通过 `contract` 关联模板取 `templateName`。
+- 审核口径：`SaveContractBMOImpl`、`BatchSubmitContractCmd` 不再读 `contract_type.audit`，统一走合同审核流程。
+- 前端：模板库删除「类型维护」抽屉与类型/类型规格组件（`addContractType`、`editContractType`、`deleteContractType`、`contractTemplateEditor`、`addTemplateView`、`*ContractTypeSpec*`、两个 api 封装与两个页面）；模板编辑页新增「类型」必选下拉（提交 `category`）；合同工作台去掉合同类型下拉、模板改必选；台账/起草/履约/详情/审核/选择合同等处「合同类型」列统一改「合同模板」并取模板名；三语 i18n 同步。
+
+
 

@@ -247,11 +247,11 @@ export default {
     transition: color .2s;
 
     &:hover {
-      color: #4f46e5;
+      color: #409eff;
     }
 
     &.is-primary {
-      color: #4f46e5;
+      color: #409eff;
       font-weight: 500;
     }
 

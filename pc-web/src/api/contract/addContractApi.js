@@ -20,23 +20,8 @@ request({
   })
 }
 
-// 查询合同类型
-export function queryContractType(params) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/contract/queryContractType',
-      method: 'get',
-      params
-    }).then(response => {
-      const res = response.data
-      resolve(res)
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
 // 查询合同甲方信息
+
 export function queryContractPartya(params) {
   return new Promise((resolve, reject) => {
     request({
@@ -52,23 +37,8 @@ export function queryContractPartya(params) {
   })
 }
 
-// 查询合同类型规格
-export function queryContractTypeSpec(params) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/contract/queryContractTypeSpec',
-      method: 'get',
-      params
-    }).then(response => {
-      const res = response.data
-      resolve(res)
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
 // 查询合同关联房屋
+
 export function queryContractRoom(params) {
   return new Promise((resolve, reject) => {
     request({

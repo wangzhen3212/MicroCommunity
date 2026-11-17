@@ -5,7 +5,7 @@ export const messages = {
         title: 'Search Conditions',
         contractName: 'Please enter contract name',
         contractCode: 'Please enter contract code',
-        contractType: 'Please select contract type'
+        contractType: 'Please select contract template'
       },
       allTypes: 'All',
       title: 'Contract Change',
@@ -19,7 +19,7 @@ export const messages = {
       table: {
         contractName: 'Contract Name',
         contractCode: 'Contract Code',
-        contractType: 'Contract Type',
+        contractType: 'Contract Template',
         partyA: 'Party A',
         partyB: 'Party B',
         changeType: 'Change Type',
@@ -101,7 +101,7 @@ zh: {
         title: '查询条件',
         contractName: '请输入合同名称',
         contractCode: '请输入合同编号',
-        contractType: '请选择合同类型'
+        contractType: '请选择合同模板'
       },
       allTypes: '全部',
       title: '合同变更',
@@ -115,7 +115,7 @@ zh: {
       table: {
         contractName: '合同名称',
         contractCode: '合同编号',
-        contractType: '合同类型',
+        contractType: '合同模板',
         partyA: '甲方',
         partyB: '乙方',
         changeType: '变更类型',
@@ -197,7 +197,7 @@ zh: {
         title: '查詢條件',
         contractName: '請輸入合同名稱',
         contractCode: '請輸入合同編號',
-        contractType: '請選擇合同類型'
+        contractType: '請選擇合同模板'
       },
       allTypes: '全部',
       title: '合同變更',
@@ -211,7 +211,7 @@ zh: {
       table: {
         contractName: '合同名稱',
         contractCode: '合同編號',
-        contractType: '合同類型',
+        contractType: '合同模板',
         partyA: '甲方',
         partyB: '乙方',
         changeType: '變更類型',

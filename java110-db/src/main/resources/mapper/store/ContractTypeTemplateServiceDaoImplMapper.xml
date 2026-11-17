@@ -8,10 +8,10 @@
     <!-- 保存合同模板信息 -->
     <insert id="saveContractTypeTemplateInfo" parameterType="Map">
         insert into contract_type_template(
-        context,store_id,contract_type_id,template_id,
+        context,store_id,category,template_id,
         template_name,template_version,template_desc,use_count,source_type
         ) values (
-        #{context},#{storeId},#{contractTypeId},#{templateId},
+        #{context},#{storeId},ifnull(#{category},'2'),#{templateId},
         #{templateName},ifnull(#{templateVersion},'V1.0'),#{templateDesc},ifnull(#{useCount},0),ifnull(#{sourceType},'online')
         )
     </insert>
@@ -20,13 +20,10 @@
     <!-- 查询合同模板信息 -->
     <select id="getContractTypeTemplateInfo" parameterType="Map" resultType="Map">
         select t.context,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id
-        storeId,t.contract_type_id,t.contract_type_id contractTypeId,t.template_id templateId,
+        storeId,t.category,t.template_id templateId,
         t.template_name templateName, t.template_version templateVersion, t.template_desc templateDesc,
-        ifnull(t.use_count,0) useCount, ifnull(t.source_type,'online') sourceType, t.create_time createTime,
-        ifnull(ct.category,'2') category, ct.type_name contractTypeName
+        ifnull(t.use_count,0) useCount, ifnull(t.source_type,'online') sourceType, t.create_time createTime
         from contract_type_template t
-        left join contract_type ct on ct.contract_type_id = t.contract_type_id and ct.status_cd = '0' and ct.store_id =
-        t.store_id
         where 1 =1
         <if test="context !=null and context != ''">
             and t.context= #{context}
@@ -37,14 +34,17 @@
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
-        <if test="contractTypeId !=null and contractTypeId != ''">
-            and t.contract_type_id= #{contractTypeId}
-        </if>
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
         </if>
         <if test="category !=null and category != ''">
-            and ifnull(ct.category,'2') = #{category}
+            and t.category = #{category}
+        </if>
+        <if test="categories !=null">
+            and t.category in
+            <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="templateNameLike !=null and templateNameLike != ''">
             and t.template_name like concat('%',#{templateNameLike},'%')
@@ -69,8 +69,8 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
-        <if test="contractTypeId !=null and contractTypeId != ''">
-            , t.contract_type_id= #{contractTypeId}
+        <if test="category !=null and category != ''">
+            , t.category= #{category}
         </if>
         <if test="templateName !=null and templateName != ''">
             , t.template_name= #{templateName}
@@ -97,8 +97,6 @@
     <select id="queryContractTypeTemplatesCount" parameterType="Map" resultType="Map">
         select count(1) count
         from contract_type_template t
-        left join contract_type ct on ct.contract_type_id = t.contract_type_id and ct.status_cd = '0' and ct.store_id =
-        t.store_id
         where 1 =1
         <if test="context !=null and context != ''">
             and t.context= #{context}
@@ -109,14 +107,17 @@
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
-        <if test="contractTypeId !=null and contractTypeId != ''">
-            and t.contract_type_id= #{contractTypeId}
-        </if>
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
         </if>
         <if test="category !=null and category != ''">
-            and ifnull(ct.category,'2') = #{category}
+            and t.category = #{category}
+        </if>
+        <if test="categories !=null">
+            and t.category in
+            <foreach collection="categories" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="templateNameLike !=null and templateNameLike != ''">
             and t.template_name like concat('%',#{templateNameLike},'%')

@@ -1,6 +1,5 @@
-import { messages as contractTypeManageMessages } from '../views/contract/contractTypeManageLang'
-import { messages as contractTypeSpecManageMessages } from '../views/contract/contractTypeSpecManageLang'
 import { messages as contractPartyaManageMessages } from '../views/contract/contractPartyaManageLang'
+
 import { messages as newContractManageMessages } from '../views/contract/newContractManageLang'
 import { messages as printContractMessages } from '../views/contract/printContractLang'
 import { messages as addContractMessages } from '../views/contract/addContractLang'
@@ -26,9 +25,8 @@ import { messages as contractAuditCenterMessages } from '../views/contract/contr
 
 export const messages ={
     en:{
-        ...contractTypeManageMessages.en,
-        ...contractTypeSpecManageMessages.en,
         ...contractPartyaManageMessages.en,
+
         ...newContractManageMessages.en,
         ...printContractMessages.en,
         ...addContractMessages.en,
@@ -52,9 +50,8 @@ export const messages ={
         ...contractAuditCenterMessages.en,
     },
     zh:{    
-        ...contractTypeManageMessages.zh, 
-        ...contractTypeSpecManageMessages.zh,
         ...contractPartyaManageMessages.zh,
+
         ...newContractManageMessages.zh,
         ...printContractMessages.zh,
         ...addContractMessages.zh,
@@ -78,9 +75,8 @@ export const messages ={
         ...contractAuditCenterMessages.zh,
     },
     'zh-TW': {
-        ...contractTypeManageMessages['zh-TW'],
-        ...contractTypeSpecManageMessages['zh-TW'],
         ...contractPartyaManageMessages['zh-TW'],
+
         ...newContractManageMessages['zh-TW'],
         ...printContractMessages['zh-TW'],
         ...addContractMessages['zh-TW'],

@@ -9,7 +9,8 @@
       <el-table :data="contractDetailChangeInfo.contracts" style="width: 100%" border stripe>
         <el-table-column prop="contractName" :label="$t('contractDetailChange.contractName')" align="center" />
         <el-table-column prop="contractCode" :label="$t('contractDetailChange.contractCode')" align="center" />
-        <el-table-column prop="contractTypeName" :label="$t('contractDetailChange.contractType')" align="center" />
+        <el-table-column prop="templateName" :label="$t('contractDetailChange.contractType')" align="center" />
+
         <el-table-column prop="partyA" :label="$t('contractDetailChange.partyA')" align="center" />
         <el-table-column prop="partyB" :label="$t('contractDetailChange.partyB')" align="center" />
         <el-table-column prop="planTypeName" :label="$t('contractDetailChange.changeType')" align="center" />

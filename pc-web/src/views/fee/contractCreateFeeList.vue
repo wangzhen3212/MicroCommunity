@@ -37,10 +37,6 @@
                     v-model="contractCreateFeeInfo.conditions.contractNameLike" @keyup.enter.native="_queryContract"></el-input>
                 </el-col>
                 <el-col :span="4">
-                  <el-input :placeholder="$t('contractCreateFee.enterContractType')"
-                    v-model="contractCreateFeeInfo.conditions.contractType" @keyup.enter.native="_queryContract"></el-input>
-                </el-col>
-                <el-col :span="4">
                   <el-input :placeholder="$t('contractCreateFee.enterPartyB')"
                     v-model="contractCreateFeeInfo.conditions.bContacts" @keyup.enter.native="_queryContract"></el-input>
                 </el-col>
@@ -158,7 +154,6 @@ export default {
         conditions: {
           contractCode: '',
           contractNameLike: '',
-          contractType: '',
           bContacts: '',
           state: ''
         }

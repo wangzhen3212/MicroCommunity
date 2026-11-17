@@ -16,7 +16,7 @@
         </el-form-item>
       </el-col>
       <el-col :span="7">
-        <el-form-item :label="$t('contractWorkbench.field.template')">
+        <el-form-item :label="$t('contractWorkbench.field.template')" required>
           <el-select
             v-model="form.templateId"
             style="width: 100%"
@@ -35,19 +35,7 @@
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="6">
-        <el-form-item :label="$t('contractWorkbench.field.contractType')" required>
-          <el-select v-model="form.contractType" style="width: 100%" @change="$emit('type-change', form.contractType)">
-            <el-option
-              v-for="item in contractTypes"
-              :key="item.contractTypeId"
-              :label="item.typeName"
-              :value="item.contractTypeId"
-            />
-          </el-select>
-        </el-form-item>
-      </el-col>
-      <el-col :span="6">
+      <el-col :span="8">
         <el-form-item :label="$t('contractWorkbench.field.partyA')" required>
           <el-select
             v-model="form.partyaId"
@@ -65,12 +53,12 @@
           </el-select>
         </el-form-item>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="8">
         <el-form-item :label="$t('contractWorkbench.field.contacts')">
           <el-input v-model="form.aContacts" disabled />
         </el-form-item>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="8">
         <el-form-item :label="$t('contractWorkbench.field.partyB')" required>
           <el-input v-model="form.partyB" :disabled="isRent">
             <el-button v-if="isRent" slot="append" size="mini" @click="$emit('select-owner')">
@@ -186,12 +174,6 @@ export default {
     form: {
       type: Object,
       required: true
-    },
-    contractTypes: {
-      type: Array,
-      default: function () {
-        return []
-      }
     },
     partyas: {
       type: Array,

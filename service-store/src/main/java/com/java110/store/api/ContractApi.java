@@ -11,9 +11,8 @@ import com.java110.dto.contract.ContractChangePlanDetailDto;
 import com.java110.dto.contract.ContractChangePlanDetailAttrDto;
 import com.java110.dto.contract.ContractCollectionPlanDto;
 import com.java110.dto.contract.ContractRoomDto;
-import com.java110.dto.contract.ContractTypeDto;
-import com.java110.dto.contract.ContractTypeSpecDto;
 import com.java110.dto.contract.ContractTypeTemplateDto;
+
 import com.java110.dto.audit.AuditUser;
 import com.java110.po.contract.ContractPo;
 import com.java110.po.contract.ContractAttrPo;
@@ -24,9 +23,8 @@ import com.java110.po.contract.ContractChangePlanRoomPo;
 import com.java110.po.contract.ContractCollectionPlanPo;
 import com.java110.po.contract.ContractFilePo;
 import com.java110.po.contract.ContractRoomPo;
-import com.java110.po.contract.ContractTypePo;
-import com.java110.po.contract.ContractTypeSpecPo;
 import com.java110.po.contract.ContractTypeTemplatePo;
+
 import com.java110.store.bmo.contract.IDeleteContractBMO;
 import com.java110.store.bmo.contract.IGetContractBMO;
 import com.java110.store.bmo.contract.ISaveContractBMO;
@@ -55,15 +53,8 @@ import com.java110.store.bmo.contractRoom.IDeleteContractRoomBMO;
 import com.java110.store.bmo.contractRoom.IGetContractRoomBMO;
 import com.java110.store.bmo.contractRoom.ISaveContractRoomBMO;
 import com.java110.store.bmo.contractRoom.IUpdateContractRoomBMO;
-import com.java110.store.bmo.contractType.IDeleteContractTypeBMO;
-import com.java110.store.bmo.contractType.IGetContractTypeBMO;
-import com.java110.store.bmo.contractType.ISaveContractTypeBMO;
-import com.java110.store.bmo.contractType.IUpdateContractTypeBMO;
-import com.java110.store.bmo.contractTypeSpec.IDeleteContractTypeSpecBMO;
-import com.java110.store.bmo.contractTypeSpec.IGetContractTypeSpecBMO;
-import com.java110.store.bmo.contractTypeSpec.ISaveContractTypeSpecBMO;
-import com.java110.store.bmo.contractTypeSpec.IUpdateContractTypeSpecBMO;
 import com.java110.store.bmo.contractTypeTemplate.*;
+
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,27 +80,8 @@ public class ContractApi {
     private IGetContractBMO getContractBMOImpl;
 
     @Autowired
-    private ISaveContractTypeBMO saveContractTypeBMOImpl;
-    @Autowired
-    private IUpdateContractTypeBMO updateContractTypeBMOImpl;
-    @Autowired
-    private IDeleteContractTypeBMO deleteContractTypeBMOImpl;
-
-    @Autowired
-    private IGetContractTypeBMO getContractTypeBMOImpl;
-
-    @Autowired
-    private ISaveContractTypeSpecBMO saveContractTypeSpecBMOImpl;
-    @Autowired
-    private IUpdateContractTypeSpecBMO updateContractTypeSpecBMOImpl;
-    @Autowired
-    private IDeleteContractTypeSpecBMO deleteContractTypeSpecBMOImpl;
-
-    @Autowired
-    private IGetContractTypeSpecBMO getContractTypeSpecBMOImpl;
-
-    @Autowired
     private ISaveContractAttrBMO saveContractAttrBMOImpl;
+
     @Autowired
     private IUpdateContractAttrBMO updateContractAttrBMOImpl;
     @Autowired
@@ -199,8 +171,9 @@ public class ContractApi {
 
         Assert.hasKeyAndValue(reqJson, "contractCode", "请求报文中未包含contractCode");
         Assert.hasKeyAndValue(reqJson, "contractName", "请求报文中未包含contractName");
-        Assert.hasKeyAndValue(reqJson, "contractType", "请求报文中未包含contractType");
         Assert.hasKeyAndValue(reqJson, "partyA", "请求报文中未包含partyA");
+
+
         Assert.hasKeyAndValue(reqJson, "partyB", "请求报文中未包含partyB");
         Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
         Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
@@ -250,8 +223,9 @@ public class ContractApi {
 
         Assert.hasKeyAndValue(reqJson, "contractCode", "请求报文中未包含contractCode");
         Assert.hasKeyAndValue(reqJson, "contractName", "请求报文中未包含contractName");
-        Assert.hasKeyAndValue(reqJson, "contractType", "请求报文中未包含contractType");
         Assert.hasKeyAndValue(reqJson, "partyA", "请求报文中未包含partyA");
+
+
         Assert.hasKeyAndValue(reqJson, "partyB", "请求报文中未包含partyB");
         Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
         Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
@@ -456,191 +430,7 @@ public class ContractApi {
 
     /**
      * 微信保存消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/saveContractType
-     * @path /app/contract/saveContractType
-     */
-    @RequestMapping(value = "/saveContractType", method = RequestMethod.POST)
-    public ResponseEntity<String> saveContractType(@RequestBody JSONObject reqJson, @RequestHeader(value = "store-id", required = false) String storeId) {
 
-        Assert.hasKeyAndValue(reqJson, "typeName", "请求报文中未包含typeName");
-        Assert.hasKeyAndValue(reqJson, "audit", "请求报文中未包含audit");
-
-
-        ContractTypePo contractTypePo = BeanConvertUtil.covertBean(reqJson, ContractTypePo.class);
-        contractTypePo.setStoreId(storeId);
-        return saveContractTypeBMOImpl.save(contractTypePo);
-    }
-
-    /**
-     * 微信修改消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/updateContractType
-     * @path /app/contract/updateContractType
-     */
-    @RequestMapping(value = "/updateContractType", method = RequestMethod.POST)
-    public ResponseEntity<String> updateContractType(@RequestBody JSONObject reqJson) {
-
-        Assert.hasKeyAndValue(reqJson, "typeName", "请求报文中未包含typeName");
-        Assert.hasKeyAndValue(reqJson, "audit", "请求报文中未包含audit");
-        Assert.hasKeyAndValue(reqJson, "contractTypeId", "contractTypeId不能为空");
-
-
-        ContractTypePo contractTypePo = BeanConvertUtil.covertBean(reqJson, ContractTypePo.class);
-        return updateContractTypeBMOImpl.update(contractTypePo);
-    }
-
-    /**
-     * 微信删除消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/deleteContractType
-     * @path /app/contract/deleteContractType
-     */
-    @RequestMapping(value = "/deleteContractType", method = RequestMethod.POST)
-    public ResponseEntity<String> deleteContractType(@RequestBody JSONObject reqJson) {
-        Assert.hasKeyAndValue(reqJson, "communityId", "小区ID不能为空");
-
-        Assert.hasKeyAndValue(reqJson, "contractTypeId", "contractTypeId不能为空");
-
-
-        ContractTypePo contractTypePo = BeanConvertUtil.covertBean(reqJson, ContractTypePo.class);
-        return deleteContractTypeBMOImpl.delete(contractTypePo);
-    }
-
-    /**
-     * 微信删除消息模板
-     *
-     * @param storeId 商户ID
-     * @return
-     * @serviceCode /contract/queryContractType
-     * @path /app/contract/queryContractType
-     */
-    @RequestMapping(value = "/queryContractType", method = RequestMethod.GET)
-    public ResponseEntity<String> queryContractType(@RequestHeader(value = "store-id") String storeId,
-                                                    @RequestParam(value = "audit", required = false) String audit,
-                                                    @RequestParam(value = "typeName", required = false) String typeName,
-                                                    @RequestParam(value = "contractTypeId", required = false) String contractTypeId,
-                                                    @RequestParam(value = "page") int page,
-                                                    @RequestParam(value = "row") int row) {
-        ContractTypeDto contractTypeDto = new ContractTypeDto();
-        contractTypeDto.setPage(page);
-        contractTypeDto.setRow(row);
-        contractTypeDto.setAudit(audit);
-        contractTypeDto.setTypeName(typeName);
-        contractTypeDto.setContractTypeId(contractTypeId);
-        contractTypeDto.setStoreId(storeId);
-        return getContractTypeBMOImpl.get(contractTypeDto);
-    }
-
-    /**
-     * 微信保存消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/saveContractTypeSpec
-     * @path /app/contract/saveContractTypeSpec
-     */
-    @RequestMapping(value = "/saveContractTypeSpec", method = RequestMethod.POST)
-    public ResponseEntity<String> saveContractTypeSpec(@RequestBody JSONObject reqJson, @RequestHeader(value = "store-id") String storeId) {
-
-        // Assert.hasKeyAndValue(reqJson, "specCd", "请求报文中未包含specCd");
-        Assert.hasKeyAndValue(reqJson, "contractTypeId", "请求报文中未包含contractTypeId");
-        Assert.hasKeyAndValue(reqJson, "specName", "请求报文中未包含specName");
-        Assert.hasKeyAndValue(reqJson, "specHoldplace", "请求报文中未包含specHoldplace");
-        Assert.hasKeyAndValue(reqJson, "required", "请求报文中未包含required");
-        Assert.hasKeyAndValue(reqJson, "specShow", "请求报文中未包含specShow");
-        Assert.hasKeyAndValue(reqJson, "specValueType", "请求报文中未包含specValueType");
-        Assert.hasKeyAndValue(reqJson, "specType", "请求报文中未包含specType");
-        Assert.hasKeyAndValue(reqJson, "listShow", "请求报文中未包含listShow");
-
-
-        ContractTypeSpecPo contractTypeSpecPo = BeanConvertUtil.covertBean(reqJson, ContractTypeSpecPo.class);
-        contractTypeSpecPo.setStoreId(storeId);
-        return saveContractTypeSpecBMOImpl.save(contractTypeSpecPo);
-    }
-
-    /**
-     * 微信修改消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/updateContractTypeSpec
-     * @path /app/contract/updateContractTypeSpec
-     */
-    @RequestMapping(value = "/updateContractTypeSpec", method = RequestMethod.POST)
-    public ResponseEntity<String> updateContractTypeSpec(@RequestBody JSONObject reqJson) {
-
-        Assert.hasKeyAndValue(reqJson, "specCd", "请求报文中未包含specCd");
-        Assert.hasKeyAndValue(reqJson, "contractTypeId", "请求报文中未包含contractTypeId");
-        Assert.hasKeyAndValue(reqJson, "specName", "请求报文中未包含specName");
-        Assert.hasKeyAndValue(reqJson, "specHoldplace", "请求报文中未包含specHoldplace");
-        Assert.hasKeyAndValue(reqJson, "required", "请求报文中未包含required");
-        Assert.hasKeyAndValue(reqJson, "specShow", "请求报文中未包含specShow");
-        Assert.hasKeyAndValue(reqJson, "specValueType", "请求报文中未包含specValueType");
-        Assert.hasKeyAndValue(reqJson, "specType", "请求报文中未包含specType");
-        Assert.hasKeyAndValue(reqJson, "listShow", "请求报文中未包含listShow");
-        Assert.hasKeyAndValue(reqJson, "specCd", "specCd不能为空");
-
-
-        ContractTypeSpecPo contractTypeSpecPo = BeanConvertUtil.covertBean(reqJson, ContractTypeSpecPo.class);
-        return updateContractTypeSpecBMOImpl.update(contractTypeSpecPo);
-    }
-
-    /**
-     * 微信删除消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/deleteContractTypeSpec
-     * @path /app/contract/deleteContractTypeSpec
-     */
-    @RequestMapping(value = "/deleteContractTypeSpec", method = RequestMethod.POST)
-    public ResponseEntity<String> deleteContractTypeSpec(@RequestBody JSONObject reqJson) {
-        Assert.hasKeyAndValue(reqJson, "communityId", "小区ID不能为空");
-
-        Assert.hasKeyAndValue(reqJson, "specCd", "specCd不能为空");
-
-
-        ContractTypeSpecPo contractTypeSpecPo = BeanConvertUtil.covertBean(reqJson, ContractTypeSpecPo.class);
-        return deleteContractTypeSpecBMOImpl.delete(contractTypeSpecPo);
-    }
-
-    /**
-     * 微信删除消息模板
-     *
-     * @param storeId 小区ID
-     * @return
-     * @serviceCode /contract/queryContractTypeSpec
-     * @path /app/contract/queryContractTypeSpec
-     */
-    @RequestMapping(value = "/queryContractTypeSpec", method = RequestMethod.GET)
-    public ResponseEntity<String> queryContractTypeSpec(@RequestParam(value = "specName", required = false) String specName,
-                                                        @RequestParam(value = "specShow", required = false) String specShow,
-                                                        @RequestParam(value = "specCd", required = false) String specCd,
-                                                        @RequestHeader(value = "store-id") String storeId,
-                                                        @RequestParam(value = "page") int page,
-                                                        @RequestParam(value = "row") int row,
-                                                        @RequestParam(value = "contractTypeId") String contractTypeId) {
-        ContractTypeSpecDto contractTypeSpecDto = new ContractTypeSpecDto();
-        contractTypeSpecDto.setPage(page);
-        contractTypeSpecDto.setRow(row);
-        contractTypeSpecDto.setStoreId(storeId);
-        contractTypeSpecDto.setContractTypeId(contractTypeId);
-        contractTypeSpecDto.setSpecName(specName);
-        contractTypeSpecDto.setSpecShow(specShow);
-        contractTypeSpecDto.setSpecCd(specCd);
-        return getContractTypeSpecBMOImpl.get(contractTypeSpecDto);
-    }
-
-
-    /**
-     * 微信保存消息模板
      *
      * @param reqJson
      * @return
@@ -730,13 +520,15 @@ public class ContractApi {
     @RequestMapping(value = "/saveContractTypeTemplate", method = RequestMethod.POST)
     public ResponseEntity<String> saveContractTypeTemplate(@RequestBody JSONObject reqJson, @RequestHeader(value = "store-id") String storeId) {
 
-        Assert.hasKeyAndValue(reqJson, "contractTypeId", "请求报文中未包含contractTypeId");
+        Assert.hasKeyAndValue(reqJson, "category", "请求报文中未包含category");
+        Assert.hasKeyAndValue(reqJson, "templateName", "请求报文中未包含templateName");
         Assert.hasKeyAndValue(reqJson, "context", "请求报文中未包含context");
 
 
         ContractTypeTemplatePo contractTypeTemplatePo = BeanConvertUtil.covertBean(reqJson, ContractTypeTemplatePo.class);
         contractTypeTemplatePo.setStoreId(storeId);
         return saveContractTypeTemplateBMOImpl.save(contractTypeTemplatePo);
+
     }
 
     /**
@@ -750,9 +542,11 @@ public class ContractApi {
     @RequestMapping(value = "/updateContractTypeTemplate", method = RequestMethod.POST)
     public ResponseEntity<String> updateContractTypeTemplate(@RequestBody JSONObject reqJson) {
 
-        Assert.hasKeyAndValue(reqJson, "contractTypeId", "请求报文中未包含contractTypeId");
+        Assert.hasKeyAndValue(reqJson, "category", "请求报文中未包含category");
+        Assert.hasKeyAndValue(reqJson, "templateName", "请求报文中未包含templateName");
         Assert.hasKeyAndValue(reqJson, "context", "请求报文中未包含context");
         Assert.hasKeyAndValue(reqJson, "templateId", "templateId不能为空");
+
 
 
         ContractTypeTemplatePo contractTypeTemplatePo = BeanConvertUtil.covertBean(reqJson, ContractTypeTemplatePo.class);
@@ -788,21 +582,23 @@ public class ContractApi {
      */
     @RequestMapping(value = "/queryContractTypeTemplate", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractTypeTemplate(@RequestHeader(value = "store-id") String storeId,
-                                                            @RequestParam(value = "contractTypeId", required = false) String contractTypeId,
+                                                            @RequestParam(value = "templateId", required = false) String templateId,
                                                             @RequestParam(value = "page") int page,
                                                             @RequestParam(value = "row") int row) {
         ContractTypeTemplateDto contractTypeTemplateDto = new ContractTypeTemplateDto();
         contractTypeTemplateDto.setPage(page);
         contractTypeTemplateDto.setRow(row);
         contractTypeTemplateDto.setStoreId(storeId);
-        contractTypeTemplateDto.setContractTypeId(contractTypeId);
+        contractTypeTemplateDto.setTemplateId(templateId);
         return getContractTypeTemplateBMOImpl.get(contractTypeTemplateDto);
     }
 
 
+
     /**
      * 微信保存消息模板
-     * {"index":0,"contractName":"测试合同","contractCode":"1","contractType":"812021030474360091","partyA":"吴学文","partyB":"吴学文","aContacts":"吴学文",
+     * {"index":0,"contractName":"测试合同","contractCode":"1","templateId":"822026041457910348","partyA":"吴学文","partyB":"吴学文","aContacts":"吴学文",
+
      * "bContacts":"吴学文11","aLink":"18909711443","bLink":"18909711443","operator":"1","operatorLink":"13789876589","amount":"100.00",
      * "startTime":"2021-03-10 00:00:50","endTime":"2021-03-03 01:05:50","signingTime":"2021-03-02 00:00:50","param":"contractChangeMainBody",
      * "planType":"1001","changeRemark":"菜单"}
@@ -905,8 +701,8 @@ public class ContractApi {
                                                           @RequestParam(value = "contractId", required = false) String contractId,
                                                           @RequestParam(value = "contractName", required = false) String contractName,
                                                           @RequestParam(value = "contractCode", required = false) String contractCode,
-                                                          @RequestParam(value = "contractType", required = false) String contractType,
                                                           @RequestParam(value = "logStartTime", required = false) String logStartTime,
+
                                                           @RequestParam(value = "logEndTime", required = false) String logEndTime,
                                                           @RequestParam(value = "staffNameLike", required = false) String staffNameLike,
                                                           @RequestParam(value = "planId", required = false) String planId) {
@@ -918,8 +714,8 @@ public class ContractApi {
         contractChangePlanDto.setContractName(contractName);
         contractChangePlanDto.setPlanId(planId);
         contractChangePlanDto.setContractCode(contractCode);
-        contractChangePlanDto.setContractType(contractType);
         contractChangePlanDto.setStartTime(logStartTime);
+
         contractChangePlanDto.setEndTime(logEndTime);
         contractChangePlanDto.setStaffNameLike(staffNameLike);
         return getContractChangePlanBMOImpl.get(contractChangePlanDto);
@@ -965,8 +761,9 @@ public class ContractApi {
 
         Assert.hasKeyAndValue(reqJson, "contractCode", "请求报文中未包含contractCode");
         Assert.hasKeyAndValue(reqJson, "contractName", "请求报文中未包含contractName");
-        Assert.hasKeyAndValue(reqJson, "contractType", "请求报文中未包含contractType");
         Assert.hasKeyAndValue(reqJson, "partyA", "请求报文中未包含partyA");
+
+
         Assert.hasKeyAndValue(reqJson, "partyB", "请求报文中未包含partyB");
         Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
         Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
@@ -997,8 +794,9 @@ public class ContractApi {
 
         Assert.hasKeyAndValue(reqJson, "contractCode", "请求报文中未包含contractCode");
         Assert.hasKeyAndValue(reqJson, "contractName", "请求报文中未包含contractName");
-        Assert.hasKeyAndValue(reqJson, "contractType", "请求报文中未包含contractType");
         Assert.hasKeyAndValue(reqJson, "partyA", "请求报文中未包含partyA");
+
+
         Assert.hasKeyAndValue(reqJson, "partyB", "请求报文中未包含partyB");
         Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
         Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
@@ -1149,7 +947,7 @@ public class ContractApi {
      */
     @RequestMapping(value = "/printContractTemplate", method = RequestMethod.GET)
     public ResponseEntity<String> printContractTemplate(@RequestHeader(value = "store-id") String storeId,
-                                                        @RequestParam(value = "contractTypeId", required = false) String contractTypeId,
+                                                        @RequestParam(value = "templateId", required = false) String templateId,
                                                         @RequestParam(value = "contractId", required = false) String contractId,
                                                         @RequestParam(value = "page") int page,
                                                         @RequestParam(value = "row") int row) {
@@ -1157,7 +955,7 @@ public class ContractApi {
         contractTypeTemplateDto.setPage(page);
         contractTypeTemplateDto.setRow(row);
         contractTypeTemplateDto.setStoreId(storeId);
-        contractTypeTemplateDto.setContractTypeId(contractTypeId);
+        contractTypeTemplateDto.setTemplateId(templateId);
 
         ContractDto contractDto = new ContractDto();
         contractDto.setPage(page);
@@ -1165,14 +963,9 @@ public class ContractApi {
         contractDto.setStoreId(storeId);
         contractDto.setContractId(contractId);
 
-        ContractTypeSpecDto contractTypeSpecDto = new ContractTypeSpecDto();
-        contractTypeSpecDto.setPage(page);
-        contractTypeSpecDto.setRow(100);
-        contractTypeSpecDto.setStoreId(storeId);
-        contractTypeSpecDto.setContractTypeId(contractTypeId);
-
-        return printContractTemplateBMO.get(contractTypeTemplateDto, contractDto, contractTypeSpecDto);
+        return printContractTemplateBMO.get(contractTypeTemplateDto, contractDto);
     }
+
 
 
     /**

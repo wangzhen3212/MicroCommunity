@@ -18,8 +18,8 @@ public class ContractChangePlanDetailDto extends PageDto implements Serializable
     private String aLink;
     private String aContacts;
     private String amount;
-    private String contractType;
     private String detailId;
+
     private String storeId;
     private String operator;
     private String signingTime;
@@ -67,15 +67,8 @@ public class ContractChangePlanDetailDto extends PageDto implements Serializable
         this.amount = amount;
     }
 
-    public String getContractType() {
-        return contractType;
-    }
-
-    public void setContractType(String contractType) {
-        this.contractType = contractType;
-    }
-
     public String getDetailId() {
+
         return detailId;
     }
 

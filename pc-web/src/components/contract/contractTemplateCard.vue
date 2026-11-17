@@ -57,7 +57,7 @@ export default {
   },
   computed: {
     category() {
-      return guessCategory({ category: this.template.category, contractTypeName: this.template.typeName })
+      return guessCategory(this.template)
     },
     categoryInfo() {
       return categoryTagOf(this.category)
@@ -293,13 +293,13 @@ export default {
     }
 
     &.is-primary {
-      border-color: #4f46e5;
-      background: #4f46e5;
+      border-color: #409eff;
+      background: #409eff;
       color: #fff;
 
       &:hover {
-        border-color: #6366f1;
-        background: #6366f1;
+        border-color: #66b1ff;
+        background: #66b1ff;
       }
     }
 

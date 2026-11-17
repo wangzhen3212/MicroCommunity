@@ -21,16 +21,6 @@
         :placeholder="$t('contractRemind.filter.keywordPlaceholder')"
         @keyup.enter.native="handleSearch"
       />
-      <el-select
-        v-model="condition.category"
-        style="width: 150px"
-        clearable
-        :placeholder="$t('contractRemind.filter.categoryPlaceholder')"
-      >
-        <el-option :label="$t('contractCategory.rent')" value="1" />
-        <el-option :label="$t('contractCategory.purchase')" value="2" />
-        <el-option :label="$t('contractCategory.maintain')" value="3" />
-      </el-select>
       <el-select v-model="condition.days" style="width: 150px">
         <el-option :label="$t('contractRemind.filter.days') + ' 30'" value="30" />
         <el-option :label="$t('contractRemind.filter.days') + ' 60'" value="60" />
@@ -83,7 +73,7 @@
         </template>
       </el-table-column>
       <el-table-column :label="$t('contractRemind.table.category')" align="center" width="120">
-        <template slot-scope="scope">{{ scope.row.contractTypeName || '-' }}</template>
+        <template slot-scope="scope">{{ scope.row.templateName || '-' }}</template>
       </el-table-column>
       <el-table-column :label="$t('contractRemind.table.partyB')" min-width="150">
         <template slot-scope="scope">{{ scope.row.partyB || '-' }}</template>
@@ -182,7 +172,6 @@ export default {
       includeExpired: false,
       condition: {
         searchText: '',
-        category: '',
         days: '30'
       },
       page: {
@@ -225,7 +214,6 @@ export default {
         page: this.page.current,
         row: this.page.size,
         searchText: this.condition.searchText,
-        category: this.condition.category,
         days: this.condition.days,
         includeExpired: this.includeExpired ? '1' : '0'
       }
@@ -250,7 +238,6 @@ export default {
     handleReset() {
       this.condition = {
         searchText: '',
-        category: '',
         days: '30'
       }
       this.includeExpired = false

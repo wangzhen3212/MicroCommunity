@@ -13,7 +13,8 @@
     <el-table :data="chooseContractInfo.contracts" border style="width: 100%">
       <el-table-column prop="contractName" :label="$t('chooseContract.contractName')" align="center" />
       <el-table-column prop="contractCode" :label="$t('chooseContract.contractCode')" align="center" />
-      <el-table-column prop="contractTypeName" :label="$t('chooseContract.contractType')" align="center" />
+      <el-table-column prop="templateName" :label="$t('chooseContract.contractType')" align="center" />
+
       <el-table-column prop="partyA" :label="$t('chooseContract.partyA')" align="center" />
       <el-table-column prop="partyB" :label="$t('chooseContract.partyB')" align="center" />
       <el-table-column prop="signingTime" :label="$t('chooseContract.signingTime')" align="center" />

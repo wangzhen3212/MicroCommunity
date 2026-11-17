@@ -4,7 +4,7 @@ export const messages = {
       title: 'Contract Print',
       print: 'Print',
       close: 'Close',
-      noTemplate: 'This contract does not have a template set, please set it in the contract template under the contract type'
+      noTemplate: 'This contract does not have a template set, please set it in the contract template library'
     }
   },
   zh: {

@@ -13,7 +13,6 @@
           clearable
           @keyup.enter.native="handleSearch"
         />
-        <el-button @click="openTypeDrawer">{{ $t('contractTemplate.typeMaintain') }}</el-button>
         <el-button @click="handleImportWord">
           <i class="el-icon-document-copy"></i>
           <span>{{ $t('contractTemplate.editor.pasteWord') }}</span>
@@ -81,136 +80,38 @@
       @current-change="handleCurrentChange"
     />
 
-    <el-drawer
-      :title="$t('contractTemplate.typeMaintain')"
-      :visible.sync="typeDrawerVisible"
-      size="760px"
-      custom-class="cc-drawer"
-      :append-to-body="true"
-      @close="handleTypeDrawerClose"
-    >
-      <div class="cc-type-drawer">
-        <div class="cc-toolbar">
-          <el-input
-            style="width: 180px"
-            v-model="typeConditions.typeName"
-            :placeholder="$t('contractTypeManage.search.typeNamePlaceholder')"
-            clearable
-            @keyup.enter.native="queryContractTypeMethod"
-          />
-          <el-select
-            style="width: 150px"
-            v-model="typeConditions.audit"
-            :placeholder="$t('contractTypeManage.search.auditPlaceholder')"
-            clearable
-          >
-            <el-option v-for="item in audits" :key="item.statusCd" :label="item.name" :value="item.statusCd" />
-          </el-select>
-          <el-button type="primary" @click="queryContractTypeMethod">
-            {{ $t('common.search') }}
-          </el-button>
-          <el-button @click="resetContractTypeMethod">
-            {{ $t('common.reset') }}
-          </el-button>
-          <el-button type="primary" @click="openAddContractType">
-            {{ $t('common.add') }}
-          </el-button>
-        </div>
-
-        <el-table :data="contractTypes" border style="width: 100%">
-          <el-table-column prop="typeName" :label="$t('contractTypeManage.table.typeName')" min-width="140" />
-          <el-table-column prop="auditName" :label="$t('contractTypeManage.table.audit')" align="center" width="100" />
-          <el-table-column prop="remark" :label="$t('contractTypeManage.table.remark')" min-width="140" />
-          <el-table-column prop="createTime" :label="$t('contractTypeManage.table.createTime')" align="center" width="160" />
-          <el-table-column :label="$t('common.operation')" align="center" width="300">
-            <template slot-scope="scope">
-              <el-button type="text" size="mini" @click="openTypeSpec(scope.row)">
-                {{ $t('contractTypeManage.table.specInfo') }}
-              </el-button>
-              <el-button type="text" size="mini" @click="openTypeTemplate(scope.row)">
-                {{ $t('contractTypeManage.table.template') }}
-              </el-button>
-              <el-button type="text" size="mini" @click="openEditContractType(scope.row)">
-                {{ $t('common.edit') }}
-              </el-button>
-              <el-button type="text" size="mini" @click="openDeleteContractType(scope.row)">
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <el-pagination
-          class="cc-pagination"
-          :current-page="typePage.current"
-          :page-sizes="[10, 20, 30, 50]"
-          :page-size="typePage.size"
-          :total="typePage.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleTypeSizeChange"
-          @current-change="handleTypeCurrentChange"
-        />
-      </div>
-    </el-drawer>
-
     <contract-template-preview ref="templatePreview" />
-    <add-template-view ref="addTemplateView" @success="handleSearch" />
-    <add-contract-type ref="addContractType" @success="handleSuccess" />
-    <edit-contract-type ref="editContractType" @success="handleSuccess" />
-    <delete-contract-type ref="deleteContractType" @success="handleSuccess" />
   </div>
 </template>
 
 <script>
 import ContractTemplateCard from '@/components/contract/contractTemplateCard'
 import ContractTemplatePreview from '@/components/contract/contractTemplatePreview'
-import AddTemplateView from '@/components/contract/addTemplateView'
-import AddContractType from '@/components/contract/addContractType'
-import EditContractType from '@/components/contract/editContractType'
-import DeleteContractType from '@/components/contract/deleteContractType'
-import { getDict } from '@/api/community/communityApi'
 import {
   deleteContractTypeTemplate,
   listContractTemplates,
   queryContractTypeTemplate
 } from '@/api/contract/contractTemplateApi'
-import { queryContractType } from '@/api/contract/contractTypeManageApi'
 import { guessCategory } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractTypeManageList',
   components: {
     ContractTemplateCard,
-    ContractTemplatePreview,
-    AddTemplateView,
-    AddContractType,
-    EditContractType,
-    DeleteContractType
+    ContractTemplatePreview
   },
   data() {
     return {
       loading: false,
-      typeDrawerVisible: false,
       templates: [],
       allTemplates: [],
-      contractTypes: [],
-      audits: [],
       conditions: {
         templateNameLike: '',
         category: ''
       },
-      typeConditions: {
-        typeName: '',
-        audit: ''
-      },
       page: {
         current: 1,
         size: 9,
-        total: 0
-      },
-      typePage: {
-        current: 1,
-        size: 10,
         total: 0
       }
     }
@@ -236,15 +137,10 @@ export default {
   },
   created() {
     this.loadTemplates()
-    this.queryContractTypes()
-    this.loadAudits()
   },
   methods: {
     countByCategory(category) {
-      return this.allTemplates.filter(item => guessCategory({
-        category: item.category,
-        contractTypeName: item.contractTypeName
-      }) === category).length
+      return this.allTemplates.filter(item => guessCategory(item) === category).length
     },
     loadTemplates() {
       this.loading = true
@@ -334,83 +230,12 @@ export default {
         })
       }).catch(() => {
       })
-    },
-    queryContractTypes() {
-      queryContractType({
-        page: this.typePage.current,
-        row: this.typePage.size,
-        typeName: this.typeConditions.typeName,
-        audit: this.typeConditions.audit
-      }).then(res => {
-        this.contractTypes = res.data || []
-        this.typePage.total = res.total || (res.data || []).length
-      }).catch(error => {
-        this.$message.error(error.message || this.$t('contractTypeManage.fetchError'))
-      })
-    },
-    loadAudits() {
-      getDict('contract_type', 'audit').then(data => {
-        this.audits = data || []
-      }).catch(() => {
-        this.audits = []
-      })
-    },
-    queryContractTypeMethod() {
-      this.typePage.current = 1
-      this.queryContractTypes()
-    },
-    resetContractTypeMethod() {
-      this.typeConditions = {
-        typeName: '',
-        audit: ''
-      }
-      this.queryContractTypeMethod()
-    },
-    handleTypeSizeChange(size) {
-      this.typePage.size = size
-      this.queryContractTypes()
-    },
-    handleTypeCurrentChange(current) {
-      this.typePage.current = current
-      this.queryContractTypes()
-    },
-    handleSuccess() {
-      this.queryContractTypes()
-      this.loadTemplates()
-    },
-    openAddContractType() {
-      this.$refs.addContractType.open()
-    },
-    openEditContractType(row) {
-      this.$refs.editContractType.open(row)
-    },
-    openDeleteContractType(row) {
-      this.$refs.deleteContractType.open(row)
-    },
-    openTypeSpec(row) {
-      this.$router.push(`/views/contract/contractTypeSpecManage?contractTypeId=${row.contractTypeId}`)
-    },
-    openTypeTemplate(row) {
-      this.$refs.addTemplateView.open(row)
-    },
-    openTypeDrawer() {
-      this.typeDrawerVisible = true
-      if (!this.contractTypes.length) {
-        this.queryContractTypes()
-      }
-    },
-    handleTypeDrawerClose() {
-      this.loadTemplates()
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.cc-type-drawer {
-  padding: 0 4px 8px;
-}
-
 .cc-tpl-bar {
   display: flex;
   align-items: center;

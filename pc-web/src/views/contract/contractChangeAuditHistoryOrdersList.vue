@@ -12,8 +12,9 @@
                 align="center" />
               <el-table-column prop="contractName" :label="$t('contractChangeAuditHistoryOrders.contractName')"
                 align="center" />
-              <el-table-column prop="contractTypeName" :label="$t('contractChangeAuditHistoryOrders.contractTypeName')"
+              <el-table-column prop="templateName" :label="$t('contractChangeAuditHistoryOrders.contractTypeName')"
                 align="center" />
+
               <el-table-column prop="stateName" :label="$t('contractChangeAuditHistoryOrders.stateName')"
                 align="center" />
               <el-table-column prop="createTime" :label="$t('contractChangeAuditHistoryOrders.createTime')"

@@ -1,19 +1,6 @@
 ﻿<template>
   <el-dialog :title="$t('exportContractFeeImportExcel.templateExport')" :visible.sync="visible" width="50%">
     <el-form label-width="150px" class="text-left">
-      <el-form-item :label="$t('exportContractFeeImportExcel.contractType')">
-        <div>
-          <el-checkbox v-model="isContractTypeAll" @change="changeAllContractTypes">
-            {{ $t('exportContractFeeImportExcel.all') }}
-          </el-checkbox>
-          <el-checkbox-group v-model="selectedContractTypes" @change="changeItemContractType">
-            <el-checkbox v-for="item in contractTypes" :key="item.contractType" :label="item.contractType" style="margin-left:15px">
-              {{ item.contractTypeName }}
-            </el-checkbox>
-          </el-checkbox-group>
-        </div>
-      </el-form-item>
-
       <el-form-item :label="$t('exportContractFeeImportExcel.feeItem')">
         <div>
           <el-checkbox v-model="isConfigAll" @change="changeAllConfigs">
@@ -40,18 +27,14 @@
 
 <script>
 import { listFeeConfigs, exportContractFeeExcel } from '@/api/fee/contractCreateFeeApi'
-import { getDict } from '@/api/community/communityApi'
 
 export default {
   name: 'ExportContractFeeImportExcel',
   data() {
     return {
       visible: false,
-      isContractTypeAll: true,
       isConfigAll: true,
-      selectedContractTypes: [],
       selectedConfigs: [],
-      contractTypes: [],
       configs: []
     }
   },
@@ -61,11 +44,6 @@ export default {
   methods: {
     async fetchData() {
       try {
-        // 获取合同类型
-        const contractTypeRes = await getDict('contract', 'contract_type')
-        this.contractTypes = contractTypeRes || []
-        this.selectedContractTypes = this.contractTypes.map(item => item.contractType)
-
         // 获取费用配置
         const configRes = await listFeeConfigs({
           page: 1,
@@ -84,16 +62,6 @@ export default {
     open() {
       this.visible = true
     },
-    changeAllContractTypes() {
-      if (this.isContractTypeAll) {
-        this.selectedContractTypes = this.contractTypes.map(item => item.contractType)
-      } else {
-        this.selectedContractTypes = []
-      }
-    },
-    changeItemContractType() {
-      this.isContractTypeAll = this.selectedContractTypes.length === this.contractTypes.length
-    },
     changeAllConfigs() {
       if (this.isConfigAll) {
         this.selectedConfigs = this.configs
@@ -110,11 +78,9 @@ export default {
     },
     async handleExport() {
       try {
-        const contractTypes = this.selectedContractTypes.join(',')
         const configIds = this.selectedConfigs.join(',')
 
         await exportContractFeeExcel({
-          contractTypes,
           configIds
         })
 

@@ -8,8 +8,8 @@ import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.contract.ContractAuditDto;
 import com.java110.dto.contract.ContractCollectionPlanDto;
-import com.java110.dto.contract.ContractTypeDto;
 import com.java110.dto.fee.FeeDto;
+
 import com.java110.dto.owner.OwnerRoomRelDto;
 import com.java110.dto.renting.RentingPoolDto;
 import com.java110.dto.store.StoreDto;
@@ -52,10 +52,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
     private IContractAttrInnerServiceSMO contractAttrInnerServiceSMOImpl;
 
     @Autowired
-    private IContractTypeInnerServiceSMO contractTypeInnerServiceSMOImpl;
-
-    @Autowired
     private IRentingPoolInnerServiceSMO rentingPoolInnerServiceSMOImpl; // 房屋租赁
+
 
     @Autowired
     private IContractApplyUserInnerServiceSMO contractApplyUserInnerServiceSMOImpl;
@@ -99,27 +97,16 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
     @Java110Transactional
     public ResponseEntity<String> save(ContractPo contractPo, JSONObject reqJson) {
 
-        //查询 合同是否需要审核
-        ContractTypeDto contractTypeDto = new ContractTypeDto();
-        contractTypeDto.setContractTypeId(contractPo.getContractType());
-        contractTypeDto.setStoreId(contractPo.getStoreId());
-        List<ContractTypeDto> contractTypeDtos = contractTypeInnerServiceSMOImpl.queryContractTypes(contractTypeDto);
-
-        Assert.listOnlyOne(contractTypeDtos, "查询合同类型失败");
-
         validateRoom(contractPo, reqJson);
-
-        String audit = contractTypeDtos.get(0).getAudit();
 
         boolean draft = ContractDto.STATE_DRAFT.equals(reqJson.getString("state"));
 
         if (draft) {
             contractPo.setState(ContractDto.STATE_DRAFT);
-        } else if (ContractTypeDto.NO_AUDIT.equals(audit)) {
-            contractPo.setState(ContractDto.STATE_AUDIT_FINISH);
         } else {
             contractPo.setState(ContractDto.STATE_AUDIT);
         }
+
         //校验合同编号是否重复
         ContractDto contractDto = new ContractDto();
         contractDto.setStoreId(contractPo.getStoreId());
@@ -152,15 +139,16 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
 
         saveContractCollectionPlans(reqJson, contractPo);
 
-        // 非草稿且需要审核时提交两级审批（法务校对 -> 领导审核）
-        if (!draft && !ContractTypeDto.NO_AUDIT.equals(audit)) {
+        // 非草稿时提交两级审批（法务校对 -> 领导审核）
+        if (!draft) {
             submitContractAudit(reqJson, contractPo);
         }
 
 
         if (!draft && StoreDto.STORE_ADMIN.equals(contractPo.getStoreId())) {
-            noticeRentUpdateState(contractPo, audit);
+            noticeRentUpdateState(contractPo);
         }
+
 
 
         if (!reqJson.containsKey("contractTypeSpecs")) {
@@ -371,7 +359,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
      *
      * @param contractPo
      */
-    private void noticeRentUpdateState(ContractPo contractPo, String audit) {
+    private void noticeRentUpdateState(ContractPo contractPo) {
+
 
         if (!contractPo.getObjType().equals(FeeDto.PAYER_OBJ_TYPE_ROOM)
                 || StringUtil.isEmpty(contractPo.getObjId())
@@ -392,12 +381,9 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
         rentingPoolPo.setCommunityId(rentingPoolDtos.get(0).getCommunityId());
         rentingPoolPo.setRentingId(rentingPoolDtos.get(0).getRentingId());
 
-        if (ContractTypeDto.NO_AUDIT.equals(audit)) {
-            rentingPoolPo.setState(RentingPoolDto.STATE_FINISH);
-        } else {
-            rentingPoolPo.setState(RentingPoolDto.STATE_ADMIN_AUDIT);
-        }
+        rentingPoolPo.setState(RentingPoolDto.STATE_ADMIN_AUDIT);
         rentingPoolInnerServiceSMOImpl.updateRentingPool(rentingPoolPo);
+
     }
 
     /**

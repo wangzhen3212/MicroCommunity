@@ -25,7 +25,7 @@ export const messages = {
       table: {
         auditCode: 'Approval Code',
         contract: 'Contract',
-        contractType: 'Contract Type',
+        contractType: 'Contract Template',
         type: 'Type',
         amount: 'Amount',
         partyB: 'Party B',
@@ -131,7 +131,7 @@ export const messages = {
       table: {
         auditCode: '审批单号',
         contract: '合同',
-        contractType: '合同类型',
+        contractType: '合同模板',
         type: '类型',
         amount: '金额',
         partyB: '签约对象',
@@ -237,7 +237,7 @@ export const messages = {
       table: {
         auditCode: '審批單號',
         contract: '合同',
-        contractType: '合同類型',
+        contractType: '合同模板',
         type: '類型',
         amount: '金額',
         partyB: '簽約對象',

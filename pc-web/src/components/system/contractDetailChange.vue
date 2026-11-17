@@ -5,8 +5,9 @@
       </el-table-column>
       <el-table-column prop="contractCode" :label="$t('contractDetailChange.contractCode')" align="center">
       </el-table-column>
-      <el-table-column prop="contractTypeName" :label="$t('contractDetailChange.contractTypeName')" align="center">
+      <el-table-column prop="templateName" :label="$t('contractDetailChange.contractTypeName')" align="center">
       </el-table-column>
+
       <el-table-column prop="partyA" :label="$t('contractDetailChange.partyA')" align="center">
       </el-table-column>
       <el-table-column prop="partyB" :label="$t('contractDetailChange.partyB')" align="center">

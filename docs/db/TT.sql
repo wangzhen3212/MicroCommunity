@@ -29173,7 +29173,6 @@ CREATE TABLE `contract` (
   `contract_id` varchar(30) NOT NULL COMMENT '合同ID',
   `contract_code` varchar(30) NOT NULL COMMENT '合同编码',
   `contract_name` varchar(200) NOT NULL COMMENT '合同名称',
-  `contract_type` varchar(30) NOT NULL COMMENT '合同类型',
   `obj_type` varchar(12) DEFAULT '1111' COMMENT '合同对象类型：3333 房屋 ，1111 没有合同对象',
   `obj_id` varchar(30) DEFAULT '-1' COMMENT '合同对象',
   `party_a` varchar(200) NOT NULL COMMENT '甲方',

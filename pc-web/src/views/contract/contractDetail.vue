@@ -29,7 +29,8 @@
           </el-col>
           <el-col :span="6">
             <el-form-item :label="$t('contractDetail.contractType') + '：'">
-              <span>{{ contractDetailInfo.contractTypeName }}</span>
+              <span>{{ contractDetailInfo.templateName }}</span>
+
             </el-form-item>
           </el-col>
           <el-col :span="6">
@@ -179,8 +180,9 @@ export default {
         contractId: '',
         contractName: '',
         contractCode: '',
-        contractType: '',
-        contractTypeName: '',
+        templateName: '',
+
+
         partyA: '',
         partyB: '',
         aContacts: '',
@@ -243,7 +245,8 @@ export default {
     },
     _printContract() {
       const contract = this.contractDetailInfo
-      window.open(`/#/views/contract/printContract?contractTypeId=${contract.contractType}&contractId=${contract.contractId}`)
+      window.open(`/#/views/contract/printContract?contractId=${contract.contractId}`)
+
     }
   }
 }

@@ -62,13 +62,13 @@
         t.submit_staff_name submitStaffName, t.submit_time submitTime, t.finish_time finishTime,
         t.store_id storeId, t.status_cd statusCd, t.create_time createTime,
         c.contract_code bizCode, c.contract_name bizName, c.amount bizAmount, c.party_b bizPartyB,
-        c.state bizState, c.contract_type bizContractType, td.name bizStateName,
-        tt.type_name bizContractTypeName,
+        c.state bizState, td.name bizStateName,
+        tt.template_name bizTemplateName,
         (select count(1) from contract_audit_record r where r.audit_id = t.audit_id and r.status_cd = '0') recordCount
         from contract_audit t
         left join contract_change_plan p on p.plan_id = t.biz_id and p.status_cd = '0'
         left join contract c on c.contract_id = ifnull(p.contract_id, t.biz_id) and c.status_cd = '0'
-        left join contract_type tt on tt.contract_type_id = c.contract_type and tt.status_cd = '0'
+        left join contract_type_template tt on tt.template_id = c.template_id and tt.status_cd = '0'
         left join t_dict td on td.status_cd = c.state and td.table_name = 'contract' and td.table_columns = 'state'
         where 1 = 1
         <if test="auditId != null and auditId != ''">

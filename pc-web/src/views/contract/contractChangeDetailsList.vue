@@ -38,7 +38,7 @@
                   <label class="el-form-item__label">
                     <span>{{ $t('contractChangeDetails.contractType') }}</span>：
                   </label>
-                  <label class="el-form-item__content">{{contractChangeDetailInfo.contractType}}</label>
+                  <label class="el-form-item__content">{{contractChangeDetailInfo.templateName}}</label>
                 </div>
               </el-col>
             </el-row>

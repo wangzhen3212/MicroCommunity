@@ -12,16 +12,6 @@
       </div>
     </div>
 
-    <div class="cc-tip-bar">
-      <div class="cc-tip-icon">
-        <i class="el-icon-office-building"></i>
-      </div>
-      <p class="cc-tip-text">{{ $t('contractPartyaCenter.tip') }}</p>
-      <el-button type="primary" @click="handleAdd">
-        {{ $t('contractPartyaCenter.add') }}
-      </el-button>
-    </div>
-
     <div class="cc-toolbar">
       <el-input
         v-model="searchForm.partyA"

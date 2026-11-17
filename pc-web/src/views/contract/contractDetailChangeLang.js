@@ -3,8 +3,8 @@ export const messages = {
     contractDetailChange: {
       contractName: 'Contract Name',
       contractCode: 'Contract Code',
-      contractType: 'Contract Type',
-      contractTypeName: 'Contract Type',
+      contractType: 'Contract Template',
+      contractTypeName: 'Contract Template',
       partyA: 'Party A',
       partyB: 'Party B',
       changeType: 'Change Type',
@@ -25,8 +25,8 @@ zh: {
     contractDetailChange: {
       contractName: '合同名称',
       contractCode: '合同编号',
-      contractType: '合同类型',
-      contractTypeName: '合同类型',
+      contractType: '合同模板',
+      contractTypeName: '合同模板',
       partyA: '甲方',
       partyB: '乙方',
       changeType: '变更类型',
@@ -47,8 +47,8 @@ zh: {
     contractDetailChange: {
       contractName: '合同名稱',
       contractCode: '合同編號',
-      contractType: '合同類型',
-      contractTypeName: '合同類型',
+      contractType: '合同模板',
+      contractTypeName: '合同模板',
       partyA: '甲方',
       partyB: '乙方',
       changeType: '變更類型',

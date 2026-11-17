@@ -46,14 +46,11 @@
                   </el-form-item>
                 </el-col>
                 <el-col :span="9">
-                  <el-form-item :label="$t('contractTemplate.editor.contractType')" required>
-                    <el-select v-model="form.contractTypeId" style="width: 100%" @change="handleTypeChange">
-                      <el-option
-                        v-for="item in contractTypes"
-                        :key="item.contractTypeId"
-                        :label="item.typeName"
-                        :value="item.contractTypeId"
-                      />
+                  <el-form-item :label="$t('contractTemplate.editor.category')" required>
+                    <el-select v-model="form.category" style="width: 100%">
+                      <el-option :label="$t('contractCategory.rent')" value="1" />
+                      <el-option :label="$t('contractCategory.purchase')" value="2" />
+                      <el-option :label="$t('contractCategory.maintain')" value="3" />
                     </el-select>
                   </el-form-item>
                 </el-col>
@@ -64,18 +61,9 @@
                 </el-col>
               </el-row>
               <el-row :gutter="16">
-                <el-col :span="16">
+                <el-col :span="24">
                   <el-form-item :label="$t('contractTemplate.editor.desc')">
                     <el-input v-model="form.templateDesc" maxlength="200" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item :label="$t('contractTemplate.editor.category')">
-                    <el-select v-model="form.category" style="width: 100%" clearable>
-                      <el-option :label="$t('contractCategory.rent')" value="1" />
-                      <el-option :label="$t('contractCategory.purchase')" value="2" />
-                      <el-option :label="$t('contractCategory.maintain')" value="3" />
-                    </el-select>
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -163,12 +151,7 @@
 import ContractDocEditor from '@/components/contract/workbench/ContractDocEditor'
 import ContractPasteImport from '@/components/contract/contractPasteImport'
 import ContractTemplatePreview from '@/components/contract/contractTemplatePreview'
-import { queryContractType } from '@/api/contract/contractManageApi'
-import {
-  queryContractTypeTemplate,
-  saveContractTypeTemplate,
-  updateContractTemplate
-} from '@/api/contract/contractTemplateApi'
+import { queryContractTypeTemplate, saveContractTypeTemplate, updateContractTemplate } from '@/api/contract/contractTemplateApi'
 
 export default {
   name: 'ContractTemplateEditorList',
@@ -182,12 +165,10 @@ export default {
       loading: false,
       saving: false,
       validating: false,
-      contractTypes: [],
       form: {
         templateId: '',
         templateName: '',
-        contractTypeId: '',
-        category: '',
+        category: '2',
         templateVersion: 'V1.0',
         templateDesc: '',
         context: '',
@@ -226,7 +207,6 @@ export default {
     }
   },
   created() {
-    this.loadContractTypes()
     this.loadTemplate()
   },
   mounted() {
@@ -235,19 +215,9 @@ export default {
     }
   },
   methods: {
-    loadContractTypes() {
-      queryContractType({ page: 1, row: 200 }).then(res => {
-        this.contractTypes = res.data || []
-      }).catch(() => {
-        this.contractTypes = []
-      })
-    },
     loadTemplate() {
       const query = this.$route.query || {}
       const templateId = query.templateId || query.copyFrom || ''
-      if (query.contractTypeId) {
-        this.form.contractTypeId = query.contractTypeId
-      }
       if (!templateId) {
         return
       }
@@ -262,8 +232,7 @@ export default {
           templateName: query.copyFrom
             ? detail.templateName + this.$t('contractTemplate.copySuffix')
             : detail.templateName,
-          contractTypeId: detail.contractTypeId || '',
-          category: detail.category ? String(detail.category) : '',
+          category: detail.category ? String(detail.category) : '2',
           templateVersion: detail.templateVersion || 'V1.0',
           templateDesc: detail.templateDesc || '',
           context: detail.context || '',
@@ -274,12 +243,6 @@ export default {
       }).finally(() => {
         this.loading = false
       })
-    },
-    handleTypeChange(contractTypeId) {
-      const matched = this.contractTypes.filter(item => item.contractTypeId === contractTypeId)[0]
-      if (matched && matched.category) {
-        this.form.category = String(matched.category)
-      }
     },
     insertVariable(item) {
       if (this.$refs.docEditor) {
@@ -331,7 +294,7 @@ export default {
         this.$message.error(this.$t('contractTemplate.editor.nameRequired'))
         return
       }
-      if (!this.form.contractTypeId) {
+      if (!this.form.category) {
         this.$message.error(this.$t('contractTemplate.editor.typeRequired'))
         return
       }
@@ -342,7 +305,7 @@ export default {
       const data = {
         templateId: this.form.templateId,
         templateName: this.form.templateName,
-        contractTypeId: this.form.contractTypeId,
+        category: this.form.category,
         templateVersion: this.form.templateVersion,
         templateDesc: this.form.templateDesc,
         context: this.form.context,
@@ -393,8 +356,8 @@ $brand: #4f46e5;
     cursor: pointer;
 
     &:hover {
-      color: $brand;
-      border-color: rgba(79, 70, 229, .35);
+      color: #409eff;
+      border-color: rgba(64, 158, 255, .35);
     }
   }
 
@@ -447,15 +410,15 @@ $brand: #4f46e5;
     }
 
     .el-button--primary {
-      background: $brand;
-      border-color: $brand;
+      background: #409eff;
+      border-color: #409eff;
       border-radius: 10px;
-      box-shadow: 0 6px 14px rgba(79, 70, 229, .18);
+      box-shadow: 0 6px 14px rgba(64, 158, 255, .18);
 
       &:hover,
       &:focus {
-        background: #6366f1;
-        border-color: #6366f1;
+        background: #66b1ff;
+        border-color: #66b1ff;
       }
     }
   }

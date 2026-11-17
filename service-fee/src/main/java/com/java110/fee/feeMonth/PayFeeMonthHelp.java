@@ -100,7 +100,7 @@ public class PayFeeMonthHelp implements IPayFeeMonthHelp {
             contractDto.setContractId(feeDto.getPayerObjId());
             List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
             if (!ListUtil.isNull(contractDtos)) {
-                payFeeMonthOwnerDto.setObjFpcId(contractDtos.get(0).getContractType());
+                payFeeMonthOwnerDto.setObjFpcId(contractDtos.get(0).getTemplateId());
             }
         }
         return payFeeMonthOwnerDto;

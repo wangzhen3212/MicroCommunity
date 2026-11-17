@@ -28,7 +28,8 @@
           </el-col>
           <el-col :span="8">
             <el-form-item :label="$t('contractChangeDetail.contractType')">
-              <span>{{ contractChangeDetailInfo.contractTypeName }}</span>
+              <span>{{ contractChangeDetailInfo.templateName }}</span>
+
             </el-form-item>
           </el-col>
         </el-row>
@@ -175,8 +176,9 @@ export default {
         contractId: '',
         contractName: '',
         contractCode: '',
-        contractType: '',
-        contractTypeName: '',
+        templateName: '',
+
+
         partyA: '',
         partyB: '',
         aContacts: '',
@@ -261,8 +263,8 @@ export default {
       this.contractChangeDetailInfo.contractId = contract.contractId
       this.contractChangeDetailInfo.contractName = contract.contractName
       this.contractChangeDetailInfo.contractCode = contract.contractCode
-      this.contractChangeDetailInfo.contractType = contract.contractType
-      this.contractChangeDetailInfo.contractTypeName = contract.contractTypeName
+      this.contractChangeDetailInfo.templateName = contract.templateName
+
       this.contractChangeDetailInfo.partyA = contract.partyA
       this.contractChangeDetailInfo.partyB = contract.partyB
       this.contractChangeDetailInfo.aContacts = contract.aContacts

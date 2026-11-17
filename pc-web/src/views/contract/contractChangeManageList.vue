@@ -105,7 +105,8 @@
 <script>
 import ContractChangeForm from '@/components/contract/contractChangeForm'
 import DeleteContractChangePlan from '@/components/contract/deleteContractChangePlan'
-import { queryContract, queryContractType } from '@/api/contract/contractManageApi'
+import { queryContract } from '@/api/contract/contractManageApi'
+
 import { queryContractChangePlan } from '@/api/contract/contractChangeManageApi'
 import { PLAN_TYPE } from '@/utils/contractPlanUtil'
 
@@ -120,8 +121,8 @@ export default {
       loading: false,
       plans: [],
       contracts: [],
-      contractTypes: [],
       counts: {
+
         all: 0,
         [PLAN_TYPE.MAIN_BODY]: 0,
         [PLAN_TYPE.LEASE]: 0,
@@ -153,8 +154,8 @@ export default {
     this.getList()
     this.getCounts()
     this.getContracts()
-    this.getContractTypes()
   },
+
   methods: {
     formatTime(time) {
       if (!time) {
@@ -265,18 +266,12 @@ export default {
         this.contracts = []
       })
     },
-    getContractTypes() {
-      queryContractType({ page: 1, row: 100 }).then(res => {
-        this.contractTypes = res.data || []
-      }).catch(() => {
-        this.contractTypes = []
-      })
-    },
     handleSearch() {
       this.page.current = 1
       this.getList()
     },
     handleReset() {
+
       this.condition.contractName = ''
       this.condition.contractCode = ''
       this.handleSearch()
@@ -494,18 +489,18 @@ export default {
     transition: color .2s, border-color .2s, background-color .2s;
 
     &:hover {
-      border-color: #c7d2fe;
-      color: #4f46e5;
+      border-color: #c6e2ff;
+      color: #409eff;
     }
 
     &.is-primary {
-      border-color: #4f46e5;
-      background: #4f46e5;
+      border-color: #409eff;
+      background: #409eff;
       color: #fff;
 
       &:hover {
-        border-color: #6366f1;
-        background: #6366f1;
+        border-color: #66b1ff;
+        background: #66b1ff;
         color: #fff;
       }
     }

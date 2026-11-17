@@ -72,23 +72,13 @@ export function categoryTagOf(category) {
 }
 
 /**
- * 合同分类兜底：分类为空时按类型名称关键字归类
+ * 合同分类取值：由模板 category 决定，缺省为采购
  */
 export function guessCategory(contract) {
-  if (!contract) {
+  if (!contract || !contract.category) {
     return CONTRACT_CATEGORY.PURCHASE
   }
-  if (contract.category) {
-    return String(contract.category)
-  }
-  const typeName = contract.contractTypeName || ''
-  if (typeName.indexOf('租') > -1) {
-    return CONTRACT_CATEGORY.RENT
-  }
-  if (typeName.indexOf('维保') > -1 || typeName.indexOf('维修') > -1) {
-    return CONTRACT_CATEGORY.MAINTAIN
-  }
-  return CONTRACT_CATEGORY.PURCHASE
+  return String(contract.category)
 }
 
 export function toNumber(value) {

@@ -17,7 +17,8 @@
             {{scope.row.parentContractCode || '-'}}
           </template>
         </el-table-column>
-        <el-table-column prop="contractTypeName" :label="$t('simplifyContract.contractType')" align="center"></el-table-column>
+        <el-table-column prop="templateName" :label="$t('simplifyContract.contractType')" align="center"></el-table-column>
+
         <el-table-column prop="startTime" :label="$t('simplifyContract.startTime')" align="center"></el-table-column>
         <el-table-column prop="endTime" :label="$t('simplifyContract.endTime')" align="center"></el-table-column>
         <el-table-column prop="stateName" :label="$t('simplifyContract.status')" align="center"></el-table-column>
@@ -59,8 +60,7 @@ export default {
         contractId: '',
         conditions: {
           objId: '',
-          contractCode: '',
-          contractType: ''
+          contractCode: ''
         }
       },
       currentPage: 1,
@@ -101,7 +101,8 @@ export default {
       this.$router.push('/pages/admin/newContractManage')
     },
     _printContract(contract) {
-      window.open(`/#/views/contract/printContract?contractTypeId=${contract.contractType}&contractId=${contract.contractId}`)
+      window.open(`/#/views/contract/printContract?contractId=${contract.contractId}`)
+
     },
     _viewContract(contract) {
       this.$router.push(`/views/contract/contractDetail?contractId=${contract.contractId}`)
@@ -117,8 +118,7 @@ export default {
         contractId: '',
         conditions: {
           contractName: '',
-          contractCode: '',
-          contractType: ''
+          contractCode: ''
         }
       }
     },

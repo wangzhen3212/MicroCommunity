@@ -74,15 +74,6 @@
       />
       <el-select
         style="width: 150px"
-        v-model="conditions.category"
-        :placeholder="$t('contractPerformance.filter.categoryPlaceholder')"
-        clearable
-      >
-        <el-option :label="$t('contractCategory.purchase')" value="2" />
-        <el-option :label="$t('contractCategory.maintain')" value="3" />
-      </el-select>
-      <el-select
-        style="width: 150px"
         v-model="conditions.payState"
         :placeholder="$t('contractPerformance.filter.payStatePlaceholder')"
         clearable
@@ -183,7 +174,6 @@ export default {
       summary: {},
       conditions: {
         searchText: '',
-        category: '',
         payState: ''
       },
       page: {
@@ -207,7 +197,6 @@ export default {
         page: this.page.current,
         row: this.page.size,
         searchText: this.conditions.searchText,
-        category: this.conditions.category,
         payState: this.conditions.payState
       }
       if (this.$route.query && this.$route.query.contractId) {
@@ -232,7 +221,6 @@ export default {
     handleReset() {
       this.conditions = {
         searchText: '',
-        category: '',
         payState: ''
       }
       this.handleSearch()
@@ -249,7 +237,6 @@ export default {
       exportContracts({
         exportType: 'performance',
         searchText: this.conditions.searchText,
-        category: this.conditions.category,
         payState: this.conditions.payState
       }).then(data => {
         saveBase64File(data.base64, data.fileName)

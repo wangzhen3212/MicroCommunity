@@ -39,12 +39,10 @@ export default {
     return {
       templatecontent: '',
       contractdata: '',
-      contractTypeSpec: '',
       baseRepalce: [],
       attrs: [],
       printContractInfo: {
         contractId: '',
-        contractTypeId: '',
         context: ''
       },
       printFlag: '0',
@@ -53,7 +51,6 @@ export default {
   },
   created() {
     this.communityId = getCommunityId()
-    this.printContractInfo.contractTypeId = this.$route.query.contractTypeId
     this.printContractInfo.contractId = this.$route.query.contractId
     this._loadContract()
   },
@@ -63,7 +60,6 @@ export default {
         page: 1,
         row: 1,
         contractId: this.printContractInfo.contractId,
-        contractTypeId: this.printContractInfo.contractTypeId,
         communityId: this.communityId
       }
 
@@ -73,20 +69,9 @@ export default {
           this.templatecontent = _data.contractTypeTemplate[0].context
           this.contractdata = _data.contract[0]
           this.attrs = _data.contract[0].attrs
-          this.contractTypeSpec = _data.contractTypeSpec
-
-          this.contractTypeSpec.forEach(e => {
-            const rname = e.specName
-            const rspecCd = e.specCd
-            this.attrs.forEach(ea => {
-              if (rspecCd === ea.specCd) {
-                const reg = new RegExp('#' + rname + '#', 'g')
-                this.templatecontent = this.templatecontent.replace(reg, ea.value)
-              }
-            })
-          })
 
           this.baseRepalce = _data.baseRepalce
+
           if (this.baseRepalce) {
             this.baseRepalce.forEach(e => {
               const rname = e.name

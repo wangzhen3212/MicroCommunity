@@ -210,8 +210,8 @@ export default {
       border-bottom: 2px solid transparent;
 
       &.is-active {
-        color: #4f46e5;
-        border-bottom-color: #4f46e5;
+        color: #409eff;
+        border-bottom-color: #409eff;
       }
     }
   }

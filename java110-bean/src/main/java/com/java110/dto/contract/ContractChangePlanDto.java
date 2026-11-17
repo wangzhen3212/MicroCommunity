@@ -44,7 +44,7 @@ public class ContractChangePlanDto extends ContractDto implements Serializable {
 
     private String contractName;
     private String contractCode;
-    private String contractType;
+
 
     private String logStartTime;
     private String logEndTime;
@@ -183,17 +183,8 @@ public class ContractChangePlanDto extends ContractDto implements Serializable {
         this.contractCode = contractCode;
     }
 
-    @Override
-    public String getContractType() {
-        return contractType;
-    }
-
-    @Override
-    public void setContractType(String contractType) {
-        this.contractType = contractType;
-    }
-
     public String getLogStartTime() {
+
         return logStartTime;
     }
 

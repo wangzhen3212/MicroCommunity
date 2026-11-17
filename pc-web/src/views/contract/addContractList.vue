@@ -45,11 +45,9 @@
             <el-form label-position="top" class="cc-wb-form">
               <contract-base-info-form
                 :form="form"
-                :contract-types="contractTypes"
                 :partyas="partyas"
                 :templates="templates"
                 @regenerate-code="handleGenerateCode"
-                @type-change="handleTypeChange"
                 @template-change="handleTemplateChange"
                 @partya-change="handlePartyaChange"
                 @amount-change="handleAmountChange"
@@ -153,7 +151,7 @@ import ContractDocEditor from '@/components/contract/workbench/ContractDocEditor
 import ContractFilePanel from '@/components/contract/workbench/ContractFilePanel'
 import ContractSummaryPanel from '@/components/contract/workbench/ContractSummaryPanel'
 import ContractTemplatePreview from '@/components/contract/contractTemplatePreview'
-import { queryContract, queryContractType } from '@/api/contract/contractManageApi'
+import { queryContract } from '@/api/contract/contractManageApi'
 import { queryContractPartya } from '@/api/contract/contractPartyaApi'
 import { listContractTemplates, queryContractTypeTemplate } from '@/api/contract/contractTemplateApi'
 import {
@@ -189,7 +187,6 @@ export default {
       loading: false,
       dirty: false,
       initializing: true,
-      contractTypes: [],
       partyas: [],
       templates: [],
       templateContent: '',
@@ -320,7 +317,6 @@ export default {
         contractId: '',
         contractName: '',
         contractCode: '',
-        contractType: '',
         category: '2',
         templateId: '',
         partyaId: '',
@@ -346,11 +342,6 @@ export default {
       }
     },
     loadBaseData() {
-      queryContractType({ page: 1, row: 100 }).then(res => {
-        this.contractTypes = res.data || []
-      }).catch(() => {
-        this.contractTypes = []
-      })
       queryContractPartya({ page: 1, row: 200 }).then(res => {
         this.partyas = res.data || []
         const defaultPartya = this.partyas.filter(item => String(item.defaultFlag) === '1')[0]
@@ -464,34 +455,23 @@ export default {
         this.$message.error(error.message)
       })
     },
-    handleTypeChange(contractTypeId) {
-      const matched = this.contractTypes.filter(item => item.contractTypeId === contractTypeId)[0]
-      if (matched && matched.category) {
-        this.form.category = String(matched.category)
-      }
-      this.handleGenerateCode()
-    },
     applyTemplate(templateId) {
       this.form.templateId = templateId
-      this.handleGenerateCode()
       queryContractTypeTemplate({ templateId, page: 1, row: 1 }).then(list => {
         const template = (list || [])[0]
         if (!template) {
+          this.handleGenerateCode()
           return
         }
-        this.form.category = guessCategory({
-          category: template.category,
-          contractTypeName: template.contractTypeName
-        })
-        if (template.contractTypeId) {
-          this.form.contractType = template.contractTypeId
-        }
+        this.form.category = guessCategory(template)
+        this.handleGenerateCode()
         this.templateContent = template.context || ''
         if (this.templateContent && !this.content) {
           this.content = this.templateContent
         }
       }).catch(() => {
         this.templateContent = ''
+        this.handleGenerateCode()
       })
     },
     handleTemplateChange(templateId) {
@@ -501,7 +481,13 @@ export default {
       }
       queryContractTypeTemplate({ templateId, page: 1, row: 1 }).then(list => {
         const template = (list || [])[0]
-        this.templateContent = template ? template.context : ''
+        if (!template) {
+          this.templateContent = ''
+          return
+        }
+        this.form.category = guessCategory(template)
+        this.handleGenerateCode()
+        this.templateContent = template.context || ''
         if (this.templateContent && !this.content) {
           this.content = this.templateContent
         }

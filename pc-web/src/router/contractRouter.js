@@ -12,12 +12,8 @@ export default [
         component: () => import('@/views/contract/contractTemplateEditorList.vue')
     },
     {
-        path: '/views/contract/contractTypeSpecManage',
-        name: '/views/contract/contractTypeSpecManage',
-        component: () => import('@/views/contract/contractTypeSpecManageList.vue')
-    },
-    {
         path: '/pages/admin/contractPartyaManage',
+
         meta: { title: '合同甲方' },
         name: '/pages/admin/contractPartyaManage',
         component: () => import('@/views/contract/contractPartyaManageList.vue')

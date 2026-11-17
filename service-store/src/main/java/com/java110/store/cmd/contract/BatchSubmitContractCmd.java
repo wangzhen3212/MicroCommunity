@@ -9,10 +9,7 @@ import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.dto.contract.ContractAuditDto;
 import com.java110.dto.contract.ContractDto;
-import com.java110.dto.contract.ContractTypeDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
-import com.java110.intf.store.IContractTypeInnerServiceSMO;
-import com.java110.po.contract.ContractPo;
 import com.java110.store.bmo.contract.IContractAuditBMO;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.StringUtil;
@@ -32,9 +29,6 @@ public class BatchSubmitContractCmd extends Cmd {
 
     @Autowired
     private IContractInnerServiceSMO contractInnerServiceSMOImpl;
-
-    @Autowired
-    private IContractTypeInnerServiceSMO contractTypeInnerServiceSMOImpl;
 
     @Autowired
     private IContractAuditBMO contractAuditBMOImpl;
@@ -75,7 +69,7 @@ public class BatchSubmitContractCmd extends Cmd {
     }
 
     /**
-     * 单条提交：草稿/已驳回可提交，合同类型免审核时直接生效
+     * 单条提交：草稿/已驳回可提交，统一走合同审核流程
      */
     private void submitContract(String contractId, String storeId, String userId) {
         ContractDto contractDto = new ContractDto();
@@ -89,22 +83,6 @@ public class BatchSubmitContractCmd extends Cmd {
         ContractDto contract = contractDtos.get(0);
         if (!ContractDto.STATE_DRAFT.equals(contract.getState()) && !ContractDto.STATE_FAIL.equals(contract.getState())) {
             throw new CmdException("仅草稿或已驳回的合同可提交审核");
-        }
-
-        ContractTypeDto contractTypeDto = new ContractTypeDto();
-        contractTypeDto.setContractTypeId(contract.getContractType());
-        contractTypeDto.setStoreId(storeId);
-        contractTypeDto.setStatusCd("0");
-        List<ContractTypeDto> contractTypeDtos = contractTypeInnerServiceSMOImpl.queryContractTypes(contractTypeDto);
-        String audit = (contractTypeDtos == null || contractTypeDtos.isEmpty()) ? null : contractTypeDtos.get(0).getAudit();
-
-        if (ContractTypeDto.NO_AUDIT.equals(audit)) {
-            ContractPo contractPo = new ContractPo();
-            contractPo.setContractId(contractId);
-            contractPo.setState(ContractDto.STATE_AUDIT_FINISH);
-            contractPo.setStatusCd("0");
-            contractInnerServiceSMOImpl.updateContract(contractPo);
-            return;
         }
 
         JSONObject auditJson = new JSONObject();

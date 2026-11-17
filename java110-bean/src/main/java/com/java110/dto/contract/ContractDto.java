@@ -39,8 +39,8 @@ public class ContractDto extends PageDto implements Serializable {
     private String aLink;
     private String aContacts;
     private String amount;
-    private String contractType;
     private String storeId;
+
     private String operator;
     private String signingTime;
     private String bContacts;
@@ -79,8 +79,8 @@ public class ContractDto extends PageDto implements Serializable {
     private Date createTime;
 
     private String statusCd = "0";
-    private String contractTypeName;
     private String stateName;
+
 
     private String parentContractCode;
     private String parentContractCodeLike;
@@ -116,6 +116,11 @@ public class ContractDto extends PageDto implements Serializable {
      * 合同模板ID
      */
     private String templateId;
+    /**
+     * 合同模板名称
+     */
+    private String templateName;
+
     /**
      * 付款方式
      */
@@ -174,15 +179,8 @@ public class ContractDto extends PageDto implements Serializable {
         this.amount = amount;
     }
 
-    public String getContractType() {
-        return contractType;
-    }
-
-    public void setContractType(String contractType) {
-        this.contractType = contractType;
-    }
-
     public String getStoreId() {
+
         return storeId;
     }
 
@@ -398,15 +396,16 @@ public class ContractDto extends PageDto implements Serializable {
         this.statusCd = statusCd;
     }
 
-    public String getContractTypeName() {
-        return contractTypeName;
+    public String getTemplateName() {
+        return templateName;
     }
 
-    public void setContractTypeName(String contractTypeName) {
-        this.contractTypeName = contractTypeName;
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName;
     }
 
     public String getStateName() {
+
         return stateName;
     }
 

@@ -4,6 +4,10 @@
  */
 $cc-primary: #4f46e5;
 $cc-primary-light: #eef2ff;
+$cc-button: #409eff;
+$cc-button-hover: #66b1ff;
+$cc-button-disabled: #a0cfff;
+$cc-button-light: #ecf5ff;
 $cc-border: #ebeef5;
 $cc-text: #303133;
 $cc-text-secondary: #909399;
@@ -20,36 +24,36 @@ $cc-success: #67c23a;
   text-align: left;
 
   .el-button--primary {
-    background-color: $cc-primary;
-    border-color: $cc-primary;
+    background-color: $cc-button;
+    border-color: $cc-button;
     border-radius: 8px;
 
     &:hover,
     &:focus {
-      background-color: #6366f1;
-      border-color: #6366f1;
+      background-color: $cc-button-hover;
+      border-color: $cc-button-hover;
     }
 
     &.is-disabled,
     &.is-disabled:hover,
     &.is-disabled:focus {
-      background-color: #a5b4fc;
-      border-color: #a5b4fc;
+      background-color: $cc-button-disabled;
+      border-color: $cc-button-disabled;
     }
   }
 
   .el-button--text {
-    color: $cc-primary;
+    color: $cc-button;
     padding: 0 6px;
 
     &:hover,
     &:focus {
-      color: #6366f1;
+      color: $cc-button-hover;
     }
   }
 
   .el-pager li.active {
-    color: $cc-primary;
+    color: $cc-button;
   }
 
   .el-input__inner:focus,
@@ -93,52 +97,13 @@ $cc-success: #67c23a;
 
     .el-button--primary {
       border-radius: 10px;
-      box-shadow: 0 6px 14px rgba(79, 70, 229, .18);
+      box-shadow: 0 6px 14px rgba(64, 158, 255, .18);
     }
 
     .el-input__inner {
       height: 36px;
       line-height: 36px;
     }
-  }
-}
-
-.cc-tip-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  border-radius: 12px;
-  border: 1px solid #e0e7ff;
-  background: linear-gradient(90deg, $cc-primary-light, rgba(224, 231, 255, .35));
-
-  .cc-tip-icon {
-    width: 32px;
-    height: 32px;
-    flex: none;
-    border-radius: 8px;
-    background: #e0e7ff;
-    color: $cc-primary;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .cc-tip-text {
-    flex: 1;
-    min-width: 220px;
-    margin: 0;
-    font-size: 13px;
-    line-height: 20px;
-    text-align: left;
-    color: #3730a3;
-  }
-
-  .el-button {
-    height: 36px;
-    padding: 0 14px;
   }
 }
 
@@ -393,13 +358,13 @@ $cc-success: #67c23a;
     transition: color .2s, border-color .2s;
 
     &:hover {
-      color: $cc-primary;
+      color: $cc-button;
     }
 
     &.is-active {
       color: $cc-text;
       font-weight: 600;
-      border-bottom-color: $cc-primary;
+      border-bottom-color: $cc-button;
     }
 
     .cc-tab-count {
@@ -409,7 +374,7 @@ $cc-success: #67c23a;
     }
 
     &.is-active .cc-tab-count {
-      color: $cc-primary;
+      color: $cc-button;
     }
   }
 
@@ -425,14 +390,14 @@ $cc-success: #67c23a;
       background: #fff;
 
       &:hover {
-        color: $cc-primary;
-        border-color: $cc-primary;
+        color: $cc-button;
+        border-color: $cc-button;
       }
 
       &.is-active {
-        color: $cc-primary;
-        border-color: $cc-primary;
-        background: $cc-primary-light;
+        color: $cc-button;
+        border-color: $cc-button;
+        background: $cc-button-light;
       }
     }
   }
@@ -460,8 +425,8 @@ $cc-success: #67c23a;
       }
 
       &.is-active {
-        color: $cc-primary;
-        background: $cc-primary-light;
+        color: $cc-button;
+        background: $cc-button-light;
       }
     }
   }
@@ -578,8 +543,8 @@ $cc-success: #67c23a;
   padding: 8px 12px;
   margin-bottom: 12px;
   border-radius: 6px;
-  background: $cc-primary-light;
-  color: $cc-primary;
+  background: $cc-button-light;
+  color: $cc-button;
   font-size: 13px;
 }
 
@@ -632,13 +597,13 @@ $cc-success: #67c23a;
   }
 
   .el-button--primary {
-    background-color: $cc-primary;
-    border-color: $cc-primary;
+    background-color: $cc-button;
+    border-color: $cc-button;
 
     &:hover,
     &:focus {
-      background-color: #6366f1;
-      border-color: #6366f1;
+      background-color: $cc-button-hover;
+      border-color: $cc-button-hover;
     }
   }
 

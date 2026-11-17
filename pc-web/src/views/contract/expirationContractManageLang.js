@@ -5,7 +5,7 @@ export const messages = {
         title: 'Search Conditions',
         contractNameLike: 'Please enter contract name',
         contractCode: 'Please enter contract code',
-        contractType: 'Please select contract type'
+        contractType: 'Please select contract template'
       },
       list: {
         title: 'Expiration Contracts'
@@ -13,7 +13,7 @@ export const messages = {
       table: {
         contractName: 'Contract Name',
         contractCode: 'Contract Code',
-        contractType: 'Contract Type',
+        contractType: 'Contract Template',
         partyA: 'Party A',
         partyB: 'Party B',
         operator: 'Operator',
@@ -49,7 +49,7 @@ export const messages = {
         title: '查询条件',
         contractNameLike: '请输入合同名称',
         contractCode: '请输入合同编号',
-        contractType: '请选择合同类型'
+        contractType: '请选择合同模板'
       },
       list: {
         title: '到期合同'
@@ -57,7 +57,7 @@ export const messages = {
       table: {
         contractName: '合同名称',
         contractCode: '合同编号',
-        contractType: '合同类型',
+        contractType: '合同模板',
         partyA: '甲方',
         partyB: '乙方',
         operator: '经办人',
@@ -93,7 +93,7 @@ error: '合同终止失败'
         title: '查詢條件',
         contractNameLike: '請輸入合同名稱',
         contractCode: '請輸入合同編號',
-        contractType: '請選擇合同類型'
+        contractType: '請選擇合同模板'
       },
       list: {
         title: '到期合同'
@@ -101,7 +101,7 @@ error: '合同终止失败'
       table: {
         contractName: '合同名稱',
         contractCode: '合同編號',
-        contractType: '合同類型',
+        contractType: '合同模板',
         partyA: '甲方',
         partyB: '乙方',
         operator: '經辦人',

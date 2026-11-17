@@ -6,8 +6,8 @@ export const messages = {
       filter: {
         keyword: 'Keyword',
         keywordPlaceholder: 'Contract name / code / party B',
-        category: 'Contract Type',
-        categoryPlaceholder: 'All types',
+        category: 'Contract Template',
+        categoryPlaceholder: 'All templates',
         includeExpired: 'Include expired',
         days: 'Days Range',
         export: 'Export'
@@ -70,8 +70,8 @@ export const messages = {
       filter: {
         keyword: '关键字',
         keywordPlaceholder: '合同名称 / 编号 / 签约方',
-        category: '合同类型',
-        categoryPlaceholder: '全部类型',
+        category: '合同模板',
+        categoryPlaceholder: '全部模板',
         includeExpired: '包含已到期',
         days: '提醒范围',
         export: '导出'
@@ -134,8 +134,8 @@ export const messages = {
       filter: {
         keyword: '關鍵字',
         keywordPlaceholder: '合同名稱 / 編號 / 簽約方',
-        category: '合同類型',
-        categoryPlaceholder: '全部類型',
+        category: '合約模板',
+        categoryPlaceholder: '全部模板',
         includeExpired: '包含已到期',
         days: '提醒範圍',
         export: '導出'

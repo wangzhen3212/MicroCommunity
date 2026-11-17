@@ -8,10 +8,10 @@
     <!-- 保存合同变更明细信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractChangePlanDetailInfo" parameterType="Map">
         insert into contract_change_plan_detail(
-        a_link,a_contacts,amount,contract_type,detail_id,store_id,operator,signing_time,b_contacts,party_a,b_link,
+        a_link,a_contacts,amount,detail_id,store_id,operator,signing_time,b_contacts,party_a,b_link,
         party_b,contract_id,obj_id,plan_id,contract_name,start_time,end_time,contract_code,obj_type,operator_link,operate
         ) values (
-        #{aLink},#{aContacts},#{amount},#{contractType},#{detailId},#{storeId},#{operator},#{signingTime},#{bContacts},
+        #{aLink},#{aContacts},#{amount},#{detailId},#{storeId},#{operator},#{signingTime},#{bContacts},
         #{partyA},#{bLink},#{partyB},#{contractId},#{objId},#{planId},#{contractName},#{startTime},#{endTime},
         #{contractCode},#{objType},#{operatorLink},#{operate}
         )
@@ -20,16 +20,19 @@
 
     <!-- 查询合同变更明细信息 add by wuxw 2018-07-03 -->
     <select id="getContractChangePlanDetailInfo" parameterType="Map" resultType="Map">
-        select t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts aContacts,t.amount,t.contract_type,t.contract_type
-        contractType,t.detail_id,t.detail_id detailId,t.store_id,t.store_id
+        select t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts aContacts,t.amount,t.detail_id,t.detail_id detailId,t.store_id,t.store_id
         storeId,t.operator,t.signing_time,t.signing_time signingTime,t.b_contacts,t.b_contacts
         bContacts,t.party_a,t.party_a partyA,t.b_link,t.b_link bLink,t.party_b,t.party_b
         partyB,t.contract_id,t.contract_id contractId,t.obj_id,t.obj_id objId,t.plan_id,t.plan_id
         planId,t.contract_name,t.contract_name contractName,t.start_time,t.start_time startTime,t.end_time,t.end_time
         endTime,t.contract_code,t.contract_code contractCode,t.obj_type,t.obj_type
-        objType,t.operator_link,t.operator_link operatorLink,t.operate,td.`name` planTypeName,ccp.plan_type planType
+        objType,t.operator_link,t.operator_link operatorLink,t.operate,td.`name` planTypeName,ccp.plan_type planType,
+        ctt.template_name templateName
         from contract_change_plan_detail t
         inner join contract_change_plan ccp on t.plan_id = ccp.plan_id and ccp.status_cd = '0' and ccp.store_id = t.store_id
+        left join contract cc on cc.contract_id = t.contract_id and cc.status_cd = '0' and cc.store_id = t.store_id
+        left join contract_type_template ctt on ctt.template_id = cc.template_id and ctt.status_cd = '0' and ctt.store_id =
+        cc.store_id
         left join t_dict td on ccp.plan_type = td.status_cd and td.table_name = 'contract_change_plan' and td.table_columns = 'plan_type'
         where 1 =1
         <if test="aLink !=null and aLink != ''">
@@ -40,9 +43,6 @@
         </if>
         <if test="amount !=null and amount != ''">
             and t.amount= #{amount}
-        </if>
-        <if test="contractType !=null and contractType != ''">
-            and t.contract_type= #{contractType}
         </if>
         <if test="detailId !=null and detailId != ''">
             and t.detail_id= #{detailId}
@@ -122,9 +122,6 @@
         <if test="amount !=null and amount != ''">
             , t.amount= #{amount}
         </if>
-        <if test="contractType !=null and contractType != ''">
-            , t.contract_type= #{contractType}
-        </if>
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
@@ -194,9 +191,6 @@
         </if>
         <if test="amount !=null and amount != ''">
             and t.amount= #{amount}
-        </if>
-        <if test="contractType !=null and contractType != ''">
-            and t.contract_type= #{contractType}
         </if>
         <if test="detailId !=null and detailId != ''">
             and t.detail_id= #{detailId}

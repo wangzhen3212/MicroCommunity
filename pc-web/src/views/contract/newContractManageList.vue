@@ -4,15 +4,15 @@
       <el-col :span="4" class="left-panel">
         <el-card class="type-card">
           <div class="type-list-wrapper">
-            <div class="type-list-item" :class="{ 'selected': selectedType === '' }"
-              @click="switchType('')">
+            <div class="type-list-item" :class="{ 'selected': selectedTemplate === '' }"
+              @click="switchTemplate('')">
               {{ $t('newContractManage.allTypes') }}
             </div>
-            <div v-for="(item, index) in contractTypes" :key="index"
+            <div v-for="(item, index) in templates" :key="index"
               class="type-list-item"
-              :class="{ 'selected': selectedType === item.contractTypeId }"
-              @click="switchType(item.contractTypeId)">
-              {{ item.typeName }}
+              :class="{ 'selected': selectedTemplate === item.templateId }"
+              @click="switchTemplate(item.templateId)">
+              {{ item.templateName }}
             </div>
           </div>
         </el-card>
@@ -62,7 +62,7 @@
                 {{ scope.row.parentContractCode || '-' }}
               </template>
             </el-table-column>
-            <el-table-column prop="contractTypeName" :label="$t('newContractManage.table.contractType')" align="center" />
+            <el-table-column prop="templateName" :label="$t('newContractManage.table.contractType')" align="center" />
             <el-table-column prop="operator" :label="$t('newContractManage.table.operator')" align="center" />
             <el-table-column prop="amount" :label="$t('newContractManage.table.amount')" align="center" />
             <el-table-column prop="startTime" :label="$t('newContractManage.table.startTime')" align="center" />
@@ -101,7 +101,8 @@
 </template>
 
 <script>
-import { getContractList, getContractTypeList } from '@/api/contract/newContractManageApi'
+import { getContractList } from '@/api/contract/newContractManageApi'
+import { listContractTemplates } from '@/api/contract/contractTemplateApi'
 import EditContract from '@/components/contract/editContract'
 import DeleteContract from '@/components/contract/deleteContract'
 import { getCommunityId } from '@/api/community/communityApi'
@@ -115,15 +116,15 @@ export default {
   data() {
     return {
       loading: false,
-      selectedType: '',
+      selectedTemplate: '',
       searchForm: {
         contractNameLike: '',
         contractCode: '',
-        contractType: '',
+        templateId: '',
         state: ''
       },
       tableData: [],
-      contractTypes: [],
+      templates: [],
       pagination: {
         current: 1,
         size: 10,
@@ -135,7 +136,7 @@ export default {
   created() {
     this.communityId = getCommunityId()
     this.fetchData()
-    this.fetchContractTypes()
+    this.fetchTemplates()
   },
   methods: {
     async fetchData() {
@@ -156,16 +157,12 @@ export default {
         this.loading = false
       }
     },
-    async fetchContractTypes() {
+    async fetchTemplates() {
       try {
-        const params = {
-          page: 1,
-          row: 100
-        }
-        const { data } = await getContractTypeList(params)
-        this.contractTypes = data
+        const { data } = await listContractTemplates({ page: 1, row: 100 })
+        this.templates = data
       } catch (error) {
-        console.error('获取合同类型失败:', error)
+        this.templates = []
       }
     },
     handleSearch() {
@@ -176,14 +173,14 @@ export default {
       this.searchForm = {
         contractNameLike: '',
         contractCode: '',
-        contractType: this.selectedType,
+        templateId: this.selectedTemplate,
         state: ''
       }
       this.handleSearch()
     },
-    switchType(contractTypeId) {
-      this.selectedType = contractTypeId
-      this.searchForm.contractType = contractTypeId
+    switchTemplate(templateId) {
+      this.selectedTemplate = templateId
+      this.searchForm.templateId = templateId
       this.pagination.current = 1
       this.fetchData()
     },
@@ -197,7 +194,7 @@ export default {
       this.$refs.deleteContract.open(row)
     },
     handlePrint(row) {
-      window.open(`/#/views/contract/printContract?contractTypeId=${row.contractType}&contractId=${row.contractId}`)
+      window.open(`/#/views/contract/printContract?contractId=${row.contractId}`)
     },
     handleSizeChange(val) {
       this.pagination.size = val

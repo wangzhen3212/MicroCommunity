@@ -21,14 +21,13 @@ export const messages = {
       subtitle: 'Contract center for ledger, performance and expiration',
       stat: {
         total: 'Total Contracts',
-        totalExtra: 'Lease {rent} / Purchase {purchase} / Maintenance {maintain}',
         effective: 'Effective',
         effectiveExtra: 'Covers {roomCount} houses',
         auditing: 'To Be Audited',
         auditingExtra: 'Click to filter auditing contracts',
-        amount: 'Total Amount',
-        amountExtra: 'Lease {rentAmount} / Purchase {purchaseAmount} / Maintenance {maintainAmount}'
+        amount: 'Total Amount'
       },
+
       filter: {
         keyword: 'Keyword',
         keywordPlaceholder: 'Contract name / code / party B',
@@ -150,14 +149,13 @@ export const messages = {
       subtitle: '台账、履约、到期一体化合同中心',
       stat: {
         total: '合同总数',
-        totalExtra: '出租 {rent} / 采购 {purchase} / 维保 {maintain}',
         effective: '生效中',
         effectiveExtra: '覆盖房屋 {roomCount} 套',
         auditing: '待审核',
         auditingExtra: '点击筛选待审核合同',
-        amount: '合同总金额',
-        amountExtra: '出租 {rentAmount} / 采购 {purchaseAmount} / 维保 {maintainAmount}'
+        amount: '合同总金额'
       },
+
       filter: {
         keyword: '关键字',
         keywordPlaceholder: '合同名称 / 编号 / 签约方',
@@ -279,14 +277,13 @@ export const messages = {
       subtitle: '台賬、履約、到期一體化合同中心',
       stat: {
         total: '合同總數',
-        totalExtra: '出租 {rent} / 採購 {purchase} / 維保 {maintain}',
         effective: '生效中',
         effectiveExtra: '覆蓋房屋 {roomCount} 套',
         auditing: '待審核',
         auditingExtra: '點擊篩選待審核合同',
-        amount: '合同總金額',
-        amountExtra: '出租 {rentAmount} / 採購 {purchaseAmount} / 維保 {maintainAmount}'
+        amount: '合同總金額'
       },
+
       filter: {
         keyword: '關鍵字',
         keywordPlaceholder: '合同名稱 / 編號 / 簽約方',

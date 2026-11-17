@@ -23,42 +23,6 @@ export function queryContract(params) {
   })
 }
 
-// 查询合同类型
-export function queryContractType(params) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/contract/queryContractType',
-      method: 'get',
-      params
-    }).then(response => {
-      const res = response.data
-      resolve({
-        data: res.data
-      })
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
-// 查询合同类型规格
-export function queryContractTypeSpec(params) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: '/contract/queryContractTypeSpec',
-      method: 'get',
-      params
-    }).then(response => {
-      const res = response.data
-      resolve({
-        data: res.data
-      })
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
 // 查询合同文件
 export function queryContractFile(params) {
   return new Promise((resolve, reject) => {

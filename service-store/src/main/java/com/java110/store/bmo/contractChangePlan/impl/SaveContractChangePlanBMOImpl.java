@@ -6,11 +6,11 @@ import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.contract.ContractAuditDto;
-import com.java110.dto.contract.ContractChangePlanDetailDto;
 import com.java110.dto.contract.ContractChangePlanRoomDto;
+
 import com.java110.dto.contract.ContractRoomDto;
-import com.java110.dto.contract.ContractTypeDto;
 import com.java110.dto.owner.OwnerRoomRelDto;
+
 import com.java110.intf.common.IContractChangeUserInnerServiceSMO;
 import com.java110.intf.community.IRoomInnerServiceSMO;
 import com.java110.intf.store.*;
@@ -59,13 +59,11 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
     private IContractRoomInnerServiceSMO contractRoomInnerServiceSMOImpl;
 
     @Autowired
-    private IContractTypeInnerServiceSMO contractTypeInnerServiceSMOImpl;
-
-    @Autowired
     private IOwnerRoomRelInnerServiceSMO ownerRoomRelInnerServiceSMOImpl;
 
     @Autowired
     private IRoomInnerServiceSMO roomInnerServiceSMOImpl;
+
 
     /**
      * 添加小区信息
@@ -87,15 +85,8 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
 
         Assert.listOnlyOne(contractDtos, "合同不存在");
 
-        //查询 合同是否需要审核
-        ContractTypeDto contractTypeDto = new ContractTypeDto();
-        contractTypeDto.setContractTypeId(contractDtos.get(0).getContractType());
-        contractTypeDto.setStoreId(contractDtos.get(0).getStoreId());
-        List<ContractTypeDto> contractTypeDtos = contractTypeInnerServiceSMOImpl.queryContractTypes(contractTypeDto);
-
-        Assert.listOnlyOne(contractTypeDtos, "合同类型不存在");
-
         contractChangePlanPo.setPlanId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_planId));
+
         int flag = contractChangePlanInnerServiceSMOImpl.saveContractChangePlan(contractChangePlanPo);
 
         if (flag < 1) {
@@ -121,39 +112,19 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
 
         dealContractChangePlanRooms(contractChangePlanPo, contractChangePlanRoomPos);
 
-        //需要审核时提交两级审批（法务校对 -> 领导审核），不再走 Activiti 工作流
-        if (!ContractTypeDto.NO_AUDIT.equals(contractTypeDtos.get(0).getAudit())) {
-            JSONObject auditJson = new JSONObject();
-            auditJson.put("auditType", ContractAuditDto.AUDIT_TYPE_CHANGE);
-            auditJson.put("bizId", contractChangePlanPo.getPlanId());
-            auditJson.put("submitStaffId", contractChangePlanPo.getChangePerson());
-            auditJson.put("submitStaffName", reqJson.getString("changePersonName"));
-            auditJson.put("legalAuditorId", reqJson.getString("legalAuditorId"));
-            auditJson.put("leaderAuditorId", reqJson.getString("leaderAuditorId"));
-            contractAuditBMOImpl.submitAudit(auditJson, contractChangePlanPo.getStoreId());
-        } else {
-            ContractChangePlanPo tmpContractChangePlanPo = new ContractChangePlanPo();
-            tmpContractChangePlanPo.setPlanId(contractChangePlanPo.getPlanId());
-            tmpContractChangePlanPo.setState(ContractDto.STATE_AUDIT_FINISH);
-            tmpContractChangePlanPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
-            contractChangePlanInnerServiceSMOImpl.updateContractChangePlan(tmpContractChangePlanPo);
-            //修改合同信息
-            ContractChangePlanDetailDto contractChangePlanDetailDto = new ContractChangePlanDetailDto();
-            contractChangePlanDetailDto.setPlanId(contractChangePlanPo.getPlanId());
-            contractChangePlanDetailDto.setStoreId(contractChangePlanPo.getStoreId());
-            contractChangePlanDetailDto.setOperate("ADD");
-            List<ContractChangePlanDetailDto> contractChangePlanDetailDtos =
-                    contractChangePlanDetailInnerServiceSMOImpl.queryContractChangePlanDetails(contractChangePlanDetailDto);
-
-            Assert.listOnlyOne(contractChangePlanDetailDtos, "数据错误");
-            ContractPo contractPo = BeanConvertUtil.covertBean(contractChangePlanDetailDtos.get(0), ContractPo.class);
-
-            contractInnerServiceSMOImpl.updateContract(contractPo);
-            dealContractChangePlanRoom(tmpContractChangePlanPo, contractDtos.get(0));
-        }
+        //提交两级审批（法务校对 -> 领导审核），不再走 Activiti 工作流
+        JSONObject auditJson = new JSONObject();
+        auditJson.put("auditType", ContractAuditDto.AUDIT_TYPE_CHANGE);
+        auditJson.put("bizId", contractChangePlanPo.getPlanId());
+        auditJson.put("submitStaffId", contractChangePlanPo.getChangePerson());
+        auditJson.put("submitStaffName", reqJson.getString("changePersonName"));
+        auditJson.put("legalAuditorId", reqJson.getString("legalAuditorId"));
+        auditJson.put("leaderAuditorId", reqJson.getString("leaderAuditorId"));
+        contractAuditBMOImpl.submitAudit(auditJson, contractChangePlanPo.getStoreId());
 
 
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
+
     }
 
     private void dealContractChangePlanRoom(ContractChangePlanPo contractChangePlanPo, ContractDto contractDto) {

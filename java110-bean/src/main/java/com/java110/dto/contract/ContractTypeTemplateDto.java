@@ -13,7 +13,6 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
 
     private String context;
     private String storeId;
-    private String contractTypeId;
     private String templateId;
     private String templateName;
     private String templateVersion;
@@ -22,7 +21,6 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
     private String sourceType;
     private String category;
     private String categoryName;
-    private String contractTypeName;
     private String templateNameLike;
 
 
@@ -46,15 +44,6 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
     public void setStoreId(String storeId) {
         this.storeId = storeId;
     }
-
-    public String getContractTypeId() {
-        return contractTypeId;
-    }
-
-    public void setContractTypeId(String contractTypeId) {
-        this.contractTypeId = contractTypeId;
-    }
-
 
     public Date getCreateTime() {
         return createTime;
@@ -134,14 +123,6 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
 
     public void setCategoryName(String categoryName) {
         this.categoryName = categoryName;
-    }
-
-    public String getContractTypeName() {
-        return contractTypeName;
-    }
-
-    public void setContractTypeName(String contractTypeName) {
-        this.contractTypeName = contractTypeName;
     }
 
     public String getTemplateNameLike() {
