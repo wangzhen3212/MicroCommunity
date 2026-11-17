@@ -45,18 +45,6 @@ public class InitializePayFeeServiceDaoImpl extends BaseServiceDao implements II
     }
 
     @Override
-    public int deleteReportOweFee(Map info) {
-        logger.debug("删除费用信息 入参 info : {}", info);
-
-        int deleteFlag = sqlSessionTemplate.delete("initializePayFeeServiceDaoImpl.deleteReportOweFee", info);
-
-        /*if (deleteFlag < 1) {
-            throw new DAOException(ResponseConstant.RESULT_PARAM_ERROR, "building_owner初始化失败：" + JSONObject.toJSONString(info));
-        }*/
-        return deleteFlag;
-    }
-
-    @Override
     public int deletePayFeeDetailMonth(Map info) {
         logger.debug("删除费用信息 入参 info : {}", info);
 

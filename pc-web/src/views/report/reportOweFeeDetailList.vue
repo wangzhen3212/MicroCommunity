@@ -157,9 +157,9 @@ export default {
           page: this.page.current,
           row: this.page.size
         }
-        const { data, records } = await queryOweDetailStatistics(params)
+        const { data, total } = await queryOweDetailStatistics(params)
         this.reportOweFeeDetailInfo.fees = data
-        this.page.total = records
+        this.page.total = total
       } catch (error) {
         console.error('获取欠费明细失败:', error)
       } finally {

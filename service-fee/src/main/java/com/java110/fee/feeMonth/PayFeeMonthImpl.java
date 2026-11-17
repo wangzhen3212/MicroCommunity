@@ -9,7 +9,6 @@ import com.java110.intf.fee.IFeeDetailInnerServiceSMO;
 import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.intf.fee.IPayFeeConfigV1InnerServiceSMO;
 import com.java110.intf.fee.IPayFeeDetailMonthInnerServiceSMO;
-import com.java110.intf.report.IGeneratorOweFeeInnerServiceSMO;
 import com.java110.po.payFee.PayFeeDetailMonthPo;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.ListUtil;
@@ -47,9 +46,6 @@ public class PayFeeMonthImpl implements IPayFeeMonth {
 
     @Autowired
     private IComputeFeeSMO computeFeeSMOImpl;
-
-    @Autowired
-    private IGeneratorOweFeeInnerServiceSMO generatorOweFeeInnerServiceSMOImpl;
 
     public static final int DEFAULT_DEAL_COUNT = 1000;
 

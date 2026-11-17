@@ -23,8 +23,6 @@ public interface IInitializePayFeeServiceDao {
 
     int deletePayFeeDetail(Map communityId);
 
-    int deleteReportOweFee(Map communityId);
-
     int deletePayFeeDetailMonth(Map communityId);
 
     /**

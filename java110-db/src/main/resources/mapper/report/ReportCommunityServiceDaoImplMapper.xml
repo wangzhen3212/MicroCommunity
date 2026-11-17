@@ -70,10 +70,12 @@
                t.room_area       roomArea,
                td.name           stateName,
                (
-                   select if(SUM(rof.amount_owed)!='', SUM(rof.amount_owed), 0)
-                   from report_owe_fee rof
-                   where rof.payer_obj_id = t.room_id
-                     and rof.payer_obj_type = '3333'
+                   select ifnull(sum(pf.owe_amount), 0)
+                   from pay_fee pf
+                   where pf.payer_obj_id = t.room_id
+                     and pf.payer_obj_type = '3333'
+                     and pf.status_cd = '0'
+                     and pf.owe_amount > 0
                )                 oweAmount
         from building_room t
                  INNER JOIN building_unit bu on t.unit_id = bu.unit_id and bu.status_cd = '0'
@@ -108,10 +110,12 @@
                bo.`name`    ownerName,
                bo.owner_id  ownerId,
                (
-                   select if(SUM(rof.amount_owed)!='', SUM(rof.amount_owed), 0)
-                   from report_owe_fee rof
-                   where rof.payer_obj_id = t.car_id
-                     and rof.payer_obj_type = '6666'
+                   select ifnull(sum(pf.owe_amount), 0)
+                   from pay_fee pf
+                   where pf.payer_obj_id = t.car_id
+                     and pf.payer_obj_type = '6666'
+                     and pf.status_cd = '0'
+                     and pf.owe_amount > 0
                )            oweAmount
         from owner_car t
                  INNER join building_owner bo on t.owner_id = bo.member_id and bo.status_cd = '0'
@@ -176,12 +180,13 @@
                t.car_num                     carNum,
                t.start_time                  startTime,
                t.end_time                    endTime,
-               ifnull((select sum(rof.amount_owed)
-                       from report_owe_fee rof
-                       where rof.community_id = t.community_id
-                         and rof.payer_obj_type = '6666'
-                         and (rof.payer_obj_id = t.ps_id or rof.payer_obj_id = t.car_id)
-                         and rof.amount_owed > 0), 0) oweAmount
+               ifnull((select sum(pf.owe_amount)
+                       from pay_fee pf
+                       where pf.community_id = t.community_id
+                         and pf.payer_obj_type = '6666'
+                         and pf.status_cd = '0'
+                         and (pf.payer_obj_id = t.ps_id or pf.payer_obj_id = t.car_id)
+                         and pf.owe_amount > 0), 0) oweAmount
         from parking_space t
                  left join parking_area pa on t.pa_id = pa.pa_id and pa.status_cd = '0'
                  left join parking_area_section s on t.section_id = s.section_id and s.status_cd = '0'

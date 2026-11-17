@@ -1,12 +1,7 @@
 package com.java110.job.task.fee;
 
 import com.java110.dto.task.TaskDto;
-import com.java110.intf.report.IGeneratorOweFeeInnerServiceSMO;
 import com.java110.job.quartz.TaskSystemQuartz;
-import com.java110.po.reportFee.ReportFeeMonthStatisticsPo;
-import org.slf4j.Logger;
-import com.java110.core.log.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,21 +14,8 @@ import org.springframework.stereotype.Component;
  **/
 @Component
 public class GenerateOweFeeNewTemplate extends TaskSystemQuartz {
-    private static final Logger logger = LoggerFactory.getLogger(GenerateOweFeeNewTemplate.class);
-
-    @Autowired
-    private IGeneratorOweFeeInnerServiceSMO generatorOweFeeInnerServiceSMOImpl;
-
 
     @Override
     protected void process(TaskDto taskDto) throws Exception {
-        GenerateFeeYearStatistic(taskDto);
     }
-
-    private void GenerateFeeYearStatistic(TaskDto taskDto) {
-        ReportFeeMonthStatisticsPo reportFeeMonthStatisticsPo = new ReportFeeMonthStatisticsPo();
-        generatorOweFeeInnerServiceSMOImpl.generatorOweData(reportFeeMonthStatisticsPo);
-    }
-
-
 }

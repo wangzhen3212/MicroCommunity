@@ -670,15 +670,15 @@
     <select id="queryOweFeeDetailCount" parameterType="Map" resultType="Map">
         select count(1) count
         from (
-        select t.payer_obj_name objName,t.fee_name feeName,pf.end_time feeCreateTime,t.create_time
-        createTime,SUM(t.amount_owed) oweAmount,max(t.deadline_time) deadlineTime
-        from report_owe_fee t
+        select t.payer_obj_name objName,pfc.fee_name feeName,t.end_time feeCreateTime,t.create_time
+        createTime,SUM(t.owe_amount) oweAmount,max(t.end_time) deadlineTime
+        from pay_fee t
         inner join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
         left join building_room br on t.payer_obj_id = br.room_id and t.payer_obj_type = '3333' and br.status_cd = '0'
         left join building_unit bu on br.unit_id = bu.unit_id and bu.status_cd = '0'
         left join f_floor f on bu.floor_id = f.floor_id and f.status_cd = '0'
-        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.community_id = t.community_id and pf.status_cd = '0'
         where 1=1
+        and t.status_cd = '0'
         <if test="roomNum !=null and roomNum != ''">
             and br.room_num= #{roomNum}
         </if>
@@ -701,7 +701,7 @@
             and t.payer_obj_id= #{objId}
         </if>
         <if test="feeName !=null and feeName != ''">
-            and t.fee_name= #{feeName}
+            and pfc.fee_name= #{feeName}
         </if>
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
@@ -712,25 +712,25 @@
         <if test="endTime !=null and endTime != ''">
             and t.create_time &lt;= #{endTime}
         </if>
-        and t.amount_owed > 0 and pf.end_time &lt; now()
-        group by t.payer_obj_name ,t.fee_name ,pf.end_time ,t.create_time
+        and t.owe_amount > 0 and t.end_time &lt; now()
+        group by t.payer_obj_name ,pfc.fee_name ,t.end_time ,t.create_time
         HAVING oweAmount > 0
         ) t
     </select>
 
     <!-- 查询费用月统计信息 add by wuxw 2018-07-03 -->
     <select id="queryOweFeeDetail" parameterType="Map" resultType="Map">
-        select t.payer_obj_name objName,t.fee_name feeName,pf.end_time feeCreateTime,t.update_time
-        updateTime,pfa.`value` ownerName,br.built_up_area builtUpArea ,SUM(t.amount_owed) oweAmount,max(t.deadline_time)
+        select t.payer_obj_name objName,pfc.fee_name feeName,t.end_time feeCreateTime,t.create_time
+        updateTime,pfa.`value` ownerName,br.built_up_area builtUpArea ,SUM(t.owe_amount) oweAmount,max(t.end_time)
         deadlineTime
-        from report_owe_fee t
+        from pay_fee t
         inner join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
         left join building_room br on t.payer_obj_id = br.room_id and t.payer_obj_type = '3333' and br.status_cd = '0'
         left join building_unit bu on br.unit_id = bu.unit_id and bu.status_cd = '0'
         left join f_floor f on bu.floor_id = f.floor_id and f.status_cd = '0'
-        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.community_id = t.community_id and pf.status_cd = '0'
-        left join pay_fee_attrs pfa on pf.fee_id = pfa.fee_id and pfa.spec_cd = '390008' and pfa.status_cd ='0'
+        left join pay_fee_attrs pfa on t.fee_id = pfa.fee_id and pfa.spec_cd = '390008' and pfa.status_cd ='0'
         where 1=1
+        and t.status_cd = '0'
         <if test="roomNum !=null and roomNum != ''">
             and br.room_num= #{roomNum}
         </if>
@@ -759,7 +759,7 @@
             and t.payer_obj_id= #{objId}
         </if>
         <if test="feeName !=null and feeName != ''">
-            and t.fee_name= #{feeName}
+            and pfc.fee_name= #{feeName}
         </if>
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
@@ -770,8 +770,8 @@
         <if test="endTime !=null and endTime != ''">
             and t.create_time &lt;= #{endTime}
         </if>
-        and t.amount_owed > 0 and pf.end_time &lt; now()
-        group by t.payer_obj_name ,t.fee_name ,pf.end_time ,t.update_time
+        and t.owe_amount > 0 and t.end_time &lt; now()
+        group by t.payer_obj_name ,pfc.fee_name ,t.end_time ,t.create_time
         updateTime,pfa.`value` ,br.built_up_area
         HAVING oweAmount > 0
         order by t.payer_obj_name
@@ -782,14 +782,14 @@
 
     <!-- 查询费用月统计信息 add by wuxw 2018-07-03 -->
     <select id="queryOweFeeDetailMajor" parameterType="Map" resultType="Map">
-        select SUM(t.amount_owed) oweAmount
-        from report_owe_fee t
+        select SUM(t.owe_amount) oweAmount
+        from pay_fee t
         inner join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
         left join building_room br on t.payer_obj_id = br.room_id and t.payer_obj_type = '3333' and br.status_cd = '0'
         left join building_unit bu on br.unit_id = bu.unit_id and bu.status_cd = '0'
         left join f_floor f on bu.floor_id = f.floor_id and f.status_cd = '0'
-        inner join pay_fee pf on t.fee_id = pf.fee_id and pf.community_id = t.community_id and pf.status_cd = '0'
         where 1=1
+        and t.status_cd = '0'
         <if test="roomNum !=null and roomNum != ''">
             and br.room_num= #{roomNum}
         </if>
@@ -812,7 +812,7 @@
             and t.payer_obj_id= #{objId}
         </if>
         <if test="feeName !=null and feeName != ''">
-            and t.fee_name= #{feeName}
+            and pfc.fee_name= #{feeName}
         </if>
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
@@ -2095,11 +2095,12 @@
         select count(1) count
         from (
         select t.payer_obj_name payerObjName,br.built_up_area builtUpArea,pfc.square_price squarePrice, t.fee_id
-        feeId,t.end_time startTime,t.deadline_time endTime,t.amount_owed oweAmount
-        from report_owe_fee t
+        feeId,t.end_time startTime,t.end_time endTime,t.owe_amount oweAmount
+        from pay_fee t
         left join building_room br on t.payer_obj_id = br.room_id and br.status_cd = '0'
         left join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
-        where t.amount_owed > 0
+        where t.status_cd = '0'
+        and t.owe_amount > 0
         and pfc.fee_type_cd = '888800010001'
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}
@@ -2110,11 +2111,12 @@
     <!-- 查询费用月统计信息 add by wuxw 2018-07-03 -->
     <select id="queryHuaningOweFeeDetail" parameterType="Map" resultType="Map">
         select t.payer_obj_name payerObjName,br.built_up_area builtUpArea,pfc.square_price squarePrice, t.fee_id
-        feeId,t.end_time startTime,t.deadline_time endTime,t.amount_owed oweAmount
-        from report_owe_fee t
+        feeId,t.end_time startTime,t.end_time endTime,t.owe_amount oweAmount
+        from pay_fee t
         left join building_room br on t.payer_obj_id = br.room_id and br.status_cd = '0'
         left join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
-        where t.amount_owed > 0
+        where t.status_cd = '0'
+        and t.owe_amount > 0
         and pfc.fee_type_cd = '888800010001'
         <if test="communityId !=null and communityId != ''">
             and t.community_id= #{communityId}

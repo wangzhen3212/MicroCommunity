@@ -10,9 +10,7 @@ import com.java110.fee.feeMonth.IPayFeeMonth;
 import com.java110.intf.community.IRoomInnerServiceSMO;
 import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.intf.fee.IPayFeeV1InnerServiceSMO;
-import com.java110.intf.report.IReportOweFeeInnerServiceSMO;
 import com.java110.po.fee.PayFeePo;
-import com.java110.po.reportFee.ReportOweFeePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
@@ -38,9 +36,6 @@ public class FinishFeeCmd extends Cmd {
 
     @Autowired
     private IPayFeeMonth payFeeMonthImpl;
-
-    @Autowired
-    private IReportOweFeeInnerServiceSMO reportOweFeeInnerServiceSMOImpl;
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
@@ -71,11 +66,5 @@ public class FinishFeeCmd extends Cmd {
         payFeeMonthImpl.deleteFeeMonth(payFeePo.getFeeId(), payFeePo.getCommunityId());
         //todo 重新计算
         payFeeMonthImpl.doGeneratorOrRefreshFeeMonth(payFeePo.getFeeId(), payFeePo.getCommunityId());
-
-        // todo 删除欠费信息
-        ReportOweFeePo reportOweFeePo = new ReportOweFeePo();
-        reportOweFeePo.setFeeId(payFeePo.getFeeId());
-        reportOweFeePo.setCommunityId(payFeePo.getCommunityId());
-        reportOweFeeInnerServiceSMOImpl.deleteReportOweFee(reportOweFeePo);
     }
 }

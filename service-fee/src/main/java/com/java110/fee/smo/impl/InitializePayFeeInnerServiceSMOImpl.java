@@ -35,9 +35,6 @@ public class InitializePayFeeInnerServiceSMOImpl extends BaseServiceSMO implemen
 
         int deleteFee = initializePayFeeServiceDaoImpl.deletePayFee(communityId);
 
-        //todo 删除 欠费表
-        initializePayFeeServiceDaoImpl.deleteReportOweFee(communityId);
-
         //todo 删除 月报表
         initializePayFeeServiceDaoImpl.deletePayFeeDetailMonth(communityId);
 

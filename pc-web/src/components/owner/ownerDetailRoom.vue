@@ -43,7 +43,7 @@
         <el-table-column prop="stateName" :label="$t('ownerDetailRoom.roomStatus')" align="center" />
         <el-table-column :label="$t('ownerDetailRoom.roomArrears')" align="center">
           <template slot-scope="scope">
-            {{ scope.row.roomOweFee || '0.00' }}({{ $t('ownerDetailRoom.updateDaily') }})
+            {{ _formatOweFee(scope.row.roomOweFee) }}({{ $t('ownerDetailRoom.realTime') }})
           </template>
         </el-table-column>
         <el-table-column :label="$t('common.operation')" align="center" width="250">
@@ -142,6 +142,13 @@ export default {
       this.ownerDetailRoomInfo.roomNum = ''
       this._qureyOwnerDetailRoom()
     },
+    _formatOweFee(roomOweFee) {
+      const oweFee = parseFloat(roomOweFee)
+      if (isNaN(oweFee)) {
+        return '0.00'
+      }
+      return oweFee.toFixed(2)
+    },
     _computeOwnerRoomOweFeeAmount() {
       const rooms = this.ownerDetailRoomInfo.rooms
       let totalOweFeeAmount = 0
@@ -150,8 +157,9 @@ export default {
       if (!rooms || rooms.length < 1) return
 
       rooms.forEach(room => {
-        if (room.roomOweFee) {
-          totalOweFeeAmount += parseFloat(room.roomOweFee)
+        const oweFee = parseFloat(room.roomOweFee)
+        if (!isNaN(oweFee)) {
+          totalOweFeeAmount += oweFee
         }
       })
 

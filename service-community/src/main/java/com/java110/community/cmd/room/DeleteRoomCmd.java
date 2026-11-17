@@ -17,13 +17,11 @@ import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.intf.fee.IPayFeeDetailMonthInnerServiceSMO;
 import com.java110.intf.fee.IPayFeeDetailV1InnerServiceSMO;
 import com.java110.intf.fee.IPayFeeV1InnerServiceSMO;
-import com.java110.intf.report.IReportOweFeeInnerServiceSMO;
 import com.java110.intf.user.IOwnerRoomRelV1InnerServiceSMO;
 import com.java110.po.fee.PayFeeDetailPo;
 import com.java110.po.fee.PayFeePo;
 import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.payFee.PayFeeDetailMonthPo;
-import com.java110.po.reportFee.ReportOweFeePo;
 import com.java110.po.room.RoomPo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
@@ -88,9 +86,6 @@ public class DeleteRoomCmd extends Cmd {
 
     @Autowired
     private IPayFeeDetailV1InnerServiceSMO payFeeDetailV1InnerServiceSMOImpl;
-
-    @Autowired
-    private IReportOweFeeInnerServiceSMO reportOweFeeInnerServiceSMOImpl;
 
     @Autowired
     private IPayFeeDetailMonthInnerServiceSMO payFeeDetailMonthInnerServiceSMOImpl;
@@ -203,12 +198,6 @@ public class DeleteRoomCmd extends Cmd {
         payFeePo.setFeeId(payFeeDto.getFeeId());
         payFeePo.setCommunityId(payFeeDto.getCommunityId());
         payFeeV1InnerServiceSMOImpl.deletePayFee(payFeePo);
-
-        //todo 删除欠费
-        ReportOweFeePo reportOweFeePo = new ReportOweFeePo();
-        reportOweFeePo.setFeeId(payFeeDto.getFeeId());
-        reportOweFeePo.setCommunityId(payFeeDto.getCommunityId());
-        reportOweFeeInnerServiceSMOImpl.deleteReportOweFee(reportOweFeePo);
 
         //todo 删除 离散月数据
         PayFeeDetailMonthPo payFeeDetailMonthPo = new PayFeeDetailMonthPo();

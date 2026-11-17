@@ -12,10 +12,6 @@
         delete from pay_fee_detail where  fee_id in (select fee_id from pay_fee where 1=1
         and community_id = #{communityId} and fee_type_cd !='888800010008')
     </delete>
-    <delete id="deleteReportOweFee" parameterType="Map">
-        delete from report_owe_fee where  fee_id in ( select fee_id from pay_fee where 1=1
-        and community_id = #{communityId} and fee_type_cd !='888800010008')
-    </delete>
     <delete id="deletePayFeeDetailMonth" parameterType="Map">
         delete from pay_fee_detail_month where 1=1
         and community_id = #{communityId} and fee_type_cd !='888800010008'

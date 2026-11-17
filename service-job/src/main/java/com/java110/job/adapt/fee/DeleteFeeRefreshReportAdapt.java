@@ -7,12 +7,10 @@ import com.java110.intf.community.ICommunityInnerServiceSMO;
 import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.intf.report.IReportFeeMonthStatisticsInnerServiceSMO;
 import com.java110.intf.report.IReportFeeYearCollectionInnerServiceSMO;
-import com.java110.intf.report.IReportOweFeeInnerServiceSMO;
 import com.java110.job.adapt.DatabusAdaptImpl;
 import com.java110.po.fee.PayFeePo;
 import com.java110.po.reportFee.ReportFeeMonthStatisticsPo;
 import com.java110.po.reportFee.ReportFeeYearCollectionPo;
-import com.java110.po.reportFee.ReportOweFeePo;
 import com.java110.utils.util.BeanConvertUtil;
 import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
@@ -40,9 +38,6 @@ public class DeleteFeeRefreshReportAdapt extends DatabusAdaptImpl {
     @Autowired
     private IFeeInnerServiceSMO feeInnerServiceSMOImpl;
 
-
-    @Autowired
-    private IReportOweFeeInnerServiceSMO reportOweFeeInnerServiceSMOImpl;
 
     @Autowired
     private IReportFeeYearCollectionInnerServiceSMO reportFeeYearCollectionInnerServiceSMOImpl;
@@ -88,12 +83,6 @@ public class DeleteFeeRefreshReportAdapt extends DatabusAdaptImpl {
     private void doPayFee(Business business, JSONObject businessPayFee) {
         //查询缴费明细
         PayFeePo payFeePo = BeanConvertUtil.covertBean(businessPayFee, PayFeePo.class);
-        //查询欠费报表
-        ReportOweFeePo reportOweFeePo = new ReportOweFeePo();
-        reportOweFeePo.setFeeId(payFeePo.getFeeId());
-        reportOweFeePo.setCommunityId(payFeePo.getCommunityId());
-        reportOweFeeInnerServiceSMOImpl.deleteReportOweFee(reportOweFeePo);
-
 
         ReportFeeYearCollectionPo reportFeeYearCollectionPo = new ReportFeeYearCollectionPo();
         reportFeeYearCollectionPo.setFeeId(payFeePo.getFeeId());

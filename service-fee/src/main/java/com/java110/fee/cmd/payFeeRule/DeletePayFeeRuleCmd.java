@@ -28,12 +28,10 @@ import com.java110.intf.fee.IPayFeeDetailV1InnerServiceSMO;
 import com.java110.intf.fee.IPayFeeRuleBillV1InnerServiceSMO;
 import com.java110.intf.fee.IPayFeeRuleV1InnerServiceSMO;
 import com.java110.intf.fee.IPayFeeV1InnerServiceSMO;
-import com.java110.intf.report.IReportOweFeeInnerServiceSMO;
 import com.java110.po.fee.PayFeeDetailPo;
 import com.java110.po.fee.PayFeePo;
 import com.java110.po.payFee.PayFeeRuleBillPo;
 import com.java110.po.payFee.PayFeeRulePo;
-import com.java110.po.reportFee.ReportOweFeePo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
@@ -73,11 +71,6 @@ public class DeletePayFeeRuleCmd extends Cmd {
 
     @Autowired
     private IPayFeeMonth payFeeMonthImpl;
-
-    @Autowired
-    private IReportOweFeeInnerServiceSMO reportOweFeeInnerServiceSMOImpl;
-
-
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
@@ -126,12 +119,6 @@ public class DeletePayFeeRuleCmd extends Cmd {
             payFeeDetailPo.setCommunityId(tmpPayFeeDto.getCommunityId());
 
             payFeeDetailV1InnerServiceSMOImpl.deletePayFeeDetailNew(payFeeDetailPo);
-
-            // todo 删除欠费信息
-            ReportOweFeePo reportOweFeePo = new ReportOweFeePo();
-            reportOweFeePo.setFeeId(payFeePo.getFeeId());
-            reportOweFeePo.setCommunityId(payFeePo.getCommunityId());
-            reportOweFeeInnerServiceSMOImpl.deleteReportOweFee(reportOweFeePo);
 
             //todo 离散的月
             payFeeMonthImpl.deleteFeeMonth(payFeePo.getFeeId(),payFeePo.getCommunityId());

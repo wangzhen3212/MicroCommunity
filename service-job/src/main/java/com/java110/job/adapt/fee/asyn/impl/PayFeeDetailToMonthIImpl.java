@@ -11,7 +11,6 @@ import com.java110.dto.system.Business;
 import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.intf.fee.IPayFeeDetailMonthInnerServiceSMO;
 import com.java110.intf.fee.IPayFeeMonthInnerServiceSMO;
-import com.java110.intf.report.IGeneratorOweFeeInnerServiceSMO;
 import com.java110.intf.user.IOwnerRoomRelV1InnerServiceSMO;
 import com.java110.job.adapt.fee.asyn.IPayFeeDetailToMonth;
 import com.java110.po.fee.PayFeeDetailPo;
@@ -47,9 +46,6 @@ public class PayFeeDetailToMonthIImpl implements IPayFeeDetailToMonth {
     private IOwnerRoomRelV1InnerServiceSMO ownerRoomRelV1InnerServiceSMOImpl;
 
     @Autowired
-    private IGeneratorOweFeeInnerServiceSMO generatorOweFeeInnerServiceSMOImpl;
-
-    @Autowired
     private IPayFeeMonthInnerServiceSMO payFeeMonthInnerServiceSMOImpl;
 
     @Override
@@ -75,9 +71,6 @@ public class PayFeeDetailToMonthIImpl implements IPayFeeDetailToMonth {
         //todo 如果是租金 则延长房屋租期
         toAddRoomRentTime(feeDtos.get(0), endTime);
 
-        //todo 修改欠费
-        toDeleteOweFee(feeDtos.get(0));
-
     }
 
     /**
@@ -92,15 +85,6 @@ public class PayFeeDetailToMonthIImpl implements IPayFeeDetailToMonth {
         payFeeDetailRefreshFeeMonthDto.setFeeId(feeDto.getFeeId());
         //todo 调用费用模块 处理
         payFeeMonthInnerServiceSMOImpl.payFeeDetailRefreshFeeMonth(payFeeDetailRefreshFeeMonthDto);
-    }
-
-    /**
-     * 处理欠费
-     *
-     * @param feeDto
-     */
-    private void toDeleteOweFee(FeeDto feeDto) {
-        generatorOweFeeInnerServiceSMOImpl.computeOweFee(feeDto);
     }
 
     private void toAddRoomRentTime(FeeDto feeDto, Date endTime) {
