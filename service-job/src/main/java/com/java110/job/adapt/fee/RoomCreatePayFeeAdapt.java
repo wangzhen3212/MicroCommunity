@@ -3,6 +3,7 @@ package com.java110.job.adapt.fee;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.factory.GenerateCodeFactory;
+import com.java110.core.log.LoggerFactory;
 import com.java110.dto.fee.FeeConfigDto;
 import com.java110.dto.fee.FeeDto;
 import com.java110.dto.owner.OwnerDto;
@@ -17,7 +18,9 @@ import com.java110.job.adapt.DatabusAdaptImpl;
 import com.java110.po.payFee.PayFeeRulePo;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.DateUtil;
+import com.java110.utils.util.ListUtil;
 import com.java110.utils.util.StringUtil;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +34,8 @@ import java.util.List;
  */
 @Component(value = "roomCreatePayFeeAdapt")
 public class RoomCreatePayFeeAdapt extends DatabusAdaptImpl {
-    private static final int DEFAULT_ADD_FEE_COUNT = 200;
+    private static Logger logger = LoggerFactory.getLogger(RoomCreatePayFeeAdapt.class);
+
     @Autowired
     private IRoomInnerServiceSMO roomInnerServiceSMOImpl;
 
@@ -51,52 +55,51 @@ public class RoomCreatePayFeeAdapt extends DatabusAdaptImpl {
     public void execute(Business business, List<Business> businesses) throws ParseException {
         JSONObject data = business.getData();
 
-
         JSONArray roomIds = data.getJSONArray("roomIds");
 
-        List<String> tmpRoomIds = new ArrayList<>();
-
-
-        for (int roomIndex = 0; roomIndex < roomIds.size(); roomIndex++) {
-            tmpRoomIds.add(roomIds.getString(roomIndex));
-            if (tmpRoomIds.size() == DEFAULT_ADD_FEE_COUNT) {
-                doCreateRoomPayFee(data, tmpRoomIds);
-                tmpRoomIds = new ArrayList<>();
-            }
+        if (roomIds == null || roomIds.isEmpty()) {
+            return;
         }
-        if (!tmpRoomIds.isEmpty()) {
-            doCreateRoomPayFee(data, tmpRoomIds);
+
+        //todo 逐房屋处理：一条失败只跳过该房屋，不影响后续房屋
+        for (int roomIndex = 0; roomIndex < roomIds.size(); roomIndex++) {
+            String roomId = roomIds.getString(roomIndex);
+            try {
+                doCreateRoomPayFee(data, roomId);
+            } catch (Exception e) {
+                //todo 失败的房屋不重试，靠日志定位原因（房屋失效/无业主/费用项配置/金额计算等）
+                logger.error("房屋批量创建费用失败 batchId={} communityId={} configId={} roomId={} idx={}/{}",
+                        data.getString("batchId"), data.getString("communityId"),
+                        data.getString("configId"), roomId, roomIndex + 1, roomIds.size(), e);
+            }
         }
     }
 
-    private void doCreateRoomPayFee(JSONObject data, List<String> roomIds) {
+    private void doCreateRoomPayFee(JSONObject data, String roomId) {
         RoomDto roomDto = new RoomDto();
-        roomDto.setRoomIds(roomIds.toArray(new String[roomIds.size()]));
         roomDto.setCommunityId(data.getString("communityId"));
+        roomDto.setRoomId(roomId);
         List<RoomDto> roomDtos = roomInnerServiceSMOImpl.queryRooms(roomDto);
 
-        //todo 房屋不存在，这种场景一般执行不到
-        if (roomDtos == null || roomDtos.isEmpty()) {
-            throw new IllegalArgumentException("房屋不存在");
+        //todo 房屋不存在（如单元被失效后重建），只记日志跳过该房屋，不影响其他房屋
+        if (ListUtil.isNull(roomDtos)) {
+            logger.error("房屋批量创建费用失败，未查询到房屋 batchId={} communityId={} configId={} roomId={}",
+                    data.getString("batchId"), data.getString("communityId"),
+                    data.getString("configId"), roomId);
+            return;
         }
+        RoomDto room = roomDtos.get(0);
 
-        //todo 房屋批量刷入业主信息
-        List<String> tmpRoomIds = new ArrayList<>();
-        for (RoomDto tmpRoomDto : roomDtos) {
-            tmpRoomIds.add(tmpRoomDto.getRoomId());
-        }
+        //todo 房屋刷入业主信息（与"设置费用"链路一致）
         OwnerDto ownerDto = new OwnerDto();
         ownerDto.setCommunityId(data.getString("communityId"));
-        ownerDto.setRoomIds(tmpRoomIds.toArray(new String[tmpRoomIds.size()]));
+        ownerDto.setRoomId(roomId);
         List<OwnerDto> ownerDtos = ownerInnerServiceSMOImpl.queryOwnersByRoom(ownerDto);
-        for (RoomDto tmpRoomDto : roomDtos) {
-            for (OwnerDto tmpOwnerDto : ownerDtos) {
-                if (tmpRoomDto.getRoomId().equals(tmpOwnerDto.getRoomId())) {
-                    tmpRoomDto.setOwnerId(tmpOwnerDto.getOwnerId());
-                    tmpRoomDto.setOwnerName(tmpOwnerDto.getName());
-                }
-            }
+        if (ListUtil.isNull(ownerDtos)) {
+            throw new IllegalArgumentException("根据房屋未能查到业主，不能创建费用！roomId=" + roomId);
         }
+        room.setOwnerId(ownerDtos.get(0).getOwnerId());
+        room.setOwnerName(ownerDtos.get(0).getName());
 
         //todo 查询费用项配置
         FeeConfigDto feeConfigDto = new FeeConfigDto();
@@ -107,16 +110,8 @@ public class RoomCreatePayFeeAdapt extends DatabusAdaptImpl {
 
         //todo 封装费用规则（与"设置费用"链路一致，走规则->账单模式）
         List<PayFeeRulePo> payFeeRulePos = new ArrayList<>();
-        for (int roomIndex = 0; roomIndex < roomDtos.size(); roomIndex++) {
-            payFeeRulePos.add(createPayFeeRulePo(roomDtos.get(roomIndex), data, feeConfigDtos.get(0)));
-            if (payFeeRulePos.size() == DEFAULT_ADD_FEE_COUNT) {
-                doSavePayFeeRules(payFeeRulePos);
-                payFeeRulePos = new ArrayList<>();
-            }
-        }
-        if (!payFeeRulePos.isEmpty()) {
-            doSavePayFeeRules(payFeeRulePos);
-        }
+        payFeeRulePos.add(createPayFeeRulePo(room, data, feeConfigDtos.get(0)));
+        doSavePayFeeRules(payFeeRulePos);
 
     }
 
