@@ -54,6 +54,10 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
 
     private String feeRemark;
 
+    private String squarePrice;
+
+    private String additionalAmount;
+
     private List<PayFeeDto> bills;
 
     private int billCount;
@@ -65,6 +69,8 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
     private int cancelledCount;
 
     private String receivableAmount;
+
+    private String totalReceivableAmount;
 
     private String receivedAmount;
 
@@ -289,6 +295,22 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
         this.remark = remark;
     }
 
+    public String getSquarePrice() {
+        return squarePrice;
+    }
+
+    public void setSquarePrice(String squarePrice) {
+        this.squarePrice = squarePrice;
+    }
+
+    public String getAdditionalAmount() {
+        return additionalAmount;
+    }
+
+    public void setAdditionalAmount(String additionalAmount) {
+        this.additionalAmount = additionalAmount;
+    }
+
     public String getFeeRemark() {
         return feeRemark;
     }
@@ -343,6 +365,14 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
 
     public void setReceivableAmount(String receivableAmount) {
         this.receivableAmount = receivableAmount;
+    }
+
+    public String getTotalReceivableAmount() {
+        return totalReceivableAmount;
+    }
+
+    public void setTotalReceivableAmount(String totalReceivableAmount) {
+        this.totalReceivableAmount = totalReceivableAmount;
     }
 
     public String getReceivedAmount() {

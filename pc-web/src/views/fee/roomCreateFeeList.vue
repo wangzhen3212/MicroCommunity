@@ -34,10 +34,6 @@
                 <i class="el-icon-plus"></i>
                 {{ $t('roomCreateFee.batchCreate') }}
               </el-button>
-              <el-button v-if="hasPrivilege('502022073096990007')" type="primary" size="small" @click="_openRoomFeeRuleSet">
-                <i class="el-icon-setting"></i>
-                {{ $t('roomFeeRuleSet.entry') }}
-              </el-button>
               <el-button size="small" @click="_downloadCollectionLetterOrder">
                 <i class="el-icon-download"></i>
                 {{ $t('roomCreateFee.batchCollectionLetter') }}
@@ -75,9 +71,9 @@
           </div>
 
           <el-tabs v-model="roomCreateFeeInfo._currentTab" @tab-click="changeTab(roomCreateFeeInfo._currentTab)">
-            <el-tab-pane :label="$t('roomCreateFee.roomFee')" name="roomFeeRuleBill">
-              <room-fee-rule-bill-list v-if="roomCreateFeeInfo._currentTab === 'roomFeeRuleBill'" ref="roomFeeRuleBill"
-                :key="'roomFeeRuleBill' + roomCreateFeeInfo.roomId"></room-fee-rule-bill-list>
+            <el-tab-pane :label="$t('roomCreateFee.roomFee')" name="simplifyRoomFee">
+              <simplify-room-fee v-if="roomCreateFeeInfo._currentTab === 'simplifyRoomFee'"
+                ref="simplifyRoomFee" :key="'simplifyRoomFee' + roomCreateFeeInfo.roomId"></simplify-room-fee>
             </el-tab-pane>
             <el-tab-pane v-if="roomCreateFeeInfo.ownerId" :label="$t('roomCreateFee.paymentHistory')"
               name="simplifyHisFee">
@@ -141,7 +137,7 @@ import RoomTreeDivHasOwner from '@/components/room/roomTreeDivHasOwner'
 import InputSearchRoom from '@/components/fee/inputSearchRoom'
 import InputSearchRoomByOwner from '@/components/fee/inputSearchRoomByOwner'
 import SimplifyHisFee from '@/components/fee/simplifyHisFee'
-import RoomFeeRuleBillList from '@/components/fee/roomFeeRuleBillList'
+import SimplifyRoomFee from '@/components/fee/simplifyRoomFee'
 import SimplifyOwnerRooms from '@/components/fee/simplifyOwnerRooms'
 import CarDetailOwner from '@/components/fee/carDetailOwner'
 import SimplifyCallable from '@/components/fee/simplifyCallable'
@@ -165,7 +161,7 @@ export default {
     InputSearchRoom,
     InputSearchRoomByOwner,
     SimplifyHisFee,
-    RoomFeeRuleBillList,
+    SimplifyRoomFee,
     SimplifyOwnerRooms,
     CarDetailOwner,
     SimplifyCallable,
@@ -189,7 +185,7 @@ export default {
         ownerId: '',
         ownerName: '',
         roomType: '',
-        _currentTab: 'roomFeeRuleBill',
+        _currentTab: 'simplifyRoomFee',
         condition: {
           roomNum: '',
           ownerName: ''
@@ -275,7 +271,7 @@ export default {
         const response = await queryRooms(param)
         const room = response.rooms[0]
         Object.assign(this.roomCreateFeeInfo, room)
-        this.changeTab('roomFeeRuleBill')
+        this.changeTab('simplifyRoomFee')
       } catch (error) {
         console.error('Request failed:', error)
       }
@@ -302,7 +298,7 @@ export default {
       this.roomCreateFeeInfo.ownerId = ''
       this.roomCreateFeeInfo.condition.ownerName = ''
       this.roomCreateFeeInfo.condition.roomNum = ''
-      this.changeTab('roomFeeRuleBill')
+      this.changeTab('simplifyRoomFee')
     },
     changeTab(tab) {
       this.roomCreateFeeInfo._currentTab = tab
@@ -327,18 +323,6 @@ export default {
           })
         }
       }, 500)
-    },
-    _openRoomFeeRuleSet() {
-      if (!this.roomCreateFeeInfo.roomId) {
-        this.$message.warning(this.$t('roomFeeRuleBill.selectRoomFirst'))
-        return
-      }
-      this.changeTab('roomFeeRuleBill')
-      setTimeout(() => {
-        if (this.$refs.roomFeeRuleBill) {
-          this.$refs.roomFeeRuleBill.openRuleSet()
-        }
-      }, 600)
     },
     _roomCreateFeetoSimplifyAcceptance() {
 

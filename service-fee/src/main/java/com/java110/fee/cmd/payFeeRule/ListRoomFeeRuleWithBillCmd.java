@@ -31,11 +31,11 @@ import java.util.Map;
 /**
  * 房屋计费设置与账单聚合查询
  *
- * 一次返回某个房屋的全部计费设置（pay_fee_rule），每条计费设置内挂未缴清、已取消的账单（pay_fee），
+ * 一次返回某个房屋的全部计费设置（pay_fee_rule），每条计费设置内挂未缴清、已取消、已缴清的账单（pay_fee），
  * 账单与计费设置的关联统一走 pay_fee.rule_id（pay_fee_rule_bill 当前不落库）。
  */
 @Java110CmdDoc(title = "查询房屋计费设置与账单",
-        description = "按房屋返回计费设置列表，每条计费设置返回未缴清、已取消的账单及汇总金额",
+        description = "按房屋返回计费设置列表，每条计费设置返回未缴清、已取消、已缴清的账单及汇总金额",
         httpMethod = "get",
         url = "http://{ip}:{port}/app/payFeeRule.listRoomFeeRuleWithBill",
         resource = "feeDoc",
@@ -73,6 +73,8 @@ public class ListRoomFeeRuleWithBillCmd extends Cmd {
     private static final String BILL_STATE_UNPAID = "unpaid";
 
     private static final String BILL_STATE_CANCELLED = "cancelled";
+
+    private static final String BILL_STATE_PAID = "paid";
 
     private static final String SYNTHETIC_RULE_ID = "-1";
 
@@ -180,8 +182,9 @@ public class ListRoomFeeRuleWithBillCmd extends Cmd {
 
     private void computeSummary(PayFeeRuleDto rule, List<PayFeeDto> ruleBills, String feeName) {
         List<PayFeeDto> bills = ruleBills == null ? new ArrayList<>() : ruleBills;
-        List<PayFeeDto> pendingBills = new ArrayList<>();
+        List<PayFeeDto> billList = new ArrayList<>();
         BigDecimal receivable = ZERO;
+        BigDecimal totalReceivable = ZERO;
         BigDecimal received = ZERO;
         BigDecimal owe = ZERO;
         int billCount = 0;
@@ -195,13 +198,18 @@ public class ListRoomFeeRuleWithBillCmd extends Cmd {
             if (STATUS_CD_DELETED.equals(bill.getStatusCd())) {
                 cancelledCount++;
                 bill.setBillState(BILL_STATE_CANCELLED);
+                bill.setOweAmount(formatAmount(ZERO));
                 bill.setReceivedAmount(formatAmount(ZERO));
-                pendingBills.add(bill);
+                billList.add(bill);
                 continue;
             }
             billCount++;
             BigDecimal billReceivable = toDecimal(bill.getReceivableAmount());
             BigDecimal billOwe = toDecimal(bill.getOweAmount());
+            // 缴费结清后 pay_fee.state 会置为收费结束，历史数据 owe_amount 可能未同步归零
+            if (FeeDto.STATE_FINISH.equals(bill.getState())) {
+                billOwe = ZERO;
+            }
             if (billOwe.compareTo(ZERO) < 0) {
                 billOwe = ZERO;
             }
@@ -209,31 +217,36 @@ public class ListRoomFeeRuleWithBillCmd extends Cmd {
             if (billReceived.compareTo(ZERO) < 0) {
                 billReceived = ZERO;
             }
-            receivable = receivable.add(billReceivable);
+            totalReceivable = totalReceivable.add(billReceivable);
             received = received.add(billReceived);
             owe = owe.add(billOwe);
+            bill.setOweAmount(formatAmount(billOwe));
             bill.setReceivedAmount(formatAmount(billReceived));
             if (billOwe.compareTo(ZERO) > 0) {
+                receivable = receivable.add(billOwe);
                 unpaidCount++;
                 bill.setBillState(BILL_STATE_UNPAID);
-                pendingBills.add(bill);
+                billList.add(bill);
             } else {
                 paidCount++;
+                bill.setBillState(BILL_STATE_PAID);
+                billList.add(bill);
             }
         }
 
-        pendingBills.sort((bill1, bill2) -> {
+        billList.sort((bill1, bill2) -> {
             String feeTime1 = StringUtil.isEmpty(bill1.getFeeTime()) ? "" : bill1.getFeeTime();
             String feeTime2 = StringUtil.isEmpty(bill2.getFeeTime()) ? "" : bill2.getFeeTime();
             return feeTime2.compareTo(feeTime1);
         });
 
-        rule.setBills(pendingBills);
+        rule.setBills(billList);
         rule.setBillCount(billCount);
         rule.setUnpaidCount(unpaidCount);
         rule.setPaidCount(paidCount);
         rule.setCancelledCount(cancelledCount);
         rule.setReceivableAmount(formatAmount(receivable));
+        rule.setTotalReceivableAmount(formatAmount(totalReceivable));
         rule.setReceivedAmount(formatAmount(received));
         rule.setOweAmount(formatAmount(owe));
         rule.setSettled(FeeDto.STATE_FINISH.equals(rule.getState()) && unpaidCount == 0);

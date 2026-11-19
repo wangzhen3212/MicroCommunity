@@ -1,582 +1,1114 @@
 <template>
-  <div>
-    <el-row class="margin-top-lg">
-      <el-col :span="2" >
-        <el-select v-model="simplifyRoomFeeInfo.feeTypeCd" @change="changeSimplifyRoomFeeFeeTypeCd" size="small"
-          :placeholder="$t('simplifyRoomFee.selectFeeType')">
-          <template v-for="item in simplifyRoomFeeInfo.feeTypeCds">
-            <el-option :key="item.statusCd" :label="item.name" :value="item.statusCd"
-              v-if="item.statusCd != '888800010008'"></el-option>
-          </template>
-        </el-select>
-      </el-col>
-      <el-col :span="2" >
-        <el-select v-model="simplifyRoomFeeInfo.configId" @change="changeSimplifyRoomConfigId" size="small"
-          :placeholder="$t('simplifyRoomFee.selectFeeItem')">
-          <el-option v-for="item in simplifyRoomFeeInfo.feeConfigs" :key="item.configId" :label="item.feeName"
-            :value="item.configId"></el-option>
-        </el-select>
-      </el-col>
-      <el-col :span="2" >
-        <el-select v-model="simplifyRoomFeeInfo.state" @change="changeSimplifyRoomConfigId" size="small"
-          :placeholder="$t('simplifyRoomFee.selectStatus')">
-          <el-option :label="$t('simplifyRoomFee.valid')" value="2008001"></el-option>
-          <el-option :label="$t('simplifyRoomFee.feeEnd')" value="2009001"></el-option>
-        </el-select>
-      </el-col>
-      <el-col :span="2" >
-        <el-select v-model="simplifyRoomFeeInfo.ownerFee" @change="changeSimplifyRoomConfigId" size="small">
-          <el-option :label="$t('simplifyRoomFee.currentRoom')" value="N"></el-option>
-          <el-option :label="$t('simplifyRoomFee.currentOwner')" value="Y"></el-option>
-        </el-select>
-      </el-col>
-      <el-col :span="2">
-        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
-      </el-col>
-      <el-col :span="13" class="text-right">
-        <el-button type="primary" size="small" v-if="hasPrivilege('502020082314267912')"
-          @click="openBatchPayRoomFeeModal">
+  <div class="simplify-room-fee">
+    <div class="filter-row">
+      <el-tag v-if="ruleBillInfo.riskOnly" size="mini" type="warning" closable class="risk-filter-tag"
+        @close="handleRiskClear">
+        {{ $t('roomFeeRuleBill.riskOnlyTag', { count: ruleBillInfo.riskCount }) }}
+      </el-tag>
+      <el-select :value="ruleBillInfo.feeTypeCd" size="small" class="fee-type-select"
+        :placeholder="$t('simplifyRoomFee.selectFeeType')" @input="handleFeeTypeChange">
+        <el-option :label="$t('roomFeeRuleBill.allFeeType')" value=""></el-option>
+        <template v-for="item in ruleBillInfo.feeTypeCds">
+          <el-option v-if="item.statusCd != '888800010008'" :key="item.statusCd" :label="item.name"
+            :value="item.statusCd"></el-option>
+        </template>
+      </el-select>
+      <el-select :value="ruleBillInfo.configId" size="small" class="fee-item-select" filterable
+        :placeholder="$t('simplifyRoomFee.selectFeeItem')" @input="handleConfigChange">
+        <el-option :label="$t('roomFeeRuleBill.allFeeItem')" value=""></el-option>
+        <el-option v-for="item in ruleBillInfo.feeConfigs" :key="item.configId" :label="item.feeName"
+          :value="item.configId"></el-option>
+      </el-select>
+      <el-select :value="ruleBillInfo.stateFilter" size="small" class="state-select" @input="handleStateChange">
+        <el-option :label="$t('roomFeeRuleBill.allState')" value=""></el-option>
+        <el-option :label="$t('roomFeeRuleBill.stateDoing')" value="2008001"></el-option>
+        <el-option :label="$t('roomFeeRuleBill.stateStopped')" value="2009001"></el-option>
+      </el-select>
+      <el-button type="primary" size="small" @click="handleQuery">{{ $t('common.query') }}</el-button>
+      <span class="tool-buttons">
+        <el-button v-if="hasPrivilege('502020082314267912')" type="primary" size="small" @click="_toBatchPayFee">
           <i class="el-icon-plus"></i>
           {{ $t('simplifyRoomFee.payment') }}
         </el-button>
-        <el-button type="primary" size="small" style="margin-left:10px" v-if="hasPrivilege('502020082314267912')"
-          @click="toRoomPrePayFeeOrder">
+        <el-button v-if="hasPrivilege('502020082314267912')" type="primary" size="small" @click="_toPrePayFee">
           <i class="el-icon-plus"></i>
           {{ $t('simplifyRoomFee.prePayFee') }}
         </el-button>
-      </el-col>
-    </el-row>
+        <el-button v-if="hasPrivilege('502022073096990007')" type="primary" size="small" @click="_openRoomCreateFeeAdd">
+          <i class="el-icon-plus"></i>
+          {{ $t('simplifyRoomFee.createFee') }}
+        </el-button>
+        <el-button v-if="hasPrivilege('502022073007100003')" type="primary" size="small" @click="_openTempRoomFee">
+          <i class="el-icon-plus"></i>
+          {{ $t('simplifyRoomFee.tempFee') }}
+        </el-button>
+        <el-button v-if="hasPrivilege('502022073049300004')" type="primary" size="small" @click="_openProxyFee">
+          <i class="el-icon-plus"></i>
+          {{ $t('simplifyRoomFee.quantityPayment') }}
+        </el-button>
+        <el-button v-if="hasPrivilege('502022073042960005')" type="primary" size="small" @click="_openAddMeterWater">
+          <i class="el-icon-plus"></i>
+          {{ $t('simplifyRoomFee.waterElectricity') }}
+        </el-button>
+      </span>
+    </div>
 
-    <div class="margin-top">
-      <table class="el-table el-table--border el-table--striped" style="margin-top:10px; width:100%">
-        <thead>
-          <tr>
-            <th class="text-center" style="width: 60px;"></th>
-            <th class="text-center" style="width: 150px;">{{ $t('simplifyRoomFee.feeItem') }}</th>
-            <th class="text-center">{{ $t('simplifyRoomFee.feeType') }}</th>
-            <th class="text-center">{{ $t('simplifyRoomFee.receivableAmount') }}</th>
-            <th class="text-center">{{ $t('simplifyRoomFee.chargeYearMonth') || '计费年月' }}</th>
-            <th class="text-center">{{ $t('simplifyRoomFee.receivablePeriod') }}</th>
-            <th class="text-center" style="width: 150px;">{{ $t('simplifyRoomFee.description') }}</th>
-            <th class="text-center" style="width: 150px;">{{ $t('simplifyRoomFee.remark') || '备注' }}</th>
-            <th class="text-center">{{ $t('simplifyRoomFee.status') }}</th>
-            <th class="text-center" style="width: 150px;">{{ $t('simplifyRoomFee.operation') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-for="(fee, index) in simplifyRoomFeeInfo.fees">
-            <tr :key="'fee-'+index">
-              <td class="text-center" style="color:#999;" @click="switchSimplifyFeeFlag(fee)">
-                <span class="fa fa-chevron-down" v-if="fee.showFlag == 'Y'"></span>
-                <span class="fa fa-chevron-right" v-else></span>
-              </td>
-              <td class="text-center hand" @click="viewRoomFeeConfig(fee)">
-                {{ fee.feeName }}{{ getSimplifyRoomFeeRoomName(fee) }}
-                <span class="fa fa-info-circle"></span>
-              </td>
-              <td class="text-center" @click="switchSimplifyFeeFlag(fee)">{{ fee.feeTypeCdName }}</td>
-              <td class="text-center" @click="switchSimplifyFeeFlag(fee)">{{ fee.oweAmount }}</td>
-              <td class="text-center" @click="switchSimplifyFeeFlag(fee)">-</td>
-              <td class="text-center" @click="switchSimplifyFeeFlag(fee)">{{ dateFormat(fee.startTime) }}<br/>~{{ dateFormat(fee.endTime) }}</td>
-              <td class="text-center multiline-text">-</td>
-              <td class="text-center">-</td>
-              <td class="text-center"></td>
-              <td class="text-center"></td>
-            </tr>
-            <template v-if="fee.showFlag == 'Y'">
-              <tr v-for="(feeSub, subIndex) in fee.childs" :key="'feeSub-'+index+'-'+subIndex" style="background-color:#f9f9f9;">
-                <td class="text-center hand"></td>
-                <td class="text-center hand">{{ feeSub.feeName }}</td>
-                <td class="text-center">{{ feeSub.feeTypeCdName }}</td>
-                <td class="text-center">{{ feeSub.oweAmount || feeSub.amountOwed }}</td>
-                <td class="text-center">{{ feeSub.yearMonth || (feeSub.detailYear && feeSub.detailMonth ? (feeSub.detailYear + '-' + feeSub.detailMonth) : '-') }}</td>
-                <td class="text-center">{{ dateFormat(feeSub.startTime) }}<br/>~{{ dateFormat(feeSub.endTime) }}</td>
-                <td class="text-center multiline-text" v-html="formatRemark(feeSub.remark)"></td>
-                <td class="text-center multiline-text">-</td>
-                <td class="text-center">{{ feeSub.stateName }}</td>
-                <td class="text-center">
-                  <!-- <el-button class="btn-link" type="text" v-if="feeSub.state != '2009001' && hasPrivilege('502020082314267912')" @click="payFee(feeSub)">{{ $t('simplifyRoomFee.payment') || '缴费' }}</el-button> -->
-                  <el-button class="btn-link" type="text" @click="payFeeHis(feeSub)">{{ $t('simplifyRoomFee.paymentHistory') || '缴费历史' }}</el-button>
-                  <el-dropdown v-if="hasPrivilege('502020090604200029') || hasPrivilege('502021070488970005') || hasPrivilege('502020090427190001')">
-                    <span class="el-dropdown-link">{{ $t('simplifyRoomFee.moreOperations') || '更多操作' }}<i class="el-icon-arrow-down el-icon--right"></i></span>
-                    <el-dropdown-menu slot="dropdown">
-                      <el-dropdown-item v-if="hasPrivilege('502020090604200029')" @click.native="deleteFee(feeSub)">{{ $t('simplifyRoomFee.cancelFee') }}</el-dropdown-item>
-                      <el-dropdown-item v-if="feeSub.state != '2009001' && hasPrivilege('502020090427190001')" @click.native="editFee(feeSub)">{{ $t('simplifyRoomFee.feeChange') }}</el-dropdown-item>
-                      <el-dropdown-item v-if="feeSub.state != '2009001' && hasPrivilege('502020090427190001')" @click.native="splitFee(feeSub)">{{ $t('simplifyRoomFee.splitFee') }}</el-dropdown-item>
-                      <el-dropdown-item>
-                        <a target="_blank" :href="'/#/views/fee/feeDetail?feeId=' + feeSub.feeId">{{ $t('simplifyRoomFee.details') }}</a>
-                      </el-dropdown-item>
-                    </el-dropdown-menu>
-                  </el-dropdown>
-                </td>
-              </tr>
+    <div v-if="_isShowRisk()" class="risk-alert">
+      <div class="risk-icon"><i class="el-icon-warning"></i></div>
+      <div class="risk-body">
+        <div class="risk-title">{{ $t('roomFeeRuleBill.riskTitle', { count: ruleBillInfo.riskCount }) }}</div>
+        <div class="risk-desc">{{ $t('roomFeeRuleBill.riskDesc') }}</div>
+        <div class="risk-actions">
+          <el-button type="warning" size="mini" @click="handleRiskView">{{ $t('roomFeeRuleBill.riskAction') }}</el-button>
+          <el-button size="mini" @click="handleRiskIgnore">{{ $t('roomFeeRuleBill.riskIgnore') }}</el-button>
+        </div>
+      </div>
+    </div>
+
+    <el-table ref="ruleTable" v-loading="ruleBillInfo.loading" :data="ruleBillInfo.pageRows" row-key="ruleId"
+      class="rule-table" size="small" :empty-text="_emptyText()" @row-click="handleRowClick">
+      <el-table-column type="expand">
+        <template slot-scope="scope">
+          <div class="bill-panel">
+            <div class="bill-panel-head">
+              <span class="bill-panel-title">{{ $t('roomFeeRuleBill.subTitle', { feeName: _billDisplayName(scope.row) }) }}</span>
+              <span class="bill-panel-count">{{ $t('roomFeeRuleBill.subUnpaidCount', { count: scope.row.unpaidCount }) }}</span>
+              <el-select :value="scope.row.billStateFilter" size="mini" class="bill-state-filter"
+                @input="handleBillStateFilterChange(scope.row, $event)">
+                <el-option :label="$t('roomFeeRuleBill.billFilterAll')" value="all"></el-option>
+                <el-option :label="$t('roomFeeRuleBill.billFilterPaid')" value="paid"></el-option>
+                <el-option :label="$t('roomFeeRuleBill.billFilterUnpaid')" value="unpaid"></el-option>
+              </el-select>
+            </div>
+            <div v-if="!scope.row.filteredBills || scope.row.filteredBills.length === 0" class="bill-panel-empty">
+              {{ _billEmptyText(scope.row) }}
+            </div>
+            <el-table v-else :data="scope.row.filteredBills" size="mini" class="bill-table">
+              <el-table-column prop="yearMonth" :label="$t('roomFeeRuleBill.billYearMonth')" width="120">
+              </el-table-column>
+              <el-table-column :label="$t('roomFeeRuleBill.billPeriod')" width="220">
+                <template slot-scope="billScope">
+                  {{ _dateOnly(billScope.row.startTime) }} ~ {{ _dateOnly(billScope.row.endTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('roomFeeRuleBill.billUnpaidAmount')" align="right" width="130">
+                <template slot-scope="billScope">
+                  <span :class="Number(billScope.row.oweAmount) > 0 ? 'stat-owe' : 'text-muted'">
+                    ¥{{ _money(billScope.row.oweAmount) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('roomFeeRuleBill.billState')" align="center" width="200">
+                <template slot-scope="billScope">
+                  <el-tag v-if="billScope.row.billState === 'paid'" size="mini" type="success">
+                    {{ $t('roomFeeRuleBill.billPaid') }}
+                  </el-tag>
+                  <el-tag v-else-if="billScope.row.billState === 'cancelled'" size="mini" type="info">
+                    {{ $t('roomFeeRuleBill.billCancelled') }}
+                  </el-tag>
+                  <el-tag v-else size="mini" type="danger">{{ $t('roomFeeRuleBill.billUnpaid') }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('roomFeeRuleBill.subColRemark')" width="300">
+                <template slot-scope="billScope">
+                  <div class="bill-remark">{{ billScope.row.remark || '—' }}</div>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('roomFeeRuleBill.subColFeeRemark')" width="220">
+                <template slot-scope="billScope">
+                  <div class="bill-remark">{{ billScope.row.feeRemark || '—' }}</div>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('common.operation')" align="center" min-width="260">
+                <template slot-scope="billScope">
+                  <div class="op-cell">
+                    <el-button type="text" size="mini" @click="_feeHis(billScope.row)">
+                      {{ $t('roomFeeRuleBill.payHistory') }}
+                    </el-button>
+                    <el-button type="text" size="mini" @click="_feeHis(billScope.row)">
+                      {{ $t('roomFeeRuleBill.menuDetail') }}
+                    </el-button>
+                    <el-dropdown v-if="billScope.row.billState === 'unpaid'">
+                      <span class="more-link">
+                        {{ $t('roomFeeRuleBill.moreOps') }}<i class="el-icon-arrow-down"></i>
+                      </span>
+                      <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item v-if="hasPrivilege('502020090604200029')"
+                          @click.native="_cancelBill(billScope.row)">
+                          {{ $t('roomFeeRuleBill.cancelThisBill') }}
+                        </el-dropdown-item>
+                        <el-dropdown-item v-if="hasPrivilege('502020090427190001')"
+                          @click.native="_editFee(billScope.row)">
+                          {{ $t('roomFeeRuleBill.menuFeeChange') }}
+                        </el-dropdown-item>
+                        <el-dropdown-item v-if="hasPrivilege('502020090427190001')"
+                          @click.native="_splitFee(billScope.row)">
+                          {{ $t('roomFeeRuleBill.menuSplitFee') }}
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </el-dropdown>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('roomFeeRuleBill.colFeeItem')" width="300">
+        <template slot-scope="scope">
+          <div class="cell-main cell-name">
+            {{ _ruleDisplayName(scope.row) }}
+            <el-tag v-if="scope.row.risk" size="mini" type="warning" class="cell-badge">
+              {{ $t('roomFeeRuleBill.cancelledBadge') }}
+            </el-tag>
+          </div>
+          <div class="cell-sub">
+            {{ scope.row.feeTypeCdName || '-' }} · {{ scope.row.computingFormulaName || '-' }}
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('roomFeeRuleBill.colRule')" min-width="300">
+        <template slot-scope="scope">
+          <div class="cell-main">{{ _ruleCycleText(scope.row) }}</div>
+          <div class="cell-sub">{{ _dateOnly(scope.row.startTime) }} ~ {{ _dateOnly(scope.row.maxTime) }}</div>
+          <div v-if="_rulePriceText(scope.row)" class="cell-sub">{{ _rulePriceText(scope.row) }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('roomFeeRuleBill.colNextBill')" width="150">
+        <template slot-scope="scope">
+          <template v-if="scope.row.state === '2008001'">
+            <template v-if="_isMeterRule(scope.row)">
+              <div class="cell-main text-meter">{{ $t('roomFeeRuleBill.nextBillMeter') }}</div>
+              <div class="cell-sub">{{ $t('roomFeeRuleBill.meterAfterReading') }}</div>
+            </template>
+            <template v-else>
+              <div class="cell-main">{{ _dateOnly(scope.row.curYearMonth) }}</div>
+              <div class="cell-sub">{{ $t('roomFeeRuleBill.nextBillAuto') }}</div>
             </template>
           </template>
-        </tbody>
-      </table>
-     
+          <template v-else>
+            <div class="cell-main text-muted">—</div>
+            <div class="cell-sub">{{ $t('roomFeeRuleBill.noMoreBill') }}</div>
+          </template>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('roomFeeRuleBill.colReceivable')" align="right" width="130">
+        <template slot-scope="scope">
+          <div class="cell-main" :class="Number(scope.row.oweAmount) > 0 ? 'stat-owe' : 'text-muted'">
+            ¥{{ _money(scope.row.oweAmount) }}
+          </div>
+          <div class="cell-sub">{{ $t('roomFeeRuleBill.periods', { count: scope.row.unpaidCount }) }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('roomFeeRuleBill.colState')" align="center" width="120">
+        <template slot-scope="scope">
+          <el-tag size="mini" :type="_stateTagType(scope.row)"
+            :class="['tag-state', { 'tag-meter': _isMeterRule(scope.row) }]">
+            {{ _stateText(scope.row) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('common.operation')" align="center" width="280" column-key="operation">
+        <template slot-scope="scope">
+          <div class="op-cell">
+            <el-button v-if="scope.row.state === '2008001' && hasPrivilege('502020082314267912')" type="text"
+              size="mini" @click="_preGenerateFee(scope.row)">
+              {{ $t('roomFeeRuleBill.btnPreGenerate') }}
+            </el-button>
+            <template v-if="!scope.row.syntheticOther">
+              <el-button v-if="hasPrivilege('502020090427190001')" type="text" size="mini" @click="_editRule(scope.row)">
+                {{ $t('roomFeeRuleBill.menuEditRule') }}
+              </el-button>
+              <el-button v-if="scope.row.state === '2008001' && hasPrivilege('502021070488970005')" type="text"
+                size="mini" @click="_finishRule(scope.row)">
+                {{ $t('roomFeeRuleBill.menuFinishRule') }}
+              </el-button>
+              <el-button v-if="hasPrivilege('502020090604200029')" type="text" size="mini" class="text-danger"
+                @click="_deleteRule(scope.row)">
+                {{ $t('roomFeeRuleBill.menuCancel') }}
+              </el-button>
+            </template>
+          </div>
+        </template>
+      </el-table-column>
+      <template slot="append">
+        <div v-if="ruleBillInfo.hiddenSettledCount > 0" class="settled-row">
+          <span class="settled-text">
+            {{ ruleBillInfo.showSettled
+              ? $t('roomFeeRuleBill.shownTip', { count: ruleBillInfo.hiddenSettledCount })
+              : $t('roomFeeRuleBill.hiddenTip', { count: ruleBillInfo.hiddenSettledCount }) }}
+          </span>
+          <el-button type="text" size="mini" @click="handleToggleSettled">
+            {{ ruleBillInfo.showSettled ? $t('roomFeeRuleBill.hide') : $t('roomFeeRuleBill.show') }}
+          </el-button>
+        </div>
+      </template>
+    </el-table>
+
+    <div class="footer-bar">
+      <span class="footer-stat footer-stat-owe">
+        <span class="footer-stat-label">{{ $t('roomFeeRuleBill.summaryOwe') }}</span>
+        <span class="footer-stat-value">¥{{ _statOwe() }}</span>
+      </span>
+      <span class="footer-total">{{ $t('roomFeeRuleBill.totalCount', { count: ruleBillInfo.filteredCount }) }}</span>
+      <el-pagination small layout="prev, pager, next" :current-page="ruleBillInfo.currentPage"
+        :page-size="ruleBillInfo.pageSize" :total="ruleBillInfo.filteredCount"
+        @current-change="handlePageChange"></el-pagination>
     </div>
 
-    
-
-    <el-row class="margin-top">
-      <el-col :span="12" class="text-left table-desc">
-        <div>{{ $t('simplifyRoomFee.note1') }}</div>
-        <div>{{ $t('simplifyRoomFee.note2') }}</div>
-      </el-col>
-      <el-col :span="6">
-        <span>
-          <span>{{ $t('simplifyRoomFee.arrearsSubtotal') }}</span>{{ simplifyRoomFeeInfo.totalAmount }}
-        </span>
-      </el-col>
-    </el-row>
-    <div class="text-right" style="margin-top: 20px">
-      <el-pagination @current-change="handleCurrentChange" :current-page="currentPage" :page-size="pageSize"
-        layout="total, prev, pager, next" :total="total"></el-pagination>
-    </div>
-    <!-- Modal Components -->
-    <delete-fee ref="deleteFee" @success="handleNotify"></delete-fee>
-    <edit-fee ref="editFee" @success="handleNotify"></edit-fee>
-    <finish-fee ref="finishFee" @success="handleNotify"></finish-fee>
-    <split-fee ref="splitFee" @success="handleNotify"></split-fee>
+    <simplify-room-fee-cancel-dialog ref="cancelFee" @success="loadData"></simplify-room-fee-cancel-dialog>
+    <finish-fee-rule ref="finishFeeRule" @success="loadData"></finish-fee-rule>
+    <delete-fee-rule ref="deleteFeeRule" @success="loadData"></delete-fee-rule>
+    <room-create-fee-add ref="roomCreateFeeAdd" @success="loadData"></room-create-fee-add>
+    <temp-import-room-fee ref="tempImportRoomFee" @success="loadData"></temp-import-room-fee>
+    <add-proxy-fee ref="addProxyFee" @success="loadData"></add-proxy-fee>
+    <add-meter-water ref="addMeterWater" @success="loadData"></add-meter-water>
+    <edit-fee-rule ref="editFeeRule" @success="loadData"></edit-fee-rule>
+    <edit-fee ref="editFee" @success="loadData"></edit-fee>
+    <split-fee ref="splitFee" @success="loadData"></split-fee>
+    <pre-generate-fee ref="preGenerateFee" @success="loadData"></pre-generate-fee>
   </div>
 </template>
 
 <script>
-import { listFee, listFeeConfigs } from '@/api/fee/simplifyRoomFeeApi'
-import { getDict } from '@/api/community/communityApi'
-import { getCommunityId } from '@/api/community/communityApi'
-//import { listFeeConfigs } from '@/api/fee/feeConfigManageApi'
-import { dateFormat } from '@/utils/dateUtil'
-import DeleteFee from '@/components/fee/deleteFee'
-import EditFee from '@/components/fee/editFee'
-import FinishFee from '@/components/fee/finishFee'
-import SplitFee from '@/components/fee/splitFee'
+import { listFeeConfigs } from '@/api/fee/simplifyRoomFeeApi'
+import { getDict, getCommunityId } from '@/api/community/communityApi'
+import { listRoomFeeRuleWithBill } from '@/api/fee/roomFeeRuleBillApi'
+import { queryPreGenerateFeePeriods, preGenerateFee as preGenerateFeeApi } from '@/api/fee/preGenerateFeeApi'
+import { EXCLUDE_COMPUTING_FORMULAS } from '@/utils/feeUtil'
+import SimplifyRoomFeeCancelDialog from './simplifyRoomFeeCancelDialog'
+import RoomCreateFeeAdd from './roomCreateFeeAdd'
+import TempImportRoomFee from './tempImportRoomFee'
+import AddProxyFee from './addProxyFee'
+import AddMeterWater from './addMeterWater'
+import EditFeeRule from './editFeeRule'
+import FinishFeeRule from './finishFeeRule'
+import DeleteFeeRule from './deleteFeeRule'
+import EditFee from './editFee'
+import SplitFee from './splitFee'
+import PreGenerateFee from './preGenerateFee'
 
 export default {
   name: 'SimplifyRoomFee',
   components: {
-    DeleteFee,
+    SimplifyRoomFeeCancelDialog,
+    RoomCreateFeeAdd,
+    TempImportRoomFee,
+    AddProxyFee,
+    AddMeterWater,
+    EditFeeRule,
+    FinishFeeRule,
+    DeleteFeeRule,
     EditFee,
-    FinishFee,
-    SplitFee
+    SplitFee,
+    PreGenerateFee
   },
   data() {
     return {
-      simplifyRoomFeeInfo: {
-        total: 0,
-        records: 1,
-        fees: [],
-        
-        roomId: '',
-        roomName: '',
-        name: '',
-        floorNum: '',
-        unitNum: '',
-        roomNum: '',
-        configId: '',
+      ruleBillInfo: {
+        roomInfo: {
+          roomId: '',
+          roomName: '',
+          ownerId: '',
+          ownerName: '',
+          roomSubTypeName: '',
+          stateName: '',
+          link: '',
+          builtUpArea: ''
+        },
+        loading: false,
+        rules: [],
         feeTypeCds: [],
         feeTypeCd: '',
-        state: '2008001',
-        totalAmount: 0.0,
-        roomType: '',
-        ownerFee: 'N',
-        ownerId: '',
-        
+        configId: '',
         feeConfigs: [],
-        from: ''
-      },
-      currentPage: 1,
-      pageSize: 100,
-      total: 0
+        stateFilter: '',
+        showSettled: false,
+        riskIgnored: false,
+        riskOnly: false,
+        currentPage: 1,
+        pageSize: 20,
+        filteredCount: 0,
+        pageRows: [],
+        riskRules: [],
+        riskCount: 0,
+        hiddenSettledRules: [],
+        hiddenSettledCount: 0
+      }
     }
-  },
-  computed: {
-    filteredFeeTypeCds() {
-      return this.simplifyRoomFeeInfo.feeTypeCds.filter(item => item.statusCd !== '888800010008')
-    }
-  },
-  created() {
-    this.communityId = getCommunityId()
-    //this.loadDictData()
   },
   methods: {
-    // 预付收款
-    toRoomPrePayFeeOrder() {
-      this.$router.push({
-        path: '/views/fee/prePayFeeOrder',
-        query: {
-          payerObjId: this.simplifyRoomFeeInfo.roomId,
-          payerObjType: '3333'
-        }
-      })
-    },
-    // 父子展开切换
-    switchSimplifyFeeFlag(fee) {
-      fee.showFlag = fee.showFlag === 'Y' ? 'N' : 'Y'
-    },
-    // 合并父子费用
-    simplifyRoomFeeMergeFees(fees) {
-      const mergedMap = new Map()
-      fees.forEach(fee => {
-        const key = `${fee.feeName}|${fee.payerObjName}`
-        if (!mergedMap.has(key)) {
-          mergedMap.set(key, {
-            feeName: fee.feeName,
-            configId: fee.configId,
-            payerObjName: fee.payerObjName,
-            feeFlagName: fee.feeFlagName,
-            feeTypeCdName: fee.feeTypeCdName,
-            oweAmount: this.getValidAmount(fee.oweAmount || fee.amountOwed),
-            startTime: fee.startTime,
-            endTime: fee.endTime,
-            remark: fee.remark,
-            stateName: fee.stateName,
-            showFlag: 'N',
-            childs: [fee]
-          })
-        } else {
-          const mergedItem = mergedMap.get(key)
-          const currentAmount = parseFloat(mergedItem.oweAmount || 0)
-          const newAmount = parseFloat(fee.oweAmount || fee.amountOwed || 0)
-          if (!isNaN(currentAmount) && !isNaN(newAmount)) {
-            mergedItem.oweAmount = (currentAmount + newAmount).toFixed(4)
-          } else if (!isNaN(newAmount)) {
-            mergedItem.oweAmount = newAmount.toFixed(4)
-          }
-          if (new Date(fee.startTime) < new Date(mergedItem.startTime)) {
-            mergedItem.startTime = fee.startTime
-          }
-          if (new Date(fee.endTime) > new Date(mergedItem.endTime)) {
-            mergedItem.endTime = fee.endTime
-          }
-          mergedItem.childs.push(fee)
-        }
-      })
-      const mergedFees = Array.from(mergedMap.values())
-      if (mergedFees.length > 0) {
-        mergedFees[0].showFlag = 'Y'
-      }
-      return mergedFees
-    },
     open(params) {
-      this.handleSwitch(params)
+      const data = params || {}
+      this.ruleBillInfo.roomInfo = {
+        roomId: data.roomId || data.payerObjId || '',
+        roomName: data.roomName || data.payerObjName || '',
+        ownerId: data.ownerId || '',
+        ownerName: data.ownerName || '',
+        roomSubTypeName: data.roomSubTypeName || '',
+        stateName: data.stateName || '',
+        link: data.link || '',
+        builtUpArea: data.builtUpArea || data.roomArea || ''
+      }
+      this.ruleBillInfo.stateFilter = ''
+      this.ruleBillInfo.feeTypeCd = ''
+      this.ruleBillInfo.configId = ''
+      this.ruleBillInfo.showSettled = false
+      this.ruleBillInfo.riskIgnored = false
+      this.ruleBillInfo.riskOnly = false
+      this.ruleBillInfo.currentPage = 1
+      this.ruleBillInfo.rules = []
+      this._refreshPageData()
+      this.loadData()
+      this.loadFeeTypeCds()
+      this.loadFeeConfigs('')
     },
-    handleSwitch(param) {
-      this.clearSimplifyRoomFeeInfo()
-      if (param.roomId === '') return
-
-      Object.assign(this.simplifyRoomFeeInfo, param)
-      this.listSimplifyRoomFee(1, this.pageSize)
-
-      getDict('pay_fee_config', 'fee_type_cd').then(data => {
-        this.simplifyRoomFeeInfo.feeTypeCds = data
-      })
-    },
-    handleQuery() {
-      this.currentPage = 1
-      this.listSimplifyRoomFee(1, this.pageSize)
-    },
-    handleNotify() {
-      this.listSimplifyRoomFee(this.currentPage, this.pageSize)
-    },
-    getOnePrice1(fee) {
-      let price = fee.mwPrice
-      if (!price) return fee.squarePrice
-      if (parseFloat(price) > 0) return price
-      return fee.squarePrice
-    },
-    async listSimplifyRoomFee(page, row) {
-      const params = {
-        page,
-        row,
+    loadData() {
+      const info = this.ruleBillInfo
+      if (!info.roomInfo.roomId) {
+        info.rules = []
+        this._refreshPageData()
+        return
+      }
+      info.loading = true
+      listRoomFeeRuleWithBill({
         communityId: getCommunityId(),
-        payerObjId: this.simplifyRoomFeeInfo.roomId,
-        payerObjType: '3333',
-        configId: this.simplifyRoomFeeInfo.configId,
-        state: this.simplifyRoomFeeInfo.state,
-        feeTypeCd: this.simplifyRoomFeeInfo.feeTypeCd
-      }
-
-      if (this.simplifyRoomFeeInfo.ownerFee === 'Y') {
-        params.payerObjId = ''
-        params.ownerId = this.simplifyRoomFeeInfo.ownerId
-      }
-
-      try {
-        const res = await listFee(params)
-        this.simplifyRoomFeeInfo.total = res.total
-        this.simplifyRoomFeeInfo.records = res.records
-        let totalAmount = 0.0
-
-        res.fees.forEach(item => {
-          const amount = parseFloat(item.amountOwed || item.oweAmount || 0)
-          if (!isNaN(amount)) {
-            totalAmount += amount
-          }
+        payerObjId: info.roomInfo.roomId,
+        payerObjType: '3333'
+      }).then(res => {
+        const rules = res.data || []
+        rules.forEach(rule => {
+          this._initRuleBills(rule)
         })
-
-        this.simplifyRoomFeeInfo.totalAmount = totalAmount.toFixed(2)
-        // 合并父子结构
-        const merged = this.simplifyRoomFeeMergeFees(res.fees)
-        this.simplifyRoomFeeInfo.fees = merged
-        this.total = res.total
-      } catch (error) {
-        console.error('Failed to fetch fee list:', error)
-      }
-    },
-    roomFeeCompare(a, b) {
-      if (a.payerObjName < b.payerObjName) return -1
-      if (a.payerObjName > b.payerObjName) return 1
-      return 0
-    },
-    toOwnerPayFee() {
-      this.$router.push({
-        path: '/views/fee/owePayFeeOrder',
-        query: {
-          payObjId: this.simplifyRoomFeeInfo.roomId,
-          payObjType: '3333',
-          roomName: this.simplifyRoomFeeInfo.roomName
-        }
+        info.rules = rules
+        info.loading = false
+        this._refreshPageData()
+      }).catch(error => {
+        info.rules = []
+        info.loading = false
+        this._refreshPageData()
+        this.$message.error(error.message || this.$t('roomFeeRuleBill.loadFailed'))
       })
     },
-    getAttrValue(attrs, specCd) {
-      const attr = attrs.find(item => item.specCd === specCd)
-      return attr ? attr.value : ""
-    },
-
-    payFee(fee) {
-      fee.roomName = this.simplifyRoomFeeInfo.roomName
-      fee.builtUpArea = this.simplifyRoomFeeInfo.builtUpArea
-      this.$router.push({
-        path: '/views/fee/payFeeOrder',
-        query: { feeId: fee.feeId }
+    loadFeeTypeCds() {
+      getDict('pay_fee_config', 'fee_type_cd').then(data => {
+        this.ruleBillInfo.feeTypeCds = data || []
+      }).catch(error => {
+        console.error('Failed to fetch fee type cds:', error)
       })
     },
-    editFee(fee) {
-      fee.maxEndTime = this.getAttrValue(fee.feeAttrs, '390010')
-      this.$refs.editFee.open(fee)
-    },
-    splitFee(fee) {
-      this.$refs.splitFee.open(fee)
-    },
-    payFeeHis(fee) {
-      fee.builtUpArea = this.simplifyRoomFeeInfo.builtUpArea
-      this.$router.push({
-        path: '/views/fee/propertyFee',
-        query: fee
-      })
-    },
-    deleteFee(fee) {
-      this.$refs.deleteFee.open({
-        communityId: getCommunityId(),
-        feeId: fee.feeId
-      })
-    },
-    finishFee(fee) {  
-      this.$refs.finishFee.open({
-        communityId: getCommunityId(),
-        feeId: fee.feeId
-      })
-    },
-    clearSimplifyRoomFeeInfo() {
-      const feeConfigs = this.simplifyRoomFeeInfo.feeConfigs
-      this.simplifyRoomFeeInfo = {
-        total: 0,
-        records: 1,
-        fees: [],
-        monthFees: [],
-        accounts: [],
-        roomId: '',
-        name: '',
-        roomName: '',
-        floorNum: '',
-        unitNum: '',
-        roomNum: '',
-        feeConfigs: feeConfigs,
-        feeTypeCd: '',
-        configId: '',
-        state: '2008001',
-        totalAmount: 0.0,
-        roomType: '',
-        ownerFee: 'N',
-        ownerId: '',
-        showFlag: 'DEFAULT'
-      }
-    },
-    changeSimplifyRoomFeeFeeTypeCd(feeTypeCd) {
-      this.simplifyRoomFeeInfo.configId = ''
-      this.$emit('notify', {})
-
+    loadFeeConfigs(feeTypeCd) {
       const params = {
         page: 1,
-        row: 50,
+        row: 500,
         communityId: getCommunityId(),
         feeTypeCd: feeTypeCd,
         isDefault: '',
         valid: '1'
       }
-
       listFeeConfigs(params).then(res => {
-        this.simplifyRoomFeeInfo.feeConfigs = res.feeConfigs
+        this.ruleBillInfo.feeConfigs = res.feeConfigs || []
       }).catch(error => {
         console.error('Failed to fetch fee configs:', error)
       })
     },
-    changeSimplifyRoomConfigId() {
-      this.$emit('notify', {})
+    handleFeeTypeChange(feeTypeCd) {
+      this.ruleBillInfo.feeTypeCd = feeTypeCd
+      this.ruleBillInfo.configId = ''
+      this.loadFeeConfigs(feeTypeCd)
+      this.handleQuery()
     },
-    simplifyRoomGetFeeOwnerInfo(attrs) {
-      const ownerName = this.getAttrValue(attrs, '390008')
-      const ownerLink = this.getAttrValue(attrs, '390009')
-      return `业主：${ownerName},电话：${ownerLink}`
+    handleConfigChange(configId) {
+      this.ruleBillInfo.configId = configId
+      this.handleQuery()
     },
-    getSimplifyRoomFeeRoomName(fee) {
-      if (this.simplifyRoomFeeInfo.ownerFee != 'Y') return ''
-
-      const attr = fee.feeAttrs.find(item => item.specCd === '390012')
-      return attr ? `(${attr.value})` : ''
+    handleStateChange(state) {
+      this.ruleBillInfo.stateFilter = state
+      this.handleQuery()
     },
-    openBatchPayRoomFeeModal() {
+    _buildFilteredRules() {
+      const info = this.ruleBillInfo
+      return info.rules.filter(item => {
+        if (info.riskOnly && !item.risk) {
+          return false
+        }
+        if (item.settled && !info.showSettled) {
+          return false
+        }
+        if (info.stateFilter && item.state !== info.stateFilter) {
+          return false
+        }
+        if (info.feeTypeCd && item.feeTypeCd !== info.feeTypeCd) {
+          return false
+        }
+        if (info.configId && item.configId !== info.configId) {
+          return false
+        }
+        return true
+      })
+    },
+    _buildRiskRules() {
+      return this.ruleBillInfo.rules.filter(item => item.risk)
+    },
+    _buildHiddenSettledList() {
+      return this.ruleBillInfo.rules.filter(item => item.settled)
+    },
+    _buildPageRows(filteredRules) {
+      const info = this.ruleBillInfo
+      const start = (info.currentPage - 1) * info.pageSize
+      return filteredRules.slice(start, start + info.pageSize)
+    },
+    _refreshPageData() {
+      const info = this.ruleBillInfo
+      const filteredRules = this._buildFilteredRules()
+      info.filteredCount = filteredRules.length
+      const maxPage = Math.max(1, Math.ceil(info.filteredCount / info.pageSize))
+      if (info.currentPage > maxPage) {
+        info.currentPage = maxPage
+      }
+      info.pageRows = this._buildPageRows(filteredRules)
+      info.riskRules = this._buildRiskRules()
+      info.riskCount = info.riskRules.length
+      info.hiddenSettledRules = this._buildHiddenSettledList()
+      info.hiddenSettledCount = info.hiddenSettledRules.length
+    },
+    _initRuleBills(rule) {
+      rule.billStateFilter = 'unpaid'
+      rule.filteredBills = this._buildRuleBills(rule)
+    },
+    _buildRuleBills(rule) {
+      const bills = rule.bills || []
+      if (rule.billStateFilter === 'paid') {
+        return bills.filter(bill => bill.billState === 'paid')
+      }
+      if (rule.billStateFilter === 'unpaid') {
+        return bills.filter(bill => bill.billState === 'unpaid' || bill.billState === 'cancelled')
+      }
+      return bills.slice(0)
+    },
+    handleBillStateFilterChange(rule, state) {
+      this.$set(rule, 'billStateFilter', state)
+      this.$set(rule, 'filteredBills', this._buildRuleBills(rule))
+    },
+    _isShowRisk() {
+      return this.ruleBillInfo.riskCount > 0 && !this.ruleBillInfo.riskIgnored
+    },
+    _emptyText() {
+      if (this.ruleBillInfo.roomInfo.roomId) {
+        return this.$t('roomFeeRuleBill.empty')
+      }
+      return this.$t('roomFeeRuleBill.selectRoomFirst')
+    },
+    _statOwe() {
+      let total = 0
+      this.ruleBillInfo.rules.forEach(item => {
+        const amount = parseFloat(item.oweAmount)
+        if (!isNaN(amount)) {
+          total += amount
+        }
+      })
+      return total.toFixed(2)
+    },
+    handleQuery() {
+      this.ruleBillInfo.currentPage = 1
+      this._refreshPageData()
+    },
+    handlePageChange(page) {
+      this.ruleBillInfo.currentPage = page
+      this._refreshPageData()
+    },
+    handleToggleSettled() {
+      const info = this.ruleBillInfo
+      info.showSettled = !info.showSettled
+      info.currentPage = 1
+      this._refreshPageData()
+    },
+    handleRiskView() {
+      const info = this.ruleBillInfo
+      info.stateFilter = ''
+      info.showSettled = false
+      info.riskOnly = true
+      info.currentPage = 1
+      this._refreshPageData()
+      this.$nextTick(() => {
+        if (!this.$refs.ruleTable) {
+          return
+        }
+        info.pageRows.forEach(row => {
+          if (row.risk) {
+            this.$refs.ruleTable.toggleRowExpansion(row, true)
+          }
+        })
+      })
+    },
+    handleRiskIgnore() {
+      this.ruleBillInfo.riskIgnored = true
+    },
+    handleRiskClear() {
+      this.ruleBillInfo.riskOnly = false
+      this.ruleBillInfo.currentPage = 1
+      this._refreshPageData()
+    },
+    handleRowClick(row, column) {
+      if (column && column.columnKey === 'operation') {
+        return
+      }
+      if (!this.$refs.ruleTable) {
+        return
+      }
+      this.$refs.ruleTable.toggleRowExpansion(row)
+    },
+    _money(value) {
+      const amount = parseFloat(value)
+      return isNaN(amount) ? '0.00' : amount.toFixed(2)
+    },
+    _dateOnly(value) {
+      if (!value) {
+        return '—'
+      }
+      return String(value).substring(0, 10)
+    },
+    _ruleDisplayName(row) {
+      if (row.syntheticOther) {
+        return this.$t('roomFeeRuleBill.syntheticName')
+      }
+      return row.feeName || '-'
+    },
+    _billDisplayName(row) {
+      return this._ruleDisplayName(row)
+    },
+    _rulePriceText(row) {
+      if (row.syntheticOther) {
+        return ''
+      }
+      const parts = []
+      if (!isNaN(parseFloat(row.squarePrice))) {
+        parts.push(this.$t('roomFeeRuleBill.unitPrice', { price: this._money(row.squarePrice) }))
+      }
+      if (!isNaN(parseFloat(row.additionalAmount))) {
+        parts.push(this.$t('roomFeeRuleBill.extraFee', { amount: this._money(row.additionalAmount) }))
+      }
+      return parts.join(' · ')
+    },
+    _ruleCycleText(row) {
+      if (row.syntheticOther) {
+        return '-'
+      }
+      const cycle = row.feeFlagName || '-'
+      return this._isMeterRule(row) ? this.$t('roomFeeRuleBill.cycleMeter', { cycle: cycle }) : cycle
+    },
+    _isMeterRule(row) {
+      return EXCLUDE_COMPUTING_FORMULAS.indexOf(row.computingFormula) >= 0
+    },
+    _stateText(row) {
+      if (row.syntheticOther) {
+        return this.$t('roomFeeRuleBill.stateNoRule')
+      }
+      if (row.state === '2008001') {
+        return this._isMeterRule(row) ? this.$t('roomFeeRuleBill.nextBillMeter') : this.$t('roomFeeRuleBill.stateDoing')
+      }
+      if (row.feeFlag !== '2006012') {
+        return this.$t('roomFeeRuleBill.stateStopped')
+      }
+      if (row.unpaidCount > 0) {
+        return this.$t('roomFeeRuleBill.stateOnceUnpaid')
+      }
+      return this.$t('roomFeeRuleBill.stateOnceSettled')
+    },
+    _stateTagType(row) {
+      if (row.syntheticOther) {
+        return 'info'
+      }
+      if (row.state === '2008001') {
+        return this._isMeterRule(row) ? 'info' : 'success'
+      }
+      return 'info'
+    },
+    _billEmptyText(row) {
+      if ((row.bills || []).length > 0) {
+        if (row.billStateFilter === 'unpaid' && row.paidCount > 0) {
+          return this.$t('roomFeeRuleBill.subEmptyPaid')
+        }
+        return this.$t('roomFeeRuleBill.billFilterEmpty')
+      }
+      if (row.billCount > 0) {
+        return this.$t('roomFeeRuleBill.subEmptyPaid')
+      }
+      return this._isMeterRule(row)
+        ? this.$t('roomFeeRuleBill.subEmptyNoBillMeter')
+        : this.$t('roomFeeRuleBill.subEmptyNoBill')
+    },
+    _findRuleByBill(bill) {
+      const rules = this.ruleBillInfo.rules
+      for (let i = 0; i < rules.length; i++) {
+        const bills = rules[i].bills || []
+        for (let j = 0; j < bills.length; j++) {
+          if (bills[j].feeId === bill.feeId) {
+            return rules[i]
+          }
+        }
+      }
+      return null
+    },
+    _checkRoom() {
+      if (!this.ruleBillInfo.roomInfo.roomId) {
+        this.$message.warning(this.$t('roomFeeRuleBill.selectRoomFirst'))
+        return false
+      }
+      return true
+    },
+    _toBatchPayFee() {
+      if (!this.ruleBillInfo.roomInfo.ownerId) {
+        this.$message.warning(this.$t('roomFeeRuleBill.selectRoomFirst'))
+        return
+      }
       this.$router.push({
         path: '/views/fee/batchPayFeeOrder',
         query: {
-          ownerId: this.simplifyRoomFeeInfo.ownerId,
+          ownerId: this.ruleBillInfo.roomInfo.ownerId,
           payerObjType: '3333'
         }
       })
     },
-    openMonthPayRoomFeeModal() {
-      this.$router.push({
-        path: '/property/payFeeMonthOrder',
-        query: {
-          payerObjId: this.simplifyRoomFeeInfo.roomId,
-          payerObjType: '3333'
-        }
-      })
-    },
-    openRoomCreateFeeComboModal() {
-      this.$router.push({
-        path: '/views/fee/createFeeByCombo',
-        query: {
-          payerObjId: this.simplifyRoomFeeInfo.roomId,
-          payerObjName: this.simplifyRoomFeeInfo.roomName,
-          payerObjType: '3333'
-        }
-      })
-    },
-    viewRoomFeeConfig(fee) {
-      const params = {
-        page: 1,
-        row: 1,
-        communityId: getCommunityId(),
-        configId: fee.configId
+    _toPrePayFee() {
+      if (!this._checkRoom()) {
+        return
       }
-
-      listFeeConfigs(params).then(res => {
-        const feeConfig = res.feeConfigs[0]
-        this.$emit('openViewDataModal', {
-          title: `${fee.feeName} 费用项`,
-          data: {
-            "费用项ID": feeConfig.configId,
-            "费用类型": feeConfig.feeTypeCdName,
-            "收费项目": feeConfig.feeName,
-            "费用标识": feeConfig.feeFlagName,
-            "催缴类型": feeConfig.billTypeName,
-            "付费类型": feeConfig.paymentCd == '1200' ? '预付费' : '后付费',
-            "缴费周期": feeConfig.paymentCycle,
-            "应收开始时间": feeConfig.startTime,
-            "应收结束时间": feeConfig.endTime,
-            "公式": feeConfig.computingFormulaName,
-            "计费单价": feeConfig.computingFormula == '2002' ? '-' : feeConfig.squarePrice,
-            "附加/固定费用": feeConfig.additionalAmount
-          }
+      this.$router.push({
+        path: '/views/fee/prePayFeeOrder',
+        query: {
+          payerObjId: this.ruleBillInfo.roomInfo.roomId,
+          payerObjType: '3333'
+        }
+      })
+    },
+    _openRoomCreateFeeAdd() {
+      if (!this._checkRoom()) {
+        return
+      }
+      if (this.$refs.roomCreateFeeAdd) {
+        this.$refs.roomCreateFeeAdd.open({
+          isMore: false,
+          roomId: this.ruleBillInfo.roomInfo.roomId,
+          roomName: this.ruleBillInfo.roomInfo.roomName,
+          ownerName: this.ruleBillInfo.roomInfo.ownerName
         })
-      }).catch(error => {
-        console.error('Failed to fetch fee config:', error)
-      })
-    },
-    viewRoomFee(fee) {
-      const data = {
-        "费用ID": fee.feeId,
-        "费用标识": fee.feeFlagName,
-        "费用类型": fee.feeTypeCdName,
-        "付费对象": fee.payerObjName,
-        "费用项": fee.feeName,
-        "费用状态": fee.stateName,
-        "建账时间": fee.startTime,
-        "应收开始时间": this.getEndTime(fee),
-        "应收结束时间": this.getDeadlineTime(fee),
-        "批次": fee.batchId
       }
-
-      fee.feeAttrs.forEach(attr => {
-        data[attr.specCdName] = attr.value
+    },
+    _openTempRoomFee() {
+      if (!this._checkRoom()) {
+        return
+      }
+      if (this.$refs.tempImportRoomFee) {
+        this.$refs.tempImportRoomFee.open({
+          roomId: this.ruleBillInfo.roomInfo.roomId,
+          roomName: this.ruleBillInfo.roomInfo.roomName,
+          ownerName: this.ruleBillInfo.roomInfo.ownerName
+        })
+      }
+    },
+    _openProxyFee() {
+      if (!this._checkRoom()) {
+        return
+      }
+      if (this.$refs.addProxyFee) {
+        this.$refs.addProxyFee.open({
+          roomId: this.ruleBillInfo.roomInfo.roomId,
+          roomName: this.ruleBillInfo.roomInfo.roomName,
+          ownerName: this.ruleBillInfo.roomInfo.ownerName
+        })
+      }
+    },
+    _openAddMeterWater() {
+      if (!this._checkRoom()) {
+        return
+      }
+      if (this.$refs.addMeterWater) {
+        this.$refs.addMeterWater.open({
+          roomId: this.ruleBillInfo.roomInfo.roomId,
+          roomName: this.ruleBillInfo.roomInfo.roomName,
+          ownerName: this.ruleBillInfo.roomInfo.ownerName
+        })
+      }
+    },
+    _feeHis(bill) {
+      if (!bill) {
+        return
+      }
+      this.$router.push({
+        path: '/views/fee/feeDetail',
+        query: { feeId: bill.feeId }
       })
-
-      this.$emit('openViewDataModal', {
-        title: `${fee.feeName} 详情`,
-        data: data
+    },
+    _cancelBill(bill) {
+      if (!bill || !this.$refs.cancelFee) {
+        return
+      }
+      this.$refs.cancelFee.open({
+        rule: this._findRuleByBill(bill) || {},
+        bill: bill
       })
     },
-    handleCurrentChange(page) {
-      this.currentPage = page
-      this.listSimplifyRoomFee(page, this.pageSize)
+    _finishRule(rule) {
+      if (this.$refs.finishFeeRule) {
+        this.$refs.finishFeeRule.open({
+          ruleId: rule.ruleId,
+          communityId: getCommunityId()
+        })
+      }
     },
-    dateFormat,
-    formatRemark(remark) {
-      if (!remark || remark === '-') return '-'
-      return remark.replace(/\n/g, '<br/>')
+    _deleteRule(rule) {
+      if (this.$refs.deleteFeeRule) {
+        this.$refs.deleteFeeRule.open({
+          ruleId: rule.ruleId,
+          communityId: getCommunityId()
+        })
+      }
     },
-    getValidAmount(amount) {
-      const num = parseFloat(amount)
-      return isNaN(num) ? '0.00' : num.toFixed(2)
+    _editRule(rule) {
+      if (this.$refs.editFeeRule) {
+        this.$refs.editFeeRule.open(rule)
+      }
+    },
+    _editFee(bill) {
+      if (!bill) {
+        return
+      }
+      if (this.$refs.editFee) {
+        this.$refs.editFee.open(bill)
+      }
+    },
+    _splitFee(bill) {
+      if (!bill) {
+        return
+      }
+      if (this.$refs.splitFee) {
+        this.$refs.splitFee.open(bill)
+      }
+    },
+    _preGenerateFee(rule) {
+      const communityId = getCommunityId()
+      queryPreGenerateFeePeriods({
+        communityId: communityId,
+        ruleId: rule.ruleId
+      }).then(res => {
+        const data = res.data
+        if (!data) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        if (data.feeFlag === '2006012') {
+          this.$confirm(this.$t('simplifyRoomFee.preGenerateConfirmTip'), this.$t('simplifyRoomFee.preGenerate'), {
+            confirmButtonText: this.$t('common.confirm'),
+            cancelButtonText: this.$t('common.cancel'),
+            type: 'warning'
+          }).then(() => {
+            preGenerateFeeApi({
+              communityId: communityId,
+              ruleId: rule.ruleId,
+              periods: []
+            }).then(response => {
+              this.$message.success(this.$t('simplifyRoomFee.preGenerateSuccess', { count: response.data }))
+              this.loadData()
+            }).catch(error => {
+              this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
+            })
+          }).catch(() => {})
+          return
+        }
+        if (!data.periods || data.periods.length < 1) {
+          this.$message.warning(this.$t('simplifyRoomFee.noAvailablePeriod'))
+          return
+        }
+        if (this.$refs.preGenerateFee) {
+          this.$refs.preGenerateFee.open({
+            communityId: communityId,
+            ruleId: rule.ruleId,
+            feeName: rule.feeName,
+            endTime: data.endTime,
+            periods: data.periods
+          })
+        }
+      }).catch(error => {
+        this.$message.error(error.message || this.$t('simplifyRoomFee.preGenerateFailed'))
+      })
     }
-    // 其他方法类似
   }
 }
 </script>
 
 <style scoped>
-.margin-top-lg {
-  margin-top: 20px;
+.simplify-room-fee {
+  margin-top: 10px;
 }
 
-.margin-top {
-  margin-top: 15px;
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
 
-.text-right {
-  text-align: right;
+.risk-filter-tag {
+  margin-right: 8px;
 }
 
-.hand {
+.fee-type-select {
+  width: 130px;
+  margin-right: 8px;
+}
+
+.fee-item-select {
+  width: 150px;
+  margin-right: 8px;
+}
+
+.state-select {
+  width: 110px;
+  margin-right: 8px;
+}
+
+.tool-buttons {
+  margin-left: auto;
+}
+
+.risk-alert {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: #fdf6ec;
+  border: 1px solid #faecd8;
+  border-radius: 4px;
+}
+
+.risk-icon {
+  margin-right: 8px;
+  font-size: 16px;
+  line-height: 20px;
+  color: #e6a23c;
+}
+
+.risk-body {
+  flex: 1;
+}
+
+.risk-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #b88230;
+}
+
+.risk-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #909399;
+}
+
+.risk-actions {
+  margin-top: 8px;
+}
+
+.stat-owe {
+  color: #f56c6c;
+}
+
+.text-meter {
+  color: #8b5cf6;
+}
+
+.tag-meter {
+  color: #8b5cf6;
+  background: #f5f3ff;
+  border-color: #ede9fe;
+}
+
+.cell-main {
+  color: #303133;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-name {
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+.cell-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #909399;
+}
+
+.cell-badge {
+  margin-left: 6px;
+}
+
+.text-muted {
+  color: #c0c4cc;
+}
+
+.text-danger {
+  color: #f56c6c;
+}
+
+.op-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  gap: 8px;
+}
+
+.op-cell .el-button + .el-button {
+  margin-left: 6px;
+}
+
+.more-link {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #409eff;
   cursor: pointer;
 }
 
-/* table UI 优化：贴近 el-table 风格 */
-::v-deep .el-table thead th {
-  background-color: #fff !important;     /* 白底表头 */
-  color: #606266 !important;            /* Element 默认文字色 */
-  font-weight: 500;                      /* 更接近 el-table 的字重 */
-  border-bottom: 1px solid #ebeef5 !important;
-  height: 48px;                          /* 提高表头高度 */
-  line-height: 48px;                     /* 垂直居中 */
+.bill-remark {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #606266;
+  white-space: pre-line;
 }
 
-::v-deep .el-table tbody td {
-  border-top: none;                      /* 避免形成双线 */
-  border-bottom: 1px solid #ebeef5;      /* 行分隔线与 el-table 接近 */
+.settled-row {
+  padding: 12px 0;
+  text-align: center;
+  border-top: 1px solid #f1f5f9;
 }
 
-::v-deep .el-table {
-  border: 1px solid #ebeef5;             /* 外框单线 */
-  border-collapse: collapse;              /* 合并边框，避免双线 */
+.settled-text {
+  font-size: 12px;
+  color: #909399;
 }
 
-.multiline-text {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.4;
+.tag-state {
+  border-radius: 10px;
+}
+
+.tag-state::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 4px;
+  vertical-align: middle;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.rule-table ::v-deep tbody tr {
+  cursor: pointer;
+}
+
+.rule-table ::v-deep th.el-table__cell {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.rule-table ::v-deep td.el-table__cell {
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rule-table ::v-deep .el-table__expanded-cell {
+  padding: 10px 12px 12px;
+  background: #f8fafc;
+}
+
+.bill-table ::v-deep th.el-table__cell {
+  font-size: 11px;
+  font-weight: 400;
+  color: #909399;
+  background: #fff;
+}
+
+.bill-table ::v-deep td.el-table__cell {
+  font-size: 12px;
+  border-bottom: 1px solid #f7f8fa;
+}
+
+.bill-panel {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+}
+
+.bill-panel-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bill-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.bill-panel-count {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.bill-state-filter {
+  width: 110px;
+  margin-left: auto;
+}
+
+.bill-panel-empty {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #909399;
+}
+
+.footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 12px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #909399;
+  border-top: 1px solid #ebeef5;
+}
+
+.footer-stat {
+  display: flex;
+  align-items: baseline;
+  margin-right: 18px;
+}
+
+.footer-stat-label {
+  margin-right: 6px;
+  color: #909399;
+}
+
+.footer-stat-value {
+  font-weight: 600;
+  color: #303133;
+}
+
+.footer-stat-owe .footer-stat-value {
+  color: #f56c6c;
+}
+
+.footer-total {
+  margin-right: 8px;
 }
 </style>

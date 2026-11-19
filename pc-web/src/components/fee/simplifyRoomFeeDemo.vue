@@ -13,7 +13,7 @@ export default {
     SimplifyRoomFee
   },
   mounted() {
-    this.$refs.simplifyRoomFee.$emit('switch', {
+    this.$refs.simplifyRoomFee.open({
       roomId: '123',
       roomName: '测试房间',
       name: '测试业主'

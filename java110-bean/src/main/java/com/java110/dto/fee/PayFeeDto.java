@@ -49,6 +49,9 @@ public class PayFeeDto extends PageDto implements Serializable {
 
     private String remark;
 
+    private String feeRemark;
+
+
     private String ftId;
 
     private String feeTime;
@@ -261,6 +264,15 @@ public class PayFeeDto extends PageDto implements Serializable {
     public void setRemark(String remark) {
         this.remark = remark;
     }
+
+    public String getFeeRemark() {
+        return feeRemark;
+    }
+
+    public void setFeeRemark(String feeRemark) {
+        this.feeRemark = feeRemark;
+    }
+
 
     public String getFtId() {
         return ftId;
