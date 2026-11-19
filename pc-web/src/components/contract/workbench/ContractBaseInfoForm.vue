@@ -66,7 +66,7 @@
       </el-col>
       <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.partyB')" required>
-          <el-input v-model="form.partyB" :disabled="isRent">
+          <el-input v-model="form.partyB" :readonly="isRent">
             <el-button v-if="isRent" slot="append" size="mini" @click="$emit('select-owner')">
               {{ $t('common.choose') }}
             </el-button>

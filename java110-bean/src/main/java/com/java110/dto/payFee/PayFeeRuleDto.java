@@ -2,9 +2,11 @@ package com.java110.dto.payFee;
 
 import com.java110.dto.PageDto;
 import com.java110.dto.fee.FeeConfigDto;
+import com.java110.dto.fee.PayFeeDto;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @ClassName FloorDto
@@ -51,6 +53,29 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
     private String remark;
 
     private String feeRemark;
+
+    private List<PayFeeDto> bills;
+
+    private int billCount;
+
+    private int unpaidCount;
+
+    private int paidCount;
+
+    private int cancelledCount;
+
+    private String receivableAmount;
+
+    private String receivedAmount;
+
+    private String oweAmount;
+
+    private boolean settled;
+
+    private boolean risk;
+
+    private boolean syntheticOther;
+
 
 
     public String getMaxTime() {
@@ -270,5 +295,93 @@ public class PayFeeRuleDto extends FeeConfigDto implements Serializable {
 
     public void setFeeRemark(String feeRemark) {
         this.feeRemark = feeRemark;
+    }
+
+    public List<PayFeeDto> getBills() {
+        return bills;
+    }
+
+    public void setBills(List<PayFeeDto> bills) {
+        this.bills = bills;
+    }
+
+    public int getBillCount() {
+        return billCount;
+    }
+
+    public void setBillCount(int billCount) {
+        this.billCount = billCount;
+    }
+
+    public int getUnpaidCount() {
+        return unpaidCount;
+    }
+
+    public void setUnpaidCount(int unpaidCount) {
+        this.unpaidCount = unpaidCount;
+    }
+
+    public int getPaidCount() {
+        return paidCount;
+    }
+
+    public void setPaidCount(int paidCount) {
+        this.paidCount = paidCount;
+    }
+
+    public int getCancelledCount() {
+        return cancelledCount;
+    }
+
+    public void setCancelledCount(int cancelledCount) {
+        this.cancelledCount = cancelledCount;
+    }
+
+    public String getReceivableAmount() {
+        return receivableAmount;
+    }
+
+    public void setReceivableAmount(String receivableAmount) {
+        this.receivableAmount = receivableAmount;
+    }
+
+    public String getReceivedAmount() {
+        return receivedAmount;
+    }
+
+    public void setReceivedAmount(String receivedAmount) {
+        this.receivedAmount = receivedAmount;
+    }
+
+    public String getOweAmount() {
+        return oweAmount;
+    }
+
+    public void setOweAmount(String oweAmount) {
+        this.oweAmount = oweAmount;
+    }
+
+    public boolean isSettled() {
+        return settled;
+    }
+
+    public void setSettled(boolean settled) {
+        this.settled = settled;
+    }
+
+    public boolean isRisk() {
+        return risk;
+    }
+
+    public void setRisk(boolean risk) {
+        this.risk = risk;
+    }
+
+    public boolean isSyntheticOther() {
+        return syntheticOther;
+    }
+
+    public void setSyntheticOther(boolean syntheticOther) {
+        this.syntheticOther = syntheticOther;
     }
 }

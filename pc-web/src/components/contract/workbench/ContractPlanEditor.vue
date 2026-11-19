@@ -1,9 +1,8 @@
 <template>
   <div>
     <div class="cc-toolbar">
-      <span v-if="!isRent" class="cc-toolbar-label">{{ $t('contractWorkbench.plan.mode') }}</span>
+      <span class="cc-toolbar-label">{{ $t('contractWorkbench.plan.mode') }}</span>
       <el-select
-        v-if="!isRent"
         style="width: 180px"
         v-model="modeValue"
         :placeholder="$t('contractWorkbench.plan.modePlaceholder')"
@@ -84,15 +83,11 @@ import {
   sumAmount,
   sumRatio
 } from '@/utils/contractPlanUtil'
-import { formatAmount, toNumber, CONTRACT_CATEGORY } from '@/utils/contractUtil'
+import { formatAmount, toNumber } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractPlanEditor',
   props: {
-    category: {
-      type: [String, Number],
-      default: CONTRACT_CATEGORY.PURCHASE
-    },
     plans: {
       type: Array,
       default: function () {
@@ -123,9 +118,6 @@ export default {
     }
   },
   computed: {
-    isRent() {
-      return String(this.category) === CONTRACT_CATEGORY.RENT
-    },
     ratioTotal() {
       return sumRatio(this.plans)
     },

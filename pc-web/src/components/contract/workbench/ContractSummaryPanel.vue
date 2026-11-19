@@ -14,7 +14,7 @@
         <span class="cc-kv-label">{{ $t('contractWorkbench.summary.targetCount') }}</span>
         <span class="cc-kv-value">{{ targetCount }}</span>
       </div>
-      <div class="cc-kv">
+      <div v-if="!isRent" class="cc-kv">
         <span class="cc-kv-label">{{ $t('contractWorkbench.summary.planCount') }}</span>
         <span class="cc-kv-value">{{ planCount }}</span>
       </div>
@@ -92,6 +92,9 @@ export default {
     }
   },
   computed: {
+    isRent() {
+      return String((this.form || {}).category) === CONTRACT_CATEGORY.RENT
+    },
     integrityItems() {
       const form = this.form || {}
       const isRent = String(form.category) === CONTRACT_CATEGORY.RENT

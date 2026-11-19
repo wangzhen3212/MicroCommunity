@@ -164,6 +164,10 @@ export default {
       }
     },
     open() {
+      if (!this.rooms.length) {
+        this.$message.warning(this.$t('contractWorkbench.msg.roomFirst'))
+        return
+      }
       this.visible = true
       this.form = this.createEmptyForm()
       this.feeConfigs = []
@@ -228,6 +232,10 @@ export default {
         }
         if (this.isManual && !this.form.manualAmount) {
           this.$message.warning(this.$t('contractWorkbench.msg.feeAmountEmpty'))
+          return
+        }
+        if (!this.isManual && this.estimate <= 0) {
+          this.$message.warning(this.$t('contractWorkbench.msg.feeBaseEmpty'))
           return
         }
         this.$emit('confirm', {

@@ -34,6 +34,10 @@
                 <i class="el-icon-plus"></i>
                 {{ $t('roomCreateFee.batchCreate') }}
               </el-button>
+              <el-button v-if="hasPrivilege('502022073096990007')" type="primary" size="small" @click="_openRoomFeeRuleSet">
+                <i class="el-icon-setting"></i>
+                {{ $t('roomFeeRuleSet.entry') }}
+              </el-button>
               <el-button size="small" @click="_downloadCollectionLetterOrder">
                 <i class="el-icon-download"></i>
                 {{ $t('roomCreateFee.batchCollectionLetter') }}
@@ -71,9 +75,9 @@
           </div>
 
           <el-tabs v-model="roomCreateFeeInfo._currentTab" @tab-click="changeTab(roomCreateFeeInfo._currentTab)">
-            <el-tab-pane :label="$t('roomCreateFee.roomFee')" name="simplifyRoomFee">
-              <simplify-room-fee v-if="roomCreateFeeInfo._currentTab === 'simplifyRoomFee'" ref="simplifyRoomFee"
-                :key="'simplifyRoomFee' + roomCreateFeeInfo.roomId"></simplify-room-fee>
+            <el-tab-pane :label="$t('roomCreateFee.roomFee')" name="roomFeeRuleBill">
+              <room-fee-rule-bill-list v-if="roomCreateFeeInfo._currentTab === 'roomFeeRuleBill'" ref="roomFeeRuleBill"
+                :key="'roomFeeRuleBill' + roomCreateFeeInfo.roomId"></room-fee-rule-bill-list>
             </el-tab-pane>
             <el-tab-pane v-if="roomCreateFeeInfo.ownerId" :label="$t('roomCreateFee.paymentHistory')"
               name="simplifyHisFee">
@@ -83,10 +87,6 @@
             <el-tab-pane :label="$t('roomCreateFee.prePayFee')" name="prePayFeeDetail">
               <pre-pay-fee-detail v-if="roomCreateFeeInfo._currentTab === 'prePayFeeDetail'" ref="prePayFeeDetail"
                 :key="'prePayFeeDetail' + roomCreateFeeInfo.roomId"></pre-pay-fee-detail>
-            </el-tab-pane>
-            <el-tab-pane :label="$t('roomCreateFee.billingRules')" name="feeDetailFeeRule">
-              <fee-detail-fee-rule v-if="roomCreateFeeInfo._currentTab === 'feeDetailFeeRule'" ref="feeDetailFeeRule"
-                :key="'feeDetailFeeRule' + roomCreateFeeInfo.roomId"></fee-detail-fee-rule>
             </el-tab-pane>
             <el-tab-pane v-if="roomCreateFeeInfo.ownerId" :label="$t('roomCreateFee.rooms')" name="simplifyOwnerRooms">
               <simplify-owner-rooms v-if="roomCreateFeeInfo._currentTab === 'simplifyOwnerRooms'"
@@ -140,8 +140,8 @@
 import RoomTreeDivHasOwner from '@/components/room/roomTreeDivHasOwner'
 import InputSearchRoom from '@/components/fee/inputSearchRoom'
 import InputSearchRoomByOwner from '@/components/fee/inputSearchRoomByOwner'
-import SimplifyRoomFee from '@/components/fee/simplifyRoomFee'
 import SimplifyHisFee from '@/components/fee/simplifyHisFee'
+import RoomFeeRuleBillList from '@/components/fee/roomFeeRuleBillList'
 import SimplifyOwnerRooms from '@/components/fee/simplifyOwnerRooms'
 import CarDetailOwner from '@/components/fee/carDetailOwner'
 import SimplifyCallable from '@/components/fee/simplifyCallable'
@@ -150,7 +150,6 @@ import SimplifyMeterWaterLog from '@/components/fee/simplifyMeterWaterLog'
 import SimplifyRefundDeposit from '@/components/fee/simplifyRefundDeposit'
 import RoomInvoiceApply from '@/components/fee/roomInvoiceApply'
 import RoomInvoiceRed from '@/components/fee/roomInvoiceRed'
-import FeeDetailFeeRule from '@/components/fee/feeDetailFeeRule'
 import PrePayFeeDetail from '@/components/fee/prePayFeeDetail'
 
 import ExportFeeImportExcel from '@/components/fee/exportFeeImportExcel'
@@ -165,8 +164,8 @@ export default {
     RoomTreeDivHasOwner,
     InputSearchRoom,
     InputSearchRoomByOwner,
-    SimplifyRoomFee,
     SimplifyHisFee,
+    RoomFeeRuleBillList,
     SimplifyOwnerRooms,
     CarDetailOwner,
     SimplifyCallable,
@@ -176,7 +175,6 @@ export default {
     SimplifyRefundDeposit,
     RoomInvoiceApply,
     RoomInvoiceRed,
-    FeeDetailFeeRule,
 
     ExportFeeImportExcel,
     DoImportCreateFee,
@@ -191,7 +189,7 @@ export default {
         ownerId: '',
         ownerName: '',
         roomType: '',
-        _currentTab: 'simplifyRoomFee',
+        _currentTab: 'roomFeeRuleBill',
         condition: {
           roomNum: '',
           ownerName: ''
@@ -277,7 +275,7 @@ export default {
         const response = await queryRooms(param)
         const room = response.rooms[0]
         Object.assign(this.roomCreateFeeInfo, room)
-        this.changeTab('simplifyRoomFee')
+        this.changeTab('roomFeeRuleBill')
       } catch (error) {
         console.error('Request failed:', error)
       }
@@ -304,7 +302,7 @@ export default {
       this.roomCreateFeeInfo.ownerId = ''
       this.roomCreateFeeInfo.condition.ownerName = ''
       this.roomCreateFeeInfo.condition.roomNum = ''
-      this.changeTab('simplifyRoomFee')
+      this.changeTab('roomFeeRuleBill')
     },
     changeTab(tab) {
       this.roomCreateFeeInfo._currentTab = tab
@@ -320,10 +318,27 @@ export default {
             payerObjId: this.roomCreateFeeInfo.roomId,
             payerObjName: this.roomCreateFeeInfo.roomName,
             roomId: this.roomCreateFeeInfo.roomId,
-            roomName: this.roomCreateFeeInfo.roomName
+            roomName: this.roomCreateFeeInfo.roomName,
+            roomType: this.roomCreateFeeInfo.roomType,
+            roomSubTypeName: this.roomCreateFeeInfo.roomSubTypeName,
+            stateName: this.roomCreateFeeInfo.stateName,
+            link: this.roomCreateFeeInfo.link,
+            builtUpArea: this.roomCreateFeeInfo.builtUpArea
           })
         }
       }, 500)
+    },
+    _openRoomFeeRuleSet() {
+      if (!this.roomCreateFeeInfo.roomId) {
+        this.$message.warning(this.$t('roomFeeRuleBill.selectRoomFirst'))
+        return
+      }
+      this.changeTab('roomFeeRuleBill')
+      setTimeout(() => {
+        if (this.$refs.roomFeeRuleBill) {
+          this.$refs.roomFeeRuleBill.openRuleSet()
+        }
+      }, 600)
     },
     _roomCreateFeetoSimplifyAcceptance() {
 

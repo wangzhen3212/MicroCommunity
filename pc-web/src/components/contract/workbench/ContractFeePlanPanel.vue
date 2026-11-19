@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="isRent" class="cc-fee-panel">
+    <div v-if="isRent && hasRooms" class="cc-fee-panel">
       <div class="cc-fee-toolbar">
         <span class="cc-section-sub">{{ $t('contractWorkbench.plan.feeTitle') }}</span>
         <el-button size="mini" type="primary" @click="openFeeDialog">
@@ -79,8 +79,16 @@
       />
     </div>
 
+    <el-alert
+      v-else-if="isRent"
+      type="info"
+      :closable="false"
+      show-icon
+      :title="$t('contractWorkbench.msg.roomFirst')"
+    />
+
     <contract-plan-editor
-      :category="category"
+      v-if="!isRent"
       :plans="plans"
       :amount="amount"
       :start-time="startTime"
@@ -152,6 +160,9 @@ export default {
   computed: {
     isRent() {
       return String(this.category) === CONTRACT_CATEGORY.RENT
+    },
+    hasRooms() {
+      return this.rooms.length > 0
     },
     feeTotal() {
       return sumFeeTotal(this.fees)

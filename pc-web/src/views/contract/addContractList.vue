@@ -46,12 +46,21 @@
                 @template-change="handleTemplateChange"
                 @partya-change="handlePartyaChange"
                 @amount-change="handleAmountChange"
+                @select-owner="openOwnerPicker"
               />
             </el-form>
+            <el-alert
+              v-if="!hasTemplate"
+              class="cc-wb-alert"
+              type="info"
+              :closable="false"
+              show-icon
+              :title="$t('contractWorkbench.msg.templateFirst')"
+            />
           </div>
         </div>
 
-        <div class="cc-panel">
+        <div v-if="hasTemplate" class="cc-panel">
           <div class="cc-panel-head">
             <span class="cc-panel-index">02</span>
             <h4 class="cc-panel-title">{{ sectionTargetTitle }}</h4>
@@ -73,10 +82,10 @@
           </div>
         </div>
 
-        <div class="cc-panel">
+        <div v-if="hasTemplate" class="cc-panel">
           <div class="cc-panel-head">
             <span class="cc-panel-index">03</span>
-            <h4 class="cc-panel-title">{{ $t('contractWorkbench.section.plan') }}</h4>
+            <h4 class="cc-panel-title">{{ sectionPlanTitle }}</h4>
           </div>
           <div class="cc-panel-body">
             <contract-fee-plan-panel
@@ -136,6 +145,7 @@
     </div>
 
     <contract-house-dialog ref="houseDialog" @choose="handleChooseRooms" />
+    <search-owner ref="ownerPicker" @chooseOwner="handleChooseOwner" />
     <contract-template-preview ref="templatePreview" />
   </div>
 </template>
@@ -149,6 +159,7 @@ import ContractDocEditor from '@/components/contract/workbench/ContractDocEditor
 import ContractFilePanel from '@/components/contract/workbench/ContractFilePanel'
 import ContractSummaryPanel from '@/components/contract/workbench/ContractSummaryPanel'
 import ContractTemplatePreview from '@/components/contract/contractTemplatePreview'
+import SearchOwner from '@/components/owner/SearchOwner'
 import { queryContract } from '@/api/contract/contractManageApi'
 import { queryContractPartya } from '@/api/contract/contractPartyaApi'
 import { listContractTemplates, queryContractTypeTemplate } from '@/api/contract/contractTemplateApi'
@@ -177,7 +188,8 @@ export default {
     ContractDocEditor,
     ContractFilePanel,
     ContractSummaryPanel,
-    ContractTemplatePreview
+    ContractTemplatePreview,
+    SearchOwner
   },
   data() {
     return {
@@ -187,6 +199,7 @@ export default {
       loading: false,
       dirty: false,
       initializing: true,
+      hadRooms: false,
       partyas: [],
       templates: [],
       templateContent: '',
@@ -241,10 +254,21 @@ export default {
     isRent() {
       return String(this.form.category) === CONTRACT_CATEGORY.RENT
     },
+    hasTemplate() {
+      return !!this.form.templateId
+    },
+    hasRooms() {
+      return this.rooms.length > 0
+    },
     sectionTargetTitle() {
       return this.isRent
         ? this.$t('contractWorkbench.section.targetRent')
         : this.$t('contractWorkbench.section.target')
+    },
+    sectionPlanTitle() {
+      return this.isRent
+        ? this.$t('contractWorkbench.section.planRent')
+        : this.$t('contractWorkbench.section.planPay')
     },
     feeContext() {
       return {
@@ -377,7 +401,9 @@ export default {
         remark: '',
         state: '',
         objType: '1111',
-        objId: '-1'
+        objId: '-1',
+        objPersonId: '',
+        objPersonName: ''
       }
     },
     loadBaseData() {
@@ -514,17 +540,30 @@ export default {
       })
     },
     handleTemplateChange(templateId) {
+      const previousCategory = String(this.form.category || '')
       if (!templateId) {
+        this.form.category = ''
         this.templateContent = ''
+        this.rooms = []
+        this.fees = []
+        this.targets = []
+        this.plans = []
+        this.form.amount = ''
         return
       }
       queryContractTypeTemplate({ templateId, page: 1, row: 1 }).then(list => {
         const template = (list || [])[0]
         if (!template) {
           this.templateContent = ''
+          this.handleGenerateCode()
           return
         }
-        this.form.category = guessCategory(template)
+        if (!template.category) {
+          this.$message.warning(this.$t('contractWorkbench.msg.templateCategoryEmpty'))
+        }
+        const nextCategory = guessCategory(template)
+        this.applyCategorySwitch(previousCategory, nextCategory)
+        this.form.category = nextCategory
         this.handleGenerateCode()
         this.templateContent = template.context || ''
         if (this.templateContent && !this.content) {
@@ -533,6 +572,21 @@ export default {
       }).catch(() => {
         this.templateContent = ''
       })
+    },
+    applyCategorySwitch(previousCategory, nextCategory) {
+      const wasRent = String(previousCategory) === CONTRACT_CATEGORY.RENT
+      const isRent = String(nextCategory) === CONTRACT_CATEGORY.RENT
+      if (wasRent === isRent) {
+        return
+      }
+      if (isRent) {
+        this.targets = []
+        this.plans = []
+        this.form.payMode = ''
+        return
+      }
+      this.rooms = []
+      this.fees = []
     },
     handlePartyaChange(partyaId) {
       const matched = this.partyas.filter(item => item.partyaId === partyaId)[0]
@@ -547,6 +601,24 @@ export default {
     handleAmountChange(amount) {
       this.form.amount = amount
     },
+    openOwnerPicker() {
+      if (this.$refs.ownerPicker) {
+        this.$refs.ownerPicker.open()
+      }
+    },
+    handleChooseOwner(owner) {
+      if (!owner) {
+        return
+      }
+      const ownerName = owner.name || ''
+      this.form.partyB = ownerName
+      this.form.bLink = owner.link || ''
+      if (!this.form.bContacts) {
+        this.form.bContacts = ownerName
+      }
+      this.form.objPersonId = owner.ownerId || owner.memberId || ''
+      this.form.objPersonName = ownerName
+    },
     handlePlanChange(plans) {
       this.plans = plans
       this.dirty = true
@@ -556,7 +628,19 @@ export default {
     },
     recalcFeeRows(force) {
       recalcFees(this.fees, this.feeContext)
-      if (this.isRent && (this.fees.length || force)) {
+      if (!this.isRent) {
+        this.hadRooms = this.hasRooms
+        return
+      }
+      if (!this.hasRooms) {
+        if (this.hadRooms || force) {
+          this.form.amount = '0.00'
+        }
+        this.hadRooms = false
+        return
+      }
+      this.hadRooms = true
+      if (this.fees.length || force) {
         this.form.amount = this.includeFeeTotal.toFixed(2)
       }
     },
@@ -623,7 +707,7 @@ export default {
         ...this.form,
         state: state,
         rooms: this.rooms,
-        plans: this.plans,
+        plans: this.isRent ? [] : this.plans,
         targets: this.targets,
         fees: this.fees,
         content: this.content,
@@ -894,6 +978,10 @@ export default {
 
   .cc-wb-form ::v-deep .el-form-item.is-required .el-form-item__label::before {
     margin-right: 2px;
+  }
+
+  .cc-wb-alert {
+    margin-top: 2px;
   }
 
   @media (max-width: 1280px) {

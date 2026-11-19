@@ -53,6 +53,14 @@ public class PayFeeDto extends PageDto implements Serializable {
 
     private String feeTime;
 
+    private String feeName;
+
+    private String yearMonth;
+
+    private String receivedAmount;
+
+    private String billState;
+
     public String[] getFeeIds() {
         return feeIds;
     }
@@ -268,5 +276,37 @@ public class PayFeeDto extends PageDto implements Serializable {
 
     public void setFeeTime(String feeTime) {
         this.feeTime = feeTime;
+    }
+
+    public String getFeeName() {
+        return feeName;
+    }
+
+    public void setFeeName(String feeName) {
+        this.feeName = feeName;
+    }
+
+    public String getYearMonth() {
+        return yearMonth;
+    }
+
+    public void setYearMonth(String yearMonth) {
+        this.yearMonth = yearMonth;
+    }
+
+    public String getReceivedAmount() {
+        return receivedAmount;
+    }
+
+    public void setReceivedAmount(String receivedAmount) {
+        this.receivedAmount = receivedAmount;
+    }
+
+    public String getBillState() {
+        return billState;
+    }
+
+    public void setBillState(String billState) {
+        this.billState = billState;
     }
 }

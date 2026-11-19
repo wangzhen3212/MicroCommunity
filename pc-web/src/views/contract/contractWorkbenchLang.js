@@ -20,6 +20,8 @@ export const messages = {
         target: 'Related Targets',
         targetRent: 'Leased Houses',
         plan: 'Fee Composition & Payment Plan',
+        planRent: 'Fee Composition',
+        planPay: 'Payment Plan',
         doc: 'Contract Text',
         file: 'Attachments'
       },
@@ -193,7 +195,11 @@ export const messages = {
         amountEmpty: 'Please fill the contract amount first',
         amountAuto: 'Contract amount is the total of included fee items',
         feeAmountEmpty: 'Please fill the fee amount',
-        codeEmpty: 'Please generate the contract code first'
+        codeEmpty: 'Please generate the contract code first',
+        templateFirst: 'Select a contract template first; related houses/targets and fees will show by template category',
+        roomFirst: 'Add houses in "Leased Houses" first so fees can be calculated automatically',
+        feeBaseEmpty: 'Houses lack area/rent, unable to calculate by this fee item; complete house data or fill the amount manually',
+        templateCategoryEmpty: 'This template has no category and is treated as purchase; please maintain the category in contract templates'
       }
     }
   },
@@ -218,6 +224,8 @@ export const messages = {
         target: '关联标的',
         targetRent: '关联出租房屋',
         plan: '费用构成与收款计划',
+        planRent: '费用构成',
+        planPay: '收款计划',
         doc: '合同正文',
         file: '附件'
       },
@@ -391,7 +399,11 @@ export const messages = {
         amountEmpty: '请先填写合同金额',
         amountAuto: '合同金额自动取费用构成中计入项合计',
         feeAmountEmpty: '请填写费用金额',
-        codeEmpty: '请先生成合同编号'
+        codeEmpty: '请先生成合同编号',
+        templateFirst: '请先选择合同模板，选择后将按模板分类显示关联房源/标的与费用信息',
+        roomFirst: '请先在「关联出租房屋」中添加房屋，系统才能按费用项自动计算金额',
+        feeBaseEmpty: '当前房屋缺少面积/租金，无法按该费用项计算，请完善房源档案或手工填写金额',
+        templateCategoryEmpty: '该合同模板未配置分类，暂按采购合同处理，请在合同模板中维护分类'
       }
     }
   },
@@ -416,6 +428,8 @@ export const messages = {
         target: '關聯標的',
         targetRent: '關聯出租房屋',
         plan: '費用構成與收款計劃',
+        planRent: '費用構成',
+        planPay: '收款計劃',
         doc: '合同正文',
         file: '附件'
       },
@@ -589,7 +603,11 @@ export const messages = {
         amountEmpty: '請先填寫合同金額',
         amountAuto: '合同金額自動取費用構成中計入項合計',
         feeAmountEmpty: '請填寫費用金額',
-        codeEmpty: '請先生成合同編號'
+        codeEmpty: '請先生成合同編號',
+        templateFirst: '請先選擇合同模板，選擇後將按模板分類顯示關聯房源/標的與費用資訊',
+        roomFirst: '請先在「關聯出租房屋」中添加房屋，系統才能按費用項自動計算金額',
+        feeBaseEmpty: '當前房屋缺少面積/租金，無法按該費用項計算，請完善房源檔案或手工填寫金額',
+        templateCategoryEmpty: '該合同模板未配置分類，暫按採購合同處理，請在合同模板中維護分類'
       }
     }
   }
