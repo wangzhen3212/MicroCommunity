@@ -27,129 +27,107 @@
       </el-select>
     </div>
 
-    <div v-if="roomFeeInfo.roomsLoading" v-loading="true" class="room-fee-loading"></div>
-    <div v-else-if="roomFeeInfo.rooms.length < 1" class="room-fee-empty">
+    <div v-if="roomFeeInfo.roomsLoading" v-loading="true" class="rule-cards-loading"></div>
+    <div v-else-if="roomFeeInfo.rooms.length < 1" class="rule-cards-empty">
       {{ $t('ownerDetailRoomFeeRule.noRoom') }}
     </div>
-    <div v-else>
-      <el-table ref="ruleTable" v-loading="roomFeeInfo.loading" :data="roomFeeInfo.pageRows" row-key="ruleId"
-        class="rule-table" size="small" :empty-text="_emptyText()" @row-click="handleRowClick"
-        @expand-change="handleExpandChange">
-        <el-table-column type="expand">
-          <template slot-scope="scope">
-            <div class="bill-panel">
-              <div class="bill-panel-head">
-                <span class="bill-panel-title">
-                  {{ $t('roomFeeRuleBill.subTitle', { feeName: _billDisplayName(scope.row) }) }}
-                </span>
-                <span class="bill-panel-count">{{ _billCountText(scope.row) }}</span>
-                <el-select :value="scope.row.billStateFilter" size="mini" class="bill-state-filter"
-                  @input="handleBillStateFilterChange(scope.row, $event)">
-                  <el-option :label="$t('roomFeeRuleBill.billFilterAll')" value="all"></el-option>
-                  <el-option :label="$t('roomFeeRuleBill.billFilterPaid')" value="paid"></el-option>
-                  <el-option :label="$t('roomFeeRuleBill.billFilterUnpaid')" value="unpaid"></el-option>
-                </el-select>
-              </div>
-              <div v-loading="scope.row.billsLoading" class="bill-panel-body">
-                <div v-if="!scope.row.filteredBills || scope.row.filteredBills.length === 0" class="bill-panel-empty">
-                  {{ _billEmptyText(scope.row) }}
+    <template >
+      <div v-loading="roomFeeInfo.loading && roomFeeInfo.pageRows.length === 0" class="rule-cards">
+        <div v-if="!roomFeeInfo.pageRows || roomFeeInfo.pageRows.length === 0" class="rule-cards-empty">
+          {{ _emptyText() }}
+        </div>
+
+        <div v-for="(row, index) in roomFeeInfo.pageRows" :key="row.ruleId || ('rule-' + index)"
+          :class="['rule-card', { 'is-expanded': row.expanded }]">
+          <div class="rule-card-head" @click="_toggleRule(row)">
+            <div class="head-left">
+              <i :class="['chevron el-icon-arrow-down', { 'is-open': row.expanded }]"></i>
+              <div class="title-area">
+                <div class="card-title">
+                  {{ _ruleDisplayName(row) }}
+                  <el-tag v-if="row.risk" size="mini" type="warning" class="cell-badge">
+                    {{ $t('roomFeeRuleBill.cancelledBadge') }}
+                  </el-tag>
                 </div>
-                <el-table v-else :data="scope.row.filteredBills" size="mini" class="bill-table">
-                  <el-table-column prop="yearMonth" :label="$t('roomFeeRuleBill.billYearMonth')">
-                  </el-table-column>
-                  <el-table-column :label="$t('roomFeeRuleBill.billPeriod')">
-                    <template slot-scope="billScope">
-                      {{ _dateOnly(billScope.row.startTime) }} ~ {{ _dateOnly(billScope.row.endTime) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column :label="$t('roomFeeRuleBill.billUnpaidAmount')" align="right">
-                    <template slot-scope="billScope">
-                      <span :class="Number(billScope.row.oweAmount) > 0 ? 'stat-owe' : 'text-muted'">
-                        ¥{{ _money(billScope.row.oweAmount) }}
-                      </span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column :label="$t('roomFeeRuleBill.billState')" align="center">
-                    <template slot-scope="billScope">
-                      <el-tag v-if="billScope.row.billState === 'paid'" size="mini" type="success">
-                        {{ $t('roomFeeRuleBill.billPaid') }}
-                      </el-tag>
-                      <el-tag v-else-if="billScope.row.billState === 'cancelled'" size="mini" type="info">
-                        {{ $t('roomFeeRuleBill.billCancelled') }}
-                      </el-tag>
-                      <el-tag v-else size="mini" type="danger">{{ $t('roomFeeRuleBill.billUnpaid') }}</el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column :label="$t('roomFeeRuleBill.subColRemark')">
-                    <template slot-scope="billScope">
-                      <div class="bill-remark">{{ billScope.row.remark || '—' }}</div>
-                    </template>
-                  </el-table-column>
-                  <el-table-column :label="$t('roomFeeRuleBill.subColFeeRemark')">
-                    <template slot-scope="billScope">
-                      <div class="bill-remark">{{ billScope.row.feeRemark || '—' }}</div>
-                    </template>
-                  </el-table-column>
-                </el-table>
+                <div class="card-subtitle">
+                  {{ row.feeTypeCdName || '-' }} · {{ row.computingFormulaName || '-' }}
+                </div>
+              </div>
+              <div class="meta-info">
+                <div class="meta-item">
+                  <span>{{ $t('roomFeeRuleBill.colNextBill') }}</span>{{ _nextBillText(row) }}
+                </div>
+                <div v-if="_rulePriceText(row)" class="meta-item">
+                  {{ _rulePriceText(row) }}
+                </div>
+                <div class="meta-item">
+                  <span>{{ $t('roomFeeRuleBill.colRule') }}</span>
+                  <span class="meta-rule-value">
+                    <span>{{ _ruleCycleText(row) }}</span>
+                    <span v-if="_rulePeriodText(row)" class="meta-sub">{{ _rulePeriodText(row) }}</span>
+                  </span>
+                </div>
               </div>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('roomFeeRuleBill.colFeeItem')" width="300">
-          <template slot-scope="scope">
-            <div class="cell-main cell-name">
-              {{ _ruleDisplayName(scope.row) }}
-              <el-tag v-if="scope.row.risk" size="mini" type="warning" class="cell-badge">
-                {{ $t('roomFeeRuleBill.cancelledBadge') }}
-              </el-tag>
+
+            <div class="head-right">
+              <div class="amount-block">
+                <div :class="['amount-value', Number(row.oweAmount) > 0 ? 'is-owe' : 'is-zero']">
+                  ¥{{ _money(row.oweAmount) }}
+                </div>
+                <div class="amount-desc">
+                  {{ Number(row.unpaidCount) > 0
+                    ? $t('roomFeeRuleBill.periods', { count: row.unpaidCount })
+                    : $t('roomFeeRuleBill.noOwe') }}
+                </div>
+              </div>
+              <div class="status-block">
+                <span :class="['status-pill', 'tone-' + _stateTone(row)]">{{ _stateText(row) }}</span>
+                <div class="link-group" @click.stop>
+                  <el-select :value="row.billStateFilter" size="mini" class="bill-card-filter"
+                    @input="_switchBillFilter(row, $event)">
+                    <el-option :label="$t('roomFeeRuleBill.tabAllBills')" value="all"></el-option>
+                    <el-option :label="$t('roomFeeRuleBill.tabUnpaidBills')" value="unpaid"></el-option>
+                    <el-option :label="$t('roomFeeRuleBill.tabPaidBills')" value="paid"></el-option>
+                  </el-select>
+                </div>
+              </div>
             </div>
-            <div class="cell-sub">
-              {{ scope.row.feeTypeCdName || '-' }} · {{ scope.row.computingFormulaName || '-' }}
+          </div>
+
+          <div v-show="row.expanded" v-loading="row.billsLoading" class="rule-card-body">
+            <div v-if="!row.filteredBills || row.filteredBills.length === 0" class="bill-panel-empty">
+              {{ _billEmptyText(row) }}
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('roomFeeRuleBill.colRule')" min-width="300">
-          <template slot-scope="scope">
-            <div class="cell-main">{{ _ruleCycleText(scope.row) }}</div>
-            <div class="cell-sub">{{ _dateOnly(scope.row.startTime) }} ~ {{ _dateOnly(scope.row.maxTime) }}</div>
-            <div v-if="_rulePriceText(scope.row)" class="cell-sub">{{ _rulePriceText(scope.row) }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('roomFeeRuleBill.colNextBill')" width="150">
-          <template slot-scope="scope">
-            <template v-if="scope.row.state === '2008001'">
-              <template v-if="_isMeterRule(scope.row)">
-                <div class="cell-main text-meter">{{ $t('roomFeeRuleBill.nextBillMeter') }}</div>
-                <div class="cell-sub">{{ $t('roomFeeRuleBill.meterAfterReading') }}</div>
-              </template>
-              <template v-else>
-                <div class="cell-main">{{ _dateOnly(scope.row.curYearMonth) }}</div>
-                <div class="cell-sub">{{ $t('roomFeeRuleBill.nextBillAuto') }}</div>
-              </template>
-            </template>
-            <template v-else>
-              <div class="cell-main text-muted">—</div>
-              <div class="cell-sub">{{ $t('roomFeeRuleBill.noMoreBill') }}</div>
-            </template>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('roomFeeRuleBill.colReceivable')" align="right" width="130">
-          <template slot-scope="scope">
-            <div class="cell-main" :class="Number(scope.row.oweAmount) > 0 ? 'stat-owe' : 'text-muted'">
-              ¥{{ _money(scope.row.oweAmount) }}
+            <div v-else class="bill-list">
+              <div class="bill-row bill-row-head">
+                <div>{{ $t('roomFeeRuleBill.billYearMonth') }}</div>
+                <div>{{ $t('roomFeeRuleBill.billPeriod') }}</div>
+                <div class="align-right">{{ $t('roomFeeRuleBill.billUnpaidAmount') }}</div>
+                <div>{{ $t('roomFeeRuleBill.billState') }}</div>
+                <div>{{ $t('roomFeeRuleBill.subColRemark') }}</div>
+              </div>
+              <div v-for="bill in row.filteredBills" :key="bill.feeId" class="bill-row">
+                <div class="col-month">{{ bill.yearMonth || '—' }}</div>
+                <div class="col-period">
+                  {{ _dateOnly(bill.startTime) }} ~ {{ _dateOnly(bill.endTime) }}
+                </div>
+                <div :class="['col-amount', Number(bill.oweAmount) > 0 ? 'is-owe' : 'is-muted']">
+                  ¥{{ _money(bill.oweAmount) }}
+                </div>
+                <div>
+                  <span :class="['status-pill', 'tone-' + _billTone(bill)]">{{ _billStateText(bill) }}</span>
+                </div>
+                <div class="col-desc">
+                  <span v-if="bill.remark">{{ bill.remark }}</span>
+                  <span v-if="bill.feeRemark">{{ bill.feeRemark }}</span>
+                  <span v-if="!bill.remark && !bill.feeRemark">—</span>
+                </div>
+              </div>
             </div>
-            <div class="cell-sub">{{ $t('roomFeeRuleBill.periods', { count: scope.row.unpaidCount }) }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('roomFeeRuleBill.colState')" align="center" width="120">
-          <template slot-scope="scope">
-            <el-tag size="mini" :type="_stateTagType(scope.row)"
-              :class="['tag-state', { 'tag-meter': _isMeterRule(scope.row) }]">
-              {{ _stateText(scope.row) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+        </div>
+      </div>
 
       <div class="footer-bar">
         <span class="footer-stat footer-stat-owe">
@@ -163,7 +141,7 @@
           :page-size="roomFeeInfo.pageSize" :total="roomFeeInfo.filteredCount"
           @current-change="handlePageChange"></el-pagination>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -182,7 +160,7 @@ export default {
         ownerId: '',
         ownerName: '',
         rooms: [],
-        roomsLoading: false,
+        roomsLoading: true,
         roomId: '',
         roomName: '',
         rules: [],
@@ -207,7 +185,7 @@ export default {
       info.ownerId = data.ownerId || ''
       info.ownerName = data.name || data.ownerName || ''
       info.rooms = []
-      info.roomsLoading = false
+      info.roomsLoading = true
       info.roomId = ''
       info.roomName = ''
       info.rules = []
@@ -386,6 +364,7 @@ export default {
       this.$set(rule, 'billCount', 0)
       this.$set(rule, 'billsLoading', false)
       this.$set(rule, 'billCache', {})
+      this.$set(rule, 'expanded', false)
     },
     _buildRuleBills(rule) {
       const bills = rule.bills || []
@@ -404,6 +383,7 @@ export default {
         this.$set(rule, 'filteredBills', [])
         this.$set(rule, 'billCount', 0)
         this.$set(rule, 'billsLoading', false)
+        this.$set(rule, 'expanded', false)
       })
     },
     _loadRuleBills(rule, state) {
@@ -450,21 +430,23 @@ export default {
         this.$message.error(error.message || this.$t('roomFeeRuleBill.loadFailed'))
       })
     },
-    handleBillStateFilterChange(rule, state) {
+    _toggleRule(rule) {
+      if (!rule) {
+        return
+      }
+      if (rule.expanded) {
+        this.$set(rule, 'expanded', false)
+        return
+      }
+      this.$set(rule, 'expanded', true)
+      this._loadRuleBills(rule, rule.billStateFilter || 'unpaid')
+    },
+    _switchBillFilter(rule, state) {
+      if (!rule) {
+        return
+      }
       this._loadRuleBills(rule, state)
-    },
-    handleExpandChange(row, expandRows) {
-      const rows = expandRows || []
-      if (rows.indexOf(row) < 0) {
-        return
-      }
-      this._loadRuleBills(row, row.billStateFilter || 'unpaid')
-    },
-    handleRowClick(row) {
-      if (!this.$refs.ruleTable) {
-        return
-      }
-      this.$refs.ruleTable.toggleRowExpansion(row)
+      this.$set(rule, 'expanded', true)
     },
     handleQuery() {
       this.roomFeeInfo.currentPage = 1
@@ -519,9 +501,6 @@ export default {
       }
       return row.feeName || '-'
     },
-    _billDisplayName(row) {
-      return this._ruleDisplayName(row)
-    },
     _rulePriceText(row) {
       if (row.syntheticOther) {
         return ''
@@ -542,6 +521,12 @@ export default {
       const cycle = row.feeFlagName || '-'
       return this._isMeterRule(row) ? this.$t('roomFeeRuleBill.cycleMeter', { cycle: cycle }) : cycle
     },
+    _rulePeriodText(row) {
+      if (row.syntheticOther || !row.startTime || !row.maxTime) {
+        return ''
+      }
+      return this._dateOnly(row.startTime) + ' ~ ' + this._dateOnly(row.maxTime)
+    },
     _isMeterRule(row) {
       return EXCLUDE_COMPUTING_FORMULAS.indexOf(row.computingFormula) >= 0
     },
@@ -560,18 +545,44 @@ export default {
       }
       return this.$t('roomFeeRuleBill.stateOnceSettled')
     },
-    _stateTagType(row) {
+    _stateTone(row) {
       if (row.syntheticOther) {
-        return 'info'
+        return 'muted'
       }
       if (row.state === '2008001') {
-        return this._isMeterRule(row) ? 'info' : 'success'
+        return this._isMeterRule(row) ? 'meter' : 'success'
       }
-      return 'info'
+      if (Number(row.unpaidCount) > 0) {
+        return 'danger'
+      }
+      return 'muted'
     },
-    _billCountText(row) {
-      const count = Number(row.billCount) > 0 ? Number(row.billCount) : 0
-      return this.$t('roomFeeRuleBill.billViewCount', { count: count })
+    _nextBillText(row) {
+      if (row.syntheticOther || row.state !== '2008001') {
+        return '—'
+      }
+      if (this._isMeterRule(row)) {
+        return this.$t('roomFeeRuleBill.nextBillMeter')
+      }
+      return this._dateOnly(row.curYearMonth)
+    },
+    _billTone(bill) {
+      if (bill.billState === 'paid') {
+        return 'success'
+      }
+      if (bill.billState === 'cancelled') {
+        return 'muted'
+      }
+      return 'danger'
+    },
+    _billStateText(bill) {
+      if (bill.billState === 'paid') {
+        return this.$t('roomFeeRuleBill.billPaid')
+      }
+      if (bill.billState === 'cancelled') {
+        return this.$t('roomFeeRuleBill.billCancelled')
+      }
+      return this.$t('roomFeeRuleBill.billUnpaid')
     },
     _billTotalCount(row) {
       if (row.syntheticOther) {
@@ -597,16 +608,12 @@ export default {
 }
 </script>
 
+<style lang="scss" scoped src="@/styles/feeRuleBill.scss"></style>
+
 <style scoped>
 .owner-detail-room-fee {
+  min-height: calc(100vh - 420px);
   margin-top: 10px;
-}
-
-.filter-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
 }
 
 .room-select {
@@ -614,202 +621,12 @@ export default {
   margin-right: 8px;
 }
 
-.fee-type-select {
-  width: 130px;
-  margin-right: 8px;
+.rule-cards-loading {
+  min-height: 280px;
 }
 
-.fee-item-select {
-  width: 150px;
-  margin-right: 8px;
-}
-
-.state-select {
-  width: 110px;
-  margin-right: 8px;
-}
-
-.room-fee-loading {
-  min-height: 120px;
-}
-
-.room-fee-empty {
-  padding: 40px 0;
-  text-align: center;
-  font-size: 13px;
-  color: #909399;
-}
-
-.stat-owe {
-  color: #f56c6c;
-}
-
-.text-meter {
-  color: #8b5cf6;
-}
-
-.tag-meter {
-  color: #8b5cf6;
-  background: #f5f3ff;
-  border-color: #ede9fe;
-}
-
-.cell-main {
-  color: #303133;
-  font-variant-numeric: tabular-nums;
-}
-
-.cell-name {
-  font-weight: 600;
-  color: #1f2d3d;
-}
-
-.cell-sub {
-  margin-top: 2px;
-  font-size: 11px;
-  color: #909399;
-}
-
-.cell-badge {
-  margin-left: 6px;
-}
-
-.text-muted {
-  color: #c0c4cc;
-}
-
-.bill-remark {
-  font-size: 12px;
-  line-height: 1.5;
-  color: #606266;
-  white-space: pre-line;
-}
-
-.tag-state {
-  border-radius: 10px;
-}
-
-.tag-state::before {
-  content: '';
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin-right: 4px;
-  vertical-align: middle;
-  background: currentColor;
-  border-radius: 50%;
-}
-
-.rule-table ::v-deep tbody tr {
-  cursor: pointer;
-}
-
-.rule-table ::v-deep th.el-table__cell {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  background: #f8fafc;
-}
-
-.rule-table ::v-deep td.el-table__cell {
-  font-size: 13px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.rule-table ::v-deep .el-table__expanded-cell {
-  padding: 10px 12px 12px;
-  background: #f8fafc;
-}
-
-.bill-table ::v-deep th.el-table__cell {
-  font-size: 11px;
-  font-weight: 400;
-  color: #909399;
-  background: #fff;
-}
-
-.bill-table ::v-deep td.el-table__cell {
-  font-size: 12px;
-  border-bottom: 1px solid #f7f8fa;
-}
-
-.bill-panel {
-  overflow: hidden;
-  margin-left: 40px;
-  background: #fff;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-}
-
-.bill-panel-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.bill-panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.bill-panel-count {
-  margin-left: 10px;
-  font-size: 12px;
-  color: #909399;
-}
-
-.bill-state-filter {
-  width: 110px;
-  margin-left: auto;
-}
-
-.bill-panel-empty {
-  padding: 16px 0;
-  text-align: center;
-  font-size: 12px;
-  color: #909399;
-}
-
-.bill-panel-body {
-  min-height: 60px;
-}
-
-.footer-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-top: 12px;
-  margin-top: 12px;
-  font-size: 12px;
-  color: #909399;
-  border-top: 1px solid #ebeef5;
-}
-
-.footer-stat {
-  display: flex;
-  align-items: baseline;
-  margin-right: 18px;
-}
-
-.footer-stat-label {
-  margin-right: 6px;
-  color: #909399;
-}
-
-.footer-stat-value {
-  font-weight: 600;
-  color: #303133;
-}
-
-.footer-stat-owe .footer-stat-value {
-  color: #f56c6c;
-}
-
-.footer-total {
-  margin-right: 8px;
+.owner-detail-room-fee .bill-list .bill-row {
+  grid-template-columns: 100px 200px 110px 90px minmax(160px, 1fr);
+  min-width: 660px;
 }
 </style>
