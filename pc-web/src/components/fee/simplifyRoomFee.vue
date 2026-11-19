@@ -111,7 +111,7 @@
                     <el-tag v-else size="mini" type="danger">{{ $t('roomFeeRuleBill.billUnpaid') }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column :label="$t('roomFeeRuleBill.subColRemark')" width="220">
+                <el-table-column :label="$t('roomFeeRuleBill.subColRemark')" width="200">
                   <template slot-scope="billScope">
                     <div class="bill-remark">{{ billScope.row.remark || '—' }}</div>
                   </template>
@@ -1142,6 +1142,7 @@ export default {
 
 .bill-panel {
   overflow: hidden;
+  margin-left: 40px;
   background: #fff;
   border: 1px solid #ebeef5;
   border-radius: 8px;

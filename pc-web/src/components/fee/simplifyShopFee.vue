@@ -1107,6 +1107,7 @@ export default {
 
 .bill-panel {
   overflow: hidden;
+  margin-left: 40px;
   background: #fff;
   border: 1px solid #ebeef5;
   border-radius: 8px;
