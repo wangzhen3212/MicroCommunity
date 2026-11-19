@@ -19,3 +19,23 @@ export function listRoomFeeRuleWithBill(params) {
     })
   })
 }
+
+// 按计费设置（ruleId）查询账单，billState: all / paid / unpaid / cancelled
+export function listRuleBills(params) {
+  return new Promise((resolve, reject) => {
+    request({
+      url: '/payFeeRule.listRuleBills',
+      method: 'get',
+      params
+    }).then(response => {
+      const res = response.data
+      if (res.code !== 0) {
+        reject(new Error(res.msg || 'error'))
+        return
+      }
+      resolve(res)
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}
