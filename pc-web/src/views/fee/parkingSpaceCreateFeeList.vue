@@ -39,9 +39,9 @@
             <div class="tab-section">
               <el-tabs v-model="parkingSpaceCreateFeeInfo._currentTab"
                 @tab-click="changeTab(parkingSpaceCreateFeeInfo._currentTab)">
-                <el-tab-pane :label="$t('parkingSpaceCreateFee.parkingSpaceFee')" name="simplifyParkingSpaceFee">
-                  <simplify-parking-space-fee v-if="parkingSpaceCreateFeeInfo._currentTab === 'simplifyParkingSpaceFee'"
-                    ref="simplifyParkingSpaceFee"></simplify-parking-space-fee>
+                <el-tab-pane :label="$t('parkingSpaceCreateFee.parkingSpaceFee')" name="simplifyPayerObjFee">
+                  <simplify-parking-space-fee v-if="parkingSpaceCreateFeeInfo._currentTab === 'simplifyPayerObjFee'"
+                    ref="simplifyPayerObjFee" :key="'simplifyPayerObjFee' + parkingSpaceCreateFeeInfo.psId"></simplify-parking-space-fee>
                 </el-tab-pane>
                 <el-tab-pane :label="$t('parkingSpaceCreateFee.paymentHistory')" name="simplifyHisFee">
                   <simplify-his-fee v-if="parkingSpaceCreateFeeInfo._currentTab === 'simplifyHisFee'"
@@ -54,12 +54,6 @@
                 <el-tab-pane :label="$t('parkingSpaceCreateFee.prepayment')" name="prePayFeeDetail">
                   <pre-pay-fee-detail v-if="parkingSpaceCreateFeeInfo._currentTab === 'prePayFeeDetail'"
                     ref="prePayFeeDetail"></pre-pay-fee-detail>
-                </el-tab-pane>
-
-                <el-tab-pane :label="$t('parkingSpaceCreateFee.setFee')" name="feeDetailParkingSpaceFeeRule">
-                  <fee-detail-parking-space-fee-rule
-                    v-if="parkingSpaceCreateFeeInfo._currentTab === 'feeDetailParkingSpaceFeeRule'"
-                    ref="feeDetailParkingSpaceFeeRule"></fee-detail-parking-space-fee-rule>
                 </el-tab-pane>
 
                 <el-tab-pane v-if="parkingSpaceCreateFeeInfo.ownerId" :label="$t('parkingSpaceCreateFee.house')"
@@ -105,7 +99,6 @@ import PrePayFeeDetail from '@/components/fee/prePayFeeDetail'
 import SimplifyOwnerRooms from '@/components/fee/simplifyOwnerRooms'
 import CarDetailOwner from '@/components/fee/carDetailOwner'
 import SimplifyFeeReceipt from '@/components/fee/simplifyFeeReceipt'
-import FeeDetailParkingSpaceFeeRule from '@/components/fee/feeDetailParkingSpaceFeeRule'
 import ParkingSpaceCarDetail from '@/components/fee/parkingSpaceCarDetail'
 import DeleteFee from '@/components/fee/deleteFee'
 import EditFee from '@/components/fee/editFee'
@@ -124,7 +117,6 @@ export default {
     SimplifyOwnerRooms,
     CarDetailOwner,
     SimplifyFeeReceipt,
-    FeeDetailParkingSpaceFeeRule,
     ParkingSpaceCarDetail,
     DeleteFee,
     EditFee,
@@ -157,7 +149,7 @@ export default {
         carNum: '',
         startTime: '',
         endTime: '',
-        _currentTab: 'simplifyParkingSpaceFee'
+        _currentTab: 'simplifyPayerObjFee'
       }
     }
   },
@@ -168,6 +160,7 @@ export default {
   mounted() {
     document.addEventListener('mousemove', this.onMouseMove)
     document.addEventListener('mouseup', this.onMouseUp)
+    this.changeTab(this.parkingSpaceCreateFeeInfo._currentTab)
   },
   beforeDestroy() {
     document.removeEventListener('mousemove', this.onMouseMove)
@@ -210,6 +203,7 @@ export default {
             startTime: this.parkingSpaceCreateFeeInfo.startTime,
             endTime: this.parkingSpaceCreateFeeInfo.endTime,
             payerObjId: this.parkingSpaceCreateFeeInfo.psId,
+            payerObjName: this.parkingSpaceCreateFeeInfo.psName,
             payerObjType: '6666'
           })
         }

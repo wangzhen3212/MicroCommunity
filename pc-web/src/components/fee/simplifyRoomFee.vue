@@ -93,18 +93,6 @@
                     {{ _dateOnly(billScope.row.startTime) }} ~ {{ _dateOnly(billScope.row.endTime) }}
                   </template>
                 </el-table-column>
-                <el-table-column :label="$t('roomFeeRuleBill.billReceivable')" align="right" width="120">
-                  <template slot-scope="billScope">
-                    ¥{{ _money(billScope.row.receivableAmount) }}
-                  </template>
-                </el-table-column>
-                <el-table-column :label="$t('roomFeeRuleBill.billReceived')" align="right" width="120">
-                  <template slot-scope="billScope">
-                    <span :class="Number(billScope.row.receivedAmount) > 0 ? 'stat-received' : 'text-muted'">
-                      ¥{{ _money(billScope.row.receivedAmount) }}
-                    </span>
-                  </template>
-                </el-table-column>
                 <el-table-column :label="$t('roomFeeRuleBill.billUnpaidAmount')" align="right" width="130">
                   <template slot-scope="billScope">
                     <span :class="Number(billScope.row.oweAmount) > 0 ? 'stat-owe' : 'text-muted'">
@@ -123,12 +111,12 @@
                     <el-tag v-else size="mini" type="danger">{{ $t('roomFeeRuleBill.billUnpaid') }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column :label="$t('roomFeeRuleBill.subColRemark')" width="300">
+                <el-table-column :label="$t('roomFeeRuleBill.subColRemark')" width="220">
                   <template slot-scope="billScope">
                     <div class="bill-remark">{{ billScope.row.remark || '—' }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column :label="$t('roomFeeRuleBill.subColFeeRemark')" width="220">
+                <el-table-column :label="$t('roomFeeRuleBill.subColFeeRemark')" width="200">
                   <template slot-scope="billScope">
                     <div class="bill-remark">{{ billScope.row.feeRemark || '—' }}</div>
                   </template>
@@ -1027,10 +1015,6 @@ export default {
 
 .stat-owe {
   color: #f56c6c;
-}
-
-.stat-received {
-  color: #67c23a;
 }
 
 .text-meter {

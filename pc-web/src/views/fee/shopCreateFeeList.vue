@@ -45,9 +45,9 @@
           </div>
 
           <el-tabs v-model="shopCreateFeeInfo._currentTab" @tab-click="changeTab(shopCreateFeeInfo._currentTab)">
-            <el-tab-pane :label="$t('shopCreateFee.shopFee')" name="simplifyShopFee">
-              <simplify-shop-fee v-show="shopCreateFeeInfo._currentTab === 'simplifyShopFee'" ref="simplifyShopFee"
-                :key="'simplifyShopFee' + shopCreateFeeInfo.shopId"></simplify-shop-fee>
+            <el-tab-pane :label="$t('shopCreateFee.shopFee')" name="simplifyPayerObjFee">
+              <simplify-shop-fee v-show="shopCreateFeeInfo._currentTab === 'simplifyPayerObjFee'" ref="simplifyPayerObjFee"
+                :key="'simplifyPayerObjFee' + shopCreateFeeInfo.shopId"></simplify-shop-fee>
             </el-tab-pane>
             <el-tab-pane :label="$t('shopCreateFee.paymentHistory')" name="simplifyHisFee">
               <simplify-his-fee v-show="shopCreateFeeInfo._currentTab === 'simplifyHisFee'" ref="simplifyHisFee"
@@ -56,11 +56,6 @@
             <el-tab-pane :label="$t('shopCreateFee.prePayFee')" name="prePayFeeDetail">
               <pre-pay-fee-detail v-show="shopCreateFeeInfo._currentTab === 'prePayFeeDetail'" ref="prePayFeeDetail"
                 :key="'prePayFeeDetail' + shopCreateFeeInfo.shopId"></pre-pay-fee-detail>
-            </el-tab-pane>
-
-            <el-tab-pane :label="$t('shopCreateFee.setFee')" name="feeDetailShopFeeRule">
-              <fee-detail-shop-fee-rule v-show="shopCreateFeeInfo._currentTab === 'feeDetailShopFeeRule'"
-                ref="feeDetailShopFeeRule" :key="'feeDetailShopFeeRule' + shopCreateFeeInfo.shopId"></fee-detail-shop-fee-rule>
             </el-tab-pane>
             <el-tab-pane v-if="shopCreateFeeInfo.ownerId" :label="$t('shopCreateFee.ownerShops')" name="simplifyShopOwnerShops">
               <simplify-shop-owner-shops v-show="shopCreateFeeInfo._currentTab === 'simplifyShopOwnerShops'"
@@ -91,7 +86,6 @@ import SimplifyHisFee from '@/components/fee/simplifyHisFee'
 import PrePayFeeDetail from '@/components/fee/prePayFeeDetail'
 import CarDetailOwner from '@/components/fee/carDetailOwner'
 import SimplifyFeeReceipt from '@/components/fee/simplifyFeeReceipt'
-import FeeDetailShopFeeRule from '@/components/fee/feeDetailShopFeeRule'
 import DoImportShopCreateFee from '@/components/fee/doImportShopCreateFee'
 import { getCommunityId } from '@/api/community/communityApi'
 import { listShops } from '@/api/shop/shopCreateFeeApi'
@@ -106,7 +100,6 @@ export default {
     PrePayFeeDetail,
     CarDetailOwner,
     SimplifyFeeReceipt,
-    FeeDetailShopFeeRule,
     DoImportShopCreateFee
   },
   data() {
@@ -120,7 +113,7 @@ export default {
         builtUpArea: '',
         locationId: '',
         locationName: '',
-        _currentTab: 'simplifyShopFee',
+        _currentTab: 'simplifyPayerObjFee',
         condition: {
           shopNum: ''
         },
@@ -143,6 +136,7 @@ export default {
   mounted() {
     document.addEventListener('mousemove', this.onMouseMove)
     document.addEventListener('mouseup', this.onMouseUp)
+    this.changeTab(this.shopCreateFeeInfo._currentTab)
   },
   beforeDestroy() {
     document.removeEventListener('mousemove', this.onMouseMove)
@@ -163,7 +157,7 @@ export default {
       this.shopCreateFeeInfo.locationName = param.locationName || ''
 
       this.shopCreateFeeInfo.condition.shopNum = ''
-      this.changeTab('simplifyShopFee')
+      this.changeTab('simplifyPayerObjFee')
     },
     async listShopInShopCreateFee() {
       if (!this.shopCreateFeeInfo.condition.shopNum) {
@@ -189,7 +183,7 @@ export default {
           this.shopCreateFeeInfo.builtUpArea = shop.builtUpArea || ''
           this.shopCreateFeeInfo.locationId = shop.locationId || ''
           this.shopCreateFeeInfo.locationName = shop.locationName || ''
-          this.changeTab('simplifyShopFee')
+          this.changeTab('simplifyPayerObjFee')
         }
       } catch (error) {
         console.error('Failed to load shop:', error)
@@ -203,7 +197,7 @@ export default {
       this.shopCreateFeeInfo.ownerName = ''
       this.shopCreateFeeInfo.ownerId = ''
       this.shopCreateFeeInfo.condition.shopNum = ''
-      this.shopCreateFeeInfo._currentTab = 'simplifyShopFee'
+      this.shopCreateFeeInfo._currentTab = 'simplifyPayerObjFee'
     },
     changeTab(tab) {
       this.shopCreateFeeInfo._currentTab = tab
@@ -217,6 +211,7 @@ export default {
             ownerName: this.shopCreateFeeInfo.ownerName,
             builtUpArea: this.shopCreateFeeInfo.builtUpArea,
             payerObjId: this.shopCreateFeeInfo.shopId,
+            payerObjName: this.shopCreateFeeInfo.shopName,
             payerObjType: '4444'
           })
         }

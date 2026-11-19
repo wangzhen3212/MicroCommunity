@@ -58,8 +58,9 @@
 
             <div class="tab-section">
               <el-tabs v-model="contractCreateFeeInfo._currentTab" @tab-click="changeTab(contractCreateFeeInfo._currentTab)">
-                <el-tab-pane label="合同费用" name="simplifyContractFee">
-                  <simplify-contract-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyContractFee'" ref="simplifyContractFee"/>
+                <el-tab-pane label="合同费用" name="simplifyPayerObjFee">
+                  <simplify-contract-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyPayerObjFee'" ref="simplifyPayerObjFee"
+                    :key="'simplifyPayerObjFee' + contractCreateFeeInfo.contractId"/>
                 </el-tab-pane>
 
                 <el-tab-pane label="缴费历史" name="simplifyHisFee">
@@ -68,10 +69,6 @@
 
                 <el-tab-pane label="预付收款" name="prePayFeeDetail">
                   <pre-pay-fee-detail v-if="contractCreateFeeInfo._currentTab === 'prePayFeeDetail'" ref="prePayFeeDetail"/>
-                </el-tab-pane>
-
-                <el-tab-pane label="设置费用" name="feeDetailContractFeeRule">
-                  <fee-detail-contract-fee-rule v-if="contractCreateFeeInfo._currentTab === 'feeDetailContractFeeRule'" ref="feeDetailContractFeeRule"/>
                 </el-tab-pane>
 
                 <el-tab-pane v-if="contractCreateFeeInfo.ownerId" label="业主" name="contractDetailOwner">
@@ -113,7 +110,6 @@ import PrePayFeeDetail from '@/components/fee/prePayFeeDetail'
 import CarDetailOwner from '@/components/fee/carDetailOwner'
 import ContractDetailRoom from '@/components/contract/contractDetailRoom'
 import SimplifyFeeReceipt from '@/components/fee/simplifyFeeReceipt'
-import FeeDetailContractFeeRule from '@/components/fee/feeDetailContractFeeRule'
 import DeleteFee from '@/components/fee/deleteFee'
 import EditFee from '@/components/fee/editFee'
 import SplitFee from '@/components/fee/splitFee'
@@ -130,7 +126,6 @@ export default {
     CarDetailOwner,
     ContractDetailRoom,
     SimplifyFeeReceipt,
-    FeeDetailContractFeeRule,
     DeleteFee,
     EditFee,
     SplitFee,
@@ -150,7 +145,7 @@ export default {
         ownerName: '',
         total: 0,
         records: 1,
-        _currentTab: 'simplifyContractFee',
+        _currentTab: 'simplifyPayerObjFee',
         conditions: {
           contractCode: '',
           contractNameLike: '',
@@ -225,11 +220,12 @@ export default {
             ownerId: this.contractCreateFeeInfo.ownerId,
             ownerName: this.contractCreateFeeInfo.ownerName,
             payerObjId: this.contractCreateFeeInfo.contractId,
+            payerObjName: this.contractCreateFeeInfo.contractCode,
             payerObjType: '7777'
           }
           
           // 根据不同组件传递不同的参数
-          if (tabName === 'simplifyContractFee') {
+          if (tabName === 'simplifyPayerObjFee') {
             this.$refs[tabName].open(params)
           } else if (tabName === 'simplifyHisFee') {
             this.$refs[tabName].open({
@@ -239,13 +235,6 @@ export default {
           } else if (tabName === 'prePayFeeDetail') {
             this.$refs[tabName].open({
               payerObjId: params.payerObjId
-            })
-          } else if (tabName === 'feeDetailContractFeeRule') {
-            this.$refs[tabName].open({
-              contractId: params.contractId,
-              contractCode: params.contractCode,
-              ownerId: params.ownerId,
-              ownerName: params.ownerName
             })
           } else if (tabName === 'contractDetailOwner') {
             this.$refs[tabName].open({
