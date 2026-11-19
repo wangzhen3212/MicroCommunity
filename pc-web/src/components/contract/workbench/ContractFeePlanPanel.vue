@@ -1,49 +1,86 @@
 <template>
   <div>
     <div v-if="isRent" class="cc-fee-panel">
-      <div class="cc-section-sub">{{ $t('contractWorkbench.plan.feeTitle') }}</div>
-      <el-table :data="feeRows" size="mini" border>
-        <el-table-column :label="$t('contractWorkbench.plan.rent')" width="180">
-          <template slot-scope="scope">
-            <span>{{ feeLabel(scope.row) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('contractWorkbench.target.rentUnitPrice')" width="150" align="center">
+      <div class="cc-fee-toolbar">
+        <span class="cc-section-sub">{{ $t('contractWorkbench.plan.feeTitle') }}</span>
+        <el-button size="mini" type="primary" @click="openFeeDialog">
+          <i class="el-icon-plus"></i>{{ $t('contractWorkbench.plan.addFee') }}
+        </el-button>
+        <span class="cc-fee-total">
+          {{ $t('contractWorkbench.plan.includeTotal') }}：<span>{{ formatAmount(includeTotal) }}</span>
+        </span>
+      </div>
+
+      <el-table v-if="fees.length" :data="fees" size="mini" border>
+        <el-table-column prop="feeTypeName" :label="$t('contractWorkbench.plan.feeType')" width="110" align="center" />
+        <el-table-column prop="feeName" :label="$t('contractWorkbench.plan.feeItem')" min-width="120" />
+        <el-table-column prop="computingFormulaName" :label="$t('contractWorkbench.plan.formula')" width="130" align="center" />
+        <el-table-column :label="$t('contractWorkbench.plan.unitPrice')" width="110" align="center">
           <template slot-scope="scope">
             <el-input
-              v-if="scope.row.key !== 'other'"
+              v-if="isUnitPriceRow(scope.row)"
               size="mini"
               v-model="scope.row.unitPrice"
-              @input="handleFeeChange"
+              @input="handleFeeInput"
             />
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('contractWorkbench.field.amount')" align="center" width="150">
+        <el-table-column :label="$t('contractWorkbench.plan.additional')" width="100" align="center">
           <template slot-scope="scope">
             <el-input
-              v-if="scope.row.key === 'other' || scope.row.key === 'water'"
+              v-if="isAdditionalRow(scope.row)"
               size="mini"
-              v-model="scope.row.value"
-              @input="handleFeeChange"
+              v-model="scope.row.additionalAmount"
+              @input="handleFeeInput"
             />
-            <span v-else>{{ formatAmount(scope.row.value) }}</span>
+            <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('contractWorkbench.field.remark')" align="center">
+        <el-table-column :label="$t('contractWorkbench.plan.baseAmount')" width="110" align="center">
+          <template slot-scope="scope">{{ formatAmount(scope.row.baseAmount) }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('contractWorkbench.field.amount')" width="130" align="center">
           <template slot-scope="scope">
-            <span v-if="scope.row.key === 'water'" class="cc-fee-tip">{{ $t('contractWorkbench.plan.waterTip') }}</span>
-            <span v-else>-</span>
+            <el-input
+              v-if="isManualRow(scope.row)"
+              size="mini"
+              v-model="scope.row.manualAmount"
+              @input="handleFeeInput"
+            />
+            <span v-else>{{ formatAmount(scope.row.amount) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('contractWorkbench.plan.includeInAmount')" width="110" align="center">
+          <template slot-scope="scope">
+            <el-switch v-model="scope.row.includeInAmount" @change="handleFeeInput" />
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('common.operation')" width="70" align="center">
+          <template slot-scope="scope">
+            <el-button type="text" @click="handleFeeRemove(scope.$index)">{{ $t('common.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
+      <div v-else class="cc-empty">{{ $t('contractWorkbench.plan.feeEmpty') }}</div>
 
-      <div class="cc-fee-total">
-        {{ $t('contractWorkbench.plan.total') }}：<span>{{ formatAmount(feeTotal) }}</span>
+      <div class="cc-fee-summary">
+        <span>{{ $t('contractWorkbench.plan.total') }}：{{ formatAmount(feeTotal) }}</span>
+        <span>{{ $t('contractWorkbench.plan.includeTotal') }}：{{ formatAmount(includeTotal) }}</span>
+        <span class="cc-fee-tip">{{ $t('contractWorkbench.plan.excludeTip') }}</span>
       </div>
+
+      <contract-fee-add-dialog
+        ref="feeDialog"
+        :rooms="rooms"
+        :start-time="startTime"
+        :end-time="endTime"
+        @confirm="handleFeeConfirm"
+      />
     </div>
 
     <contract-plan-editor
+      :category="category"
       :plans="plans"
       :amount="amount"
       :start-time="startTime"
@@ -56,12 +93,21 @@
 
 <script>
 import ContractPlanEditor from '@/components/contract/workbench/ContractPlanEditor'
-import { CONTRACT_CATEGORY, formatAmount, termMonths, toNumber } from '@/utils/contractUtil'
+import ContractFeeAddDialog from '@/components/contract/workbench/ContractFeeAddDialog'
+import { CONTRACT_CATEGORY, formatAmount } from '@/utils/contractUtil'
+import {
+  isAdditionalFormula,
+  isManualFormula,
+  isUnitPriceFormula,
+  sumFeeTotal,
+  sumIncludedAmount
+} from '@/utils/contractFeeUtil'
 
 export default {
   name: 'ContractFeePlanPanel',
   components: {
-    ContractPlanEditor
+    ContractPlanEditor,
+    ContractFeeAddDialog
   },
   props: {
     category: {
@@ -69,6 +115,12 @@ export default {
       default: CONTRACT_CATEGORY.RENT
     },
     rooms: {
+      type: Array,
+      default: function () {
+        return []
+      }
+    },
+    fees: {
       type: Array,
       default: function () {
         return []
@@ -97,68 +149,41 @@ export default {
       default: ''
     }
   },
-  data() {
-    return {
-      feeRows: [
-        { key: 'rent', unitPrice: '', value: 0, countable: true },
-        { key: 'propertyFee', unitPrice: '', value: 0, countable: true },
-        { key: 'other', unitPrice: '', value: '', countable: true },
-        { key: 'water', unitPrice: '', value: '', countable: false }
-      ]
-    }
-  },
   computed: {
     isRent() {
       return String(this.category) === CONTRACT_CATEGORY.RENT
     },
-    area() {
-      return this.rooms.reduce((sum, room) => sum + toNumber(room.builtUpArea), 0)
-    },
-    months() {
-      return termMonths(this.startTime, this.endTime)
-    },
     feeTotal() {
-      return this.feeRows
-        .filter(row => row.countable)
-        .reduce((sum, row) => sum + toNumber(row.value), 0)
-    }
-  },
-  watch: {
-    rooms() {
-      this.recalc()
+      return sumFeeTotal(this.fees)
     },
-    months() {
-      this.recalc()
+    includeTotal() {
+      return sumIncludedAmount(this.fees)
     }
   },
   methods: {
     formatAmount,
-    feeLabel(row) {
-      if (row.key === 'rent') {
-        return this.$t('contractWorkbench.plan.rent')
-      }
-      if (row.key === 'propertyFee') {
-        return this.$t('contractWorkbench.plan.propertyFee')
-      }
-      if (row.key === 'water') {
-        return this.$t('contractWorkbench.plan.water')
-      }
-      return this.$t('contractWorkbench.plan.other')
+    isManualRow(row) {
+      return isManualFormula(row.computingFormula)
     },
-    recalc() {
-      this.feeRows.forEach(row => {
-        if (row.key === 'rent' || row.key === 'propertyFee') {
-          row.value = this.area * toNumber(row.unitPrice) * this.months
-        }
-      })
-      this.handleFeeChange()
+    isUnitPriceRow(row) {
+      return isUnitPriceFormula(row.computingFormula)
     },
-    handleFeeChange() {
-      this.$emit('fee-change', {
-        rows: this.feeRows,
-        total: this.feeTotal
-      })
-      this.$emit('amount-change', formatAmount(this.feeTotal))
+    isAdditionalRow(row) {
+      return isAdditionalFormula(row.computingFormula)
+    },
+    openFeeDialog() {
+      this.$refs.feeDialog.open()
+    },
+    handleFeeConfirm(row) {
+      this.fees.push(row)
+      this.$emit('fees-change', this.fees)
+    },
+    handleFeeInput() {
+      this.$emit('fees-change', this.fees)
+    },
+    handleFeeRemove(index) {
+      this.fees.splice(index, 1)
+      this.$emit('fees-change', this.fees)
     }
   }
 }
@@ -168,11 +193,28 @@ export default {
 .cc-fee-panel {
   margin-bottom: 18px;
 
-  .cc-section-sub {
-    font-size: 13px;
-    font-weight: 600;
-    color: #303133;
+  .cc-fee-toolbar {
+    display: flex;
+    align-items: center;
     margin-bottom: 8px;
+
+    .cc-section-sub {
+      font-size: 13px;
+      font-weight: 600;
+      color: #303133;
+      margin-right: 10px;
+    }
+
+    .cc-fee-total {
+      margin-left: auto;
+      font-size: 13px;
+      color: #606266;
+
+      span {
+        font-weight: 600;
+        color: #409eff;
+      }
+    }
   }
 
   .cc-fee-tip {
@@ -180,15 +222,14 @@ export default {
     color: #909399;
   }
 
-  .cc-fee-total {
+  .cc-fee-summary {
     margin-top: 10px;
     text-align: right;
     font-size: 13px;
     color: #606266;
 
-    span {
-      font-weight: 600;
-      color: #4f46e5;
+    > span {
+      margin-left: 16px;
     }
   }
 }

@@ -28,8 +28,7 @@
       <span class="cc-tpl-time">{{ $t('contractTemplate.updatedOn', { date: formatTime(template.updateTime || template.createTime) }) }}</span>
       <div class="cc-tpl-ops">
         <button type="button" class="cc-tpl-btn" @click="$emit('edit', template)">{{ $t('contractTemplate.edit') }}</button>
-        <button type="button" class="cc-tpl-btn" @click="$emit('preview', template)">{{ $t('contractTemplate.preview') }}</button>
-        <button type="button" class="cc-tpl-btn is-primary" @click="$emit('use', template)">{{ $t('contractTemplate.use') }}</button>
+        <button type="button" class="cc-tpl-btn is-primary" @click="$emit('preview', template)">{{ $t('contractTemplate.preview') }}</button>
         <el-dropdown trigger="click" class="cc-tpl-more" @command="handleCommand">
           <button type="button" class="cc-tpl-btn is-icon" :title="$t('contractTemplate.more')">
             <i class="el-icon-more"></i>

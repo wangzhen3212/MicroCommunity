@@ -19,7 +19,7 @@
 
           <el-input v-model="searchForm.name" :placeholder="$t('mapping.search.name')" class="search-item" clearable
             @keyup.enter.native="handleSearch" />
-          <el-input v-model="searchForm.key" :placeholder="$t('mapping.search.key')" class="search-item"
+          <el-input v-model="searchForm.key" :placeholder="$t('mapping.search.mappingKey')" class="search-item"
             clearable @keyup.enter.native="handleSearch" />
           <el-input v-model="searchForm.value" :placeholder="$t('mapping.search.value')" class="search-item" clearable
             @keyup.enter.native="handleSearch" />
@@ -37,7 +37,7 @@
           <el-table-column prop="id" :label="$t('mapping.table.id')" />
           <el-table-column prop="domain" :label="$t('mapping.table.domain')" />
           <el-table-column prop="name" :label="$t('mapping.table.name')" />
-          <el-table-column prop="key" :label="$t('mapping.table.key')" />
+          <el-table-column prop="key" :label="$t('mapping.table.mappingKey')" />
           <el-table-column prop="value" :label="$t('mapping.table.value')" />
           <el-table-column prop="remark" :label="$t('mapping.table.remark')" />
           <!-- <el-table-column

@@ -27,7 +27,7 @@
     <div class="cc-summary-block">
       <div class="cc-section-title">
         {{ $t('contractWorkbench.summary.integrity') }}
-        <span class="cc-badge" :class="integrityClass">{{ integrityPassed }}/7</span>
+        <span class="cc-badge" :class="integrityClass">{{ integrityPassed }}/{{ integrityItems.length }}</span>
       </div>
       <div v-for="item in integrityItems" :key="item.key" class="cc-integrity-row">
         <i :class="item.pass ? 'el-icon-circle-check is-pass' : 'el-icon-warning-outline is-fail'"></i>
@@ -50,7 +50,7 @@
 
 <script>
 import ContractAuditFlow from '@/components/contract/contractAuditFlow'
-import { formatAmount, formatTerm, toNumber } from '@/utils/contractUtil'
+import { CONTRACT_CATEGORY, formatAmount, formatTerm, toNumber } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractSummaryPanel',
@@ -72,6 +72,10 @@ export default {
       type: Number,
       default: 0
     },
+    feeTotal: {
+      type: Number,
+      default: 0
+    },
     hasContent: {
       type: Boolean,
       default: false
@@ -90,7 +94,8 @@ export default {
   computed: {
     integrityItems() {
       const form = this.form || {}
-      return [
+      const isRent = String(form.category) === CONTRACT_CATEGORY.RENT
+      const items = [
         {
           key: 'base',
           labelKey: 'contractWorkbench.integrity.base',
@@ -118,21 +123,30 @@ export default {
         },
         {
           key: 'target',
-          labelKey: 'contractWorkbench.integrity.target',
+          labelKey: isRent ? 'contractWorkbench.integrity.targetRent' : 'contractWorkbench.integrity.target',
           pass: this.targetCount > 0
-        },
-        {
-          key: 'plan',
-          labelKey: 'contractWorkbench.integrity.plan',
-          pass: this.planCount > 0 || this.hasContent
         }
       ]
+      if (isRent) {
+        items.push({
+          key: 'fee',
+          labelKey: 'contractWorkbench.integrity.fee',
+          pass: toNumber(this.feeTotal) > 0
+        })
+      } else {
+        items.push({
+          key: 'payMode',
+          labelKey: 'contractWorkbench.integrity.payMode',
+          pass: !!form.payMode
+        })
+      }
+      return items
     },
     integrityPassed() {
       return this.integrityItems.filter(item => item.pass).length
     },
     integrityClass() {
-      return this.integrityPassed === 7 ? 'is-success' : 'is-warning'
+      return this.integrityPassed === this.integrityItems.length ? 'is-success' : 'is-warning'
     }
   },
   methods: {
@@ -148,7 +162,16 @@ export default {
 <style lang="scss" scoped>
 .cc-summary-panel {
   .cc-summary-block {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #ebeef5;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 
   .cc-integrity-row {

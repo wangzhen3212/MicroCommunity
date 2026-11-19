@@ -1,58 +1,63 @@
 <template>
   <div class="contract-partya-center cc-page">
-    <div class="cc-page-head">
-      <div>
-        <div class="cc-page-title">{{ $t('contractPartyaCenter.title') }}</div>
-        <div class="cc-page-subtitle">{{ $t('contractPartyaCenter.subtitle') }}</div>
+    <div class="cc-surface">
+      <div class="cc-surface-head is-stacked">
+        <div>
+          <div class="cc-surface-title">{{ $t('contractPartyaCenter.title') }}</div>
+          <div class="cc-surface-subtitle">{{ $t('contractPartyaCenter.subtitle') }}</div>
+        </div>
       </div>
-      <div class="cc-page-actions">
-        <el-button type="primary" @click="handleAdd">
-          {{ $t('contractPartyaCenter.add') }}
-        </el-button>
+
+      <div class="cc-partya-bar">
+        <div class="cc-partya-filter">
+          <el-input
+            class="cc-partya-search"
+            v-model="searchForm.partyA"
+            prefix-icon="el-icon-search"
+            clearable
+            :placeholder="$t('contractPartyaCenter.searchPlaceholder')"
+            @keyup.enter.native="handleSearch"
+            @clear="handleReset"
+          />
+          <el-button @click="handleSearch">
+            <i class="el-icon-search"></i>
+            <span>{{ $t('common.search') }}</span>
+          </el-button>
+        </div>
+        <div class="cc-partya-actions">
+          <el-button type="primary" @click="handleAdd">
+            <i class="el-icon-plus"></i>
+            <span>{{ $t('contractPartyaCenter.add') }}</span>
+          </el-button>
+        </div>
       </div>
-    </div>
 
-    <div class="cc-toolbar">
-      <el-input
-        v-model="searchForm.partyA"
-        style="width: 260px"
-        clearable
-        :placeholder="$t('contractPartyaCenter.searchPlaceholder')"
-        @keyup.enter.native="handleSearch"
-      />
-      <el-button type="primary" @click="handleSearch">
-        {{ $t('common.search') }}
-      </el-button>
-      <el-button @click="handleReset">
-        {{ $t('common.reset') }}
-      </el-button>
-    </div>
+      <div v-loading="loading" class="cc-partya-list">
+        <div v-if="partyas.length" class="cc-card-grid">
+          <el-row :gutter="16">
+            <el-col v-for="item in partyas" :key="item.partyaId" :xs="24" :sm="12" :lg="8">
+              <contract-partya-card
+                :partya="item"
+                @edit="handleEdit"
+                @set-default="handleSetDefault"
+                @delete="handleDelete"
+              />
+            </el-col>
+          </el-row>
+        </div>
+        <div v-else-if="!loading" class="cc-empty">{{ $t('contractPartyaCenter.empty') }}</div>
 
-    <div v-loading="loading" class="cc-partya-list">
-      <div v-if="partyas.length" class="cc-card-grid">
-        <el-row :gutter="16">
-          <el-col v-for="item in partyas" :key="item.partyaId" :xs="24" :sm="12" :lg="8">
-            <contract-partya-card
-              :partya="item"
-              @edit="handleEdit"
-              @set-default="handleSetDefault"
-              @delete="handleDelete"
-            />
-          </el-col>
-        </el-row>
+        <el-pagination
+          class="cc-pagination"
+          :current-page="page.current"
+          :page-sizes="[12, 24, 36, 48]"
+          :page-size="page.size"
+          :total="page.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
       </div>
-      <div v-else-if="!loading" class="cc-empty">{{ $t('contractPartyaCenter.empty') }}</div>
-
-      <el-pagination
-        class="cc-pagination"
-        :current-page="page.current"
-        :page-sizes="[12, 24, 36, 48]"
-        :page-size="page.size"
-        :total="page.total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      />
     </div>
 
     <add-contract-partya ref="addContractPartya" @success="refresh" />
@@ -167,6 +172,50 @@ export default {
 
 <style lang="scss" scoped>
 .contract-partya-center {
+  .cc-partya-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .cc-partya-filter {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .el-button {
+      height: 36px;
+      padding: 0 16px;
+      margin-left: 0;
+    }
+  }
+
+  .cc-partya-actions {
+    display: flex;
+    align-items: center;
+    flex: none;
+    gap: 8px;
+
+    .el-button {
+      height: 36px;
+      padding: 0 16px;
+      margin-left: 0;
+    }
+  }
+
+  .cc-partya-search {
+    width: 240px;
+
+    ::v-deep .el-input__inner {
+      height: 36px;
+      line-height: 36px;
+    }
+  }
+
   .cc-partya-list {
     min-height: 200px;
   }

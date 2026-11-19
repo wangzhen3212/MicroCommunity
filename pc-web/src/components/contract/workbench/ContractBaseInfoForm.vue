@@ -1,21 +1,21 @@
 <template>
   <div>
     <el-row :gutter="16">
-      <el-col :span="10">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.contractName')" required>
           <el-input v-model="form.contractName" maxlength="100" />
         </el-form-item>
       </el-col>
-      <el-col :span="7">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.contractCode')" required>
-          <el-input v-model="form.contractCode" disabled>
+          <el-input v-model="form.contractCode" maxlength="50">
             <el-button slot="append" size="mini" @click="$emit('regenerate-code')">
               {{ $t('contractWorkbench.regenerate') }}
             </el-button>
           </el-input>
         </el-form-item>
       </el-col>
-      <el-col :span="7">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.template')" required>
           <el-select
             v-model="form.templateId"
@@ -32,10 +32,16 @@
           </el-select>
         </el-form-item>
       </el-col>
+      <el-col :span="6">
+        <el-form-item :label="$t('contractWorkbench.field.amount')" required>
+          <el-input v-model="form.amount" :disabled="isRent" @input="$emit('amount-change', form.amount)" />
+          <div v-if="isRent" class="cc-field-tip">{{ $t('contractWorkbench.msg.amountAuto') }}</div>
+        </el-form-item>
+      </el-col>
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.partyA')" required>
           <el-select
             v-model="form.partyaId"
@@ -53,18 +59,23 @@
           </el-select>
         </el-form-item>
       </el-col>
-      <el-col :span="8">
-        <el-form-item :label="$t('contractWorkbench.field.contacts')">
+      <el-col :span="6">
+        <el-form-item :label="$t('contractWorkbench.field.aContacts')">
           <el-input v-model="form.aContacts" disabled />
         </el-form-item>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.partyB')" required>
           <el-input v-model="form.partyB" :disabled="isRent">
             <el-button v-if="isRent" slot="append" size="mini" @click="$emit('select-owner')">
               {{ $t('common.choose') }}
             </el-button>
           </el-input>
+        </el-form-item>
+      </el-col>
+      <el-col :span="6">
+        <el-form-item :label="$t('contractWorkbench.field.bContacts')">
+          <el-input v-model="form.bContacts" />
         </el-form-item>
       </el-col>
     </el-row>
@@ -76,18 +87,18 @@
         </el-form-item>
       </el-col>
       <el-col :span="6">
-        <el-form-item :label="$t('contractWorkbench.field.contacts')">
-          <el-input v-model="form.bContacts" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.tel')">
           <el-input v-model="form.bLink" maxlength="20" />
         </el-form-item>
       </el-col>
       <el-col :span="6">
-        <el-form-item :label="$t('contractWorkbench.field.amount')" required>
-          <el-input v-model="form.amount" @input="$emit('amount-change', form.amount)" />
+        <el-form-item :label="$t('contractWorkbench.field.operator')" required>
+          <el-input v-model="form.operator" maxlength="50" />
+        </el-form-item>
+      </el-col>
+      <el-col :span="6">
+        <el-form-item :label="$t('contractWorkbench.field.operatorLink')">
+          <el-input v-model="form.operatorLink" maxlength="20" />
         </el-form-item>
       </el-col>
     </el-row>
@@ -133,19 +144,9 @@
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="6">
-        <el-form-item :label="$t('contractWorkbench.field.operator')" required>
-          <el-input v-model="form.operator" maxlength="50" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="6">
-        <el-form-item :label="$t('contractWorkbench.field.operatorLink')">
-          <el-input v-model="form.operatorLink" maxlength="20" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="6">
+      <el-col v-if="!isRent" :span="6">
         <el-form-item :label="$t('contractWorkbench.field.payMode')">
-          <el-input :value="form.payMode" disabled />
+          <el-input v-model="form.payMode" maxlength="100" />
         </el-form-item>
       </el-col>
       <el-col :span="6">
@@ -153,10 +154,7 @@
           <el-input v-model="form.place" maxlength="100" />
         </el-form-item>
       </el-col>
-    </el-row>
-
-    <el-row :gutter="16">
-      <el-col :span="24">
+      <el-col :span="12">
         <el-form-item :label="$t('contractWorkbench.field.remark')">
           <el-input v-model="form.remark" maxlength="200" />
         </el-form-item>
@@ -202,3 +200,11 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.cc-field-tip {
+  font-size: 11px;
+  line-height: 16px;
+  color: #909399;
+}
+</style>

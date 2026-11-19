@@ -112,7 +112,7 @@ export default {
     height: 40px;
     flex: none;
     border-radius: 10px;
-    background: linear-gradient(135deg, #4f46e5, #818cf8);
+    background: linear-gradient(135deg, #409eff, #79bbff);
     color: #fff;
     font-size: 18px;
     display: flex;
@@ -152,8 +152,8 @@ export default {
     padding: 0 6px;
     border-radius: 9px;
     font-size: 11px;
-    color: #4f46e5;
-    background: #eef2ff;
+    color: #409eff;
+    background: #ecf5ff;
   }
 
   .cc-partya-meta {

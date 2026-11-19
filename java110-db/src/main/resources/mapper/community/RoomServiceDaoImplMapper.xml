@@ -938,4 +938,98 @@
             limit #{page},#{row}
         </if>
     </select>
+
+    <!-- 查询可出租房源（无业主的房屋/商铺）数量 room.queryLeasableRooms -->
+    <select id="queryLeasableRoomsCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from building_room t
+        inner join building_unit u on t.unit_id = u.unit_id and u.status_cd = '0'
+        inner join f_floor f on u.floor_id = f.floor_id and f.community_id = t.community_id and f.status_cd = '0'
+        where 1 = 1
+        and t.status_cd = '0'
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
+        <if test="roomType !=null and roomType != ''">
+            and t.room_type = #{roomType}
+        </if>
+        and not exists (
+            select 1 from building_owner_room_rel borr
+            where borr.room_id = t.room_id and borr.status_cd = '0'
+        )
+        <if test="roomNumLike !=null and roomNumLike != ''">
+            and t.room_num like concat('%', #{roomNumLike}, '%')
+        </if>
+        <if test="floorNum !=null and floorNum != ''">
+            and f.floor_num = #{floorNum}
+        </if>
+        <if test="unitNum !=null and unitNum != ''">
+            and u.unit_num = #{unitNum}
+        </if>
+        <if test="states != null">
+            and t.state in
+            <foreach collection="states" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="unitIds != null">
+            and t.unit_id in
+            <foreach collection="unitIds" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+    <!-- 查询可出租房源（无业主的房屋/商铺） room.queryLeasableRooms -->
+    <select id="getLeasableRooms" parameterType="Map" resultType="Map">
+        select t.room_id roomId,
+        concat(f.floor_num, '-', u.unit_num, '-', t.room_num) roomName,
+        t.room_num roomNum, f.floor_num floorNum, u.unit_num unitNum,
+        t.room_type roomType, tdrt.name roomTypeName,
+        t.room_area roomArea, t.built_up_area builtUpArea,
+        t.room_rent roomRent,
+        t.state, tds.name stateName, t.community_id communityId
+        from building_room t
+        inner join building_unit u on t.unit_id = u.unit_id and u.status_cd = '0'
+        inner join f_floor f on u.floor_id = f.floor_id and f.community_id = t.community_id and f.status_cd = '0'
+        left join t_dict tds on t.state = tds.status_cd and tds.table_name = 'building_room' and tds.table_columns = 'state'
+        left join t_dict tdrt on t.room_type = tdrt.status_cd and tdrt.table_name = 'building_room' and tdrt.table_columns = 'room_type'
+        where 1 = 1
+        and t.status_cd = '0'
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
+        <if test="roomType !=null and roomType != ''">
+            and t.room_type = #{roomType}
+        </if>
+        and not exists (
+            select 1 from building_owner_room_rel borr
+            where borr.room_id = t.room_id and borr.status_cd = '0'
+        )
+        <if test="roomNumLike !=null and roomNumLike != ''">
+            and t.room_num like concat('%', #{roomNumLike}, '%')
+        </if>
+        <if test="floorNum !=null and floorNum != ''">
+            and f.floor_num = #{floorNum}
+        </if>
+        <if test="unitNum !=null and unitNum != ''">
+            and u.unit_num = #{unitNum}
+        </if>
+        <if test="states != null">
+            and t.state in
+            <foreach collection="states" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="unitIds != null">
+            and t.unit_id in
+            <foreach collection="unitIds" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        order by f.seq, u.unit_num, CONVERT(t.layer, SIGNED), CONVERT(t.room_num, SIGNED) asc
+        <if test="page != -1 and page != null">
+            limit #{page},#{row}
+        </if>
+    </select>
 </mapper>

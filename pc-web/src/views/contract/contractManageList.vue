@@ -1,27 +1,27 @@
 <template>
   <div class="contract-ledger cc-page">
-    <div class="cc-page-head">
-      <div>
-        <div class="cc-page-title">{{ $t('contractLedger.title') }}</div>
-        <div class="cc-page-subtitle">{{ $t('contractLedger.subtitle') }}</div>
-      </div>
-      <div class="cc-page-actions">
-        <el-button type="primary" @click="createContract">
-          <i class="el-icon-plus"></i>
-          <span>{{ $t('contractWorkbench.titleNew') }}</span>
-        </el-button>
-      </div>
-    </div>
-
     <contract-ledger-stat :statistics="statistics" @filter-auditing="filterAuditing" />
 
     <div class="cc-surface">
+      <div class="cc-surface-head">
+        <div class="cc-surface-title">{{ $t('contractLedger.list') }}</div>
+        <div class="cc-surface-actions">
+          <el-button type="primary" @click="createContract">
+            <i class="el-icon-plus"></i>
+            <span>{{ $t('contractWorkbench.titleNew') }}</span>
+          </el-button>
+          <el-button @click="handleExport">
+            <i class="el-icon-download"></i>
+            <span>{{ $t('contractLedger.filter.export') }}</span>
+          </el-button>
+        </div>
+      </div>
+
       <contract-filter-bar
         :value="conditions"
         :partyas="partyas"
         @search="handleSearch"
         @reset="handleReset"
-        @export="handleExport"
       />
 
       <contract-bulk-bar

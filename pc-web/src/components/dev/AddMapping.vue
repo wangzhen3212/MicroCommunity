@@ -75,7 +75,7 @@ export default {
           { required: true, message: this.$t('mapping.validate.name'), trigger: 'blur' }
         ],
         key: [
-          { required: true, message: this.$t('mapping.validate.key'), trigger: 'blur' }
+          { required: true, message: this.$t('mapping.validate.mappingKey'), trigger: 'blur' }
         ],
         value: [
           { required: true, message: this.$t('mapping.validate.value'), trigger: 'blur' }

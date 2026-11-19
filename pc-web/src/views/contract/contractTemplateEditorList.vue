@@ -1,9 +1,6 @@
 <template>
   <div class="contract-template-editor">
     <div class="cc-tpl-head">
-      <button type="button" class="cc-tpl-back" :title="$t('contractTemplate.editor.back')" @click="handleBack">
-        <i class="el-icon-arrow-left"></i>
-      </button>
       <div class="cc-tpl-title">
         <div class="cc-tpl-title-row">
           <span class="cc-tpl-name">{{ pageTitle }}</span>
@@ -12,16 +9,11 @@
         <p class="cc-tpl-sub">{{ $t('contractTemplate.editor.pageSubtitle') }}</p>
       </div>
       <div class="cc-tpl-actions">
-        <el-button size="small" @click="openPaste">
-          <i class="el-icon-document-copy"></i>
-          <span>{{ $t('contractTemplate.editor.pasteWord') }}</span>
-        </el-button>
-        <el-button size="small" :loading="validating" @click="validateVariables">
-          {{ $t('contractTemplate.editor.validate') }}
-        </el-button>
-        <el-button size="small" @click="previewTemplate">{{ $t('contractTemplate.editor.preview') }}</el-button>
         <el-button size="small" type="primary" :loading="saving" @click="handleSave">
           {{ $t('contractTemplate.editor.save') }}
+        </el-button>
+        <el-button size="small" class="cc-tpl-return" @click="handleBack">
+          {{ $t('contractTemplate.editor.back') }}
         </el-button>
       </div>
     </div>
@@ -85,7 +77,14 @@
               ref="docEditor"
               v-model="form.context"
               :template-content="form.context"
-            />
+            >
+              <template #toolbar>
+                <el-button size="mini" @click="openPaste">
+                  <i class="el-icon-document-copy"></i>
+                  <span>{{ $t('contractTemplate.editor.pasteWord') }}</span>
+                </el-button>
+              </template>
+            </contract-doc-editor>
           </div>
         </div>
       </div>
@@ -143,28 +142,24 @@
     </div>
 
     <contract-paste-import ref="pasteImport" @generated="handlePasteGenerated" />
-    <contract-template-preview ref="templatePreview" />
   </div>
 </template>
 
 <script>
 import ContractDocEditor from '@/components/contract/workbench/ContractDocEditor'
 import ContractPasteImport from '@/components/contract/contractPasteImport'
-import ContractTemplatePreview from '@/components/contract/contractTemplatePreview'
 import { queryContractTypeTemplate, saveContractTypeTemplate, updateContractTemplate } from '@/api/contract/contractTemplateApi'
 
 export default {
   name: 'ContractTemplateEditorList',
   components: {
     ContractDocEditor,
-    ContractPasteImport,
-    ContractTemplatePreview
+    ContractPasteImport
   },
   data() {
     return {
       loading: false,
       saving: false,
-      validating: false,
       form: {
         templateId: '',
         templateName: '',
@@ -271,21 +266,6 @@ export default {
         this.$refs.docEditor.setContent(html)
       }
     },
-    validateVariables() {
-      this.validating = true
-      const matched = (this.form.context || '').match(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g) || []
-      const known = this.variables.map(item => '{{' + item.key + '}}')
-      const missing = matched.filter(item => known.indexOf(item) < 0)
-      if (missing.length < 1) {
-        this.$message.success(this.$t('contractTemplate.editor.variableValid'))
-      } else {
-        this.$message.warning(this.$t('contractTemplate.editor.missingVars', { vars: missing.join('、') }))
-      }
-      this.validating = false
-    },
-    previewTemplate() {
-      this.$refs.templatePreview.open(this.form.context, this.form.templateName)
-    },
     handleBack() {
       this.$router.back()
     },
@@ -327,7 +307,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$brand: #4f46e5;
+$brand: #409eff;
 
 .contract-template-editor {
   padding: 16px 24px 24px;
@@ -341,24 +321,6 @@ $brand: #4f46e5;
     align-items: flex-start;
     gap: 12px;
     padding-bottom: 14px;
-  }
-
-  .cc-tpl-back {
-    width: 32px;
-    height: 32px;
-    flex: none;
-    margin-top: 2px;
-    border: 1px solid #ebeef5;
-    border-radius: 10px;
-    background: #fff;
-    color: #606266;
-    font-size: 14px;
-    cursor: pointer;
-
-    &:hover {
-      color: #409eff;
-      border-color: rgba(64, 158, 255, .35);
-    }
   }
 
   .cc-tpl-title {
@@ -384,7 +346,7 @@ $brand: #4f46e5;
     line-height: 20px;
     padding: 0 6px;
     border-radius: 5px;
-    background: #eef2ff;
+    background: #ecf5ff;
     color: $brand;
     font-size: 10px;
     font-weight: 600;
@@ -419,6 +381,19 @@ $brand: #4f46e5;
       &:focus {
         background: #66b1ff;
         border-color: #66b1ff;
+      }
+    }
+
+    .cc-tpl-return {
+      color: #409eff;
+      background: #ecf5ff;
+      border-color: #d9ecff;
+
+      &:hover,
+      &:focus {
+        color: #409eff;
+        background: #d9ecff;
+        border-color: #409eff;
       }
     }
   }
@@ -462,7 +437,7 @@ $brand: #4f46e5;
     height: 20px;
     flex: none;
     border-radius: 6px;
-    background: #eef2ff;
+    background: #ecf5ff;
     color: $brand;
     font-size: 10px;
     font-weight: 700;
@@ -541,17 +516,17 @@ $brand: #4f46e5;
   .cc-var-chip {
     height: 26px;
     padding: 0 10px;
-    border: 1px solid #e0e7ff;
+    border: 1px solid #d9ecff;
     border-radius: 8px;
-    background: #eef2ff;
-    color: #4338ca;
+    background: #ecf5ff;
+    color: #409eff;
     font-size: 12px;
     cursor: pointer;
     transition: all .2s;
 
     &:hover {
       border-color: $brand;
-      background: #e0e7ff;
+      background: #d9ecff;
     }
   }
 

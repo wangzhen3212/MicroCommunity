@@ -4,6 +4,7 @@ export const messages = {
       title: 'Expiration Reminder',
       subtitle: 'Sorted by remaining days, remind 30 / 15 / 7 days before expiration',
       filter: {
+        title: 'Search Conditions',
         keyword: 'Keyword',
         keywordPlaceholder: 'Contract name / code / party B',
         category: 'Contract Template',
@@ -68,6 +69,7 @@ export const messages = {
       title: '到期提醒',
       subtitle: '按剩余天数升序，到期前 30 / 15 / 7 天提醒',
       filter: {
+        title: '查询条件',
         keyword: '关键字',
         keywordPlaceholder: '合同名称 / 编号 / 签约方',
         category: '合同模板',
@@ -132,6 +134,7 @@ export const messages = {
       title: '到期提醒',
       subtitle: '按剩餘天數升序，到期前 30 / 15 / 7 天提醒',
       filter: {
+        title: '查詢條件',
         keyword: '關鍵字',
         keywordPlaceholder: '合同名稱 / 編號 / 簽約方',
         category: '合約模板',

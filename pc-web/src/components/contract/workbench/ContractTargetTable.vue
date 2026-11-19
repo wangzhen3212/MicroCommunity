@@ -2,7 +2,7 @@
   <div>
     <div class="cc-target-toolbar">
       <el-button v-if="isRent" size="mini" type="primary" @click="$emit('add-house')">
-        <i class="el-icon-plus"></i>{{ $t('contractWorkbench.target.add') }}
+        <i class="el-icon-plus"></i>{{ $t('contractWorkbench.target.addRent') }}
       </el-button>
       <el-button v-else size="mini" type="primary" @click="$emit('add-target')">
         <i class="el-icon-plus"></i>{{ $t('contractWorkbench.target.add') }}
@@ -13,21 +13,21 @@
     </div>
 
     <el-table v-if="isRent" :data="rooms" size="mini" border>
-      <el-table-column :label="$t('contractWorkbench.target.house')">
+      <el-table-column :label="$t('contractWorkbench.target.roomName')">
         <template slot-scope="scope">
           {{ scope.row.roomName || ((scope.row.floorNum || '') + '-' + (scope.row.unitNum || '') + '-' + (scope.row.roomNum || '')) }}
         </template>
       </el-table-column>
-      <el-table-column prop="ownerName" :label="$t('contractWorkbench.target.owner')" align="center" />
+      <el-table-column prop="stateName" :label="$t('contractWorkbench.target.state')" align="center" width="100" />
       <el-table-column :label="$t('contractWorkbench.target.area')" align="center" width="100">
         <template slot-scope="scope">{{ scope.row.builtUpArea || '-' }}</template>
       </el-table-column>
-      <el-table-column :label="$t('contractWorkbench.target.rentUnitPrice')" align="center" width="150">
+      <el-table-column :label="$t('contractWorkbench.target.rentUnitPrice')" align="center" width="140">
         <template slot-scope="scope">
           <el-input size="mini" v-model="scope.row.rentUnitPrice" />
         </template>
       </el-table-column>
-      <el-table-column :label="$t('contractWorkbench.field.amount')" align="center" width="120">
+      <el-table-column :label="$t('contractWorkbench.target.subtotal')" align="center" width="120">
         <template slot-scope="scope">{{ formatAmount(roomAmount(scope.row)) }}</template>
       </el-table-column>
       <el-table-column :label="$t('common.operation')" align="center" width="80">
@@ -73,7 +73,7 @@
 </template>
 
 <script>
-import { CONTRACT_CATEGORY, formatAmount, toNumber } from '@/utils/contractUtil'
+import { CONTRACT_CATEGORY, formatAmount, termMonths, toNumber } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractTargetTable',
@@ -93,6 +93,14 @@ export default {
       default: function () {
         return []
       }
+    },
+    startTime: {
+      type: String,
+      default: ''
+    },
+    endTime: {
+      type: String,
+      default: ''
     }
   },
   computed: {
@@ -108,6 +116,9 @@ export default {
     secondColumnLabel() {
       return this.isMaintain ? this.$t('contractWorkbench.target.service') : this.$t('contractWorkbench.target.spec')
     },
+    months() {
+      return termMonths(this.startTime, this.endTime)
+    },
     isEmpty() {
       return this.isRent ? !this.rooms.length : !this.targets.length
     },
@@ -121,7 +132,7 @@ export default {
   methods: {
     formatAmount,
     roomAmount(row) {
-      return toNumber(row.builtUpArea) * toNumber(row.rentUnitPrice)
+      return toNumber(row.rentUnitPrice) * (this.months > 0 ? this.months : 1)
     },
     targetAmount(row) {
       return toNumber(row.num) * toNumber(row.price)
@@ -143,7 +154,7 @@ export default {
     margin-left: auto;
     font-size: 14px;
     font-weight: 600;
-    color: #4f46e5;
+    color: #409eff;
   }
 }
 </style>

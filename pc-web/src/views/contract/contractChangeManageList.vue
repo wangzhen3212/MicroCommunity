@@ -1,11 +1,11 @@
 <template>
   <div class="contract-change-center cc-page">
-    <div class="cc-page-head">
-      <div>
-        <div class="cc-page-title">{{ $t('contractChangeManage.title') }}</div>
-        <div class="cc-page-subtitle">{{ $t('contractChangeManage.note') }}</div>
+    <div class="cc-change-card">
+      <div class="cc-surface-head">
+        <div class="cc-surface-title">{{ $t('contractChangeManage.search.title') }}</div>
       </div>
-      <div class="cc-page-actions">
+
+      <div class="cc-toolbar">
         <el-input
           style="width: 220px"
           v-model="condition.contractName"
@@ -13,15 +13,28 @@
           :placeholder="$t('contractChangeManage.search.contractName')"
           @keyup.enter.native="handleSearch"
         />
-        <el-button @click="handleSearch">{{ $t('common.search') }}</el-button>
-        <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
-        <el-button type="primary" @click="handleApply">
-          {{ $t('contractChangeManage.apply.title') }}
+        <el-button type="primary" @click="handleSearch">
+          <i class="el-icon-search"></i>
+          {{ $t('common.search') }}
+        </el-button>
+        <el-button @click="handleReset">
+          <i class="el-icon-refresh"></i>
+          {{ $t('common.reset') }}
         </el-button>
       </div>
     </div>
 
     <div class="cc-change-card">
+      <div class="cc-surface-head">
+        <div class="cc-surface-title">{{ $t('contractChangeManage.title') }}</div>
+        <div class="cc-surface-actions">
+          <el-button type="primary" @click="handleApply">
+            <i class="el-icon-plus"></i>
+            <span>{{ $t('contractChangeManage.apply.title') }}</span>
+          </el-button>
+        </div>
+      </div>
+
       <div class="cc-change-card-head">
         <div class="cc-tabs">
           <div
@@ -321,6 +334,17 @@ export default {
     border: 1px solid #ebeef5;
     border-radius: 12px;
     overflow: hidden;
+    margin-bottom: 16px;
+
+    .cc-surface-head {
+      padding: 16px 20px 0;
+      margin-bottom: 12px;
+    }
+
+    .cc-toolbar {
+      padding: 0 20px;
+      margin-bottom: 16px;
+    }
   }
 
   .cc-change-card-head {

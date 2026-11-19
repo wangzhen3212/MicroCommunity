@@ -149,3 +149,23 @@ export function queryRoomsWithOutSell(params) {
     })
   })
 }
+
+// 查询可出租房源（无业主的房屋/商铺）
+export function queryLeasableRooms(params) {
+  return new Promise((resolve, reject) => {
+    request({
+      url: '/room.queryLeasableRooms',
+      method: 'get',
+      params
+    }).then(response => {
+      const res = response.data
+      if (res.code === 0) {
+        resolve(res)
+      } else {
+        reject(new Error(res.msg || 'error'))
+      }
+    }).catch(error => {
+      reject(error)
+    })
+  })
+}

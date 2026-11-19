@@ -1,14 +1,6 @@
 <template>
   <div class="cc-workbench">
     <div class="cc-wb-head">
-      <button
-        type="button"
-        class="cc-wb-back"
-        :title="$t('contractWorkbench.back')"
-        @click="handleBack"
-      >
-        <i class="el-icon-arrow-left"></i>
-      </button>
       <div class="cc-wb-title">
         <div class="cc-wb-title-row">
           <span class="cc-wb-name">{{ pageTitle }}</span>
@@ -30,6 +22,9 @@
         <el-button size="small" :loading="previewing" @click="handlePreview">{{ $t('contractWorkbench.preview') }}</el-button>
         <el-button size="small" type="primary" :loading="submitting" @click="handleSubmit">
           {{ $t('contractWorkbench.submit') }}
+        </el-button>
+        <el-button size="small" class="cc-wb-return" @click="handleBack">
+          {{ $t('contractWorkbench.back') }}
         </el-button>
       </div>
     </div>
@@ -59,13 +54,15 @@
         <div class="cc-panel">
           <div class="cc-panel-head">
             <span class="cc-panel-index">02</span>
-            <h4 class="cc-panel-title">{{ $t('contractWorkbench.section.target') }}</h4>
+            <h4 class="cc-panel-title">{{ sectionTargetTitle }}</h4>
           </div>
           <div class="cc-panel-body">
             <contract-target-table
               :category="form.category"
               :rooms="rooms"
               :targets="targets"
+              :start-time="form.startTime"
+              :end-time="form.endTime"
               @add-house="openHouseDialog"
               @remove-house="removeHouse"
               @add-target="addTarget"
@@ -85,14 +82,14 @@
             <contract-fee-plan-panel
               :category="form.category"
               :rooms="rooms"
+              :fees="fees"
               :plans="plans"
               :amount="form.amount"
               :start-time="form.startTime"
               :end-time="form.endTime"
               :pay-mode="form.payMode"
-              @amount-change="handleAmountChange"
               @plan-change="handlePlanChange"
-              @fee-change="handleFeeChange"
+              @fees-change="handleFeesChange"
             />
           </div>
         </div>
@@ -130,6 +127,7 @@
           :form="form"
           :target-count="targetCount"
           :plan-count="plans.length"
+          :fee-total="includeFeeTotal"
           :has-content="!!content"
           :audit="audit"
           :records="records"
@@ -165,7 +163,9 @@ import { listContractCollectionPlans } from '@/api/contract/contractPerformanceA
 import { queryContractAuditFlow, submitContractAudit } from '@/api/contract/contractAuditApi'
 import { queryContractRoom } from '@/api/contract/contractDetailRoomApi'
 import { queryContractFile } from '@/api/contract/contractDetailFileApi'
-import { amountToChinese, guessCategory, sanitizeHtml } from '@/utils/contractUtil'
+import { amountToChinese, guessCategory, sanitizeHtml, CONTRACT_CATEGORY } from '@/utils/contractUtil'
+import { recalcFees, sumIncludedAmount } from '@/utils/contractFeeUtil'
+import { getDateStr, getDateYYYYMMDD } from '@/utils/dateUtil'
 
 export default {
   name: 'AddContractList',
@@ -192,6 +192,7 @@ export default {
       templateContent: '',
       rooms: [],
       targets: [],
+      fees: [],
       plans: [],
       files: [],
       content: '',
@@ -237,6 +238,24 @@ export default {
     targetCount() {
       return String(this.form.category) === '1' ? this.rooms.length : this.targets.length
     },
+    isRent() {
+      return String(this.form.category) === CONTRACT_CATEGORY.RENT
+    },
+    sectionTargetTitle() {
+      return this.isRent
+        ? this.$t('contractWorkbench.section.targetRent')
+        : this.$t('contractWorkbench.section.target')
+    },
+    feeContext() {
+      return {
+        rooms: this.rooms,
+        startTime: this.form.startTime,
+        endTime: this.form.endTime
+      }
+    },
+    includeFeeTotal() {
+      return sumIncludedAmount(this.fees)
+    },
     docVariables() {
       return {
         amount: this.form.amount,
@@ -261,6 +280,25 @@ export default {
       this.markDirty()
     },
     rooms: {
+      deep: true,
+      handler() {
+        this.markDirty()
+        this.recalcFeeRows()
+      }
+    },
+    'form.startTime'() {
+      this.recalcFeeRows()
+    },
+    'form.endTime'() {
+      this.recalcFeeRows()
+    },
+    'form.category'() {
+      if (this.isRent) {
+        this.form.payMode = ''
+      }
+      this.recalcFeeRows()
+    },
+    fees: {
       deep: true,
       handler() {
         this.markDirty()
@@ -313,6 +351,7 @@ export default {
       this.dirty = true
     },
     createEmptyForm() {
+      const user = this.$getUser() || {}
       return {
         contractId: '',
         contractName: '',
@@ -328,11 +367,11 @@ export default {
         bLink: '',
         creditCode: '',
         amount: '',
-        signingTime: '',
-        startTime: '',
+        signingTime: getDateStr(),
+        startTime: getDateYYYYMMDD(),
         endTime: '',
-        operator: '',
-        operatorLink: '',
+        operator: user.name || '',
+        operatorLink: user.tel || '',
         payMode: '',
         place: '',
         remark: '',
@@ -511,14 +550,21 @@ export default {
     handlePlanChange(plans) {
       this.plans = plans
       this.dirty = true
-      if (this.plans.length) {
+      if (!this.isRent && this.plans.length) {
         this.form.payMode = this.plans.length + ' 期'
       }
     },
-    handleFeeChange(fee) {
-      if (fee && fee.total !== undefined) {
-        this.form.amount = fee.total
+    recalcFeeRows(force) {
+      recalcFees(this.fees, this.feeContext)
+      if (this.isRent && (this.fees.length || force)) {
+        this.form.amount = this.includeFeeTotal.toFixed(2)
       }
+    },
+    handleFeesChange(fees) {
+      if (fees) {
+        this.fees = fees
+      }
+      this.recalcFeeRows(true)
     },
     openHouseDialog() {
       this.$refs.houseDialog.open(this.rooms)
@@ -579,6 +625,7 @@ export default {
         rooms: this.rooms,
         plans: this.plans,
         targets: this.targets,
+        fees: this.fees,
         content: this.content,
         contractFilePo: this.files
       }
@@ -673,37 +720,16 @@ export default {
 
 <style lang="scss" scoped>
 .cc-workbench {
+  padding: 16px 24px 24px;
   min-height: calc(100vh - 140px);
-  background: #f5f7fa;
+  background: #f7f8fa;
+  box-sizing: border-box;
 
   .cc-wb-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
-    padding: 10px 24px;
-    background: #fff;
-    border-bottom: 1px solid #ebeef5;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-
-  .cc-wb-back {
-    width: 36px;
-    height: 36px;
-    flex: none;
-    padding: 0;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    color: #606266;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color .2s;
-
-    &:hover {
-      background: #f5f7fa;
-    }
+    padding-bottom: 14px;
   }
 
   .cc-wb-title {
@@ -717,23 +743,23 @@ export default {
   }
 
   .cc-wb-name {
-    font-size: 15px;
+    font-size: 20px;
     font-weight: 700;
-    line-height: 22px;
-    color: #303133;
+    line-height: 28px;
+    color: #1f2937;
   }
 
   .cc-wb-tag {
-    height: 18px;
-    line-height: 18px;
+    height: 20px;
+    line-height: 20px;
     padding: 0 6px;
-    border-radius: 4px;
+    border-radius: 5px;
     font-size: 10px;
-    font-weight: 500;
+    font-weight: 600;
 
     &.is-draft {
-      color: #7c3aed;
-      background: #f3e8ff;
+      color: #409eff;
+      background: #ecf5ff;
     }
 
     &.is-audit {
@@ -744,9 +770,9 @@ export default {
 
   .cc-wb-sub {
     margin: 2px 0 0;
-    font-size: 11px;
-    line-height: 16px;
-    color: #909399;
+    font-size: 12px;
+    line-height: 18px;
+    color: #9ca3af;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -768,17 +794,37 @@ export default {
     align-items: center;
     gap: 8px;
     margin-left: auto;
+    flex: none;
+
+    .el-button {
+      height: 34px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
 
     .cc-wb-tip {
       font-size: 11px;
       color: #67c23a;
+    }
+
+    .cc-wb-return {
+      color: #409eff;
+      background: #ecf5ff;
+      border-color: #d9ecff;
+
+      &:hover,
+      &:focus {
+        color: #409eff;
+        background: #d9ecff;
+        border-color: #409eff;
+      }
     }
   }
 
   .cc-wb-body {
     display: flex;
     align-items: flex-start;
-    padding: 16px 24px 24px;
+    padding: 0;
 
     .cc-wb-main {
       flex: 1;
@@ -789,7 +835,7 @@ export default {
       width: 320px;
       margin-left: 16px;
       position: sticky;
-      top: 76px;
+      top: 16px;
     }
   }
 
@@ -813,8 +859,8 @@ export default {
       height: 20px;
       flex: none;
       border-radius: 6px;
-      background: #eef2ff;
-      color: #4f46e5;
+      background: #ecf5ff;
+      color: #409eff;
       font-size: 10px;
       font-weight: 700;
       line-height: 20px;

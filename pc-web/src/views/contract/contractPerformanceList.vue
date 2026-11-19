@@ -1,17 +1,5 @@
 <template>
   <div class="contract-performance cc-page">
-    <div class="cc-page-head">
-      <div>
-        <div class="cc-page-title">{{ $t('contractPerformance.title') }}</div>
-        <div class="cc-page-subtitle">{{ $t('contractPerformance.subtitle') }}</div>
-      </div>
-      <div class="cc-page-actions">
-        <el-button @click="handleExport">
-          {{ $t('contractPerformance.filter.export') }}
-        </el-button>
-      </div>
-    </div>
-
     <div class="cc-stat-row">
       <div class="cc-stat-card">
         <div class="cc-stat-head">
@@ -64,6 +52,16 @@
     </div>
 
     <div class="cc-surface">
+    <div class="cc-surface-head">
+      <div class="cc-surface-title">{{ $t('contractPerformance.title') }}</div>
+      <div class="cc-surface-actions">
+        <el-button @click="handleExport">
+          <i class="el-icon-download"></i>
+          <span>{{ $t('contractPerformance.filter.export') }}</span>
+        </el-button>
+      </div>
+    </div>
+
     <div class="cc-toolbar">
       <el-input
         style="width: 220px"

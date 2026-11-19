@@ -209,6 +209,25 @@ public class RoomServiceDaoImpl extends BaseServiceDao implements IRoomServiceDa
         return infos;
     }
 
+    @Override
+    public int queryLeasableRoomsCount(Map info) {
+        logger.debug("查询可出租房源数量 入参 info : {}", info);
 
+        List<Map> infos = sqlSessionTemplate.selectList("roomServiceDaoImpl.queryLeasableRoomsCount", info);
+        if (infos.size() < 1) {
+            return 0;
+        }
+
+        return Integer.parseInt(infos.get(0).get("count").toString());
+    }
+
+    @Override
+    public List<Map> getLeasableRooms(Map info) {
+        logger.debug("查询可出租房源 入参 info : {}", info);
+
+        List<Map> infos = sqlSessionTemplate.selectList("roomServiceDaoImpl.getLeasableRooms", info);
+
+        return infos;
+    }
 
 }

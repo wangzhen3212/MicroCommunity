@@ -477,5 +477,23 @@ DELETE FROM `c_service` WHERE `id` IN ('499','500','501','502','503','504','505'
 - 审核口径：`SaveContractBMOImpl`、`BatchSubmitContractCmd` 不再读 `contract_type.audit`，统一走合同审核流程。
 - 前端：模板库删除「类型维护」抽屉与类型/类型规格组件（`addContractType`、`editContractType`、`deleteContractType`、`contractTemplateEditor`、`addTemplateView`、`*ContractTypeSpec*`、两个 api 封装与两个页面）；模板编辑页新增「类型」必选下拉（提交 `category`）；合同工作台去掉合同类型下拉、模板改必选；台账/起草/履约/详情/审核/选择合同等处「合同类型」列统一改「合同模板」并取模板名；三语 i18n 同步。
 
+## 十三、可出租房源查询接口（room.queryLeasableRooms）
+
+> 场景：合同工作台（`/pages/admin/newContractManage`）房屋出租模板下「关联出租房屋」，只列出**无业主**的房屋/商铺并带出租金 `roomRent`。
+> 归属服务 `community-service`（`url: http://community-service`），`is_instance = 'CMD'`，方法 `GET`；只新增 CMD / DAO / Mapper statement，不改动 `room.queryRooms`、`room.queryRoomsWithOutSell` 等既有接口。
+> 执行后需刷新 `AppRouteCache` 或重启 `service-api`，否则前端调用报「未提供该服务」。
+
+```sql
+INSERT IGNORE INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_cd`,`name`,`seq`,`messageQueueName`,`is_instance`,`url`,`method`,`timeout`,`retry_count`,`provide_app_id`,`create_time`,`status_cd`) VALUES
+ ('2156','982026111600000026','room.queryLeasableRooms','API','查询可出租房源（无业主）','1',NULL,'CMD','http://community-service','GET','60','3','8000418004',NOW(),'0');
+
+INSERT IGNORE INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_times`,`invoke_model`,`create_time`,`status_cd`) VALUES
+ ('3138','8000418004','982026111600000026','Q','1000','S',NOW(),'0');
+```
+
+> 请求参数：`communityId`（必填）、`roomType`（必填，`1010301` 房屋 / `2020602` 商铺）、`roomNumLike`、`floorNum`、`unitNum`、`roomState`（多个逗号分隔）、`page`、`row`（≤ 10000）。
+> 返回：`ResultVo`（`records` 总页数、`total` 总条数、`data` 房源列表，含 `roomId/roomName/roomNum/floorNum/unitNum/roomType/roomTypeName/roomArea/builtUpArea/roomRent/state/stateName`）。
+> 无需新增菜单与权限码，按钮沿用合同台账已授权菜单；接口带员工数据权限（`unitIds`），无楼栋数据权限的账号查不到房源。
+
 
 

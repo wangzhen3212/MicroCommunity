@@ -1,18 +1,10 @@
 <template>
   <div class="contract-remind cc-page">
-    <div class="cc-page-head">
-      <div>
-        <div class="cc-page-title">{{ $t('contractRemind.title') }}</div>
-        <div class="cc-page-subtitle">{{ $t('contractRemind.subtitle') }}</div>
-      </div>
-      <div class="cc-page-actions">
-        <el-button v-if="hasPrivilege('502026111600000004')" @click="handleExport">
-          {{ $t('contractRemind.filter.export') }}
-        </el-button>
-      </div>
+    <div class="cc-surface">
+    <div class="cc-surface-head">
+      <div class="cc-surface-title">{{ $t('contractRemind.filter.title') }}</div>
     </div>
 
-    <div class="cc-surface">
     <div class="cc-toolbar">
       <el-input
         v-model="condition.searchText"
@@ -28,12 +20,20 @@
       </el-select>
       <el-checkbox v-model="includeExpired">{{ $t('contractRemind.filter.includeExpired') }}</el-checkbox>
       <el-button type="primary" @click="handleSearch">
+        <i class="el-icon-search"></i>
         {{ $t('common.search') }}
       </el-button>
       <el-button @click="handleReset">
+        <i class="el-icon-refresh"></i>
         {{ $t('common.reset') }}
       </el-button>
-      <div class="cc-bulk-actions">
+    </div>
+    </div>
+
+    <div class="cc-surface">
+    <div class="cc-surface-head">
+      <div class="cc-surface-title">{{ $t('contractRemind.title') }}</div>
+      <div class="cc-surface-actions">
         <span v-if="selection.length" class="cc-selected">
           {{ $t('contractRemind.bulk.selected', { count: selection.length }) }}
         </span>
@@ -42,10 +42,16 @@
           :disabled="!selection.length"
           @click="openPushDialog"
         >
-          {{ $t('contractRemind.bulk.push') }}
+          <i class="el-icon-bell"></i>
+          <span>{{ $t('contractRemind.bulk.push') }}</span>
         </el-button>
         <el-button :disabled="!selection.length" @click="handleBatchRenew">
-          {{ $t('contractRemind.bulk.renew') }}
+          <i class="el-icon-refresh-left"></i>
+          <span>{{ $t('contractRemind.bulk.renew') }}</span>
+        </el-button>
+        <el-button v-if="hasPrivilege('502026111600000004')" @click="handleExport">
+          <i class="el-icon-download"></i>
+          <span>{{ $t('contractRemind.filter.export') }}</span>
         </el-button>
       </div>
     </div>
@@ -330,16 +336,11 @@ export default {
 
 <style lang="scss" scoped>
 .contract-remind {
-  .cc-toolbar {
-    .cc-bulk-actions {
-      margin-left: auto;
-
-      .cc-selected {
-        margin-right: 10px;
-        font-size: 12px;
-        color: #4f46e5;
-      }
-    }
+  .cc-selected {
+    margin-right: 4px;
+    font-size: 12px;
+    color: #4f46e5;
+    white-space: nowrap;
   }
 
   .cc-cell-code {

@@ -28,6 +28,7 @@
           <el-dropdown-item command="houses">{{ $t('contractWorkbench.doc.varHouses') }}</el-dropdown-item>
         </el-dropdown-menu>
       </el-dropdown>
+      <slot name="toolbar"></slot>
       <el-button v-if="templateContent" size="mini" :disabled="readonly" @click="resetToTemplate">
         {{ $t('contractWorkbench.doc.reset') }}
       </el-button>

@@ -1,84 +1,89 @@
 <template>
   <div class="contract-template-center cc-page">
-    <div class="cc-page-head">
-      <div>
-        <div class="cc-page-title">{{ $t('contractTemplate.title') }}</div>
-        <div class="cc-page-subtitle">{{ $t('contractTemplate.subtitle') }}</div>
-      </div>
-      <div class="cc-page-actions">
-        <el-input
-          style="width: 200px"
-          v-model="conditions.templateNameLike"
-          :placeholder="$t('contractTemplate.searchPlaceholder')"
-          clearable
-          @keyup.enter.native="handleSearch"
-        />
-        <el-button @click="handleImportWord">
-          <i class="el-icon-document-copy"></i>
-          <span>{{ $t('contractTemplate.editor.pasteWord') }}</span>
-        </el-button>
-        <el-button type="primary" @click="openEditor()">
-          <i class="el-icon-plus"></i>
-          <span>{{ $t('contractTemplate.newTemplate') }}</span>
-        </el-button>
-      </div>
-    </div>
-
-    <div class="cc-tpl-bar">
-      <div class="cc-tabs is-segment">
-        <div
-          v-for="tab in categoryTabs"
-          :key="tab.key"
-          class="cc-tab"
-          :class="{ 'is-active': conditions.category === tab.key }"
-          @click="switchCategory(tab.key)"
-        >
-          {{ $t(tab.labelKey) }}
-          <span class="cc-tab-count">{{ tab.count }}</span>
+    <div class="cc-surface">
+      <div class="cc-surface-head is-stacked">
+        <div>
+          <div class="cc-surface-title">{{ $t('contractTemplate.title') }}</div>
+          <div class="cc-surface-subtitle">{{ $t('contractTemplate.subtitle') }}</div>
         </div>
       </div>
-      <p class="cc-tpl-legend">
-        <span class="cc-tpl-legend-label">{{ $t('contractTemplate.variableLabel') }}</span>
-        <span v-for="item in templateVariables" :key="item.token" class="cc-var-item">
-          <code class="cc-var-chip">{{ item.token }}</code>
-          <em class="cc-var-name">{{ $t('contractTemplate.variables.' + item.key) }}</em>
-        </span>
-      </p>
-    </div>
 
-    <div class="cc-card-grid">
-      <el-row :gutter="16" v-loading="loading">
-        <el-col
-          v-for="item in templates"
-          :key="item.templateId"
-          :xs="24"
-          :sm="12"
-          :lg="8"
-        >
-          <contract-template-card
-            :template="item"
-            @edit="openEditor"
-            @preview="openPreview"
-            @use="handleUseTemplate"
-            @copy="copyTemplate"
-            @disable="disableTemplate"
+      <div class="cc-tpl-bar">
+        <div class="cc-tabs is-segment">
+          <div
+            v-for="tab in categoryTabs"
+            :key="tab.key"
+            class="cc-tab"
+            :class="{ 'is-active': conditions.category === tab.key }"
+            @click="switchCategory(tab.key)"
+          >
+            {{ $t(tab.labelKey) }}
+            <span class="cc-tab-count">{{ tab.count }}</span>
+          </div>
+        </div>
+
+        <div class="cc-tpl-actions">
+          <el-popover placement="bottom-end" width="300" trigger="hover" popper-class="cc-tpl-vars">
+            <div class="cc-var-list">
+              <span v-for="item in templateVariables" :key="item.token" class="cc-var-item">
+                <code class="cc-var-chip">{{ item.token }}</code>
+                <em class="cc-var-name">{{ $t('contractTemplate.variables.' + item.key) }}</em>
+              </span>
+            </div>
+            <span slot="reference" class="cc-tpl-help">
+              <i class="el-icon-info"></i>
+              <span>{{ $t('contractTemplate.variableHelp') }}</span>
+            </span>
+          </el-popover>
+
+          <el-input
+            class="cc-tpl-search"
+            v-model="conditions.templateNameLike"
+            :placeholder="$t('contractTemplate.searchPlaceholder')"
+            prefix-icon="el-icon-search"
+            clearable
+            @keyup.enter.native="handleSearch"
           />
-        </el-col>
-      </el-row>
+          <el-button type="primary" @click="openEditor()">
+            <i class="el-icon-plus"></i>
+            <span>{{ $t('contractTemplate.newTemplate') }}</span>
+          </el-button>
+        </div>
+      </div>
+
+      <div class="cc-card-grid">
+        <el-row :gutter="16" v-loading="loading">
+          <el-col
+            v-for="item in templates"
+            :key="item.templateId"
+            :xs="24"
+            :sm="12"
+            :lg="8"
+          >
+            <contract-template-card
+              :template="item"
+              @edit="openEditor"
+              @preview="openPreview"
+              @copy="copyTemplate"
+              @disable="disableTemplate"
+            />
+          </el-col>
+        </el-row>
+      </div>
+
+      <div v-if="!loading && !templates.length" class="cc-empty">{{ $t('contractTemplate.empty') }}</div>
+
+      <el-pagination
+        class="cc-pagination"
+        :current-page="page.current"
+        :page-sizes="[9, 18, 36]"
+        :page-size="page.size"
+        :total="page.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </div>
-
-    <div v-if="!loading && !templates.length" class="cc-empty">{{ $t('contractTemplate.empty') }}</div>
-
-    <el-pagination
-      class="cc-pagination"
-      :current-page="page.current"
-      :page-sizes="[9, 18, 36]"
-      :page-size="page.size"
-      :total="page.total"
-      layout="total, sizes, prev, pager, next, jumper"
-      @size-change="handleSizeChange"
-      @current-change="handleCurrentChange"
-    />
 
     <contract-template-preview ref="templatePreview" />
   </div>
@@ -182,12 +187,6 @@ export default {
       this.page.current = current
       this.loadTemplates()
     },
-    handleImportWord() {
-      this.$router.push({
-        path: '/views/contract/templateEditor',
-        query: { paste: '1' }
-      })
-    },
     openEditor(template) {
       if (!template || !template.templateId) {
         this.$router.push({ path: '/views/contract/templateEditor' })
@@ -195,12 +194,6 @@ export default {
       }
       this.$router.push({
         path: '/views/contract/templateEditor',
-        query: { templateId: template.templateId }
-      })
-    },
-    handleUseTemplate(template) {
-      this.$router.push({
-        path: '/views/contract/addContract',
         query: { templateId: template.templateId }
       })
     },
@@ -236,53 +229,82 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.cc-tpl-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-
-  .cc-tabs {
-    margin-bottom: 0;
-  }
-
-  .cc-tpl-legend {
+.contract-template-center {
+  .cc-tpl-bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 6px;
-    margin: 0;
-    font-size: 12px;
-    line-height: 18px;
-    color: #9ca3af;
-    text-align: right;
+    gap: 12px;
+    margin: 16px 0;
+
+    .cc-tabs {
+      margin-bottom: 0;
+    }
+
+    .cc-tabs.is-segment {
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      gap: 6px;
+
+      .cc-tab {
+        padding: 6px 16px;
+        border-radius: 999px;
+        border-bottom: none;
+
+        &:hover {
+          background: #f5f6fa;
+        }
+
+        &.is-active {
+          color: #409eff;
+          background: #ecf5ff;
+          font-weight: 500;
+        }
+
+        .cc-tab-count {
+          color: inherit;
+        }
+      }
+    }
   }
 
-  .cc-tpl-legend-label {
-    margin-right: 2px;
+  .cc-tpl-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .el-button {
+      height: 36px;
+      padding: 0 16px;
+      margin-left: 0;
+    }
   }
 
-  .cc-var-item {
+  .cc-tpl-help {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    font-size: 12px;
+    color: #909399;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      color: #409eff;
+    }
   }
 
-  .cc-var-chip {
-    padding: 1px 6px;
-    border-radius: 5px;
-    background: #eef0f4;
-    color: #606266;
-    font-size: 11px;
-    font-family: Consolas, Monaco, monospace;
-  }
+  .cc-tpl-search {
+    width: 220px;
 
-  .cc-var-name {
-    font-style: normal;
-    font-size: 11px;
-    color: #b1b3b8;
+    ::v-deep .el-input__inner {
+      height: 36px;
+      line-height: 36px;
+    }
   }
 }
 </style>

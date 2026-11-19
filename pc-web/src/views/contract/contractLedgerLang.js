@@ -19,6 +19,7 @@ export const messages = {
     contractLedger: {
       title: 'Contract Ledger',
       subtitle: 'Contract center for ledger, performance and expiration',
+      list: 'Contract List',
       stat: {
         total: 'Total Contracts',
         effective: 'Effective',
@@ -147,6 +148,7 @@ export const messages = {
     contractLedger: {
       title: '合同台账',
       subtitle: '台账、履约、到期一体化合同中心',
+      list: '合同列表',
       stat: {
         total: '合同总数',
         effective: '生效中',
@@ -275,6 +277,7 @@ export const messages = {
     contractLedger: {
       title: '合同台賬',
       subtitle: '台賬、履約、到期一體化合同中心',
+      list: '合約列表',
       stat: {
         total: '合同總數',
         effective: '生效中',

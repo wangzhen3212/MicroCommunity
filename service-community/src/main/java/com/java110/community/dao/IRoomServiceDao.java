@@ -139,4 +139,22 @@ public interface IRoomServiceDao {
 
     public List<Map> getRoomInfos(Map info);
 
+
+    /**
+     * 查询可出租房源（无业主的房屋/商铺）数量
+     *
+     * @param info 查询条件
+     * @return 房源数量
+     */
+    int queryLeasableRoomsCount(Map info);
+
+
+    /**
+     * 查询可出租房源（无业主的房屋/商铺）
+     *
+     * @param info 查询条件
+     * @return 房源信息
+     */
+    List<Map> getLeasableRooms(Map info);
+
 }

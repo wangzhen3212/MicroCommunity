@@ -5,6 +5,7 @@ export const messages = {
       subtitle: 'Maintain standard templates and variable placeholders for three contract categories, apply them in one click when creating a contract.',
       variableTip: 'Variables: {{amount}} contract amount, {{startTime}} effective date, {{endTime}} expiry date, {{partyB}} Party B, {{houses}} house list',
       variableLabel: 'Variables available in text:',
+      variableHelp: 'Variable Guide',
       variables: {
         amount: 'Contract amount',
         startTime: 'Effective date',
@@ -148,6 +149,7 @@ export const messages = {
       subtitle: '维护三类合同的标准模板与变量占位符，新建合同时一键套用。',
       variableTip: '可用变量：{{amount}} 合同金额、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名称、{{houses}} 房屋清单',
       variableLabel: '正文中可用变量：',
+      variableHelp: '变量说明',
       variables: {
         amount: '合同金额',
         startTime: '生效日期',
@@ -291,6 +293,7 @@ export const messages = {
       subtitle: '維護三類合同的標準模板與變量佔位符，新建合同時一鍵套用。',
       variableTip: '可用變量：{{amount}} 合同金額、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名稱、{{houses}} 房屋清單',
       variableLabel: '正文中可用變量：',
+      variableHelp: '變量說明',
       variables: {
         amount: '合同金額',
         startTime: '生效日期',

@@ -1,94 +1,95 @@
 <template>
   <div class="contract-audit-center cc-page">
-    <div class="cc-page-head">
-      <div>
-        <div class="cc-page-title">{{ $t('contractAuditCenter.title') }}</div>
-        <div class="cc-page-subtitle">{{ $t('contractAuditCenter.subtitle') }}</div>
-      </div>
-      <div class="cc-page-actions">
-        <el-button v-if="hasPrivilege('502026111600000003')" @click="openConfig">
-          {{ $t('contractAuditCenter.ruleSetting') }}
-        </el-button>
-      </div>
-    </div>
-
     <contract-audit-stat :statistics="statistics" @change="switchTab" />
 
-    <div class="cc-tabs">
-      <div
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="cc-tab"
-        :class="{ 'is-active': activeTab === tab.key }"
-        @click="switchTab(tab.key)"
-      >
-        {{ $t(tab.labelKey) }}
-        <span class="cc-tab-count">{{ tab.count }}</span>
-      </div>
-      <p class="cc-tabs-tip">{{ $t('contractAuditCenter.nodeTip') }}</p>
-    </div>
-
-    <div class="cc-toolbar">
-      <el-input
-        v-model="condition.searchText"
-        style="width: 280px"
-        clearable
-        :placeholder="$t('contractAuditCenter.filter.keywordPlaceholder')"
-        @keyup.enter.native="handleSearch"
-      />
-      <el-select
-        v-model="condition.auditType"
-        style="width: 150px"
-        clearable
-        :placeholder="$t('contractAuditCenter.filter.auditType')"
-      >
-        <el-option :label="$t('contractAuditCenter.filter.auditTypeAll')" value="" />
-        <el-option :label="$t('contractAuditCenter.typeContract')" value="1" />
-        <el-option :label="$t('contractAuditCenter.typeChange')" value="2" />
-      </el-select>
-      <el-button type="primary" @click="handleSearch">
-        {{ $t('common.search') }}
-      </el-button>
-      <el-button @click="handleReset">
-        {{ $t('common.reset') }}
-      </el-button>
-    </div>
-
-    <div v-loading="loading" class="cc-audit-list">
-      <div v-for="(item, index) in items" :key="itemKey(item, index)" class="cc-audit-row">
-        <contract-audit-item :item="item" />
-        <div class="cc-audit-ops">
-          <el-button
-            v-if="canAudit(item)"
-            type="primary"
-            size="mini"
-            @click="openAuditDialog(item)"
-          >{{ $t('contractAuditCenter.op.audit') }}</el-button>
-          <el-button
-            v-if="canCancel(item)"
-            size="mini"
-            @click="handleCancel(item)"
-          >{{ $t('contractAuditCenter.op.cancel') }}</el-button>
-          <el-button size="mini" @click="handleView(item)">
-            {{ $t('contractAuditCenter.op.view') }}
+    <div class="cc-surface">
+      <div v-if="hasPrivilege('502026111600000003')" class="cc-surface-head">
+        <div class="cc-surface-actions">
+          <el-button @click="openConfig">
+            <i class="el-icon-setting"></i>
+            <span>{{ $t('contractAuditCenter.ruleSetting') }}</span>
           </el-button>
         </div>
       </div>
-      <div v-if="!loading && !items.length" class="cc-empty">
-        {{ $t('contractAuditCenter.empty') }}
+
+      <div class="cc-tabs">
+        <div
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="cc-tab"
+          :class="{ 'is-active': activeTab === tab.key }"
+          @click="switchTab(tab.key)"
+        >
+          {{ $t(tab.labelKey) }}
+          <span class="cc-tab-count">{{ tab.count }}</span>
+        </div>
+        <p class="cc-tabs-tip">{{ $t('contractAuditCenter.nodeTip') }}</p>
+      </div>
+
+      <div class="cc-toolbar">
+        <el-input
+          v-model="condition.searchText"
+          style="width: 280px"
+          clearable
+          :placeholder="$t('contractAuditCenter.filter.keywordPlaceholder')"
+          @keyup.enter.native="handleSearch"
+        />
+        <el-select
+          v-model="condition.auditType"
+          style="width: 150px"
+          clearable
+          :placeholder="$t('contractAuditCenter.filter.auditType')"
+        >
+          <el-option :label="$t('contractAuditCenter.filter.auditTypeAll')" value="" />
+          <el-option :label="$t('contractAuditCenter.typeContract')" value="1" />
+          <el-option :label="$t('contractAuditCenter.typeChange')" value="2" />
+        </el-select>
+        <el-button type="primary" @click="handleSearch">
+          {{ $t('common.search') }}
+        </el-button>
+        <el-button @click="handleReset">
+          {{ $t('common.reset') }}
+        </el-button>
+      </div>
+
+      <div v-loading="loading" class="cc-audit-list">
+        <div v-for="(item, index) in items" :key="itemKey(item, index)" class="cc-audit-row">
+          <contract-audit-item :item="item" />
+          <div class="cc-audit-ops">
+            <el-button
+              v-if="canAudit(item)"
+              type="primary"
+              size="mini"
+              @click="openAuditDialog(item)"
+            >{{ $t('contractAuditCenter.op.audit') }}</el-button>
+            <el-button
+              v-if="canCancel(item)"
+              size="mini"
+              @click="handleCancel(item)"
+            >{{ $t('contractAuditCenter.op.cancel') }}</el-button>
+            <el-button size="mini" @click="handleView(item)">
+              {{ $t('contractAuditCenter.op.view') }}
+            </el-button>
+          </div>
+        </div>
+        <div v-if="!loading && !items.length" class="cc-empty">
+          {{ $t('contractAuditCenter.empty') }}
+        </div>
+      </div>
+
+      <div class="cc-surface-foot">
+        <el-pagination
+          class="cc-pagination"
+          :current-page="page.current"
+          :page-sizes="[10, 20, 30, 50]"
+          :page-size="page.size"
+          :total="page.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
       </div>
     </div>
-
-    <el-pagination
-      class="cc-pagination"
-      :current-page="page.current"
-      :page-sizes="[10, 20, 30, 50]"
-      :page-size="page.size"
-      :total="page.total"
-      layout="total, sizes, prev, pager, next, jumper"
-      @size-change="handleSizeChange"
-      @current-change="handleCurrentChange"
-    />
 
     <contract-audit-dialog ref="auditDialog" @success="refresh" />
     <contract-auditor-config ref="auditorConfig" @success="refresh" />
@@ -351,6 +352,15 @@ export default {
 
 <style lang="scss" scoped>
 .contract-audit-center {
+  .cc-surface-head {
+    justify-content: flex-end;
+    margin-bottom: 0;
+  }
+
+  .cc-tabs {
+    padding-top: 8px;
+  }
+
   .cc-tabs-tip {
     margin-left: auto;
     padding-bottom: 10px;

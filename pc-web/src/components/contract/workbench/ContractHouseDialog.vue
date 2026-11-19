@@ -1,22 +1,35 @@
 <template>
   <el-dialog
-    :title="$t('contractWorkbench.target.house')"
+    :title="$t('contractWorkbench.target.addRent')"
     :visible.sync="visible"
-    width="760px"
+    width="860px"
     @close="handleClose"
   >
+    <el-tabs v-model="roomType" @tab-click="handleTabChange">
+      <el-tab-pane :label="$t('contractWorkbench.target.tabRoom')" name="1010301" />
+      <el-tab-pane :label="$t('contractWorkbench.target.tabShop')" name="2020602" />
+    </el-tabs>
+
     <div class="cc-toolbar">
       <el-input
-        style="width: 240px"
-        v-model="keyword"
-        :placeholder="$t('contractLedger.filter.keywordPlaceholder')"
+        style="width: 130px"
+        v-model="floorNum"
+        :placeholder="$t('contractWorkbench.target.floorNum')"
         clearable
-        @keyup.enter.native="queryRoomsMethod"
+        @keyup.enter.native="handleSearch"
       />
-      <el-button type="primary" @click="queryRoomsMethod">
+      <el-input
+        style="width: 150px"
+        v-model="roomNumLike"
+        :placeholder="$t('contractWorkbench.target.roomNum')"
+        clearable
+        @keyup.enter.native="handleSearch"
+      />
+      <el-button type="primary" @click="handleSearch">
         <i class="el-icon-search"></i>
         {{ $t('common.search') }}
       </el-button>
+      <span class="cc-toolbar-tip">{{ $t('contractWorkbench.target.noOwnerTip') }}</span>
     </div>
 
     <el-table
@@ -27,16 +40,21 @@
       @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="46" />
-      <el-table-column :label="$t('contractWorkbench.target.house')">
+      <el-table-column :label="$t('contractWorkbench.target.roomName')">
         <template slot-scope="scope">
           {{ scope.row.roomName || ((scope.row.floorNum || '') + '-' + (scope.row.unitNum || '') + '-' + (scope.row.roomNum || '')) }}
         </template>
       </el-table-column>
-      <el-table-column prop="ownerName" :label="$t('contractWorkbench.target.owner')" align="center" />
-      <el-table-column :label="$t('contractWorkbench.target.area')" align="center" width="110">
+      <el-table-column prop="stateName" :label="$t('contractWorkbench.target.state')" align="center" width="100" />
+      <el-table-column :label="$t('contractWorkbench.target.area')" align="center" width="100">
         <template slot-scope="scope">{{ scope.row.builtUpArea || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="stateName" :label="$t('contractCategory.all')" align="center" width="110" />
+      <el-table-column :label="$t('contractWorkbench.target.roomArea')" align="center" width="100">
+        <template slot-scope="scope">{{ scope.row.roomArea || '-' }}</template>
+      </el-table-column>
+      <el-table-column :label="$t('contractWorkbench.target.rent')" align="center" width="110">
+        <template slot-scope="scope">{{ formatAmount(scope.row.roomRent) }}</template>
+      </el-table-column>
     </el-table>
 
     <el-pagination
@@ -73,7 +91,8 @@
 
 <script>
 import { getCommunityId } from '@/api/community/communityApi'
-import { queryRooms } from '@/api/contract/addContractApi'
+import { queryLeasableRooms } from '@/api/contract/addContractApi'
+import { formatAmount } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractHouseDialog',
@@ -81,7 +100,9 @@ export default {
     return {
       visible: false,
       loading: false,
-      keyword: '',
+      roomType: '1010301',
+      floorNum: '',
+      roomNumLike: '',
       rooms: [],
       selected: [],
       page: {
@@ -92,32 +113,43 @@ export default {
     }
   },
   methods: {
+    formatAmount,
     open(exists) {
       this.visible = true
       this.selected = exists ? exists.slice() : []
-      this.keyword = ''
+      this.floorNum = ''
+      this.roomNumLike = ''
       this.page.current = 1
       this.queryRoomsMethod()
     },
     handleClose() {
       this.visible = false
     },
+    handleTabChange() {
+      this.page.current = 1
+      this.queryRoomsMethod()
+    },
+    handleSearch() {
+      this.page.current = 1
+      this.queryRoomsMethod()
+    },
     queryRoomsMethod() {
       this.loading = true
-      queryRooms({
+      queryLeasableRooms({
         communityId: getCommunityId(),
+        roomType: this.roomType,
+        floorNum: this.floorNum,
+        roomNumLike: this.roomNumLike,
         page: this.page.current,
-        row: this.page.size,
-        roomNameLike: this.keyword,
-        all: true
+        row: this.page.size
       }).then(res => {
         const payload = res || {}
-        this.rooms = payload.rooms || payload.data || []
+        this.rooms = payload.data || []
         this.page.total = payload.total || this.rooms.length
       }).catch(error => {
         this.rooms = []
         this.page.total = 0
-        this.$message.error(error.message)
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.loadError'))
       }).finally(() => {
         this.loading = false
       })
@@ -151,7 +183,13 @@ export default {
       this.queryRoomsMethod()
     },
     handleConfirm() {
-      this.$emit('choose', this.selected.slice())
+      const rooms = this.selected.map(room => {
+        return {
+          ...room,
+          rentUnitPrice: room.rentUnitPrice || room.roomRent
+        }
+      })
+      this.$emit('choose', rooms)
       this.handleClose()
     }
   }
@@ -164,8 +202,17 @@ export default {
   align-items: center;
   margin-bottom: 12px;
 
+  .el-input {
+    margin-right: 8px;
+  }
+
   .el-button {
-    margin-left: 8px;
+    margin-right: 8px;
+  }
+
+  .cc-toolbar-tip {
+    font-size: 12px;
+    color: #909399;
   }
 }
 
