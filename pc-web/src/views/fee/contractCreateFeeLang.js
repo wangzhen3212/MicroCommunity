@@ -32,7 +32,14 @@ export const messages = {
       enterPartyB: 'Enter party B',
       selectContractStatus: 'Select contract status',
       batchPayFee: 'Batch Pay Fee',
-      batchCreate: 'Batch Create'
+      prePayFee: 'Pre Pay Fee',
+      batchCreate: 'Batch Create',
+      contractFee: 'Contract Fee',
+      paymentHistory: 'Payment History',
+      owner: 'Owner',
+      contractRooms: 'Contract Rooms',
+      reprintReceipt: 'Reprint Receipt',
+      emptyContract: 'Please add a contract first'
     },
     contractDetailFee: {
       temporaryFee: 'Temporary Fee',
@@ -178,7 +185,13 @@ export const messages = {
       selectContractStatus: '请选择合同状态',
       batchPayFee: '批量缴费',
       prePayFee: '预付收款',
-      batchCreate: '批量创建'
+      batchCreate: '批量创建',
+      contractFee: '合同费用',
+      paymentHistory: '缴费历史',
+      owner: '业主',
+      contractRooms: '合同房屋',
+      reprintReceipt: '补打收据',
+      emptyContract: '请先添加合同'
     },
     contractDetailFee: {
       temporaryFee: '临时费用',
@@ -324,7 +337,13 @@ note: '注：批量创建的费用在合同收费的查看费用中显示'
       selectContractStatus: '請選擇合同狀態',
       batchPayFee: '批量繳費',
       prePayFee: '預付收款',
-      batchCreate: '批量創建'
+      batchCreate: '批量創建',
+      contractFee: '合同費用',
+      paymentHistory: '繳費歷史',
+      owner: '業主',
+      contractRooms: '合同房屋',
+      reprintReceipt: '補打收據',
+      emptyContract: '請先添加合同'
     },
     contractDetailFee: {
       temporaryFee: '臨時費用',

@@ -22,6 +22,12 @@ import { getCommunityId } from '@/api/community/communityApi'
 
 export default {
   name: 'ParkingSpaceTreeHasOwner',
+  props: {
+    autoSelectFirst: {
+      type: Boolean,
+      default: true
+    }
+  },
   data() {
     return {
       treeData: [],
@@ -93,6 +99,10 @@ export default {
       this.$nextTick(() => {
         if (this.treeData.length === 0) {
           this.$emit('treeEmpty')
+          return
+        }
+        if (!this.autoSelectFirst) {
+          this.expandAndSelectFirstParkingSpace()
           return
         }
         if (this.lastSelected && this.lastSelected.psId) {
@@ -277,7 +287,7 @@ export default {
 
         this.$set(node.data, 'children', psNodes)
 
-        if (!this.isInitialized && psNodes.length > 0) {
+        if (!this.isInitialized && this.autoSelectFirst && psNodes.length > 0) {
           this.$emit('selectParkingSpace', this.getSelectParkingSpaceData(psNodes[0]))
         }
         return psNodes

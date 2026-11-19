@@ -17,7 +17,8 @@ export const messages = {
       query: 'Query',
       reset: 'Reset',
       loadLocationError: 'Failed to load locations',
-      loadShopError: 'Failed to load shops'
+      loadShopError: 'Failed to load shops',
+      shopEmpty: 'Please add a shop first'
     },
     shopCreatePayFee: {
       title: 'Shop Batch Create Fee',
@@ -194,7 +195,8 @@ export const messages = {
       query: '查询',
       reset: '重置',
       loadLocationError: '加载位置失败',
-      loadShopError: '加载商铺失败'
+      loadShopError: '加载商铺失败',
+      shopEmpty: '请先添加商铺'
     },
     shopCreatePayFee: {
       title: '商铺批量创建费用',
@@ -371,7 +373,8 @@ export const messages = {
       query: '查詢',
       reset: '重置',
       loadLocationError: '載入位置失敗',
-      loadShopError: '載入商鋪失敗'
+      loadShopError: '載入商鋪失敗',
+      shopEmpty: '請先添加商鋪'
     },
     shopCreatePayFee: {
       title: '商鋪批量創建費用',

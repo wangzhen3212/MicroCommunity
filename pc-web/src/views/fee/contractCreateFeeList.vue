@@ -1,101 +1,91 @@
 <template>
-  <div class="contract-create-fee-container">
-    <div class="main-card">
-      <el-card v-if="contractCreateFeeInfo.contracts.length === 0" class="empty-page">
-        <i class="el-icon-document"></i>
-        <span>请先添加合同</span>
+  <create-fee-layout :title="contractCreateFeeInfo.contractCode" :empty="contractCreateFeeInfo.contracts.length === 0"
+    :empty-text="$t('contractCreateFee.emptyContract')" storage-key="contractCreateFeeTreeWidth">
+    <div slot="tree" class="contract-tree-panel">
+      <el-card class="contract-list-card">
+        <div class="contract-search-input">
+          <el-input :placeholder="$t('contractCreateFee.enterContractCode')"
+            v-model="contractCreateFeeInfo.conditions.contractCode" clearable
+            @keyup.enter.native="_queryContract"></el-input>
+        </div>
+        <div class="contract-list-wrapper">
+          <ul class="contract-list">
+            <li v-for="(item, index) in contractCreateFeeInfo.contracts" :key="index" class="contract-item"
+              :class="{ 'selected': contractCreateFeeInfo.contractId === item.contractId }" @click="switchContract(item)">
+              {{ item.contractCode }}({{ item.contractName }})--{{ item.bContacts }}
+            </li>
+          </ul>
+        </div>
       </el-card>
-      <el-row v-else :gutter="20">
-        <el-col :span="4" class="left-panel">
-          <el-card class="contract-list-card">
-            <div class="contract-search-input">
-              <el-input placeholder="合同编号，回车查询"
-                v-model="contractCreateFeeInfo.conditions.contractCode" @keyup.enter.native="_queryContract"></el-input>
-            </div>
-            <div class="contract-list-wrapper">
-              <ul class="contract-list">
-                <li v-for="(item, index) in contractCreateFeeInfo.contracts" :key="index" class="contract-item"
-                  :class="{ 'selected': contractCreateFeeInfo.contractId === item.contractId }" @click="switchContract(item)">
-                  {{ item.contractCode }}({{ item.contractName }})--{{ item.bContacts }}
-                </li>
-              </ul>
-            </div>
-          </el-card>
-        </el-col>
-
-        <el-col :span="20" class="right-panel">
-          <el-card>
-            <div slot="header" class="card-header">
-              <span>{{ contractCreateFeeInfo.contractCode }}</span>
-        
-            </div>
-
-            <div class="search-section">
-              <el-row :gutter="20">
-                <el-col :span="4">
-                  <el-input :placeholder="$t('contractCreateFee.enterContractName')"
-                    v-model="contractCreateFeeInfo.conditions.contractNameLike" @keyup.enter.native="_queryContract"></el-input>
-                </el-col>
-                <el-col :span="4">
-                  <el-input :placeholder="$t('contractCreateFee.enterPartyB')"
-                    v-model="contractCreateFeeInfo.conditions.bContacts" @keyup.enter.native="_queryContract"></el-input>
-                </el-col>
-                <el-col :span="4">
-                  <el-select v-model="contractCreateFeeInfo.conditions.state"
-                    :placeholder="$t('contractCreateFee.selectContractStatus')" style="width:100%">
-                    <el-option :label="$t('contractCreateFee.selectContractStatus')" value=""></el-option>
-                    <el-option v-for="(item, index) in contractCreateFeeInfo.states" :key="index" :label="item.name"
-                      :value="item.statusCd"></el-option>
-                  </el-select>
-                </el-col>
-                <el-col :span="4">
-                  <el-button type="primary" @click="_queryContract">
-                    {{ $t('common.search') }}
-                  </el-button>
-                </el-col>
-              </el-row>
-            </div>
-
-            <div class="tab-section">
-              <el-tabs v-model="contractCreateFeeInfo._currentTab" @tab-click="changeTab(contractCreateFeeInfo._currentTab)">
-                <el-tab-pane label="合同费用" name="simplifyPayerObjFee">
-                  <simplify-contract-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyPayerObjFee'" ref="simplifyPayerObjFee"
-                    :key="'simplifyPayerObjFee' + contractCreateFeeInfo.contractId"/>
-                </el-tab-pane>
-
-                <el-tab-pane label="缴费历史" name="simplifyHisFee">
-                  <simplify-his-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyHisFee'" ref="simplifyHisFee"/>
-                </el-tab-pane>
-
-                <el-tab-pane label="预付收款" name="prePayFeeDetail">
-                  <pre-pay-fee-detail v-if="contractCreateFeeInfo._currentTab === 'prePayFeeDetail'" ref="prePayFeeDetail"/>
-                </el-tab-pane>
-
-                <el-tab-pane v-if="contractCreateFeeInfo.ownerId" label="业主" name="contractDetailOwner">
-                  <car-detail-owner v-if="contractCreateFeeInfo._currentTab === 'contractDetailOwner'" ref="contractDetailOwner"/>
-                </el-tab-pane>
-
-                <el-tab-pane label="合同房屋" name="contractDetailRoom">
-                  <contract-detail-room v-if="contractCreateFeeInfo._currentTab === 'contractDetailRoom'" ref="contractDetailRoom"/>
-                </el-tab-pane>
-
-                <el-tab-pane v-if="hasPrivilege('502020092373407363')" label="补打收据" name="simplifyFeeReceipt">
-                  <simplify-fee-receipt v-if="contractCreateFeeInfo._currentTab === 'simplifyFeeReceipt'" ref="simplifyFeeReceipt"/>
-                </el-tab-pane>
-              </el-tabs>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
     </div>
 
-    <!-- 模态框组件 -->
+    <div slot="content">
+      <div class="filter-container">
+        <el-row :gutter="20">
+          <el-col :span="6">
+            <el-input v-model="contractCreateFeeInfo.conditions.contractNameLike"
+              :placeholder="$t('contractCreateFee.enterContractName')" clearable
+              @keyup.enter.native="_queryContract"></el-input>
+          </el-col>
+          <el-col :span="6">
+            <el-input v-model="contractCreateFeeInfo.conditions.bContacts"
+              :placeholder="$t('contractCreateFee.enterPartyB')" clearable
+              @keyup.enter.native="_queryContract"></el-input>
+          </el-col>
+          <el-col :span="6">
+            <el-select v-model="contractCreateFeeInfo.conditions.state"
+              :placeholder="$t('contractCreateFee.selectContractStatus')" style="width:100%">
+              <el-option :label="$t('contractCreateFee.selectContractStatus')" value=""></el-option>
+              <el-option v-for="(item, index) in contractCreateFeeInfo.states" :key="index" :label="item.name"
+                :value="item.statusCd"></el-option>
+            </el-select>
+          </el-col>
+          <el-col :span="6">
+            <el-button type="primary" size="small" @click="_queryContract">
+              {{ $t('common.query') }}
+            </el-button>
+            <el-button size="small" @click="_resetContractMethod">
+              {{ $t('common.reset') }}
+            </el-button>
+          </el-col>
+        </el-row>
+      </div>
+
+      <el-tabs v-model="contractCreateFeeInfo._currentTab" @tab-click="changeTab(contractCreateFeeInfo._currentTab)">
+        <el-tab-pane :label="$t('contractCreateFee.contractFee')" name="simplifyPayerObjFee">
+          <simplify-contract-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyPayerObjFee'"
+            ref="simplifyPayerObjFee" :key="'simplifyPayerObjFee' + contractCreateFeeInfo.contractId"></simplify-contract-fee>
+        </el-tab-pane>
+        <el-tab-pane :label="$t('contractCreateFee.paymentHistory')" name="simplifyHisFee">
+          <simplify-his-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyHisFee'" ref="simplifyHisFee"
+            :key="'simplifyHisFee' + contractCreateFeeInfo.contractId"></simplify-his-fee>
+        </el-tab-pane>
+        <el-tab-pane :label="$t('contractCreateFee.prePayFee')" name="prePayFeeDetail">
+          <pre-pay-fee-detail v-if="contractCreateFeeInfo._currentTab === 'prePayFeeDetail'" ref="prePayFeeDetail"
+            :key="'prePayFeeDetail' + contractCreateFeeInfo.contractId"></pre-pay-fee-detail>
+        </el-tab-pane>
+        <el-tab-pane v-if="contractCreateFeeInfo.ownerId" :label="$t('contractCreateFee.owner')" name="contractDetailOwner">
+          <car-detail-owner v-if="contractCreateFeeInfo._currentTab === 'contractDetailOwner'" ref="contractDetailOwner"
+            :key="'contractDetailOwner' + contractCreateFeeInfo.contractId"></car-detail-owner>
+        </el-tab-pane>
+        <el-tab-pane :label="$t('contractCreateFee.contractRooms')" name="contractDetailRoom">
+          <contract-detail-room v-if="contractCreateFeeInfo._currentTab === 'contractDetailRoom'" ref="contractDetailRoom"
+            :key="'contractDetailRoom' + contractCreateFeeInfo.contractId"></contract-detail-room>
+        </el-tab-pane>
+        <el-tab-pane v-if="hasPrivilege('502020092373407363')" :label="$t('contractCreateFee.reprintReceipt')"
+          name="simplifyFeeReceipt">
+          <simplify-fee-receipt v-if="contractCreateFeeInfo._currentTab === 'simplifyFeeReceipt'" ref="simplifyFeeReceipt"
+            :key="'simplifyFeeReceipt' + contractCreateFeeInfo.contractId"></simplify-fee-receipt>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+
     <delete-fee ref="deleteFee" @success="handleSuccess" />
     <edit-fee ref="editFee" @success="handleSuccess" />
     <split-fee ref="splitFee" @success="handleSuccess" />
     <contract-create-fee-add ref="contractCreateFeeAdd" @success="handleSuccess" />
     <download-collection-letter-order ref="downloadCollectionLetterOrder" />
-  </div>
+  </create-fee-layout>
 </template>
 
 <script>
@@ -103,7 +93,7 @@ import { getDict } from '@/api/community/communityApi'
 import { getCommunityId } from '@/api/community/communityApi'
 import { queryContract } from '@/api/fee/contractCreateFeeApi'
 
-// 导入组件
+import CreateFeeLayout from '@/components/fee/createFeeLayout'
 import SimplifyContractFee from '@/components/fee/simplifyContractFee'
 import SimplifyHisFee from '@/components/fee/simplifyHisFee'
 import PrePayFeeDetail from '@/components/fee/prePayFeeDetail'
@@ -116,10 +106,12 @@ import SplitFee from '@/components/fee/splitFee'
 
 import ContractCreateFeeAdd from '@/components/fee/contractCreateFeeAdd'
 import DownloadCollectionLetterOrder from '@/components/fee/downloadCollectionLetterOrder'
+import { openFeeTabPane } from '@/utils/feeTabUtil'
 
 export default {
   name: 'ContractCreateFeeList',
   components: {
+    CreateFeeLayout,
     SimplifyContractFee,
     SimplifyHisFee,
     PrePayFeeDetail,
@@ -169,16 +161,15 @@ export default {
         console.error('获取字典数据失败:', error)
       }
     },
-
     async listContracts(page, row) {
-      try {
-        const params = {
-          page,
-          row,
-          communityId: this.communityId,
-          ...this.contractCreateFeeInfo.conditions
-        }
+      const params = {
+        page,
+        row,
+        communityId: this.communityId,
+        ...this.contractCreateFeeInfo.conditions
+      }
 
+      try {
         const response = await queryContract(params)
         this.contractCreateFeeInfo.contracts = response.data || []
         this.contractCreateFeeInfo.total = response.total || 0
@@ -195,10 +186,9 @@ export default {
         }
       } catch (error) {
         console.error('获取合同列表失败:', error)
-        this.$message.error('获取合同列表失败')
+        this.$message.error(this.$t('contractCreateFee.fetchError'))
       }
     },
-
     switchContract(contract) {
       this.contractCreateFeeInfo.contractId = contract.contractId
       this.contractCreateFeeInfo.contractCode = contract.contractCode
@@ -208,65 +198,66 @@ export default {
       this.changeTab(this.contractCreateFeeInfo._currentTab)
       localStorage.setItem('lastSelectedContract', JSON.stringify(contract))
     },
-
     changeTab(tabName) {
       this.contractCreateFeeInfo._currentTab = tabName
-      setTimeout(() => {
-        if (this.$refs[tabName]) {
-          const params = {
-            contractId: this.contractCreateFeeInfo.contractId,
-            contractCode: this.contractCreateFeeInfo.contractCode,
-            contractName: this.contractCreateFeeInfo.contractName,
-            ownerId: this.contractCreateFeeInfo.ownerId,
-            ownerName: this.contractCreateFeeInfo.ownerName,
-            payerObjId: this.contractCreateFeeInfo.contractId,
-            payerObjName: this.contractCreateFeeInfo.contractCode,
-            payerObjType: '7777'
-          }
-          
-          // 根据不同组件传递不同的参数
-          if (tabName === 'simplifyPayerObjFee') {
-            this.$refs[tabName].open(params)
-          } else if (tabName === 'simplifyHisFee') {
-            this.$refs[tabName].open({
-              ownerId: params.ownerId,
-              payerObjId: params.payerObjId
-            })
-          } else if (tabName === 'prePayFeeDetail') {
-            this.$refs[tabName].open({
-              payerObjId: params.payerObjId
-            })
-          } else if (tabName === 'contractDetailOwner') {
-            this.$refs[tabName].open({
-              ownerId: params.ownerId
-            })
-          } else if (tabName === 'contractDetailRoom') {
-            this.$refs[tabName].open({
-              contractId: params.contractId
-            })
-          } else if (tabName === 'simplifyFeeReceipt') {
-            this.$refs[tabName].open({
-              payerObjId: params.payerObjId,
-              ownerId: params.ownerId,
-              payerObjType: params.payerObjType
-            })
-          }
-        }
-      }, 500)
+      openFeeTabPane(this, tabName, this._buildTabParams(tabName))
     },
+    _buildTabParams(tabName) {
+      const params = {
+        contractId: this.contractCreateFeeInfo.contractId,
+        contractCode: this.contractCreateFeeInfo.contractCode,
+        contractName: this.contractCreateFeeInfo.contractName,
+        ownerId: this.contractCreateFeeInfo.ownerId,
+        ownerName: this.contractCreateFeeInfo.ownerName,
+        payerObjId: this.contractCreateFeeInfo.contractId,
+        payerObjName: this.contractCreateFeeInfo.contractCode,
+        payerObjType: '7777'
+      }
 
+      if (tabName === 'simplifyPayerObjFee') {
+        return params
+      }
+      if (tabName === 'simplifyHisFee') {
+        return {
+          ownerId: params.ownerId,
+          payerObjId: params.payerObjId
+        }
+      }
+      if (tabName === 'prePayFeeDetail') {
+        return {
+          payerObjId: params.payerObjId
+        }
+      }
+      if (tabName === 'contractDetailOwner') {
+        return {
+          ownerId: params.ownerId
+        }
+      }
+      if (tabName === 'contractDetailRoom') {
+        return {
+          contractId: params.contractId
+        }
+      }
+      if (tabName === 'simplifyFeeReceipt') {
+        return {
+          payerObjId: params.payerObjId,
+          ownerId: params.ownerId,
+          payerObjType: params.payerObjType
+        }
+      }
+      return params
+    },
     async _queryContract() {
       await this.listContracts(1, 500)
     },
-
-    _openBatchCreate() {
-      this.$refs.contractCreateFeeAdd.open(null, true)
+    _resetContractMethod() {
+      this.contractCreateFeeInfo.conditions.contractCode = ''
+      this.contractCreateFeeInfo.conditions.contractNameLike = ''
+      this.contractCreateFeeInfo.conditions.bContacts = ''
+      this.contractCreateFeeInfo.conditions.state = ''
+      this._queryContract()
     },
-
-   
-
     handleSuccess() {
-      // 处理成功回调
       this.listContracts(1, 500)
     }
   }
@@ -274,110 +265,74 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.contract-create-fee-container {
-  padding: 20px;
+.contract-tree-panel {
+  height: 100%;
+}
 
-  .main-card {
-    min-height: 800px;
-  }
+.contract-list-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: none;
+  box-shadow: none;
 
-  .empty-page {
+  ::v-deep .el-card__body {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 800px;
-    color: #909399;
-    font-size: 16px;
-
-    i {
-      font-size: 64px;
-      margin-bottom: 20px;
-    }
+    height: 100%;
+    padding: 0;
   }
 
-  .left-panel {
-    .contract-list-card {
-      height: 700px;
-
-      .contract-search-input {
-        margin-bottom: 10px;
-      }
-
-      .contract-list-wrapper {
-        height: 600px;
-        overflow-y: auto;
-
-        &::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        &::-webkit-scrollbar-thumb {
-          background: #dcdfe6;
-          border-radius: 2px;
-        }
-
-        &::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .contract-list {
-          list-style: none;
-          padding: 0;
-          padding-right: 5px;
-          margin: 0;
-
-          .contract-item {
-            padding: 12px;
-            margin-bottom: 8px;
-            border: 1px solid #e6e6e6;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-            font-size: 14px;
-            color: #606266;
-
-            &:hover {
-              background-color: #f5f7fa;
-              border-color: #409eff;
-            }
-
-            &.selected {
-              background-color: #ecf5ff;
-              border-color: #409eff;
-              color: #409eff;
-              font-weight: bold;
-            }
-          }
-        }
-      }
-    }
+  .contract-search-input {
+    margin-bottom: 10px;
   }
 
-  .right-panel {
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+  .contract-list-wrapper {
+    flex: 1;
+    overflow-y: auto;
 
-      .header-tools {
-        .el-button {
-          margin-left: 10px;
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #dcdfe6;
+      border-radius: 2px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .contract-list {
+      list-style: none;
+      padding: 0;
+      padding-right: 5px;
+      margin: 0;
+
+      .contract-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        border: 1px solid #e6e6e6;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+        font-size: 14px;
+        color: #606266;
+
+        &:hover {
+          background-color: #f5f7fa;
+          border-color: #409eff;
+        }
+
+        &.selected {
+          background-color: #ecf5ff;
+          border-color: #409eff;
+          color: #409eff;
+          font-weight: bold;
         }
       }
-    }
-
-    .search-section {
-      margin-bottom: 20px;
-
-      .el-col {
-        margin-bottom: 10px;
-      }
-    }
-
-    .tab-section {
-      margin-top: 20px;
     }
   }
 }

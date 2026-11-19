@@ -298,6 +298,13 @@ export const messages = {
         photoSize: 'Photo size cannot exceed 2MB'
       },
       uploadFailed: 'Photo upload failed'
+    },
+    ownerDetailRoomFeeRule: {
+      room: 'Room',
+      roomPlaceholder: 'Please select a room',
+      noRoom: 'This owner has no room',
+      summaryOwe: 'Outstanding',
+      totalCount: '{count} in total'
     }
   },
   zh: {
@@ -599,6 +606,13 @@ export const messages = {
         photoSize: '图片大小不能超过2MB'
       },
       uploadFailed: '照片上传失败'
+    },
+    ownerDetailRoomFeeRule: {
+      room: '房屋',
+      roomPlaceholder: '请选择房屋',
+      noRoom: '该业主暂无房屋',
+      summaryOwe: '欠费合计',
+      totalCount: '共 {count} 条'
     }
   },
   'zh-TW': {
@@ -899,6 +913,13 @@ export const messages = {
         photoSize: '圖片大小不能超過2MB'
       },
       uploadFailed: '照片上傳失敗'
+    },
+    ownerDetailRoomFeeRule: {
+      room: '房屋',
+      roomPlaceholder: '請選擇房屋',
+      noRoom: '該業主暫無房屋',
+      summaryOwe: '欠費合計',
+      totalCount: '共 {count} 條'
     }
   }
 }

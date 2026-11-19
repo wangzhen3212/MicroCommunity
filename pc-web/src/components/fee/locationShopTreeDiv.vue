@@ -26,6 +26,12 @@ import { getCommunityId } from '@/api/community/communityApi'
 
 export default {
   name: 'LocationShopTreeDiv',
+  props: {
+    autoSelectFirst: {
+      type: Boolean,
+      default: true
+    }
+  },
   data() {
     return {
       treeData: [],
@@ -45,7 +51,7 @@ export default {
   methods: {
     async loadTreeData() {
       let lastSelected = localStorage.getItem('lastSelectedShop')
-      if (lastSelected) {
+      if (lastSelected && this.autoSelectFirst) {
         try {
           this.lastSelected = JSON.parse(lastSelected)
           this.$emit('selectShop', {
@@ -90,6 +96,10 @@ export default {
       this.$nextTick(() => {
         if (this.treeData.length === 0) {
           this.$emit('treeEmpty')
+          return
+        }
+        if (!this.autoSelectFirst) {
+          return
         }
         this.expandAndSelectFirstShop()
       })
@@ -102,13 +112,8 @@ export default {
       if (!path || path.length === 0) return
 
       const lastNode = path[path.length - 1]
-   
-      console.log('Expanding path to first shop:', lastNode)
 
       await this.loadShops(lastNode, { data: lastNode })
-      this.$nextTick(() => {
-        this.selectFirstShop()
-      })
     },
     findDeepestLeafPath(nodes, currentPath) {
       currentPath = currentPath || []
