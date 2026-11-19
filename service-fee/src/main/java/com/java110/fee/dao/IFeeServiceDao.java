@@ -75,6 +75,25 @@ public interface IFeeServiceDao {
 
 
     /**
+     * 查询业主端费用信息（不关联属性/水表/导入/字典）
+     *
+     * @param info 费用信息
+     * @return List<Map>
+     * @throws DAOException DAO异常
+     */
+    List<Map> getAppOwnerFeeInfo(Map info) throws DAOException;
+
+
+    /**
+     * 查询业主端费用总数（不关联属性/水表/导入/字典）
+     *
+     * @param info 费用信息
+     * @return 费用数量
+     */
+    int queryAppOwnerFeesCount(Map info);
+
+
+    /**
      * 查询费用总数
      *
      * @param info 费用信息

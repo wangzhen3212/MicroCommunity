@@ -170,6 +170,26 @@ public class FeeInnerServiceSMOImpl extends BaseServiceSMO implements IFeeInnerS
     }
 
     @Override
+    public List<FeeDto> queryAppOwnerFees(@RequestBody FeeDto feeDto) {
+
+        //校验是否传了 分页信息
+        int page = feeDto.getPage();
+
+        if (page != PageDto.DEFAULT_PAGE) {
+            feeDto.setPage((page - 1) * feeDto.getRow());
+        }
+
+        List<FeeDto> fees = BeanConvertUtil.covertBeanList(feeServiceDaoImpl.getAppOwnerFeeInfo(BeanConvertUtil.beanCovertMap(feeDto)), FeeDto.class);
+
+        return fees;
+    }
+
+    @Override
+    public int queryAppOwnerFeesCount(@RequestBody FeeDto feeDto) {
+        return feeServiceDaoImpl.queryAppOwnerFeesCount(BeanConvertUtil.beanCovertMap(feeDto));
+    }
+
+    @Override
     public List<FeeDto> queryFeeByAttr(FeeAttrDto feeAttrDto) {
         //校验是否传了 分页信息
 

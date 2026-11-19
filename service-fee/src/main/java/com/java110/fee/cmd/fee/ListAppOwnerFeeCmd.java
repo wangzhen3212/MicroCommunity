@@ -86,15 +86,29 @@ public class ListAppOwnerFeeCmd extends Cmd {
         FeeDto feeDto = new FeeDto();
         feeDto.setOwnerId(reqJson.getString("ownerId"));
         feeDto.setCommunityId(reqJson.getString("communityId"));
-        feeDto.setPayerObjType(reqJson.getString("payerObjType"));
+        //兼容手机端 payObjType 与旧调用方 payerObjType 两种入参名
+        String payerObjType = reqJson.getString("payerObjType");
+        if (StringUtil.isEmpty(payerObjType)) {
+            payerObjType = reqJson.getString("payObjType");
+        }
+        feeDto.setPayerObjType(StringUtil.isEmpty(payerObjType) ? FeeDto.PAYER_OBJ_TYPE_ROOM : payerObjType);
         feeDto.setState(FeeDto.STATE_DOING);
-        int count = feeInnerServiceSMOImpl.queryFeesCount(feeDto);
+        feeDto.setStatusCd("0");
+        int count = feeInnerServiceSMOImpl.queryAppOwnerFeesCount(feeDto);
         List<FeeDto> feeDtos = null;
         if (count > 0) {
-            feeDtos = feeInnerServiceSMOImpl.queryFees(feeDto);//查询费用项目
+            feeDtos = feeInnerServiceSMOImpl.queryAppOwnerFees(feeDto);//查询费用项目
         } else {
             feeDtos = new ArrayList<>();
         }
+
+        //oweAmount 空值兜底，前端首页金额汇总与实收金额依赖该字段
+        for (FeeDto tmpFeeDto : feeDtos) {
+            if (StringUtil.isEmpty(tmpFeeDto.getOweAmount())) {
+                tmpFeeDto.setOweAmount(StringUtil.isEmpty(tmpFeeDto.getReceivableAmount()) ? "0.00" : tmpFeeDto.getReceivableAmount());
+            }
+        }
+
 
         if (ListUtil.isNull(feeDtos)) {
             context.setResponseEntity(ResultVo.createResponseEntity(feeDtos));

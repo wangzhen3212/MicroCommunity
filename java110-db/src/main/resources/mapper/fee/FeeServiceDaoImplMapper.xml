@@ -384,6 +384,62 @@
         </if>
     </select>
 
+    <!-- 业主端费用查询（业主端专用，不关联属性/水表/导入/字典）add by txcode 2026-11-19 -->
+    <select id="getAppOwnerFeeInfo" parameterType="Map" resultType="Map">
+        select t.fee_id feeId, t.config_id configId, t.community_id communityId,
+        t.payer_obj_id payerObjId, t.payer_obj_name payerObjName, t.payer_obj_type payerObjType,
+        t.owner_id ownerId, t.owner_name ownerName,
+        t.fee_type_cd feeTypeCd, t.fee_flag feeFlag, t.state, t.status_cd statusCd,
+        t.amount, t.receivable_amount receivableAmount, t.owe_amount oweAmount,
+        t.start_time startTime, t.end_time endTime, t.rule_id ruleId,
+        t.remark, t.fee_remark feeRemark, t.fee_time feeTime,
+        pfc.fee_name feeName, pfc.payment_cd paymentCd, pfc.payment_cycle paymentCycle,
+        pfc.bill_type billType, pfc.pay_online payOnline
+        from pay_fee t
+        INNER join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
+        where 1 = 1
+        and t.status_cd = '0'
+        <if test="ownerId != null and ownerId != ''">
+            and t.owner_id = #{ownerId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+            and pfc.community_id in (#{communityId}, '9999')
+        </if>
+        <if test="payerObjType != null and payerObjType != ''">
+            and t.payer_obj_type = #{payerObjType}
+        </if>
+        <if test="state != null and state != ''">
+            and t.state = #{state}
+        </if>
+        order by t.config_id, t.start_time
+        <if test="page != -1 and page != null">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <!-- 业主端费用数量（业主端专用，不关联属性/水表/导入/字典，条件与 getAppOwnerFeeInfo 保持一致）add by txcode 2026-11-19 -->
+    <select id="queryAppOwnerFeesCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from pay_fee t
+        INNER join pay_fee_config pfc on t.config_id = pfc.config_id and pfc.status_cd = '0'
+        where 1 = 1
+        and t.status_cd = '0'
+        <if test="ownerId != null and ownerId != ''">
+            and t.owner_id = #{ownerId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+            and pfc.community_id in (#{communityId}, '9999')
+        </if>
+        <if test="payerObjType != null and payerObjType != ''">
+            and t.payer_obj_type = #{payerObjType}
+        </if>
+        <if test="state != null and state != ''">
+            and t.state = #{state}
+        </if>
+    </select>
+
     <!-- 查询账期 -->
     <select id="queryBills" parameterType="Map" resultType="Map">
         select

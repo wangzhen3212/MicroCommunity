@@ -65,6 +65,26 @@ public interface IFeeInnerServiceSMO {
 
 
     /**
+     * <p>查询业主端费用信息（不关联属性/水表/导入/字典）</p>
+     *
+     * @param feeDto 数据对象分享
+     * @return FeeDto 对象数据
+     */
+    @RequestMapping(value = "/queryAppOwnerFees", method = RequestMethod.POST)
+    List<FeeDto> queryAppOwnerFees(@RequestBody FeeDto feeDto);
+
+
+    /**
+     * 查询<p>业主端费用</p>总记录数（不关联属性/水表/导入/字典）
+     *
+     * @param feeDto 数据对象分享
+     * @return 费用记录数
+     */
+    @RequestMapping(value = "/queryAppOwnerFeesCount", method = RequestMethod.POST)
+    int queryAppOwnerFeesCount(@RequestBody FeeDto feeDto);
+
+
+    /**
      * <p>查询费用信息</p>
      *
      * @param feeAttrDto 数据对象分享

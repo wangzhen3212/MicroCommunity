@@ -131,6 +131,27 @@ public class FeeServiceDaoImpl extends BaseServiceDao implements IFeeServiceDao 
     }
 
     @Override
+    public List<Map> getAppOwnerFeeInfo(Map info) throws DAOException {
+        logger.debug("查询业主端费用信息 入参 info : {}", info);
+
+        List<Map> infos = sqlSessionTemplate.selectList("feeServiceDaoImpl.getAppOwnerFeeInfo", info);
+
+        return infos;
+    }
+
+    @Override
+    public int queryAppOwnerFeesCount(Map info) {
+        logger.debug("查询业主端费用数量 入参 info : {}", info);
+
+        List<Map> infos = sqlSessionTemplate.selectList("feeServiceDaoImpl.queryAppOwnerFeesCount", info);
+        if (infos.size() < 1) {
+            return 0;
+        }
+
+        return Integer.parseInt(infos.get(0).get("count").toString());
+    }
+
+    @Override
     public int queryFeeByAttrCount(Map info) {
         logger.debug("查询费用数据 入参 info : {}", info);
 
