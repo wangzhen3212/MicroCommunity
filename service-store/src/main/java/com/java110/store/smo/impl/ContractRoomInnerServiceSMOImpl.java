@@ -5,11 +5,16 @@ import com.java110.core.base.smo.BaseServiceSMO;
 import com.java110.dto.PageDto;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractRoomDto;
+import com.java110.dto.fee.FeeDto;
+import com.java110.dto.shop.BuildingShopDto;
+import com.java110.intf.community.IBuildingShopInnerServiceSMO;
 import com.java110.intf.community.IRoomInnerServiceSMO;
 import com.java110.intf.store.IContractRoomInnerServiceSMO;
 import com.java110.po.contract.ContractRoomPo;
 import com.java110.store.dao.IContractRoomServiceDao;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.ListUtil;
+import com.java110.utils.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,6 +39,10 @@ public class ContractRoomInnerServiceSMOImpl extends BaseServiceSMO implements I
 
     @Autowired
     private IRoomInnerServiceSMO roomInnerServiceSMOImpl;
+
+    @Autowired
+    private IBuildingShopInnerServiceSMO buildingShopInnerServiceSMOImpl;
+
 
 
     @Override
@@ -79,21 +88,73 @@ public class ContractRoomInnerServiceSMOImpl extends BaseServiceSMO implements I
 
     private void refreshContractRooms(List<ContractRoomDto> contractRooms) {
         List<String> roomIds = new ArrayList<>();
+        List<String> shopIds = new ArrayList<>();
 
-        for(ContractRoomDto contractRoomDto : contractRooms){
-            roomIds.add(contractRoomDto.getRoomId());
+        for (ContractRoomDto contractRoomDto : contractRooms) {
+            String payerObjType = StringUtil.isEmpty(contractRoomDto.getPayerObjType())
+                    ? FeeDto.PAYER_OBJ_TYPE_ROOM : contractRoomDto.getPayerObjType();
+            contractRoomDto.setPayerObjType(payerObjType);
+            if (FeeDto.PAYER_OBJ_TYPE_SHOP.equals(payerObjType)) {
+                if (!shopIds.contains(contractRoomDto.getRoomId())) {
+                    shopIds.add(contractRoomDto.getRoomId());
+                }
+                continue;
+            }
+            if (!roomIds.contains(contractRoomDto.getRoomId())) {
+                roomIds.add(contractRoomDto.getRoomId());
+            }
         }
 
+        refreshRoomInfo(contractRooms, roomIds);
+        refreshShopInfo(contractRooms, shopIds);
+    }
+
+    private void refreshRoomInfo(List<ContractRoomDto> contractRooms, List<String> roomIds) {
+        if (ListUtil.isNull(roomIds)) {
+            return;
+        }
         RoomDto roomDto = new RoomDto();
         roomDto.setRoomIds(roomIds.toArray(new String[roomIds.size()]));
-        roomDto.setCommunityId(contractRooms.get(0).getCommunityId());
         List<RoomDto> roomDtos = roomInnerServiceSMOImpl.queryRooms(roomDto);
-
-        for(ContractRoomDto contractRoomDto : contractRooms){
-            for(RoomDto tmpRoomDto : roomDtos){
-                if(contractRoomDto.getRoomId().equals(tmpRoomDto.getRoomId())){
-                    BeanConvertUtil.covertBean(tmpRoomDto,contractRoomDto);
+        if (ListUtil.isNull(roomDtos)) {
+            return;
+        }
+        for (ContractRoomDto contractRoomDto : contractRooms) {
+            if (FeeDto.PAYER_OBJ_TYPE_SHOP.equals(contractRoomDto.getPayerObjType())) {
+                continue;
+            }
+            for (RoomDto tmpRoomDto : roomDtos) {
+                if (contractRoomDto.getRoomId().equals(tmpRoomDto.getRoomId())) {
+                    BeanConvertUtil.covertBean(tmpRoomDto, contractRoomDto);
                 }
+            }
+        }
+    }
+
+    private void refreshShopInfo(List<ContractRoomDto> contractRooms, List<String> shopIds) {
+        if (ListUtil.isNull(shopIds)) {
+            return;
+        }
+        for (String shopId : shopIds) {
+            BuildingShopDto shopDto = new BuildingShopDto();
+            shopDto.setShopId(shopId);
+            List<BuildingShopDto> shopDtos = buildingShopInnerServiceSMOImpl.queryBuildingShops(shopDto);
+            if (ListUtil.isNull(shopDtos)) {
+                continue;
+            }
+            BuildingShopDto tmpShopDto = shopDtos.get(0);
+            for (ContractRoomDto contractRoomDto : contractRooms) {
+                if (!FeeDto.PAYER_OBJ_TYPE_SHOP.equals(contractRoomDto.getPayerObjType())
+                        || !shopId.equals(contractRoomDto.getRoomId())) {
+                    continue;
+                }
+                contractRoomDto.setCommunityId(tmpShopDto.getCommunityId());
+                contractRoomDto.setRoomName(StringUtil.isEmpty(tmpShopDto.getShopNum())
+                        ? tmpShopDto.getLocationName() : tmpShopDto.getShopNum());
+                contractRoomDto.setBuiltUpArea(tmpShopDto.getBuiltUpArea());
+                contractRoomDto.setRoomArea(tmpShopDto.getShopArea());
+                contractRoomDto.setRoomRent(tmpShopDto.getShopRent());
+                contractRoomDto.setState(tmpShopDto.getState());
             }
         }
     }

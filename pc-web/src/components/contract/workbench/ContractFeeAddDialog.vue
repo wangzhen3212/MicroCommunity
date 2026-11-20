@@ -30,15 +30,20 @@
       </el-form-item>
 
       <el-form-item v-if="showUnitPrice" :label="unitPriceLabel">
-        <el-input v-model="form.unitPrice" />
+        <span class="cc-fee-readonly">{{ form.unitPrice || '0.00' }}</span>
+        <span class="cc-fee-dialog-tip">{{ $t('contractWorkbench.plan.unitPriceTip') }}</span>
       </el-form-item>
 
       <el-form-item v-if="showAdditional" :label="$t('contractWorkbench.plan.additional')">
-        <el-input v-model="form.additionalAmount" />
+        <span class="cc-fee-readonly">{{ form.additionalAmount || '0.00' }}</span>
+        <span class="cc-fee-dialog-tip">{{ $t('contractWorkbench.plan.unitPriceTip') }}</span>
       </el-form-item>
 
       <el-form-item v-if="showCycle" :label="$t('contractWorkbench.plan.cycle')">
-        <el-input v-model="form.cycle" />
+        <span class="cc-fee-readonly">{{ form.cycle || '-' }}</span>
+        <span v-if="form.months" class="cc-fee-dialog-tip">
+          {{ $t('contractWorkbench.plan.monthsTip', { months: form.months }) }}
+        </span>
       </el-form-item>
 
       <el-form-item v-if="isManual" :label="$t('contractWorkbench.field.amount')">
@@ -51,7 +56,12 @@
       </el-form-item>
 
       <el-form-item :label="$t('contractWorkbench.plan.estimate')">
-        <span class="cc-fee-estimate">{{ formatAmount(estimate) }}</span>
+        <span v-loading="computing" class="cc-fee-estimate">{{ formatAmount(form.amount) }}</span>
+        <span v-if="computing" class="cc-fee-dialog-tip">{{ $t('contractWorkbench.msg.feeComputing') }}</span>
+      </el-form-item>
+
+      <el-form-item v-if="form.computeRemark" :label="$t('contractWorkbench.plan.remarkTitle')">
+        <span class="cc-fee-remark">{{ form.computeRemark }}</span>
       </el-form-item>
 
       <el-form-item :label="$t('contractWorkbench.field.remark')">
@@ -61,17 +71,19 @@
 
     <span slot="footer">
       <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
-      <el-button type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</el-button>
+      <el-button type="primary" :loading="computing" @click="handleSubmit">{{ $t('common.confirm') }}</el-button>
     </span>
   </el-dialog>
 </template>
 
 <script>
-import { listFeeConfigsByType, listFeeTypes } from '@/api/contract/contractFeeCompositionApi'
-import { formatAmount } from '@/utils/contractUtil'
+import { computeContractFeeAmount, listFeeConfigsByType, listFeeTypes } from '@/api/contract/contractFeeCompositionApi'
+import { formatAmount, termMonths } from '@/utils/contractUtil'
 import {
   FEE_FORMULA,
-  calcFeeAmount,
+  applyManualAmount,
+  applyServerAmount,
+  buildComputeParams,
   defaultIncludeInAmount,
   isAdditionalFormula,
   isManualFormula,
@@ -99,6 +111,8 @@ export default {
   data() {
     return {
       visible: false,
+      computing: false,
+      computeError: '',
       feeTypes: [],
       feeConfigs: [],
       form: this.createEmptyForm(),
@@ -140,9 +154,6 @@ export default {
     },
     showCycle() {
       return this.formula === FEE_FORMULA.RENT || this.formula === FEE_FORMULA.RENT_STEP
-    },
-    estimate() {
-      return calcFeeAmount(this.form, this.feeContext())
     }
   },
   methods: {
@@ -158,6 +169,10 @@ export default {
         unitPrice: '',
         additionalAmount: '0.00',
         cycle: '1',
+        months: 0,
+        baseAmount: '0.00',
+        amount: '0.00',
+        computeRemark: '',
         manualAmount: '',
         includeInAmount: true,
         remark: ''
@@ -169,6 +184,8 @@ export default {
         return
       }
       this.visible = true
+      this.computing = false
+      this.computeError = ''
       this.form = this.createEmptyForm()
       this.feeConfigs = []
       this.loadFeeTypes()
@@ -179,12 +196,16 @@ export default {
         this.$refs.form.resetFields()
       }
     },
-    feeContext() {
-      return {
-        rooms: this.rooms,
-        startTime: this.startTime,
-        endTime: this.endTime
+    months() {
+      return termMonths(this.startTime, this.endTime)
+    },
+    buildParams() {
+      const params = buildComputeParams(this.rooms, this.months(), this.startTime, this.endTime)
+      if (!params) {
+        return null
       }
+      params.configId = this.form.configId
+      return params
     },
     loadFeeTypes() {
       listFeeTypes().then(data => {
@@ -201,6 +222,10 @@ export default {
       this.form.computingFormula = ''
       this.form.computingFormulaName = ''
       this.form.includeInAmount = defaultIncludeInAmount(feeTypeCd)
+      this.form.amount = '0.00'
+      this.form.baseAmount = '0.00'
+      this.form.computeRemark = ''
+      this.computeError = ''
       this.feeConfigs = []
       const matched = this.feeTypes.filter(item => item.statusCd === feeTypeCd)[0]
       this.form.feeTypeName = matched ? matched.name : ''
@@ -220,22 +245,61 @@ export default {
       this.form.feeName = config.feeName
       this.form.computingFormula = config.computingFormula
       this.form.computingFormulaName = config.computingFormulaName || config.computingFormula
-      this.form.unitPrice = config.squarePrice || ''
+      this.form.unitPrice = config.squarePrice || '0.00'
       this.form.additionalAmount = config.additionalAmount || '0.00'
       this.form.cycle = config.paymentCycle || '1'
       this.form.manualAmount = ''
+      this.form.amount = '0.00'
+      this.form.baseAmount = '0.00'
+      this.form.computeRemark = ''
+      this.computeError = ''
+      if (this.isManual) {
+        return
+      }
+      this.computeAmount()
+    },
+    computeAmount() {
+      if (this.isManual) {
+        return
+      }
+      const params = this.buildParams()
+      if (!params) {
+        this.computeError = this.$t('contractWorkbench.msg.roomFirst')
+        this.$message.warning(this.computeError)
+        return
+      }
+      if (params.months <= 0) {
+        this.computeError = this.$t('contractWorkbench.msg.termEmpty')
+        this.$message.warning(this.computeError)
+        return
+      }
+      this.computing = true
+      computeContractFeeAmount(params).then(res => {
+        applyServerAmount(this.form, res)
+        this.computeError = ''
+      }).catch(error => {
+        this.form.amount = '0.00'
+        this.form.baseAmount = '0.00'
+        this.form.computeRemark = ''
+        this.computeError = error.message || this.$t('contractWorkbench.msg.feeComputeError')
+        this.$message.warning(this.computeError)
+      }).finally(() => {
+        this.computing = false
+      })
     },
     handleSubmit() {
       this.$refs.form.validate(valid => {
         if (!valid) {
           return
         }
-        if (this.isManual && !this.form.manualAmount) {
-          this.$message.warning(this.$t('contractWorkbench.msg.feeAmountEmpty'))
-          return
-        }
-        if (!this.isManual && this.estimate <= 0) {
-          this.$message.warning(this.$t('contractWorkbench.msg.feeBaseEmpty'))
+        if (this.isManual) {
+          if (!this.form.manualAmount) {
+            this.$message.warning(this.$t('contractWorkbench.msg.feeAmountEmpty'))
+            return
+          }
+          applyManualAmount(this.form)
+        } else if (!(parseFloat(this.form.amount) > 0)) {
+          this.$message.warning(this.computeError || this.$t('contractWorkbench.msg.feeComputeError'))
           return
         }
         this.$emit('confirm', {
@@ -248,10 +312,12 @@ export default {
           unitPrice: this.form.unitPrice,
           additionalAmount: this.form.additionalAmount,
           cycle: this.form.cycle,
+          months: this.form.months,
           coefficient: '1',
           manualAmount: this.form.manualAmount,
-          baseAmount: '0.00',
-          amount: '0.00',
+          baseAmount: this.form.baseAmount,
+          amount: this.form.amount,
+          computeRemark: this.form.computeRemark,
           includeInAmount: this.form.includeInAmount,
           remark: this.form.remark
         })
@@ -269,9 +335,23 @@ export default {
   color: #909399;
 }
 
+.cc-fee-readonly {
+  font-size: 13px;
+  color: #303133;
+  font-variant-numeric: tabular-nums;
+}
+
 .cc-fee-estimate {
   font-size: 14px;
   font-weight: 600;
   color: #409eff;
+}
+
+.cc-fee-remark {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 18px;
+  color: #606266;
+  white-space: pre-line;
 }
 </style>

@@ -1088,3 +1088,26 @@ VALUES ('2158', '982026111916300002', 'payFeeRule.listRuleBills', 'API', '查询
 INSERT INTO `c_route` (`id`, `app_id`, `service_id`, `order_type_cd`, `invoke_limit_times`, `invoke_model`, `create_time`, `status_cd`)
 VALUES ('3140', '8000418004', '982026111916300002', 'Q', '1000', 'S', '2026-11-19 16:30:00', '0');
 ```
+
+## 2026-11-20 合同费用后端统一试算与合同标的支持商铺
+
+```sql
+-- ① contract_room 增加标的类型（3333 房屋 / 4444 商铺），存量数据默认按房屋处理
+ALTER TABLE `contract_room`
+  ADD COLUMN `payer_obj_type` varchar(4) NOT NULL DEFAULT '3333' COMMENT '标的对象类型 3333房屋 4444商铺' AFTER `room_name`;
+
+-- ② fee.computeContractFeeAmount（service-fee，合同费用统一公式试算，GET 只读不落库）
+DELETE FROM `c_route` WHERE `service_id` IN ('982026112010000001');
+DELETE FROM `c_service` WHERE `service_code` IN ('fee.computeContractFeeAmount');
+
+INSERT INTO `c_service` (`id`, `service_id`, `service_code`, `business_type_cd`, `name`, `seq`, `messageQueueName`, `is_instance`, `url`, `method`, `timeout`, `retry_count`, `provide_app_id`, `create_time`, `status_cd`)
+VALUES ('2159', '982026112010000001', 'fee.computeContractFeeAmount', 'API', '合同费用试算', '1', null, 'CMD', 'http://fee-service', 'GET', '60', '3', '8000418002', '2026-11-20 10:00:00', '0');
+
+INSERT INTO `c_route` (`id`, `app_id`, `service_id`, `order_type_cd`, `invoke_limit_times`, `invoke_model`, `create_time`, `status_cd`)
+VALUES ('3141', '8000418004', '982026112010000001', 'Q', '1000', 'S', '2026-11-20 10:00:00', '0');
+
+-- ③ 执行后刷新路由缓存：POST /app/cache.flushCache?cache=APP_ROUTE_SERVICE（未刷缓存会返回“服务未找到”），并重启 service-api 网关
+-- ④ 回滚：DELETE FROM c_route WHERE service_id = '982026112010000001'; DELETE FROM c_service WHERE service_code = 'fee.computeContractFeeAmount';
+--          ALTER TABLE contract_room DROP COLUMN payer_obj_type;
+```
+

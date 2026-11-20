@@ -291,6 +291,18 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             contractRoomPo.setCrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_crId));
             contractRoomPo.setContractId(contractPo.getContractId());
             contractRoomPo.setStoreId(contractPo.getStoreId());
+            String payerObjType = StringUtil.isEmpty(contractRoomPo.getPayerObjType())
+                    ? FeeDto.PAYER_OBJ_TYPE_ROOM : contractRoomPo.getPayerObjType();
+            contractRoomPo.setPayerObjType(payerObjType);
+            if (FeeDto.PAYER_OBJ_TYPE_SHOP.equals(payerObjType)) {
+                String shopName = resourceStore.getString("shopNum");
+                if (StringUtil.isEmpty(shopName)) {
+                    shopName = resourceStore.getString("locationName");
+                }
+                contractRoomPo.setRoomName(StringUtil.isEmpty(shopName) ? resourceStore.getString("roomName") : shopName);
+                contractRoomInnerServiceSMOImpl.saveContractRoom(contractRoomPo);
+                continue;
+            }
             contractRoomPo.setRoomName(
                     resourceStore.getString("floorNum") + "-"
                             + resourceStore.getString("unitNum") + "-" + resourceStore.getString("roomNum"));

@@ -22,6 +22,8 @@ public class ContractRoomDto extends RoomDto implements Serializable {
     private String storeId;
     private String roomId;
     private String roomName;
+    private String payerObjType;
+
 
 
     private Date createTime;
@@ -84,6 +86,15 @@ public class ContractRoomDto extends RoomDto implements Serializable {
     public void setRoomName(String roomName) {
         this.roomName = roomName;
     }
+
+    public String getPayerObjType() {
+        return payerObjType;
+    }
+
+    public void setPayerObjType(String payerObjType) {
+        this.payerObjType = payerObjType;
+    }
+
 
 
     public Date getCreateTime() {

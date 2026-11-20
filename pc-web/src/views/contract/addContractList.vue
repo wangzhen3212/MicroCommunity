@@ -70,6 +70,8 @@
               :category="form.category"
               :rooms="rooms"
               :targets="targets"
+              :rent-amount-map="rentAmountMap"
+              :rent-total-amount="rentTotalAmount"
               :start-time="form.startTime"
               :end-time="form.endTime"
               @add-house="openHouseDialog"
@@ -174,8 +176,17 @@ import { listContractCollectionPlans } from '@/api/contract/contractPerformanceA
 import { queryContractAuditFlow, submitContractAudit } from '@/api/contract/contractAuditApi'
 import { queryContractRoom } from '@/api/contract/contractDetailRoomApi'
 import { queryContractFile } from '@/api/contract/contractDetailFileApi'
-import { amountToChinese, guessCategory, sanitizeHtml, CONTRACT_CATEGORY } from '@/utils/contractUtil'
-import { recalcFees, sumIncludedAmount } from '@/utils/contractFeeUtil'
+import { computeContractFeeAmount, computeContractRentAmount } from '@/api/contract/contractFeeCompositionApi'
+import { amountToChinese, guessCategory, sanitizeHtml, termMonths, CONTRACT_CATEGORY } from '@/utils/contractUtil'
+import {
+  PAYER_OBJ_TYPE,
+  applyManualAmount,
+  applyServerAmount,
+  detailAmountMap,
+  isManualFormula,
+  payerObjTypeOf,
+  sumIncludedAmount
+} from '@/utils/contractFeeUtil'
 import { getDateStr, getDateYYYYMMDD } from '@/utils/dateUtil'
 
 export default {
@@ -211,6 +222,9 @@ export default {
       content: '',
       audit: null,
       records: [],
+      rentAmountMap: {},
+      rentTotalAmount: '',
+      recalcTimer: null,
       form: this.createEmptyForm(),
       parentContract: null
     }
@@ -270,13 +284,6 @@ export default {
         ? this.$t('contractWorkbench.section.planRent')
         : this.$t('contractWorkbench.section.planPay')
     },
-    feeContext() {
-      return {
-        rooms: this.rooms,
-        startTime: this.form.startTime,
-        endTime: this.form.endTime
-      }
-    },
     includeFeeTotal() {
       return sumIncludedAmount(this.fees)
     },
@@ -288,7 +295,7 @@ export default {
         endTime: this.form.endTime,
         partyB: this.form.partyB,
         houses: this.rooms
-          .map(room => room.roomName || ((room.floorNum || '') + '-' + (room.unitNum || '') + '-' + (room.roomNum || '')))
+          .map(room => this.roomNameOf(room))
           .join('、')
       }
     }
@@ -307,20 +314,20 @@ export default {
       deep: true,
       handler() {
         this.markDirty()
-        this.recalcFeeRows()
+        this.scheduleRecalc()
       }
     },
     'form.startTime'() {
-      this.recalcFeeRows()
+      this.scheduleRecalc()
     },
     'form.endTime'() {
-      this.recalcFeeRows()
+      this.scheduleRecalc()
     },
     'form.category'() {
       if (this.isRent) {
         this.form.payMode = ''
       }
-      this.recalcFeeRows()
+      this.scheduleRecalc(true)
     },
     fees: {
       deep: true,
@@ -478,7 +485,7 @@ export default {
     },
     loadRooms(contractId) {
       queryContractRoom({ contractId, page: 1, row: 200 }).then(res => {
-        this.rooms = (res && res.data) || []
+        this.rooms = this.normalizeRooms((res && res.data) || [])
       }).catch(() => {
         this.rooms = []
       })
@@ -626,9 +633,52 @@ export default {
         this.form.payMode = this.plans.length + ' 期'
       }
     },
+    roomNameOf(row) {
+      if (!row) {
+        return ''
+      }
+      if (row.objName) {
+        return row.objName
+      }
+      if (payerObjTypeOf(row) === PAYER_OBJ_TYPE.SHOP) {
+        return row.shopNum || row.locationName || row.roomName || ''
+      }
+      return row.roomName || ((row.floorNum || '') + '-' + (row.unitNum || '') + '-' + (row.roomNum || ''))
+    },
+    normalizeRooms(list) {
+      return (list || []).map(row => {
+        const payerObjType = payerObjTypeOf(row)
+        const objId = row.objId || row.roomId || row.shopId
+        return {
+          ...row,
+          payerObjType: payerObjType,
+          objId: objId,
+          roomId: objId,
+          objName: row.objName || this.roomNameOf(row),
+          areaValue: row.areaValue || row.roomArea,
+          rentValue: row.rentValue || row.roomRent,
+          stateName: row.stateName || row.state
+        }
+      })
+    },
+    termMonthsOf() {
+      return termMonths(this.form.startTime, this.form.endTime)
+    },
+    scheduleRecalc(force) {
+      if (this.recalcTimer) {
+        clearTimeout(this.recalcTimer)
+      }
+      this.recalcTimer = setTimeout(() => {
+        this.recalcFeeRows(force)
+      }, 300)
+    },
     recalcFeeRows(force) {
-      recalcFees(this.fees, this.feeContext)
       if (!this.isRent) {
+        this.fees.forEach(row => {
+          if (isManualFormula(row.computingFormula)) {
+            applyManualAmount(row)
+          }
+        })
         this.hadRooms = this.hasRooms
         return
       }
@@ -637,9 +687,89 @@ export default {
           this.form.amount = '0.00'
         }
         this.hadRooms = false
+        this.rentAmountMap = {}
+        this.rentTotalAmount = ''
         return
       }
       this.hadRooms = true
+      this.refreshRentAmounts()
+      this.refreshFeeAmounts(force)
+    },
+    buildObjParams() {
+      if (!this.rooms.length) {
+        return null
+      }
+      const payerObjType = payerObjTypeOf(this.rooms[0])
+      if (this.rooms.some(row => payerObjTypeOf(row) !== payerObjType)) {
+        this.$message.warning(this.$t('contractWorkbench.msg.mixPayerObjType'))
+        return null
+      }
+      return {
+        payerObjType: payerObjType,
+        payerObjIds: this.rooms.map(row => row.objId || row.roomId).join(','),
+        months: this.termMonthsOf(),
+        startTime: this.form.startTime,
+        endTime: this.form.endTime
+      }
+    },
+    refreshRentAmounts() {
+      const params = this.buildObjParams()
+      if (!params || params.months <= 0) {
+        this.rentAmountMap = {}
+        this.rentTotalAmount = ''
+        return
+      }
+      computeContractRentAmount(params).then(res => {
+        this.rentAmountMap = detailAmountMap(res)
+        const data = res.data || res
+        this.rentTotalAmount = data.amount || ''
+      }).catch(error => {
+        this.rentAmountMap = {}
+        this.rentTotalAmount = ''
+        this.$message.warning(error.message)
+      })
+    },
+    refreshFeeAmounts(force) {
+      const params = this.buildObjParams()
+      const months = params ? params.months : 0
+      const tasks = []
+      this.fees.forEach(row => {
+        if (isManualFormula(row.computingFormula)) {
+          applyManualAmount(row)
+          return
+        }
+        if (!row.configId) {
+          return
+        }
+        if (months <= 0) {
+          row.amount = '0.00'
+          row.baseAmount = '0.00'
+          row.computeRemark = this.$t('contractWorkbench.msg.termEmpty')
+          return
+        }
+        tasks.push(computeContractFeeAmount({
+          configId: row.configId,
+          payerObjType: params.payerObjType,
+          payerObjIds: params.payerObjIds,
+          months: months,
+          startTime: params.startTime,
+          endTime: params.endTime
+        }).then(res => {
+          applyServerAmount(row, res)
+        }).catch(error => {
+          row.amount = '0.00'
+          row.baseAmount = '0.00'
+          row.computeRemark = error.message || this.$t('contractWorkbench.msg.feeComputeError')
+        }))
+      })
+      Promise.all(tasks).then(() => {
+        this.refreshFormAmount(force)
+      })
+    },
+    refreshFormAmount(force) {
+      if (!this.isRent || !this.hasRooms) {
+        return
+      }
       if (this.fees.length || force) {
         this.form.amount = this.includeFeeTotal.toFixed(2)
       }
@@ -654,7 +784,7 @@ export default {
       this.$refs.houseDialog.open(this.rooms)
     },
     handleChooseRooms(rooms) {
-      this.rooms = rooms || []
+      this.rooms = this.normalizeRooms(rooms)
     },
     removeHouse(index) {
       this.rooms.splice(index, 1)

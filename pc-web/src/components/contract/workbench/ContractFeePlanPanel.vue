@@ -17,23 +17,13 @@
         <el-table-column prop="computingFormulaName" :label="$t('contractWorkbench.plan.formula')" width="130" align="center" />
         <el-table-column :label="$t('contractWorkbench.plan.unitPrice')" width="110" align="center">
           <template slot-scope="scope">
-            <el-input
-              v-if="isUnitPriceRow(scope.row)"
-              size="mini"
-              v-model="scope.row.unitPrice"
-              @input="handleFeeInput"
-            />
+            <span v-if="isUnitPriceRow(scope.row)">{{ formatAmount(scope.row.unitPrice) }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column :label="$t('contractWorkbench.plan.additional')" width="100" align="center">
           <template slot-scope="scope">
-            <el-input
-              v-if="isAdditionalRow(scope.row)"
-              size="mini"
-              v-model="scope.row.additionalAmount"
-              @input="handleFeeInput"
-            />
+            <span v-if="isAdditionalRow(scope.row)">{{ formatAmount(scope.row.additionalAmount) }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
@@ -46,7 +36,7 @@
               v-if="isManualRow(scope.row)"
               size="mini"
               v-model="scope.row.manualAmount"
-              @input="handleFeeInput"
+              @input="handleManualInput(scope.row)"
             />
             <span v-else>{{ formatAmount(scope.row.amount) }}</span>
           </template>
@@ -104,6 +94,7 @@ import ContractPlanEditor from '@/components/contract/workbench/ContractPlanEdit
 import ContractFeeAddDialog from '@/components/contract/workbench/ContractFeeAddDialog'
 import { CONTRACT_CATEGORY, formatAmount } from '@/utils/contractUtil'
 import {
+  applyManualAmount,
   isAdditionalFormula,
   isManualFormula,
   isUnitPriceFormula,
@@ -188,6 +179,10 @@ export default {
     handleFeeConfirm(row) {
       this.fees.push(row)
       this.$emit('fees-change', this.fees)
+    },
+    handleManualInput(row) {
+      applyManualAmount(row)
+      this.handleFeeInput()
     },
     handleFeeInput() {
       this.$emit('fees-change', this.fees)

@@ -1,14 +1,20 @@
 /**
- * 合同费用构成计算：公式映射、逐行计算、合计汇总
- * 口径：月数 = termMonths(生效日期, 到期日期)；周期数 = ceil(月数 / 周期月数)
+ * 合同费用构成工具：公式类型判定、后端试算结果回填、合计汇总
+ * 金额一律由后端 fee.computeContractFeeAmount（统一公式模块）计算，前端不再实现任何金额公式
  */
-import { formatAmount, termMonths, toNumber } from '@/utils/contractUtil'
+import { formatAmount, toNumber } from '@/utils/contractUtil'
 
 // 水费 / 电费：按实结算，默认不计入合同金额
 export const FEE_TYPE_WATER = '888800010015'
 export const FEE_TYPE_ELECTRIC = '888800010016'
 
 export const EXCLUDE_FEE_TYPE_CDS = [FEE_TYPE_WATER, FEE_TYPE_ELECTRIC]
+
+// 标的类型：房屋 building_room / 商铺 building_shop，两套档案表 ID 互不通用
+export const PAYER_OBJ_TYPE = {
+  ROOM: '3333',
+  SHOP: '4444'
+}
 
 export const FEE_FORMULA = {
   RENT: '1101',
@@ -22,15 +28,6 @@ export const FEE_FORMULA = {
   METER: '5005',
   METER_USE: '6006',
   METER_DYNAMIC: '9009'
-}
-
-// 结算基数取数口径
-const BASE_TYPE = {
-  '1101': 'rent',
-  '1102': 'rent',
-  '1001': 'builtUpArea',
-  '1002': 'builtUpArea',
-  '3003': 'roomArea'
 }
 
 // 金额需手工录入的计算方式（含抄表类，按实结算）
@@ -58,81 +55,73 @@ export function defaultIncludeInAmount(feeTypeCd) {
   return EXCLUDE_FEE_TYPE_CDS.indexOf(String(feeTypeCd)) === -1
 }
 
-export function termMonthsOf(context) {
-  const ctx = context || {}
-  return termMonths(ctx.startTime, ctx.endTime)
-}
-
-export function cycleCount(months, cycle) {
-  const cycleMonths = Math.max(1, Math.round(toNumber(cycle)))
-  const totalMonths = months > 0 ? months : 1
-  return Math.max(1, Math.ceil(totalMonths / cycleMonths))
+/**
+ * 标的类型判定：缺省按房屋处理
+ */
+export function payerObjTypeOf(row) {
+  const value = String((row && row.payerObjType) || '')
+  return value === PAYER_OBJ_TYPE.SHOP ? PAYER_OBJ_TYPE.SHOP : PAYER_OBJ_TYPE.ROOM
 }
 
 /**
- * 结算基数：房源租金合计 / 建筑面积合计 / 室内面积合计
+ * 把后端试算结果写回费用行（单价/附加费/期数/结算基数/金额/计算说明）
  */
-export function calcFeeBase(row, context) {
-  const rooms = (context && context.rooms) || []
-  const baseType = BASE_TYPE[String(row && row.computingFormula)]
-  if (!baseType) {
-    return 0
+export function applyServerAmount(row, data) {
+  if (!row || !data) {
+    return row
   }
-  return rooms.reduce((sum, room) => {
-    if (baseType === 'rent') {
-      return sum + toNumber(room.rentUnitPrice || room.roomRent)
-    }
-    if (baseType === 'roomArea') {
-      return sum + toNumber(room.roomArea)
-    }
-    return sum + toNumber(room.builtUpArea)
-  }, 0)
+  const result = data.data ? data.data : data
+  row.unitPrice = result.unitPrice || row.unitPrice || '0.00'
+  row.additionalAmount = result.additionalAmount || row.additionalAmount || '0.00'
+  row.cycle = result.cycle || row.cycle
+  row.months = result.months
+  row.baseAmount = formatAmount(result.baseAmount)
+  row.amount = formatAmount(result.amount)
+  row.computingFormulaName = result.computingFormulaName || row.computingFormulaName
+  row.computeRemark = result.remark || ''
+  return row
 }
 
 /**
- * 单行金额：手工口径取 manualAmount，其余按公式自动计算
+ * 明细金额映射：objId -> 金额（租金小计、逐标的核对）
  */
-export function calcFeeAmount(row, context) {
-  if (!row) {
-    return 0
-  }
-  const formula = String(row.computingFormula)
-  if (isManualFormula(formula)) {
-    return toNumber(row.manualAmount)
-  }
-  const months = termMonthsOf(context)
-  const base = calcFeeBase(row, context)
-  const unitPrice = toNumber(row.unitPrice)
-  const additionalAmount = toNumber(row.additionalAmount)
-  if (formula === FEE_FORMULA.RENT || formula === FEE_FORMULA.RENT_STEP) {
-    return base * cycleCount(months, row.cycle)
-  }
-  if (formula === FEE_FORMULA.BUILT_UP) {
-    return base * unitPrice * months + additionalAmount
-  }
-  if (formula === FEE_FORMULA.BUILT_UP_RATIO) {
-    const coefficient = toNumber(row.coefficient) || 1
-    return base * unitPrice * coefficient * months
-  }
-  if (formula === FEE_FORMULA.ROOM_AREA) {
-    return base * unitPrice * months + additionalAmount
-  }
-  if (formula === FEE_FORMULA.FIXED) {
-    return unitPrice
-  }
-  return toNumber(row.manualAmount)
-}
-
-/**
- * 重算费用行（原地刷新 baseAmount / amount），返回同一数组
- */
-export function recalcFees(fees, context) {
-  const list = fees || []
-  list.forEach(row => {
-    row.baseAmount = formatAmount(calcFeeBase(row, context))
-    row.amount = formatAmount(calcFeeAmount(row, context))
+export function detailAmountMap(data) {
+  const result = data && data.data ? data.data : data
+  const map = {}
+  const details = (result && result.details) || []
+  details.forEach(detail => {
+    map[detail.objId] = formatAmount(detail.amount)
   })
-  return list
+  return map
+}
+
+/**
+ * 手工金额类费用行：金额直接取手工录入值（不属于公式计算）
+ */
+export function applyManualAmount(row) {
+  if (!row) {
+    return row
+  }
+  row.baseAmount = '0.00'
+  row.amount = formatAmount(row.manualAmount)
+  return row
+}
+
+/**
+ * 试算入参：标的集合统一取 payerObjType + objId
+ */
+export function buildComputeParams(objs, months, startTime, endTime) {
+  const list = objs || []
+  if (!list.length) {
+    return null
+  }
+  return {
+    payerObjType: payerObjTypeOf(list[0]),
+    payerObjIds: list.map(item => item.objId || item.roomId || item.shopId).join(','),
+    months: months,
+    startTime: startTime,
+    endTime: endTime
+  }
 }
 
 export function sumFeeTotal(fees) {

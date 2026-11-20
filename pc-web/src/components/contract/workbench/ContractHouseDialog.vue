@@ -5,26 +5,37 @@
     width="860px"
     @close="handleClose"
   >
-    <el-tabs v-model="roomType" @tab-click="handleTabChange">
-      <el-tab-pane :label="$t('contractWorkbench.target.tabRoom')" name="1010301" />
-      <el-tab-pane :label="$t('contractWorkbench.target.tabShop')" name="2020602" />
+    <el-tabs v-model="tab" @tab-click="handleTabChange">
+      <el-tab-pane :label="$t('contractWorkbench.target.tabRoom')" name="room" />
+      <el-tab-pane :label="$t('contractWorkbench.target.tabShop')" name="shop" />
     </el-tabs>
 
     <div class="cc-toolbar">
-      <el-input
-        style="width: 130px"
-        v-model="floorNum"
-        :placeholder="$t('contractWorkbench.target.floorNum')"
-        clearable
-        @keyup.enter.native="handleSearch"
-      />
-      <el-input
-        style="width: 150px"
-        v-model="roomNumLike"
-        :placeholder="$t('contractWorkbench.target.roomNum')"
-        clearable
-        @keyup.enter.native="handleSearch"
-      />
+      <template v-if="isShop">
+        <el-input
+          style="width: 180px"
+          v-model="shopNum"
+          :placeholder="$t('contractWorkbench.target.shopName')"
+          clearable
+          @keyup.enter.native="handleSearch"
+        />
+      </template>
+      <template v-else>
+        <el-input
+          style="width: 130px"
+          v-model="floorNum"
+          :placeholder="$t('contractWorkbench.target.floorNum')"
+          clearable
+          @keyup.enter.native="handleSearch"
+        />
+        <el-input
+          style="width: 150px"
+          v-model="roomNumLike"
+          :placeholder="$t('contractWorkbench.target.roomNum')"
+          clearable
+          @keyup.enter.native="handleSearch"
+        />
+      </template>
       <el-button type="primary" @click="handleSearch">
         <i class="el-icon-search"></i>
         {{ $t('common.search') }}
@@ -33,27 +44,32 @@
     </div>
 
     <el-table
-      :data="rooms"
+      :data="rows"
       size="mini"
       border
       v-loading="loading"
       @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="46" />
-      <el-table-column :label="$t('contractWorkbench.target.roomName')">
-        <template slot-scope="scope">
-          {{ scope.row.roomName || ((scope.row.floorNum || '') + '-' + (scope.row.unitNum || '') + '-' + (scope.row.roomNum || '')) }}
-        </template>
+      <el-table-column :label="isShop ? $t('contractWorkbench.target.shopName') : $t('contractWorkbench.target.roomName')">
+        <template slot-scope="scope">{{ rowName(scope.row) }}</template>
       </el-table-column>
-      <el-table-column prop="stateName" :label="$t('contractWorkbench.target.state')" align="center" width="100" />
+      <el-table-column v-if="isShop" prop="locationName" :label="$t('contractWorkbench.target.shopLocation')" />
+      <el-table-column :label="$t('contractWorkbench.target.state')" align="center" width="100">
+        <template slot-scope="scope">{{ rowStateName(scope.row) }}</template>
+      </el-table-column>
       <el-table-column :label="$t('contractWorkbench.target.area')" align="center" width="100">
         <template slot-scope="scope">{{ scope.row.builtUpArea || '-' }}</template>
       </el-table-column>
-      <el-table-column :label="$t('contractWorkbench.target.roomArea')" align="center" width="100">
-        <template slot-scope="scope">{{ scope.row.roomArea || '-' }}</template>
+      <el-table-column
+        :label="isShop ? $t('contractWorkbench.target.shopArea') : $t('contractWorkbench.target.roomArea')"
+        align="center"
+        width="100"
+      >
+        <template slot-scope="scope">{{ rowAreaValue(scope.row) || '-' }}</template>
       </el-table-column>
       <el-table-column :label="$t('contractWorkbench.target.rent')" align="center" width="110">
-        <template slot-scope="scope">{{ formatAmount(scope.row.roomRent) }}</template>
+        <template slot-scope="scope">{{ formatAmount(rowRentValue(scope.row)) }}</template>
       </el-table-column>
     </el-table>
 
@@ -70,13 +86,13 @@
       <div class="cc-selected-title">{{ $t('contractWorkbench.target.house') }}（{{ selected.length }}）</div>
       <div v-if="selected.length" class="cc-selected-list">
         <el-tag
-          v-for="(room, index) in selected"
-          :key="'room' + index"
+          v-for="(item, index) in selected"
+          :key="'obj' + index"
           size="small"
           closable
-          @close="removeRoom(index)"
+          @close="removeSelected(index)"
         >
-          {{ room.roomName || ((room.floorNum || '') + '-' + (room.unitNum || '') + '-' + (room.roomNum || '')) }}
+          {{ rowName(item) }}
         </el-tag>
       </div>
       <div v-else class="cc-empty">{{ $t('contractWorkbench.target.empty') }}</div>
@@ -92,7 +108,9 @@
 <script>
 import { getCommunityId } from '@/api/community/communityApi'
 import { queryLeasableRooms } from '@/api/contract/addContractApi'
+import { listShops } from '@/api/shop/shopCreateFeeApi'
 import { formatAmount } from '@/utils/contractUtil'
+import { PAYER_OBJ_TYPE } from '@/utils/contractFeeUtil'
 
 export default {
   name: 'ContractHouseDialog',
@@ -100,16 +118,25 @@ export default {
     return {
       visible: false,
       loading: false,
-      roomType: '1010301',
+      tab: 'room',
       floorNum: '',
       roomNumLike: '',
-      rooms: [],
+      shopNum: '',
+      rows: [],
       selected: [],
       page: {
         current: 1,
         size: 10,
         total: 0
       }
+    }
+  },
+  computed: {
+    isShop() {
+      return this.tab === 'shop'
+    },
+    payerObjType() {
+      return this.isShop ? PAYER_OBJ_TYPE.SHOP : PAYER_OBJ_TYPE.ROOM
     }
   },
   methods: {
@@ -119,77 +146,158 @@ export default {
       this.selected = exists ? exists.slice() : []
       this.floorNum = ''
       this.roomNumLike = ''
+      this.shopNum = ''
       this.page.current = 1
-      this.queryRoomsMethod()
+      this.tab = this.selected.length && this.selected[0].payerObjType === PAYER_OBJ_TYPE.SHOP ? 'shop' : 'room'
+      this.queryData()
     },
     handleClose() {
       this.visible = false
     },
     handleTabChange() {
+      if (this.selected.length && this.selected[0].payerObjType !== this.payerObjType) {
+        this.selected = []
+        this.$message.warning(this.$t('contractWorkbench.msg.mixPayerObjType'))
+      }
       this.page.current = 1
-      this.queryRoomsMethod()
+      this.queryData()
     },
     handleSearch() {
       this.page.current = 1
-      this.queryRoomsMethod()
+      this.queryData()
     },
-    queryRoomsMethod() {
+    queryData() {
+      if (this.isShop) {
+        this.queryShops()
+        return
+      }
+      this.queryRooms()
+    },
+    queryRooms() {
       this.loading = true
       queryLeasableRooms({
         communityId: getCommunityId(),
-        roomType: this.roomType,
+        roomType: '1010301',
         floorNum: this.floorNum,
         roomNumLike: this.roomNumLike,
         page: this.page.current,
         row: this.page.size
       }).then(res => {
         const payload = res || {}
-        this.rooms = payload.data || []
-        this.page.total = payload.total || this.rooms.length
+        this.rows = payload.data || []
+        this.page.total = payload.total || this.rows.length
       }).catch(error => {
-        this.rooms = []
+        this.rows = []
         this.page.total = 0
         this.$message.error(error.message || this.$t('contractWorkbench.msg.loadError'))
       }).finally(() => {
         this.loading = false
       })
     },
-    handleSelectionChange(rows) {
-      this.rooms.forEach(room => {
-        const index = this.indexOfRoom(room.roomId)
-        if (index > -1 && rows.indexOf(room) < 0) {
+    queryShops() {
+      this.loading = true
+      listShops({
+        shopNum: this.shopNum,
+        page: this.page.current,
+        row: this.page.size
+      }).then(res => {
+        const payload = res || {}
+        this.rows = payload.data || []
+        this.page.total = payload.total || this.rows.length
+      }).catch(error => {
+        this.rows = []
+        this.page.total = 0
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.loadError'))
+      }).finally(() => {
+        this.loading = false
+      })
+    },
+    rowName(row) {
+      if (!row) {
+        return ''
+      }
+      if (row.objName) {
+        return row.objName
+      }
+      if (row.shopNum || row.locationName) {
+        return row.shopNum || row.locationName
+      }
+      return row.roomName || ((row.floorNum || '') + '-' + (row.unitNum || '') + '-' + (row.roomNum || ''))
+    },
+    rowAreaValue(row) {
+      return row.areaValue || (this.isShop ? row.shopArea : row.roomArea)
+    },
+    rowRentValue(row) {
+      return row.rentValue || (this.isShop ? row.shopRent : row.roomRent)
+    },
+    rowStateName(row) {
+      if (row && row.stateName) {
+        return row.stateName
+      }
+      const state = String((row && row.state) || '')
+      if (state === '2008') {
+        return this.$t('contractWorkbench.target.stateIdle')
+      }
+      if (state === '2006') {
+        return this.$t('contractWorkbench.target.stateRented')
+      }
+      if (state === '2007') {
+        return this.$t('contractWorkbench.target.stateSold')
+      }
+      return '-'
+    },
+    rowPayerObjType(row) {
+      return row && row.payerObjType ? row.payerObjType : this.payerObjType
+    },
+    rowObjId(row) {
+      return row.objId || row.roomId || row.shopId
+    },
+    handleSelectionChange(selection) {
+      this.rows.forEach(row => {
+        const index = this.indexOfSelected(this.rowObjId(row))
+        if (index > -1 && selection.indexOf(row) < 0) {
           this.selected.splice(index, 1)
         }
       })
-      rows.forEach(room => {
-        if (this.indexOfRoom(room.roomId) < 0) {
-          this.selected.push(room)
+      selection.forEach(row => {
+        if (this.indexOfSelected(this.rowObjId(row)) < 0) {
+          this.selected.push(row)
         }
       })
     },
-    indexOfRoom(roomId) {
+    indexOfSelected(objId) {
       for (let index = 0; index < this.selected.length; index++) {
-        if (this.selected[index].roomId === roomId) {
+        if (this.rowObjId(this.selected[index]) === objId) {
           return index
         }
       }
       return -1
     },
-    removeRoom(index) {
+    removeSelected(index) {
       this.selected.splice(index, 1)
     },
     handleCurrentChange(current) {
       this.page.current = current
-      this.queryRoomsMethod()
+      this.queryData()
+    },
+    buildTarget(row) {
+      const objId = this.rowObjId(row)
+      const payerObjType = this.rowPayerObjType(row)
+      return {
+        ...row,
+        payerObjType: payerObjType,
+        objId: objId,
+        objName: this.rowName(row),
+        roomId: objId,
+        builtUpArea: row.builtUpArea,
+        areaValue: this.rowAreaValue(row),
+        rentValue: this.rowRentValue(row),
+        stateName: this.rowStateName(row)
+      }
     },
     handleConfirm() {
-      const rooms = this.selected.map(room => {
-        return {
-          ...room,
-          rentUnitPrice: room.rentUnitPrice || room.roomRent
-        }
-      })
-      this.$emit('choose', rooms)
+      const objs = this.selected.map(row => this.buildTarget(row))
+      this.$emit('choose', objs)
       this.handleClose()
     }
   }

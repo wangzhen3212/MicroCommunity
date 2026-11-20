@@ -13,22 +13,34 @@
     </div>
 
     <el-table v-if="isRent" :data="rooms" size="mini" border>
-      <el-table-column :label="$t('contractWorkbench.target.roomName')">
+      <el-table-column :label="isShop ? $t('contractWorkbench.target.shopName') : $t('contractWorkbench.target.roomName')">
+        <template slot-scope="scope">{{ rowName(scope.row) }}</template>
+      </el-table-column>
+      <el-table-column v-if="isShop" prop="locationName" :label="$t('contractWorkbench.target.shopLocation')" />
+      <el-table-column :label="$t('contractWorkbench.target.state')" align="center" width="130">
         <template slot-scope="scope">
-          {{ scope.row.roomName || ((scope.row.floorNum || '') + '-' + (scope.row.unitNum || '') + '-' + (scope.row.roomNum || '')) }}
+          <span>{{ scope.row.stateName || '-' }}</span>
+          <span class="cc-target-tip">{{ $t('contractWorkbench.target.stateTip') }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="stateName" :label="$t('contractWorkbench.target.state')" align="center" width="100" />
       <el-table-column :label="$t('contractWorkbench.target.area')" align="center" width="100">
         <template slot-scope="scope">{{ scope.row.builtUpArea || '-' }}</template>
       </el-table-column>
-      <el-table-column :label="$t('contractWorkbench.target.rentUnitPrice')" align="center" width="140">
+      <el-table-column
+        :label="isShop ? $t('contractWorkbench.target.shopArea') : $t('contractWorkbench.target.roomArea')"
+        align="center"
+        width="100"
+      >
+        <template slot-scope="scope">{{ scope.row.areaValue || scope.row.roomArea || '-' }}</template>
+      </el-table-column>
+      <el-table-column :label="$t('contractWorkbench.target.rentUnitPrice')" align="center" width="150">
         <template slot-scope="scope">
-          <el-input size="mini" v-model="scope.row.rentUnitPrice" />
+          <span>{{ formatAmount(scope.row.rentValue || scope.row.roomRent) }}</span>
+          <span class="cc-target-tip">{{ $t('contractWorkbench.target.rentTip') }}</span>
         </template>
       </el-table-column>
       <el-table-column :label="$t('contractWorkbench.target.subtotal')" align="center" width="120">
-        <template slot-scope="scope">{{ formatAmount(roomAmount(scope.row)) }}</template>
+        <template slot-scope="scope">{{ rowAmountText(scope.row) }}</template>
       </el-table-column>
       <el-table-column :label="$t('common.operation')" align="center" width="80">
         <template slot-scope="scope">
@@ -73,7 +85,8 @@
 </template>
 
 <script>
-import { CONTRACT_CATEGORY, formatAmount, termMonths, toNumber } from '@/utils/contractUtil'
+import { CONTRACT_CATEGORY, formatAmount, toNumber } from '@/utils/contractUtil'
+import { PAYER_OBJ_TYPE, payerObjTypeOf } from '@/utils/contractFeeUtil'
 
 export default {
   name: 'ContractTargetTable',
@@ -94,6 +107,16 @@ export default {
         return []
       }
     },
+    rentAmountMap: {
+      type: Object,
+      default: function () {
+        return {}
+      }
+    },
+    rentTotalAmount: {
+      type: [String, Number],
+      default: ''
+    },
     startTime: {
       type: String,
       default: ''
@@ -110,29 +133,58 @@ export default {
     isMaintain() {
       return String(this.category) === CONTRACT_CATEGORY.MAINTAIN
     },
+    isShop() {
+      return this.rooms.length > 0 && payerObjTypeOf(this.rooms[0]) === PAYER_OBJ_TYPE.SHOP
+    },
     firstColumnLabel() {
       return this.isMaintain ? this.$t('contractWorkbench.target.device') : this.$t('contractWorkbench.target.goods')
     },
     secondColumnLabel() {
       return this.isMaintain ? this.$t('contractWorkbench.target.service') : this.$t('contractWorkbench.target.spec')
     },
-    months() {
-      return termMonths(this.startTime, this.endTime)
-    },
     isEmpty() {
       return this.isRent ? !this.rooms.length : !this.targets.length
     },
     totalAmount() {
       if (this.isRent) {
-        return this.rooms.reduce((sum, row) => sum + this.roomAmount(row), 0)
+        if (this.rentTotalAmount !== '' && this.rentTotalAmount !== null) {
+          return toNumber(this.rentTotalAmount)
+        }
+        return this.rooms.reduce((sum, row) => sum + this.rowAmount(row), 0)
       }
       return this.targets.reduce((sum, row) => sum + this.targetAmount(row), 0)
     }
   },
   methods: {
     formatAmount,
-    roomAmount(row) {
-      return toNumber(row.rentUnitPrice) * (this.months > 0 ? this.months : 1)
+    rowName(row) {
+      if (!row) {
+        return ''
+      }
+      if (row.objName) {
+        return row.objName
+      }
+      if (this.isShop && (row.shopNum || row.locationName)) {
+        return row.shopNum || row.locationName
+      }
+      return row.roomName || ((row.floorNum || '') + '-' + (row.unitNum || '') + '-' + (row.roomNum || ''))
+    },
+    rowObjId(row) {
+      return (row && (row.objId || row.roomId || row.shopId)) || ''
+    },
+    rowAmount(row) {
+      const objId = this.rowObjId(row)
+      if (!objId || !this.rentAmountMap) {
+        return 0
+      }
+      return toNumber(this.rentAmountMap[objId])
+    },
+    rowAmountText(row) {
+      const objId = this.rowObjId(row)
+      if (!objId || !this.rentAmountMap || typeof this.rentAmountMap[objId] === 'undefined') {
+        return '-'
+      }
+      return formatAmount(this.rentAmountMap[objId])
     },
     targetAmount(row) {
       return toNumber(row.num) * toNumber(row.price)
@@ -156,5 +208,11 @@ export default {
     font-weight: 600;
     color: #409eff;
   }
+}
+
+.cc-target-tip {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #909399;
 }
 </style>

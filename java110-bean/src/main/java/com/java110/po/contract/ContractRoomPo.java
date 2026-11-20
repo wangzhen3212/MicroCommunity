@@ -12,6 +12,8 @@ public class ContractRoomPo implements Serializable {
     private String storeId;
     private String roomId;
     private String roomName;
+    private String payerObjType;
+
 
     public String getCrId() {
         return crId;
@@ -76,6 +78,15 @@ public class ContractRoomPo implements Serializable {
     public void setRoomName(String roomName) {
         this.roomName = roomName;
     }
+
+    public String getPayerObjType() {
+        return payerObjType;
+    }
+
+    public void setPayerObjType(String payerObjType) {
+        this.payerObjType = payerObjType;
+    }
+
 
 
 }
