@@ -20,6 +20,7 @@
       <contract-filter-bar
         :value="conditions"
         :partyas="partyas"
+        show-category
         @search="handleSearch"
         @reset="handleReset"
       />
@@ -57,8 +58,11 @@
         <el-table-column :label="$t('contractLedger.table.partya')" min-width="150">
           <template slot-scope="scope">{{ scope.row.partyA || '-' }}</template>
         </el-table-column>
-        <el-table-column :label="$t('contractLedger.table.partyB')" min-width="150">
-          <template slot-scope="scope">{{ scope.row.partyB || '-' }}</template>
+        <el-table-column :label="$t('contractLedger.table.partyB')" min-width="160">
+          <template slot-scope="scope">
+            <div class="cc-cell-party">{{ scope.row.partyB || '-' }}</div>
+            <div v-if="partyBMetaOf(scope.row)" class="cc-cell-party-meta">{{ partyBMetaOf(scope.row) }}</div>
+          </template>
         </el-table-column>
         <el-table-column :label="$t('contractLedger.table.amount')" align="right" width="130">
           <template slot-scope="scope">{{ formatAmount(scope.row.amount) }}</template>
@@ -127,7 +131,7 @@
               @click="stopContract(scope.row)"
             >{{ $t('contractLedger.op.stop') }}</el-button>
             <el-button
-              v-if="canEdit(scope.row)"
+              v-if="canDelete(scope.row)"
               type="text"
               size="mini"
               @click="deleteContractMethod(scope.row)"
@@ -185,6 +189,8 @@ import {
   CONTRACT_CATEGORY,
   CONTRACT_STATE,
   addMonths,
+  canDeleteContract,
+  canEditContract,
   daysLeft,
   daysLeftType,
   formatAmount,
@@ -213,6 +219,7 @@ export default {
       selection: [],
       conditions: {
         searchText: '',
+        category: '',
         state: '',
         partyaId: '',
         changed: '',
@@ -280,8 +287,18 @@ export default {
       return this.$t('contractLedger.daysLeft.remain', { days: days })
     },
     canEdit(row) {
-      const state = String(row.state)
-      return state === CONTRACT_STATE.DRAFT || state === CONTRACT_STATE.FAIL
+      return canEditContract(row.state)
+    },
+    canDelete(row) {
+      return canDeleteContract(row.state)
+    },
+    partyBMetaOf(row) {
+      const contacts = row.bContacts || ''
+      const link = row.bLink || ''
+      if (contacts && link) {
+        return contacts + ' / ' + link
+      }
+      return contacts || link || ''
     },
     canStop(row) {
       const state = String(row.state)
@@ -311,6 +328,9 @@ export default {
         searchText: this.conditions.searchText,
         partyaId: this.conditions.partyaId,
         changed: this.conditions.changed
+      }
+      if (this.conditions.category) {
+        params.category = this.conditions.category
       }
       const state = this.conditions.state
       if (state === 'auditing') {
@@ -347,6 +367,7 @@ export default {
     handleReset() {
       this.conditions = {
         searchText: '',
+        category: '',
         state: '',
         partyaId: '',
         changed: '',
@@ -594,6 +615,22 @@ export default {
       color: #909399;
       background: #f4f4f5;
     }
+  }
+
+  .cc-cell-party {
+    color: #303133;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .cc-cell-party-meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #909399;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .cc-cell-term {

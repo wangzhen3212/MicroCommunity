@@ -181,7 +181,8 @@ export const messages = {
         mixPayerObjType: 'Houses and shops cannot be mixed in one contract',
         codeEmpty: 'Please generate the contract code first',
         templateFirst: 'Select a contract template first; related houses/targets will show by template category',
-        templateCategoryEmpty: 'This template has no category and is treated as purchase; please maintain the category in contract templates'
+        templateCategoryEmpty: 'This template has no category and is treated as purchase; please maintain the category in contract templates',
+        auditingEditable: 'Content can be edited while legal review is in progress; saving keeps it in legal review'
       }
     }
   },
@@ -367,7 +368,8 @@ export const messages = {
         mixPayerObjType: '不支持房屋与商铺混装计算',
         codeEmpty: '请先生成合同编号',
         templateFirst: '请先选择合同模板，选择后将按模板分类显示关联房源/标的',
-        templateCategoryEmpty: '该合同模板未配置分类，暂按采购合同处理，请在合同模板中维护分类'
+        templateCategoryEmpty: '该合同模板未配置分类，暂按采购合同处理，请在合同模板中维护分类',
+        auditingEditable: '法务校对中可修改，保存后仍保持在法务校对环节'
       }
     }
   },
@@ -553,7 +555,8 @@ export const messages = {
         mixPayerObjType: '不支持房屋與商鋪混裝計算',
         codeEmpty: '請先生成合同編號',
         templateFirst: '請先選擇合同模板，選擇後將按模板分類顯示關聯房源/標的',
-        templateCategoryEmpty: '該合同模板未配置分類，暫按採購合同處理，請在合同模板中維護分類'
+        templateCategoryEmpty: '該合同模板未配置分類，暫按採購合同處理，請在合同模板中維護分類',
+        auditingEditable: '法務校對中可修改，儲存後仍保持在法務校對環節'
       }
     }
   }

@@ -98,6 +98,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
 
         validateRoom(contractPo, reqJson);
 
+        fillPartyBName(contractPo, reqJson);
+
         boolean draft = ContractDto.STATE_DRAFT.equals(reqJson.getString("state"));
 
         if (draft) {
@@ -164,6 +166,22 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
 
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
 
+    }
+
+    /**
+     * 房屋出租合同的乙方即业主，乙方名称为空时用业主姓名兜底，避免台账乙方列空白
+     */
+    private void fillPartyBName(ContractPo contractPo, JSONObject reqJson) {
+        if (!StringUtil.isEmpty(contractPo.getPartyB())) {
+            return;
+        }
+        if (!ContractDto.CATEGORY_RENT.equals(reqJson.getString("category"))) {
+            return;
+        }
+        if (StringUtil.isEmpty(contractPo.getObjPersonName())) {
+            return;
+        }
+        contractPo.setPartyB(contractPo.getObjPersonName());
     }
 
     /**

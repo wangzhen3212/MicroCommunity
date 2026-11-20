@@ -7,6 +7,7 @@
   >
     <div style="text-align:center">
       <p>{{ $t('contractManage.delete.confirmMessage') }}</p>
+      <p style="font-size:12px;color:#909399;">{{ $t('contractManage.delete.riskMessage') }}</p>
     </div>
     <span slot="footer" class="dialog-footer">
       <el-button @click="handleClose">{{ $t('contractManage.delete.cancel') }}</el-button>

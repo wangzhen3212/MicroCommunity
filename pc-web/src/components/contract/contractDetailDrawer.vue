@@ -174,6 +174,8 @@ import { queryContractChangePlan } from '@/api/contract/contractChangeManageApi'
 import {
   CONTRACT_STATE,
   amountToChinese,
+  canDeleteContract,
+  canEditContract,
   daysLeft,
   formatAmount,
   formatTerm,
@@ -213,10 +215,10 @@ export default {
       return this.contract ? String(this.contract.state) : ''
     },
     canEdit() {
-      return this.stateValue === CONTRACT_STATE.DRAFT || this.stateValue === CONTRACT_STATE.FAIL
+      return canEditContract(this.stateValue)
     },
     canSubmit() {
-      return this.canEdit
+      return this.stateValue === CONTRACT_STATE.DRAFT || this.stateValue === CONTRACT_STATE.FAIL
     },
     canStop() {
       return this.stateValue === CONTRACT_STATE.DRAFT ||
@@ -225,7 +227,7 @@ export default {
         this.stateValue === CONTRACT_STATE.EFFECTIVE
     },
     canDelete() {
-      return this.stateValue === CONTRACT_STATE.DRAFT
+      return canDeleteContract(this.stateValue)
     },
     safeContent() {
       return sanitizeHtml(this.content)

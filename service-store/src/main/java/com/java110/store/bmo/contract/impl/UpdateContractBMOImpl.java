@@ -132,9 +132,15 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         String communityId = oldContractDtos.get(0).getCommunityId();
         contractPo.setCommunityId(communityId);
         String oldState = oldContractDtos.get(0).getState();
-        if (ContractDto.STATE_AUDIT.equals(oldState) || ContractDto.STATE_AUDIT_LEADER.equals(oldState)) {
-            return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "该合同正在审批中，签约信息已锁定，无法修改");
+        if (ContractDto.STATE_AUDIT_LEADER.equals(oldState)) {
+            return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "该合同领导审批中，签约信息已锁定，无法修改");
         }
+        // 法务校对阶段允许修改签约信息，但不允许回落为草稿
+        if (ContractDto.STATE_AUDIT.equals(oldState) && ContractDto.STATE_DRAFT.equals(contractPo.getState())) {
+            contractPo.setState(ContractDto.STATE_AUDIT);
+        }
+
+        fillPartyBName(contractPo, reqJson);
 
         int flag = contractInnerServiceSMOImpl.updateContract(contractPo);
 
@@ -184,6 +190,22 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
 
+    }
+
+    /**
+     * 房屋出租合同的乙方即业主，乙方名称为空时用业主姓名兜底，避免台账乙方列空白
+     */
+    private void fillPartyBName(ContractPo contractPo, JSONObject reqJson) {
+        if (!StringUtil.isEmpty(contractPo.getPartyB())) {
+            return;
+        }
+        if (!ContractDto.CATEGORY_RENT.equals(reqJson.getString("category"))) {
+            return;
+        }
+        if (StringUtil.isEmpty(contractPo.getObjPersonName())) {
+            return;
+        }
+        contractPo.setPartyB(contractPo.getObjPersonName());
     }
 
     /**

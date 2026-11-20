@@ -41,8 +41,11 @@
         <el-table-column :label="$t('contractPendingAudit.table.partya')" min-width="140">
           <template slot-scope="scope">{{ scope.row.partyA || '-' }}</template>
         </el-table-column>
-        <el-table-column :label="$t('contractPendingAudit.table.partyB')" min-width="140">
-          <template slot-scope="scope">{{ scope.row.partyB || '-' }}</template>
+        <el-table-column :label="$t('contractPendingAudit.table.partyB')" min-width="160">
+          <template slot-scope="scope">
+            <div class="cc-cell-party">{{ scope.row.partyB || '-' }}</div>
+            <div v-if="partyBMetaOf(scope.row)" class="cc-cell-party-meta">{{ partyBMetaOf(scope.row) }}</div>
+          </template>
         </el-table-column>
         <el-table-column :label="$t('contractPendingAudit.table.amount')" align="right" width="130">
           <template slot-scope="scope">{{ formatAmount(scope.row.amount) }}</template>
@@ -164,6 +167,14 @@ export default {
         this.loading = false
       })
     },
+    partyBMetaOf(row) {
+      const contacts = row.bContacts || ''
+      const link = row.bLink || ''
+      if (contacts && link) {
+        return contacts + ' / ' + link
+      }
+      return contacts || link || ''
+    },
     lastRecordOf(row) {
       const record = row.lastAuditLog || {}
       return record.auditTime ? record : null
@@ -222,6 +233,22 @@ export default {
     margin-top: 2px;
     font-size: 11px;
     color: #909399;
+  }
+
+  .cc-cell-party {
+    color: #303133;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .cc-cell-party-meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #909399;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .cc-cell-record {

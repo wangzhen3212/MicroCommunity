@@ -82,6 +82,8 @@ public class ListPendingAuditContractsCmd extends Cmd {
         row.put("contractName", contract.getContractName());
         row.put("partyA", contract.getPartyA());
         row.put("partyB", contract.getPartyB());
+        row.put("bContacts", contract.getbContacts());
+        row.put("bLink", contract.getbLink());
         row.put("amount", contract.getAmount());
         row.put("state", contract.getState());
         row.put("stateName", contract.getStateName());

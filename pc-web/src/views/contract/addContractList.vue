@@ -18,9 +18,10 @@
       </div>
       <div class="cc-wb-head-actions">
         <span class="cc-wb-tip">{{ $t('contractWorkbench.autoSaveTip') }}</span>
+        <span v-if="isAuditing" class="cc-wb-tip is-audit">{{ $t('contractWorkbench.msg.auditingEditable') }}</span>
         <el-button size="small" :loading="saving" @click="handleSaveDraft">{{ $t('contractWorkbench.saveDraft') }}</el-button>
         <el-button size="small" :loading="previewing" @click="handlePreview">{{ $t('contractWorkbench.preview') }}</el-button>
-        <el-button size="small" type="primary" :loading="submitting" @click="handleSubmit">
+        <el-button v-if="canSubmit" size="small" type="primary" :loading="submitting" @click="handleSubmit">
           {{ $t('contractWorkbench.submit') }}
         </el-button>
         <el-button size="small" class="cc-wb-return" @click="handleBack">
@@ -250,6 +251,15 @@ export default {
       const state = String(this.form.state)
       return state === CONTRACT_STATE.AUDIT || state === CONTRACT_STATE.AUDIT_LEADER
     },
+    isAuditing() {
+      return String(this.form.state) === CONTRACT_STATE.AUDIT
+    },
+    canSubmit() {
+      const state = String(this.form.state || '')
+      return state !== CONTRACT_STATE.AUDIT &&
+        state !== CONTRACT_STATE.AUDIT_LEADER &&
+        state !== CONTRACT_STATE.EFFECTIVE
+    },
     stateTextKey() {
       return auditStepNameOf(this.form.state) || 'contractState.draft'
     },
@@ -265,7 +275,7 @@ export default {
       return (template.templateName || '') + version
     },
     readonly() {
-      return this.auditState
+      return String(this.form.state) === CONTRACT_STATE.AUDIT_LEADER
     },
     targetCount() {
       return String(this.form.category) === '1' ? this.rooms.length : this.targets.length
@@ -809,7 +819,8 @@ export default {
         return
       }
       this.saving = true
-      const payload = this.buildPayload('10')
+      const keepState = this.isEdit && String(this.form.state) === CONTRACT_STATE.AUDIT
+      const payload = this.buildPayload(keepState ? CONTRACT_STATE.AUDIT : CONTRACT_STATE.DRAFT)
       const request = this.isEdit ? updateContract(payload) : saveContract(payload)
       request.then(() => {
         this.$message.success(this.$t('contractWorkbench.msg.saveSuccess'))
@@ -963,6 +974,10 @@ export default {
     .cc-wb-tip {
       font-size: 11px;
       color: #67c23a;
+
+      &.is-audit {
+        color: #e6a23c;
+      }
     }
 
     .cc-wb-return {

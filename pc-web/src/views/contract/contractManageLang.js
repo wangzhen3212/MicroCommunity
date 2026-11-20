@@ -86,6 +86,7 @@ export const messages = {
       delete: {
         title: 'Confirm Operation',
         confirmMessage: 'Are you sure to delete this contract?',
+        riskMessage: 'Related house-owner bindings will be rolled back and the houses will be set to vacant',
         cancel: 'Cancel',
         confirm: 'Confirm',
         success: 'Contract deleted successfully',
@@ -180,6 +181,7 @@ export const messages = {
 delete: {
         title: '请确认您的操作',
         confirmMessage: '确定删除合同信息',
+        riskMessage: '删除后将回滚关联房屋的业主绑定关系，房屋状态置为空置',
         cancel: '点错了',
         confirm: '确认删除',
         success: '合同删除成功',
@@ -274,6 +276,7 @@ delete: {
       delete: {
         title: '請確認您的操作',
         confirmMessage: '確定刪除合同信息',
+        riskMessage: '刪除後將回滾關聯房屋的業主綁定關係，房屋狀態置為空置',
         cancel: '點錯了',
         confirm: '確認刪除',
         success: '合同刪除成功',

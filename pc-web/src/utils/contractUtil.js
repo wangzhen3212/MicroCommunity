@@ -42,6 +42,29 @@ export const CONTRACT_CATEGORY = {
 }
 
 /**
+ * 可编辑状态：草稿 / 法务校对 / 已驳回（领导审批与已终止锁定）
+ */
+export const EDITABLE_STATES = [CONTRACT_STATE.DRAFT, CONTRACT_STATE.AUDIT, CONTRACT_STATE.FAIL]
+
+/**
+ * 可删除状态：草稿 / 法务校对 / 已驳回 / 已完成
+ */
+export const DELETABLE_STATES = [
+  CONTRACT_STATE.DRAFT,
+  CONTRACT_STATE.AUDIT,
+  CONTRACT_STATE.FAIL,
+  CONTRACT_STATE.EFFECTIVE
+]
+
+export function canEditContract(state) {
+  return EDITABLE_STATES.indexOf(String(state)) > -1
+}
+
+export function canDeleteContract(state) {
+  return DELETABLE_STATES.indexOf(String(state)) > -1
+}
+
+/**
  * 标的类型：房屋 building_room / 商铺 building_shop，两套档案表 ID 互不通用
  */
 export const PAYER_OBJ_TYPE = {

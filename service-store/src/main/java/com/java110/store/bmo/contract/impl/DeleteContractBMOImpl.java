@@ -57,7 +57,9 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
     @Java110Transactional
     public ResponseEntity<String> delete(ContractPo contractPo) {
         // 校验合同归属小区
-        validateContractBelong(contractPo);
+        ContractDto contractDto = validateContractBelong(contractPo);
+        // 校验合同状态（草稿/法务校对/已驳回/已完成可删，领导审批与已终止锁定）
+        validateContractState(contractDto.getState());
         // 校验合同费用
         validateContractFee(contractPo);
         deleteContractRoomRel(contractPo);
@@ -77,15 +79,36 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
     /**
      * 合同必须属于当前小区，防止跨小区删除
      */
-    private void validateContractBelong(ContractPo contractPo) {
+    private ContractDto validateContractBelong(ContractPo contractPo) {
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(contractPo.getContractId());
         contractDto.setStoreId(contractPo.getStoreId());
         contractDto.setCommunityId(contractPo.getCommunityId());
         contractDto.setStatusCd(StatusConstant.STATUS_CD_VALID);
-        if (contractInnerServiceSMOImpl.queryContractsCount(contractDto) < 1) {
+        List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
+        if (contractDtos == null || contractDtos.isEmpty()) {
             throw new CmdException("未找到本小区的合同，无法删除");
         }
+        return contractDtos.get(0);
+    }
+
+    /**
+     * 仅草稿(10)、法务校对(11)、已驳回(33)、已完成(22)允许删除
+     */
+    private void validateContractState(String state) {
+        if (ContractDto.STATE_AUDIT_LEADER.equals(state)) {
+            throw new CmdException("领导审批中的合同不可删除");
+        }
+        if (ContractDto.STATE_COMPLAINT.equals(state)) {
+            throw new CmdException("已终止合同不可删除");
+        }
+        if (ContractDto.STATE_DRAFT.equals(state)
+                || ContractDto.STATE_AUDIT.equals(state)
+                || ContractDto.STATE_FAIL.equals(state)
+                || ContractDto.STATE_AUDIT_FINISH.equals(state)) {
+            return;
+        }
+        throw new CmdException("当前状态的合同不可删除");
     }
 
     private void deleteContractRoomRel(ContractPo contractPo) {

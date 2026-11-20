@@ -1445,3 +1445,30 @@ DROP TABLE IF EXISTS `contract_fee`;
 -- 回滚：代码回滚（后端 + 前端发布回滚）→ 按本文件 2026-11-20「合同费用构成落库（contract_fee）」小节的 DDL 重建空表
 --       → 重启 store-service；历史费用数据必须依赖执行前的备份恢复，代码回滚无法恢复数据
 ```
+
+## 2026-11-20 — 合同台账乙方信息展示 + 法务校对可编辑/已完成可删除 + 台账合同类型筛选
+
+背景：合同台账、合同待审核两个列表只能看到乙方名称，签约联系人/电话需进详情页才能看到；法务校对阶段发现签约信息填错无法原地修正，驳回件与已完成件又无法清理，台账堆积；台账缺「合同类型（房屋出租 / 采购 / 维保）」筛选。
+
+本次改动（**无新增表、无新增 CMD、无新增页面**）：
+
+1. 前端工具 `utils/contractUtil.js`：新增 `EDITABLE_STATES`（10/11/33）、`DELETABLE_STATES`（10/11/33/22）与 `canEditContract(state)` / `canDeleteContract(state)`，统一状态判定。
+2. 前端 `views/contract/contractManageList.vue`：`conditions` 增 `category`，`buildParams()` 透传、`handleReset()` 清空（查询/分页/批量操作/导出均自动带类型条件）；`canEdit` / 新增 `canDelete` 改用工具函数，删除按钮 `v-if` 切到 `canDelete`；乙方列改双行（主行 `partyB`，副行 `bContacts / bLink`）；`contract-filter-bar` 开启 `show-category`。
+3. 前端 `components/contract/contractFilterBar.vue`：新增 `showCategory` prop（默认 `false`）与「合同类型」下拉，选项复用 `contractCategory.all/rent/purchase/maintain` 三语键。
+4. 前端 `components/contract/contractDetailDrawer.vue`：`canEdit` / `canDelete` 改用工具函数；`canSubmit` 收敛为 `10/33`（11/22 不显示「提交审批」）。
+5. 前端 `components/contract/deleteContract.vue`：删除确认补充风险文案「删除后将回滚关联房屋的业主绑定关系，房屋状态置为空置」。
+6. 前端 `views/contract/addContractList.vue`：`readonly` 只对领导审批（56）生效，法务校对（11）可编辑；新增 `canSubmit`，11/56/22 隐藏「提交审批」按钮；`handleSaveDraft` 在 `state=11` 时提交 `state=11`（不回落草稿）；头部在 11 态提示「法务校对中可修改，保存后仍保持在法务校对环节」。
+7. 后端 `ListPendingAuditContractsCmd.wrapPendingContract`：行数据补 `bContacts`、`bLink`（`getContractInfo` 已返回两列，无 SQL 改动）。
+8. 后端 `UpdateContractBMOImpl`：审批中拦截只保留领导审批（56）；原状态为 11 且前端传 `state=10` 时强制保留 11；新增 `fillPartyBName`，房屋出租（`category=1`）合同 `partyB` 为空时用 `objPersonName` 兜底。
+9. 后端 `DeleteContractBMOImpl`：`validateContractBelong` 改为返回 `ContractDto`，新增 `validateContractState`——`10/11/33/22` 放行，`56` 提示「领导审批中的合同不可删除」，`44` 提示「已终止合同不可删除」；房屋关系回滚、流程任务删除、`fee` 未结束费用拦截保持不变。
+10. 后端 `SaveContractBMOImpl`：新增 `fillPartyBName`（同第 8 条口径），避免台账乙方列空白。
+11. i18n：`contractLedgerLang.js` 三语补 `contractLedger.filter.category` / `categoryPlaceholder`；`contractWorkbenchLang.js` 三语补 `contractWorkbench.msg.auditingEditable`；`contractManageLang.js` 三语补 `contractManage.delete.riskMessage`。
+
+```sql
+-- 本次无 SQL / 无 DDL / 无 c_service、c_route 变更、无权限码变更
+-- （编辑/删除按钮沿用现有权限体系，与审核按钮权限码 502026111600000009/10 相互独立）
+
+-- 执行后：重启 store-service（第 7~10 项 Java 改动生效），前端重新发布即可
+-- 回滚：代码回滚 + 重启 store-service + 前端发布回滚；本次未改表结构与存量数据，无需数据回滚
+```
+

@@ -26,6 +26,19 @@
       <el-option :label="$t('contractLedger.filter.expired')" value="expired" />
     </el-select>
     <el-select
+      v-if="showCategory"
+      class="cc-toolbar-item"
+      style="width: 140px"
+      v-model="value.category"
+      :placeholder="$t('contractLedger.filter.categoryPlaceholder')"
+      clearable
+    >
+      <el-option :label="$t('contractCategory.all')" value="" />
+      <el-option :label="$t('contractCategory.rent')" value="1" />
+      <el-option :label="$t('contractCategory.purchase')" value="2" />
+      <el-option :label="$t('contractCategory.maintain')" value="3" />
+    </el-select>
+    <el-select
       v-if="showPartya"
       class="cc-toolbar-item"
       style="width: 200px"
@@ -80,6 +93,10 @@ export default {
     showPartya: {
       type: Boolean,
       default: true
+    },
+    showCategory: {
+      type: Boolean,
+      default: false
     },
     showChanged: {
       type: Boolean,
