@@ -85,14 +85,14 @@ export default {
           this.contentSource = _data.contentSource || ''
           this.contentVersion = _data.contentVersion || 0
           this.printContent = _data.printContent || ''
-          this._render()
+          this.buildContent()
         })
         .catch(error => {
           this.renderFail = true
           this.$message.error(error.message)
         })
     },
-    _render() {
+    buildContent() {
       this._setTitle()
       let html = this.printContent
       if (!html) {

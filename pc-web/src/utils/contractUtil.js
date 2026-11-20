@@ -106,21 +106,6 @@ export function auditStepNameOf(state) {
 }
 
 /**
- * 按状态 + 按钮权限推导可执行的审核动作，无权限或状态不可审返回 null
- */
-export function auditActionOf(state, hasPrivilege) {
-  const value = String(state === null || state === undefined ? '' : state)
-  const check = typeof hasPrivilege === 'function' ? hasPrivilege : function () { return false }
-  if (value === CONTRACT_STATE.AUDIT && check(AUDIT_PRIVILEGE.LEGAL)) {
-    return { step: AUDIT_STEP.LEGAL, privilege: AUDIT_PRIVILEGE.LEGAL, labelKey: 'contractPendingAudit.op.legalAudit' }
-  }
-  if (value === CONTRACT_STATE.AUDIT_LEADER && check(AUDIT_PRIVILEGE.LEADER)) {
-    return { step: AUDIT_STEP.LEADER, privilege: AUDIT_PRIVILEGE.LEADER, labelKey: 'contractPendingAudit.op.leaderAudit' }
-  }
-  return null
-}
-
-/**
  * 合同分类徽标：返回 { type, key }
  */
 export function categoryTagOf(category) {

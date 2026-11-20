@@ -77,11 +77,17 @@
               {{ $t('contractChangeManage.op.view') }}
             </button>
             <button
-              v-if="actionOf(plan.state)"
+              v-if="plan.state === '11' && hasPrivilege('502026111600000009')"
               type="button"
               class="cc-change-btn is-primary"
               @click="openAuditDialog(plan)"
-            >{{ $t(actionOf(plan.state).labelKey) }}</button>
+            >{{ $t('contractChangeManage.op.legalAudit') }}</button>
+            <button
+              v-if="plan.state === '56' && hasPrivilege('502026111600000010')"
+              type="button"
+              class="cc-change-btn is-primary"
+              @click="openAuditDialog(plan)"
+            >{{ $t('contractChangeManage.op.leaderAudit') }}</button>
             <button
               v-if="canDelete(plan)"
               type="button"
@@ -124,7 +130,7 @@ import { queryContract } from '@/api/contract/contractManageApi'
 
 import { queryContractChangePlan } from '@/api/contract/contractChangeManageApi'
 import { PLAN_TYPE } from '@/utils/contractPlanUtil'
-import { AUDIT_BIZ_TYPE, auditActionOf } from '@/utils/contractUtil'
+import { AUDIT_BIZ_TYPE } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractChangeManageList',
@@ -314,9 +320,6 @@ export default {
     },
     handleView(row) {
       this.$router.push(`/views/contract/contractChangeDetails?planId=${row.planId}`)
-    },
-    actionOf(state) {
-      return auditActionOf(state, this.hasPrivilege)
     },
     openAuditDialog(row) {
       this.$refs.auditDialog.open({

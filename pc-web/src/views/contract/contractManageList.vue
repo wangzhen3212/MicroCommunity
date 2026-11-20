@@ -108,11 +108,17 @@
               @click="openPerformance(scope.row)"
             >{{ $t('contractLedger.op.performance') }}</el-button>
             <el-button
-              v-if="actionOf(scope.row.state)"
+              v-if="scope.row.state === '11' && hasPrivilege('502026111600000009')"
               type="text"
               size="mini"
               @click="openAuditDialog(scope.row)"
-            >{{ $t(actionOf(scope.row.state).labelKey) }}</el-button>
+            >{{ $t('contractLedger.op.legalAudit') }}</el-button>
+            <el-button
+              v-if="scope.row.state === '56' && hasPrivilege('502026111600000010')"
+              type="text"
+              size="mini"
+              @click="openAuditDialog(scope.row)"
+            >{{ $t('contractLedger.op.leaderAudit') }}</el-button>
             <el-button type="text" size="mini" @click="printContract(scope.row)">{{ $t('contractLedger.op.print') }}</el-button>
             <el-button
               v-if="canStop(scope.row)"
@@ -179,7 +185,6 @@ import {
   CONTRACT_CATEGORY,
   CONTRACT_STATE,
   addMonths,
-  auditActionOf,
   daysLeft,
   daysLeftType,
   formatAmount,
@@ -284,9 +289,6 @@ export default {
         state === CONTRACT_STATE.AUDIT ||
         state === CONTRACT_STATE.AUDIT_LEADER ||
         state === CONTRACT_STATE.EFFECTIVE
-    },
-    actionOf(state) {
-      return auditActionOf(state, this.hasPrivilege)
     },
     loadStatistics() {
       queryContractStatistics({}).then(data => {

@@ -220,11 +220,16 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             return;
         }
         JSONArray plans = reqJson.getJSONArray("plans");
-        ContractCollectionPlanPo deletePo = new ContractCollectionPlanPo();
-        deletePo.setContractId(contractPo.getContractId());
-        deletePo.setStoreId(contractPo.getStoreId());
-        deletePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
-        contractCollectionPlanInnerServiceSMOImpl.updateContractCollectionPlan(deletePo);
+        ContractCollectionPlanDto oldPlanDto = new ContractCollectionPlanDto();
+        oldPlanDto.setContractId(contractPo.getContractId());
+        List<ContractCollectionPlanDto> oldPlans = contractCollectionPlanInnerServiceSMOImpl.queryContractCollectionPlans(oldPlanDto);
+        if (oldPlans != null && !oldPlans.isEmpty()) {
+            ContractCollectionPlanPo deletePo = new ContractCollectionPlanPo();
+            deletePo.setContractId(contractPo.getContractId());
+            deletePo.setStoreId(contractPo.getStoreId());
+            deletePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
+            contractCollectionPlanInnerServiceSMOImpl.updateContractCollectionPlan(deletePo);
+        }
         if (plans == null || plans.isEmpty()) {
             return;
         }

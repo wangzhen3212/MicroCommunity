@@ -58,6 +58,8 @@ export const messages = {
       op: {
         view: 'View',
         audit: 'Approve',
+        legalAudit: 'Legal Review',
+        leaderAudit: 'Leader Approval',
         submit: 'Submit',
         delete: 'Delete Draft'
       },
@@ -154,6 +156,8 @@ zh: {
       op: {
         view: '查看',
         audit: '审核',
+        legalAudit: '法务校对',
+        leaderAudit: '领导审批',
         submit: '提交',
         delete: '删除草稿'
       },
@@ -250,6 +254,8 @@ zh: {
       op: {
         view: '查看',
         audit: '審核',
+        legalAudit: '法務校對',
+        leaderAudit: '領導審批',
         submit: '提交',
         delete: '刪除草稿'
       },

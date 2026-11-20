@@ -66,12 +66,25 @@
         <el-table-column :label="$t('contractPendingAudit.table.operation')" align="right" width="190">
           <template slot-scope="scope">
             <el-button
-              v-if="actionOf(scope.row.state)"
+              v-if="scope.row.state === '11' && hasPrivilege('502026111600000009')"
               type="primary"
               size="mini"
               @click="openAuditDialog(scope.row)"
-            >{{ $t(actionOf(scope.row.state).labelKey) }}</el-button>
-            <span v-else class="cc-cell-no-privilege">{{ $t('contractPendingAudit.op.noPrivilege') }}</span>
+            >{{ $t('contractPendingAudit.op.legalAudit') }}</el-button>
+            <el-button
+              v-if="scope.row.state === '56' && hasPrivilege('502026111600000010')"
+              type="primary"
+              size="mini"
+              @click="openAuditDialog(scope.row)"
+            >{{ $t('contractPendingAudit.op.leaderAudit') }}</el-button>
+            <span
+              v-if="scope.row.state === '11' && !hasPrivilege('502026111600000009')"
+              class="cc-cell-no-privilege"
+            >{{ $t('contractPendingAudit.op.noPrivilege') }}</span>
+            <span
+              v-if="scope.row.state === '56' && !hasPrivilege('502026111600000010')"
+              class="cc-cell-no-privilege"
+            >{{ $t('contractPendingAudit.op.noPrivilege') }}</span>
             <el-button type="text" size="mini" @click="openDetail(scope.row)">
               {{ $t('contractPendingAudit.op.view') }}
             </el-button>
@@ -103,11 +116,7 @@ import ContractStatusTag from '@/components/contract/contractStatusTag'
 import ContractAuditDialog from '@/components/contract/contractAuditDialog'
 import ContractDetailDrawer from '@/components/contract/contractDetailDrawer'
 import { listPendingAuditContracts } from '@/api/contract/contractAuditApi'
-import {
-  AUDIT_BIZ_TYPE,
-  auditActionOf,
-  formatAmount
-} from '@/utils/contractUtil'
+import { AUDIT_BIZ_TYPE, formatAmount } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractApplyAuditOrdersList',
@@ -135,9 +144,6 @@ export default {
   },
   methods: {
     formatAmount,
-    actionOf(state) {
-      return auditActionOf(state, this.hasPrivilege)
-    },
     buildParams() {
       return {
         page: this.page.current,
