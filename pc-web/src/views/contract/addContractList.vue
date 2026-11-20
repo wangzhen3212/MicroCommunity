@@ -66,7 +66,6 @@
           <div class="cc-panel-head">
             <span class="cc-panel-index">02</span>
             <h4 class="cc-panel-title">{{ sectionTargetTitle }}</h4>
-            <span v-if="isRent" class="cc-panel-tip">{{ $t('contractWorkbench.target.feeOptionalTip') }}</span>
           </div>
           <div class="cc-panel-body">
             <contract-target-table
@@ -77,33 +76,13 @@
               :rent-total-amount="rentTotalAmount"
               :start-time="form.startTime"
               :end-time="form.endTime"
-              :fee-visible="feePanelVisible"
-              :fee-count="fees.length"
-              :fee-disabled="!hasRooms"
               @add-house="openHouseDialog"
               @remove-house="removeHouse"
               @add-target="addTarget"
               @remove-target="removeTarget"
               @fill-amount="handleFillAmount"
               @clear="clearTargets"
-              @toggle-fee="toggleFeePanel"
-            >
-              <template v-slot:fee-panel>
-                <contract-fee-plan-panel
-                  v-if="feePanelVisible"
-                  :category="form.category"
-                  :rooms="rooms"
-                  :fees="fees"
-                  :plans="plans"
-                  :amount="form.amount"
-                  :start-time="form.startTime"
-                  :end-time="form.endTime"
-                  :pay-mode="form.payMode"
-                  @plan-change="handlePlanChange"
-                  @fees-change="handleFeesChange"
-                />
-              </template>
-            </contract-target-table>
+            />
           </div>
         </div>
 
@@ -113,17 +92,13 @@
             <h4 class="cc-panel-title">{{ sectionPlanTitle }}</h4>
           </div>
           <div class="cc-panel-body">
-            <contract-fee-plan-panel
-              :category="form.category"
-              :rooms="rooms"
-              :fees="fees"
+            <contract-plan-editor
               :plans="plans"
               :amount="form.amount"
               :start-time="form.startTime"
               :end-time="form.endTime"
               :pay-mode="form.payMode"
               @plan-change="handlePlanChange"
-              @fees-change="handleFeesChange"
             />
           </div>
         </div>
@@ -162,7 +137,6 @@
           :form="form"
           :target-count="targetCount"
           :plan-count="plans.length"
-          :fee-total="includeFeeTotal"
           :has-content="!!content"
           :state="form.state"
           :records="records"
@@ -180,7 +154,7 @@
 import ContractBaseInfoForm from '@/components/contract/workbench/ContractBaseInfoForm'
 import ContractTargetTable from '@/components/contract/workbench/ContractTargetTable'
 import ContractHouseDialog from '@/components/contract/workbench/ContractHouseDialog'
-import ContractFeePlanPanel from '@/components/contract/workbench/ContractFeePlanPanel'
+import ContractPlanEditor from '@/components/contract/workbench/ContractPlanEditor'
 import ContractDocEditor from '@/components/contract/workbench/ContractDocEditor'
 import ContractFilePanel from '@/components/contract/workbench/ContractFilePanel'
 import ContractSummaryPanel from '@/components/contract/workbench/ContractSummaryPanel'
@@ -200,28 +174,21 @@ import { listContractCollectionPlans } from '@/api/contract/contractPerformanceA
 import { queryContractAuditFlow } from '@/api/contract/contractAuditApi'
 import { queryContractRoom } from '@/api/contract/contractDetailRoomApi'
 import { queryContractFile } from '@/api/contract/contractDetailFileApi'
-import { computeContractFeeAmount, computeContractRentAmount } from '@/api/contract/contractFeeCompositionApi'
+import { computeContractRentAmount } from '@/api/contract/contractFeeCompositionApi'
 import {
   CONTRACT_CATEGORY,
   CONTRACT_STATE,
+  PAYER_OBJ_TYPE,
   amountToChinese,
   auditStepNameOf,
+  detailAmountMap,
   guessCategory,
+  normalizePlanForSubmit,
+  payerObjTypeOf,
   renderContractContent,
   sanitizeHtml,
   termMonths
 } from '@/utils/contractUtil'
-import {
-  PAYER_OBJ_TYPE,
-  applyManualAmount,
-  applyServerAmount,
-  detailAmountMap,
-  isManualFormula,
-  normalizeFeeForSubmit,
-  normalizePlanForSubmit,
-  payerObjTypeOf,
-  sumIncludedAmount
-} from '@/utils/contractFeeUtil'
 import { getDateStr, getDateYYYYMMDD } from '@/utils/dateUtil'
 
 export default {
@@ -230,7 +197,7 @@ export default {
     ContractBaseInfoForm,
     ContractTargetTable,
     ContractHouseDialog,
-    ContractFeePlanPanel,
+    ContractPlanEditor,
     ContractDocEditor,
     ContractFilePanel,
     ContractSummaryPanel,
@@ -251,9 +218,7 @@ export default {
       templateContent: '',
       rooms: [],
       targets: [],
-      fees: [],
       plans: [],
-      feePanelVisible: false,
       files: [],
       content: '',
       records: [],
@@ -320,12 +285,7 @@ export default {
         : this.$t('contractWorkbench.section.target')
     },
     sectionPlanTitle() {
-      return this.isRent
-        ? this.$t('contractWorkbench.section.planRent')
-        : this.$t('contractWorkbench.section.planPay')
-    },
-    includeFeeTotal() {
-      return sumIncludedAmount(this.fees)
+      return this.$t('contractWorkbench.section.planPay')
     },
     docVariables() {
       return {
@@ -368,12 +328,6 @@ export default {
         this.form.payMode = ''
       }
       this.scheduleRecalc(true)
-    },
-    fees: {
-      deep: true,
-      handler() {
-        this.markDirty()
-      }
     },
     plans: {
       deep: true,
@@ -533,20 +487,8 @@ export default {
     loadPlans(contractId) {
       listContractCollectionPlans({ contractId }).then(data => {
         this.plans = data.plans || []
-        this.fees = this.normalizeFees(data.fees)
-        this.feePanelVisible = this.fees.length > 0
       }).catch(() => {
         this.plans = []
-        this.fees = []
-        this.feePanelVisible = false
-      })
-    },
-    normalizeFees(list) {
-      return (list || []).map((row, index) => {
-        const fee = { ...row }
-        fee.feeSeq = row.feeSeq || String(index + 1)
-        fee.includeInAmount = String(row.includeInAmount) === '1' || row.includeInAmount === true
-        return fee
       })
     },
     loadFiles(contractId) {
@@ -602,10 +544,8 @@ export default {
         this.form.category = ''
         this.templateContent = ''
         this.rooms = []
-        this.fees = []
         this.targets = []
         this.plans = []
-        this.feePanelVisible = false
         this.form.amount = ''
         this.amountManual = false
         return
@@ -642,12 +582,9 @@ export default {
         this.targets = []
         this.plans = []
         this.form.payMode = ''
-        this.feePanelVisible = false
         return
       }
       this.rooms = []
-      this.fees = []
-      this.feePanelVisible = false
     },
     handlePartyaChange(partyaId) {
       const matched = this.partyas.filter(item => item.partyaId === partyaId)[0]
@@ -665,7 +602,7 @@ export default {
     },
     handleRecalcAmount() {
       this.amountManual = false
-      this.recalcFeeRows(true)
+      this.recalcRentAmounts(true)
     },
     openOwnerPicker() {
       if (this.$refs.ownerPicker) {
@@ -731,31 +668,24 @@ export default {
         clearTimeout(this.recalcTimer)
       }
       this.recalcTimer = setTimeout(() => {
-        this.recalcFeeRows(force)
+        this.recalcRentAmounts(force)
       }, 300)
     },
-    recalcFeeRows(force) {
+    recalcRentAmounts(force) {
       if (!this.isRent) {
-        this.fees.forEach(row => {
-          if (isManualFormula(row.computingFormula)) {
-            applyManualAmount(row)
-          }
-        })
-        this.hadRooms = this.hasRooms
         return
       }
       if (!this.hasRooms) {
+        this.rentAmountMap = {}
+        this.rentTotalAmount = ''
         if ((this.hadRooms || force) && !this.amountManual) {
           this.form.amount = '0.00'
         }
         this.hadRooms = false
-        this.rentAmountMap = {}
-        this.rentTotalAmount = ''
         return
       }
       this.hadRooms = true
       this.refreshRentAmounts()
-      this.refreshFeeAmounts(force)
     },
     buildObjParams() {
       if (!this.rooms.length) {
@@ -779,94 +709,26 @@ export default {
       if (!params || params.months <= 0) {
         this.rentAmountMap = {}
         this.rentTotalAmount = ''
+        this.syncAmountFromRent()
         return
       }
       computeContractRentAmount(params).then(res => {
         this.rentAmountMap = detailAmountMap(res)
         const data = res.data || res
         this.rentTotalAmount = data.amount || ''
+        this.syncAmountFromRent()
       }).catch(error => {
         this.rentAmountMap = {}
         this.rentTotalAmount = ''
+        this.syncAmountFromRent()
         this.$message.warning(error.message)
       })
     },
-    refreshFeeAmounts(force) {
-      const params = this.buildObjParams()
-      const months = params ? params.months : 0
-      const tasks = []
-      this.fees.forEach(row => {
-        if (isManualFormula(row.computingFormula)) {
-          applyManualAmount(row)
-          return
-        }
-        if (!row.configId) {
-          return
-        }
-        if (months <= 0) {
-          row.amount = '0.00'
-          row.baseAmount = '0.00'
-          row.computeRemark = this.$t('contractWorkbench.msg.termEmpty')
-          return
-        }
-        tasks.push(computeContractFeeAmount({
-          configId: row.configId,
-          payerObjType: params.payerObjType,
-          payerObjIds: params.payerObjIds,
-          months: months,
-          startTime: params.startTime,
-          endTime: params.endTime
-        }).then(res => {
-          applyServerAmount(row, res)
-        }).catch(error => {
-          row.amount = '0.00'
-          row.baseAmount = '0.00'
-          row.computeRemark = error.message || this.$t('contractWorkbench.msg.feeComputeError')
-        }))
-      })
-      Promise.all(tasks).then(() => {
-        this.refreshFormAmount(force)
-      })
-    },
-    refreshFormAmount(force) {
+    syncAmountFromRent() {
       if (!this.isRent || !this.hasRooms || this.amountManual) {
         return
       }
-      if (this.fees.length || force) {
-        this.form.amount = this.includeFeeTotal.toFixed(2)
-      }
-    },
-    handleFeesChange(fees) {
-      if (fees) {
-        this.fees = fees
-      }
-      this.recalcFeeRows(true)
-    },
-    toggleFeePanel() {
-      if (!this.feePanelVisible) {
-        if (!this.hasRooms) {
-          this.$message.warning(this.$t('contractWorkbench.target.feeRoomFirst'))
-          return
-        }
-        this.feePanelVisible = true
-        return
-      }
-      if (this.readonly) {
-        this.feePanelVisible = false
-        return
-      }
-      if (!this.fees.length) {
-        this.feePanelVisible = false
-        return
-      }
-      this.$confirm(this.$t('contractWorkbench.target.feeClearConfirm'), '提示', {
-        type: 'warning'
-      }).then(() => {
-        this.fees = []
-        this.feePanelVisible = false
-        this.handleFeesChange(this.fees)
-      }).catch(() => {
-      })
+      this.form.amount = Number(this.rentTotalAmount || 0).toFixed(2)
     },
     openHouseDialog() {
       this.$refs.houseDialog.open(this.rooms)
@@ -896,8 +758,6 @@ export default {
     clearTargets() {
       if (String(this.form.category) === '1') {
         this.rooms = []
-        this.fees = []
-        this.feePanelVisible = false
         return
       }
       this.targets = []
@@ -931,7 +791,6 @@ export default {
         rooms: this.rooms,
         plans: this.isRent ? [] : this.plans.map(normalizePlanForSubmit),
         targets: this.targets,
-        fees: this.fees.map(normalizeFeeForSubmit),
         content: renderContractContent(this.content, variables),
         templateContent: this.content,
         variables: variables,

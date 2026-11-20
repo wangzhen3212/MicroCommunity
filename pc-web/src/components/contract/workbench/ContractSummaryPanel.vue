@@ -72,10 +72,6 @@ export default {
       type: Number,
       default: 0
     },
-    feeTotal: {
-      type: Number,
-      default: 0
-    },
     hasContent: {
       type: Boolean,
       default: false
@@ -135,12 +131,6 @@ export default {
           key: 'owner',
           labelKey: 'contractWorkbench.integrity.owner',
           pass: !!(form.objId && !String(form.objId).startsWith('-'))
-        })
-        items.push({
-          key: 'fee',
-          labelKey: 'contractWorkbench.integrity.feeOptional',
-          pass: toNumber(this.feeTotal) > 0,
-          optional: true
         })
       } else {
         items.push({

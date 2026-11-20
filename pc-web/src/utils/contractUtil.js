@@ -41,6 +41,14 @@ export const CONTRACT_CATEGORY = {
   MAINTAIN: '3'
 }
 
+/**
+ * 标的类型：房屋 building_room / 商铺 building_shop，两套档案表 ID 互不通用
+ */
+export const PAYER_OBJ_TYPE = {
+  ROOM: '3333',
+  SHOP: '4444'
+}
+
 export const PAY_STATE = {
   DOING: '0',
   PAID: '1',
@@ -341,6 +349,43 @@ export function saveBase64File(base64, fileName) {
   link.click()
   document.body.removeChild(link)
   window.URL.revokeObjectURL(url)
+}
+
+/**
+ * 标的类型判定：缺省按房屋处理
+ */
+export function payerObjTypeOf(row) {
+  const value = String((row && row.payerObjType) || '')
+  return value === PAYER_OBJ_TYPE.SHOP ? PAYER_OBJ_TYPE.SHOP : PAYER_OBJ_TYPE.ROOM
+}
+
+/**
+ * 明细金额映射：objId -> 金额（租金小计、逐标的核对）
+ */
+export function detailAmountMap(data) {
+  const result = data && data.data ? data.data : data
+  const map = {}
+  const details = (result && result.details) || []
+  details.forEach(detail => {
+    map[detail.objId] = formatAmount(detail.amount)
+  })
+  return map
+}
+
+/**
+ * 计划行提交归一：planTime 空串不传；planAmount / ratio 空串转默认值
+ */
+export function normalizePlanForSubmit(row) {
+  const source = row || {}
+  const plan = { ...source }
+  plan.planAmount = formatAmount(source.planAmount)
+  plan.ratio = isEmptyValue(source.ratio) ? '0.00' : String(source.ratio).trim()
+  plan.planTime = isEmptyValue(source.planTime) ? '' : source.planTime
+  return plan
+}
+
+function isEmptyValue(value) {
+  return value === null || value === undefined || String(value).trim() === ''
 }
 
 /**

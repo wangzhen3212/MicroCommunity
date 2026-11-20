@@ -1411,3 +1411,37 @@ CREATE INDEX idx_contract_cpda_community_id         ON contract_change_plan_deta
 --       已由本次审批写入的 building_owner_room_rel / building_shop_owner 记录如需清理请按 room_id/shop_id 定向处理
 ```
 
+
+## 2026-11-20 — 合同「关联费用」功能下线（DROP contract_fee）
+
+背景：房屋出租合同（`category=1`）的「关联费用 / 费用构成」与业务实际用法不符，改为合同金额直接取「标的租金合计」；维保（3）/ 采购（2）合同的「履约计划（收款计划）」保持不变。`contract_fee` 表及其全部后端接口（Feign inner service / DAO / Mapper / PO / DTO）一并删除。
+
+本次改动（**仅删表，不新增服务码**）：
+
+1. 后端写入：`SaveContractBMOImpl` / `UpdateContractBMOImpl` 删除 `saveContractFees(...)`、`PREFIX_FEE_ID`、`IContractFeeInnerServiceSMO` 注入与 import，payload 中遗留的 `fees` 字段不再处理（旧前端仍提交 `fees` 不会报错）。
+2. 后端删除：`DeleteContractBMOImpl` 删除 `deleteContractFee(...)` 及注入；**保留** `validateContractFee`（合同在 `fee` 表是否存在未结束费用的拦截）。
+3. 后端查询：`contract.listContractCollectionPlans` 返回体去掉 `fees` / `feeSummary`，只保留 `plans` / `statistics`；删除 `buildFeeSummary` / `parseAmount`。
+4. 归一工具改名：`store/util/ContractFeeNormalizeUtil.java` → `store/util/ContractPlanNormalizeUtil.java`，只保留 `normalizePlanForSave` / `normalizePlanForUpdate`（调用点 `ContractCollectionPlanInnerServiceSMOImpl` 同步改名）。
+5. 删除后端类：`IContractFeeInnerServiceSMO`、`ContractFeeInnerServiceSMOImpl`、`IContractFeeServiceDao`、`ContractFeeServiceDaoImpl`、`mapper/store/ContractFeeServiceDaoImplMapper.xml`、`ContractFeePo`、`ContractFeeDto`。
+6. 前端：删除 `ContractFeeAddDialog.vue` / `ContractFeePlanPanel.vue` / `utils/contractFeeUtil.js`；`ContractTargetTable.vue` 去掉「关联费用」按钮、`fee-panel` 插槽与相关 props/样式；`addContractList.vue` 02 区块只保留房屋表格与租金合计、03 区块内联 `contract-plan-editor`（`hasTemplate && !isRent`）、合同金额改为取标的租金合计（手工改写后不被覆盖，点「重新计算」恢复）、`buildPayload()` 不再提交 `fees`；`contractDetailDrawer.vue` 只展示收款计划；`ContractSummaryPanel.vue` 去掉 `feeTotal` 与费用完整性校验项；`api/contract/contractFeeCompositionApi.js` 只保留租金合计试算。
+7. 前端工具迁移：`PAYER_OBJ_TYPE` / `payerObjTypeOf` / `detailAmountMap` / `normalizePlanForSubmit` 迁入 `utils/contractUtil.js`。
+8. i18n：`contractWorkbenchLang.js` / `contractLedgerLang.js` 三语删除费用构成相关键，`contractWorkbench.msg.amountAuto`、`amountManualTip`、`section.plan*`、`contractDetailDrawer.plans` 等文案改为「收款计划 / 合同金额取标的租金合计」。
+
+```sql
+-- 合同「关联费用」功能下线：删除合同费用构成表
+-- 前置：后端（store-service）已发布不再读写 contract_fee 的版本；前端已发布无「关联费用」入口的版本
+-- 建议备份：mysqldump -u<user> -p <db> contract_fee > contract_fee_bak.sql
+
+-- ① 存量确认（可选，仅统计，不导出）
+SELECT COUNT(*) AS cnt FROM contract_fee WHERE status_cd = '0';
+
+-- ② 删表
+DROP TABLE IF EXISTS `contract_fee`;
+
+-- ③ c_service / c_route：无变更（contractFeeApi 为 Feign 内部服务，未注册服务码；
+--    fee.computeContractFeeAmount 保留，供出租合同标的租金合计使用）
+
+-- 执行后：重启 store-service（Java 侧已删除 inner service 与 DAO），前端重新发布；未改 c_service/c_route，无需 flushCache
+-- 回滚：代码回滚（后端 + 前端发布回滚）→ 按本文件 2026-11-20「合同费用构成落库（contract_fee）」小节的 DDL 重建空表
+--       → 重启 store-service；历史费用数据必须依赖执行前的备份恢复，代码回滚无法恢复数据
+```

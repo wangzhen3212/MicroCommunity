@@ -109,8 +109,7 @@
 import { getCommunityId } from '@/api/community/communityApi'
 import { queryLeasableRooms } from '@/api/contract/addContractApi'
 import { listShops } from '@/api/shop/shopCreateFeeApi'
-import { formatAmount } from '@/utils/contractUtil'
-import { PAYER_OBJ_TYPE } from '@/utils/contractFeeUtil'
+import { PAYER_OBJ_TYPE, formatAmount } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractHouseDialog',

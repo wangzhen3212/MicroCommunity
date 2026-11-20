@@ -25,7 +25,6 @@ import com.java110.intf.store.IContractChangePlanInnerServiceSMO;
 import com.java110.intf.store.IContractChangePlanRoomInnerServiceSMO;
 import com.java110.intf.store.IContractCollectionPlanInnerServiceSMO;
 import com.java110.intf.store.IContractFileInnerServiceSMO;
-import com.java110.intf.store.IContractFeeInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.intf.store.IContractRoomInnerServiceSMO;
 import com.java110.intf.store.IContractTypeTemplateInnerServiceSMO;
@@ -36,7 +35,6 @@ import com.java110.po.contract.ContractAttrPo;
 import com.java110.po.contract.ContractChangePlanPo;
 import com.java110.po.contract.ContractCollectionPlanPo;
 import com.java110.po.contract.ContractFilePo;
-import com.java110.po.contract.ContractFeePo;
 import com.java110.po.contract.ContractRoomPo;
 import com.java110.po.contract.ContractTypeTemplatePo;
 import com.java110.po.owner.OwnerRoomRelPo;
@@ -46,7 +44,6 @@ import com.java110.store.bmo.contract.IBindOwnerRoomRelBMO;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
 import com.java110.store.bmo.contractFile.IDeleteContractFileBMO;
-import com.java110.store.util.ContractFeeNormalizeUtil;
 import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
@@ -115,14 +112,9 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     private IContractTypeTemplateInnerServiceSMO contractTypeTemplateInnerServiceSMOImpl;
 
     @Autowired
-    private IContractFeeInnerServiceSMO contractFeeInnerServiceSMOImpl;
-
-    @Autowired
     private IBindOwnerRoomRelBMO bindOwnerRoomRelBMOImpl;
 
     private static final String PREFIX_PLAN_ID = "95";
-
-    private static final String PREFIX_FEE_ID = "94";
 
     /**
      * @param contractPo
@@ -174,8 +166,6 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         saveContractContent(reqJson, contractPo, communityId);
 
         saveContractCollectionPlans(reqJson, contractPo, communityId);
-
-        saveContractFees(reqJson, contractPo, communityId);
 
         if (!reqJson.containsKey("contractTypeSpecs")) {
             return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
@@ -260,42 +250,6 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
                 planPo.setPayState(ContractCollectionPlanDto.PAY_STATE_DOING);
             }
             contractCollectionPlanInnerServiceSMOImpl.saveContractCollectionPlan(planPo);
-        }
-    }
-
-    /**
-     * 重建合同费用构成（老费用行置为失效后重新写入；payload 无 fees 时不动）
-     */
-    private void saveContractFees(JSONObject reqJson, ContractPo contractPo, String communityId) {
-        if (!reqJson.containsKey("fees")) {
-            return;
-        }
-        JSONArray fees = reqJson.getJSONArray("fees");
-        ContractFeePo deletePo = new ContractFeePo();
-        deletePo.setContractId(contractPo.getContractId());
-        deletePo.setStoreId(contractPo.getStoreId());
-        deletePo.setCommunityId(communityId);
-        deletePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
-        contractFeeInnerServiceSMOImpl.updateContractFee(deletePo);
-        if (fees == null || fees.isEmpty()) {
-            return;
-        }
-        for (int feeIndex = 0; feeIndex < fees.size(); feeIndex++) {
-            JSONObject fee = fees.getJSONObject(feeIndex);
-            ContractFeePo feePo = BeanConvertUtil.covertBean(fee, ContractFeePo.class);
-            feePo.setCfId(GenerateCodeFactory.getGeneratorId(PREFIX_FEE_ID));
-            feePo.setContractId(contractPo.getContractId());
-            feePo.setStoreId(contractPo.getStoreId());
-            feePo.setCommunityId(communityId);
-            feePo.setStatusCd(StatusConstant.STATUS_CD_VALID);
-            if (StringUtil.isEmpty(feePo.getFeeSeq())) {
-                feePo.setFeeSeq(String.valueOf(feeIndex + 1));
-            }
-            feePo.setIncludeInAmount(ContractFeeNormalizeUtil.normalizeIncludeInAmount(fee.get("includeInAmount")));
-            if (StringUtil.isEmpty(feePo.getCoefficient())) {
-                feePo.setCoefficient("1.0000");
-            }
-            contractFeeInnerServiceSMOImpl.saveContractFee(feePo);
         }
     }
 
