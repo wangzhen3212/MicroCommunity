@@ -29,11 +29,7 @@ export function listFeeConfigsByType(params) {
       }
     }).then(response => {
       const res = response.data
-      if (res.code === 0) {
         resolve(filterFeeConfigsByFormula(res.feeConfigs || []))
-      } else {
-        reject(new Error(res.msg || 'error'))
-      }
     }).catch(error => {
       reject(error)
     })
