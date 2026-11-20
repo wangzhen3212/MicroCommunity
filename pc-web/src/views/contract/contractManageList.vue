@@ -108,11 +108,11 @@
               @click="openPerformance(scope.row)"
             >{{ $t('contractLedger.op.performance') }}</el-button>
             <el-button
-              v-if="String(scope.row.state) === CONTRACT_STATE.AUDIT"
+              v-if="actionOf(scope.row.state)"
               type="text"
               size="mini"
-              @click="goAudit(scope.row)"
-            >{{ $t('contractLedger.op.audit') }}</el-button>
+              @click="openAuditDialog(scope.row)"
+            >{{ $t(actionOf(scope.row.state).labelKey) }}</el-button>
             <el-button type="text" size="mini" @click="printContract(scope.row)">{{ $t('contractLedger.op.print') }}</el-button>
             <el-button
               v-if="canStop(scope.row)"
@@ -153,6 +153,7 @@
       @delete="deleteContractMethod"
       @print="printContract"
     />
+    <contract-audit-dialog ref="auditDialog" @success="refreshAll" />
     <delete-contract ref="deleteContract" @success="refreshAll" />
   </div>
 </template>
@@ -164,6 +165,7 @@ import ContractBulkBar from '@/components/contract/contractBulkBar'
 import ContractStatusTag from '@/components/contract/contractStatusTag'
 import ContractDetailDrawer from '@/components/contract/contractDetailDrawer'
 import DeleteContract from '@/components/contract/deleteContract'
+import ContractAuditDialog from '@/components/contract/contractAuditDialog'
 import { queryContract } from '@/api/contract/contractManageApi'
 import { queryContractPartya } from '@/api/contract/contractPartyaApi'
 import {
@@ -173,9 +175,11 @@ import {
   queryContractStatistics
 } from '@/api/contract/contractLedgerApi'
 import {
+  AUDIT_BIZ_TYPE,
   CONTRACT_CATEGORY,
   CONTRACT_STATE,
   addMonths,
+  auditActionOf,
   daysLeft,
   daysLeftType,
   formatAmount,
@@ -192,6 +196,7 @@ export default {
     ContractBulkBar,
     ContractStatusTag,
     ContractDetailDrawer,
+    ContractAuditDialog,
     DeleteContract
   },
   data() {
@@ -277,7 +282,11 @@ export default {
       const state = String(row.state)
       return state === CONTRACT_STATE.DRAFT ||
         state === CONTRACT_STATE.AUDIT ||
+        state === CONTRACT_STATE.AUDIT_LEADER ||
         state === CONTRACT_STATE.EFFECTIVE
+    },
+    actionOf(state) {
+      return auditActionOf(state, this.hasPrivilege)
     },
     loadStatistics() {
       queryContractStatistics({}).then(data => {
@@ -302,7 +311,9 @@ export default {
         changed: this.conditions.changed
       }
       const state = this.conditions.state
-      if (state === 'expiring') {
+      if (state === 'auditing') {
+        params.states = CONTRACT_STATE.AUDIT + ',' + CONTRACT_STATE.AUDIT_LEADER
+      } else if (state === 'expiring') {
         params.state = CONTRACT_STATE.EFFECTIVE
         params.endTimeBegin = formatDate(new Date())
         params.endTimeEnd = addMonths(formatDate(new Date()), 1)
@@ -343,7 +354,7 @@ export default {
       this.handleSearch()
     },
     filterAuditing() {
-      this.conditions.state = CONTRACT_STATE.AUDIT
+      this.conditions.state = 'auditing'
       this.handleSearch()
     },
     handleSelectionChange(rows) {
@@ -470,13 +481,13 @@ export default {
         query: { contractId: contract.contractId }
       })
     },
-    goAudit(contract) {
-      this.$router.push({
-        path: '/pages/admin/contractApplyAuditOrders',
-        query: {
-          bizId: contract.contractId,
-          auditType: '1'
-        }
+    openAuditDialog(contract) {
+      this.$refs.auditDialog.open({
+        bizType: AUDIT_BIZ_TYPE.CONTRACT,
+        bizId: contract.contractId,
+        state: contract.state,
+        contractCode: contract.contractCode,
+        contractName: contract.contractName
       })
     },
     openPerformance(contract) {

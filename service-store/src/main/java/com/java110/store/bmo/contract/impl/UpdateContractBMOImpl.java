@@ -124,7 +124,8 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         queryDto.setStatusCd("0");
         List<ContractDto> oldContractDtos = contractInnerServiceSMOImpl.queryContracts(queryDto);
         Assert.listOnlyOne(oldContractDtos, "未找到需要修改的合同");
-        if (ContractDto.STATE_AUDIT.equals(oldContractDtos.get(0).getState())) {
+        String oldState = oldContractDtos.get(0).getState();
+        if (ContractDto.STATE_AUDIT.equals(oldState) || ContractDto.STATE_AUDIT_LEADER.equals(oldState)) {
             return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "该合同正在审批中，签约信息已锁定，无法修改");
         }
 

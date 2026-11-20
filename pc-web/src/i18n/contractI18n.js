@@ -9,10 +9,7 @@ import { messages as contractChangeDetailMessages } from '../views/contract/cont
 import { messages as expirationContractManageMessages } from '../views/contract/expirationContractManageLang'
 import { messages as contractDetailMessages } from '../views/contract/contractDetailLang.js'
 import { messages as contractChangeDetailsMessages } from '../views/contract/contractChangeDetailsLang'
-import { messages as contractApplyAuditOrdersMessages } from '../views/contract/contractApplyAuditOrdersLang'
-import { messages as contractChangeAuditOrdersMessages } from '../views/contract/contractChangeAuditOrdersLang.js'
-import { messages as contractApplyAuditHistoryOrdersMessages } from '../views/contract/contractApplyAuditHistoryOrdersLang'
-import { messages as contractChangeAuditHistoryOrdersMessages } from '../views/contract/contractChangeAuditHistoryOrdersLang'
+import { messages as contractPendingAuditMessages } from '../views/contract/contractPendingAuditLang'
 import { messages as contractDetailChangeMessages } from '../views/contract/contractDetailChangeLang'
 import { messages as contractApplyDetailMessages } from '../views/contract/contractApplyDetailLang'
 import { messages as contractLedgerMessages } from '../views/contract/contractLedgerLang'
@@ -20,7 +17,6 @@ import { messages as contractWorkbenchMessages } from '../views/contract/contrac
 import { messages as contractTemplateMessages } from '../views/contract/contractTemplateLang'
 import { messages as contractPerformanceMessages } from '../views/contract/contractPerformanceLang'
 import { messages as contractRemindMessages } from '../views/contract/contractRemindLang'
-import { messages as contractAuditCenterMessages } from '../views/contract/contractAuditCenterLang'
 
 
 export const messages ={
@@ -36,10 +32,7 @@ export const messages ={
         ...expirationContractManageMessages.en,
         ...contractDetailMessages.en,
         ...contractChangeDetailsMessages.en,
-        ...contractApplyAuditOrdersMessages.en,
-        ...contractChangeAuditOrdersMessages.en,
-        ...contractApplyAuditHistoryOrdersMessages.en,
-        ...contractChangeAuditHistoryOrdersMessages.en,
+        ...contractPendingAuditMessages.en,
         ...contractDetailChangeMessages.en,
         ...contractApplyDetailMessages.en,
         ...contractLedgerMessages.en,
@@ -47,7 +40,6 @@ export const messages ={
         ...contractTemplateMessages.en,
         ...contractPerformanceMessages.en,
         ...contractRemindMessages.en,
-        ...contractAuditCenterMessages.en,
     },
     zh:{    
         ...contractPartyaManageMessages.zh,
@@ -61,10 +53,7 @@ export const messages ={
         ...expirationContractManageMessages.zh,
         ...contractDetailMessages.zh,
         ...contractChangeDetailsMessages.zh,
-        ...contractApplyAuditOrdersMessages.zh,
-        ...contractChangeAuditOrdersMessages.zh,
-        ...contractApplyAuditHistoryOrdersMessages.zh,
-        ...contractChangeAuditHistoryOrdersMessages.zh,
+        ...contractPendingAuditMessages.zh,
         ...contractDetailChangeMessages.zh,
 ...contractApplyDetailMessages.zh,
         ...contractLedgerMessages.zh,
@@ -72,7 +61,6 @@ export const messages ={
         ...contractTemplateMessages.zh,
         ...contractPerformanceMessages.zh,
         ...contractRemindMessages.zh,
-        ...contractAuditCenterMessages.zh,
     },
     'zh-TW': {
         ...contractPartyaManageMessages['zh-TW'],
@@ -86,10 +74,7 @@ export const messages ={
         ...expirationContractManageMessages['zh-TW'],
         ...contractDetailMessages['zh-TW'],
         ...contractChangeDetailsMessages['zh-TW'],
-        ...contractApplyAuditOrdersMessages['zh-TW'],
-        ...contractChangeAuditOrdersMessages['zh-TW'],
-        ...contractApplyAuditHistoryOrdersMessages['zh-TW'],
-        ...contractChangeAuditHistoryOrdersMessages['zh-TW'],
+        ...contractPendingAuditMessages['zh-TW'],
         ...contractDetailChangeMessages['zh-TW'],
         ...contractApplyDetailMessages['zh-TW'],
         ...contractLedgerMessages['zh-TW'],
@@ -97,6 +82,5 @@ export const messages ={
         ...contractTemplateMessages['zh-TW'],
         ...contractPerformanceMessages['zh-TW'],
         ...contractRemindMessages['zh-TW'],
-        ...contractAuditCenterMessages['zh-TW'],
     }
 }

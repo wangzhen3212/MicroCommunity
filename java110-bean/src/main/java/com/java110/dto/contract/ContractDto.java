@@ -17,17 +17,18 @@ import java.util.List;
 public class ContractDto extends PageDto implements Serializable {
 
     /**
-     * 33	审核失败
+     * 33	已驳回
      * 44	合同终止
      */
     public static final String STATE_FAIL = "33";//33 44
-    public static final String STATE_AUDIT_FINISH = "22";//33 44
+    public static final String STATE_AUDIT_FINISH = "22";//审核完成
     public static final String STATE_AUDIT_DOING = "55";//33 44
 
     public static final String STATE_COMPLAINT = "44"; //合同终止
 
     public static final String STATE_DRAFT = "10"; //草稿
-    public static final String STATE_AUDIT = "11"; //待审核
+    public static final String STATE_AUDIT = "11"; //法务校对
+    public static final String STATE_AUDIT_LEADER = "56"; //领导审批
 
     /**
      * 合同类型分类：1 房屋出租 / 2 采购 / 3 维保

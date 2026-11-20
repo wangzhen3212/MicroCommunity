@@ -223,7 +223,10 @@ public class ExportContractsCmd extends Cmd {
             return "草稿";
         }
         if (ContractDto.STATE_AUDIT.equals(state)) {
-            return "待审核";
+            return "法务校对";
+        }
+        if (ContractDto.STATE_AUDIT_LEADER.equals(state)) {
+            return "领导审批";
         }
         if (ContractDto.STATE_AUDIT_FINISH.equals(state)) {
             return "生效中";

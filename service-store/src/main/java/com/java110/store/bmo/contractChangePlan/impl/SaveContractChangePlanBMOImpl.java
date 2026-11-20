@@ -5,7 +5,6 @@ import com.java110.core.annotation.Java110Transactional;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
-import com.java110.dto.contract.ContractAuditDto;
 import com.java110.dto.contract.ContractChangePlanRoomDto;
 
 import com.java110.dto.contract.ContractRoomDto;
@@ -22,7 +21,6 @@ import com.java110.po.contract.ContractChangePlanRoomPo;
 import com.java110.po.contract.ContractRoomPo;
 import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.room.RoomPo;
-import com.java110.store.bmo.contract.IContractAuditBMO;
 import com.java110.store.bmo.contractChangePlan.ISaveContractChangePlanBMO;
 import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
@@ -49,8 +47,6 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
     @Autowired
     private IContractChangeUserInnerServiceSMO contractChangeUserInnerServiceSMO;
 
-    @Autowired
-    private IContractAuditBMO contractAuditBMOImpl;
 
     @Autowired
     private IContractChangePlanRoomInnerServiceSMO contractChangePlanRoomInnerServiceSMOImpl;
@@ -111,17 +107,6 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
         }
 
         dealContractChangePlanRooms(contractChangePlanPo, contractChangePlanRoomPos);
-
-        //提交两级审批（法务校对 -> 领导审核），不再走 Activiti 工作流
-        JSONObject auditJson = new JSONObject();
-        auditJson.put("auditType", ContractAuditDto.AUDIT_TYPE_CHANGE);
-        auditJson.put("bizId", contractChangePlanPo.getPlanId());
-        auditJson.put("submitStaffId", contractChangePlanPo.getChangePerson());
-        auditJson.put("submitStaffName", reqJson.getString("changePersonName"));
-        auditJson.put("legalAuditorId", reqJson.getString("legalAuditorId"));
-        auditJson.put("leaderAuditorId", reqJson.getString("leaderAuditorId"));
-        contractAuditBMOImpl.submitAudit(auditJson, contractChangePlanPo.getStoreId());
-
 
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
 

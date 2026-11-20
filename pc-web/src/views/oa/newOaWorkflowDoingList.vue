@@ -88,7 +88,7 @@ export default {
         { key: 'purchasePending', url: '/pages/admin/myAuditOrders', count: 0 },
         { key: 'collectionPending', url: '/pages/admin/myItemOutAuditOrders', count: 0 },
         { key: 'contractApplyPending', url: '/pages/admin/contractApplyAuditOrders', count: 0 },
-        { key: 'contractChangePending', url: '/pages/admin/contractChangeAuditOrders', count: 0 },
+        { key: 'contractChangePending', url: '/pages/admin/contractChangeManage', count: 0 },
         { key: 'allocationPending', url: '/pages/admin/allocationStorehouseAuditOrders', count: 0 },
         { key: 'itemReleasePending', url: '/pages/property/itemReleaseUndo', count: 0 },
         { key: 'visitPending', url: '/pages/property/visitUndo', count: 0 }
@@ -98,8 +98,8 @@ export default {
         { key: 'complaintCompleted', url: '/pages/complaint/doHistoryComplaints' },
         { key: 'purchaseCompleted', url: '/pages/admin/myAuditHistoryOrders' },
         { key: 'collectionCompleted', url: '/pages/admin/myItemOutAuditHistoryOrders' },
-        { key: 'contractApplyCompleted', url: '/pages/admin/contractApplyAuditHistoryOrders' },
-        { key: 'contractChangeCompleted', url: '/pages/admin/contractChangeAuditHistoryOrders' },
+        { key: 'contractApplyCompleted', url: '/pages/admin/contractManage' },
+        { key: 'contractChangeCompleted', url: '/pages/admin/contractChangeManage' },
         { key: 'allocationCompleted', url: '/pages/admin/allocationStorehouseHistoryAuditOrders' },
         { key: 'itemReleaseCompleted', url: '/pages/property/itemReleaseFinish' },
         { key: 'visitCompleted', url: '/pages/property/visitFinish' }

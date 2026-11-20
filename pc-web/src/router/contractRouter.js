@@ -70,25 +70,10 @@ export default [
     },
     {
         path: '/pages/admin/contractApplyAuditOrders',
-        meta: { title: '合同审核' },
+        meta: { title: '合同待审核' },
         name: '/pages/admin/contractApplyAuditOrders',
         component: () => import('@/views/contract/contractApplyAuditOrdersList.vue')
     },
-    {
-        path: '/pages/admin/contractChangeAuditOrders',
-        name: '/pages/admin/contractChangeAuditOrders',
-        component: () => import('@/views/contract/contractChangeAuditOrdersList.vue')
-    },
-    {
-        path: '/pages/admin/contractApplyAuditHistoryOrders',
-        name: '/pages/admin/contractApplyAuditHistoryOrders',
-        component: () => import('@/views/contract/contractApplyAuditHistoryOrdersList.vue')
-    },
-    {
-        path:'/pages/admin/contractChangeAuditHistoryOrders',
-        name:'/pages/admin/contractChangeAuditHistoryOrders',
-        component: () => import('@/views/contract/contractChangeAuditHistoryOrdersList.vue')
-        },
         {
             path: '/views/contract/contractApplyDetail',
             name: '/views/contract/contractApplyDetail',

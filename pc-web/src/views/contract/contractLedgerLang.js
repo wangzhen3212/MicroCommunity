@@ -2,7 +2,9 @@ export const messages = {
   en: {
     contractState: {
       draft: 'Draft',
-      auditing: 'Auditing',
+      auditing: 'Legal Review',
+      leaderAudit: 'Leader Approval',
+      done: 'Completed',
       effective: 'Effective',
       fail: 'Rejected',
       stopped: 'Stopped',
@@ -131,7 +133,9 @@ export const messages = {
   zh: {
     contractState: {
       draft: '草稿',
-      auditing: '待审核',
+      auditing: '法务校对',
+      leaderAudit: '领导审批',
+      done: '已完成',
       effective: '生效中',
       fail: '已驳回',
       stopped: '已终止',
@@ -260,7 +264,9 @@ export const messages = {
   'zh-TW': {
     contractState: {
       draft: '草稿',
-      auditing: '待審核',
+      auditing: '法務校對',
+      leaderAudit: '領導審批',
+      done: '已完成',
       effective: '生效中',
       fail: '已駁回',
       stopped: '已終止',

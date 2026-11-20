@@ -38,7 +38,7 @@
 
     <div class="cc-summary-block">
       <div class="cc-section-title">{{ $t('contractWorkbench.summary.flow') }}</div>
-      <contract-audit-flow :audit="audit" :records="records" />
+      <contract-audit-flow :state="state" :records="records" />
     </div>
 
     <div class="cc-summary-block">
@@ -80,9 +80,9 @@ export default {
       type: Boolean,
       default: false
     },
-    audit: {
-      type: Object,
-      default: null
+    state: {
+      type: [String, Number],
+      default: ''
     },
     records: {
       type: Array,

@@ -110,6 +110,12 @@
         <if test="state !=null and state != ''">
             and t.state= #{state}
         </if>
+        <if test="states !=null">
+            and t.state in
+            <foreach collection="states" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
         <if test="noStates !=null ">
             and t.state not in
             <foreach collection="noStates" item="item" index="index" open="(" close=")" separator=",">
@@ -344,6 +350,12 @@
         <if test="state !=null and state != ''">
             and t.state= #{state}
         </if>
+        <if test="states !=null">
+            and t.state in
+            <foreach collection="states" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
         <if test="noStates !=null ">
             and t.state not in
             <foreach collection="noStates" item="item" index="index" open="(" close=")" separator=",">
@@ -422,7 +434,7 @@
         select
         count(1) total,
         ifnull(sum(case when t.state = '22' then 1 else 0 end), 0) effective,
-        ifnull(sum(case when t.state = '11' then 1 else 0 end), 0) auditing,
+        ifnull(sum(case when t.state in ('11', '56') then 1 else 0 end), 0) auditing,
         ifnull(sum(case when t.state = '10' then 1 else 0 end), 0) draft,
         ifnull(sum(t.amount), 0) totalAmount,
         ifnull(sum(case when ifnull(ctt.category, '2') = '1' then 1 else 0 end), 0) rentCount,

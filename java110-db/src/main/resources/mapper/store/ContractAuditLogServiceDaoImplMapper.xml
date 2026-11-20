@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="contractAuditLogServiceDaoImpl">
+
+    <!-- 审批留痕：一行 = 一次审核动作（通过 / 驳回） -->
+    <insert id="saveContractAuditLogInfo" parameterType="Map">
+        insert into contract_audit_log(log_id, biz_type, biz_id, step, result, opinion, auditor_id, auditor_name,
+                                       audit_time, store_id, status_cd, create_time)
+        values (#{logId}, ifnull(#{bizType}, '1'), #{bizId}, #{step}, #{result}, #{opinion},
+                #{auditorId}, #{auditorName}, ifnull(#{auditTime}, now()), #{storeId}, '0', now())
+    </insert>
+
+    <select id="queryContractAuditLogs" parameterType="Map" resultType="Map">
+        select t.log_id logId, t.biz_type bizType, t.biz_id bizId, t.step step, t.result result,
+        t.opinion opinion, t.auditor_id auditorId, t.auditor_name auditorName, t.audit_time auditTime,
+        t.store_id storeId, t.status_cd statusCd, t.create_time createTime
+        from contract_audit_log t
+        where 1 = 1
+        <if test="logId != null and logId != ''">
+            and t.log_id = #{logId}
+        </if>
+        <if test="bizType != null and bizType != ''">
+            and t.biz_type = #{bizType}
+        </if>
+        <if test="bizId != null and bizId != ''">
+            and t.biz_id = #{bizId}
+        </if>
+        <if test="bizIds != null">
+            and t.biz_id in
+            <foreach collection="bizIds" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="step != null and step != ''">
+            and t.step = #{step}
+        </if>
+        <if test="result != null and result != ''">
+            and t.result = #{result}
+        </if>
+        <if test="auditorId != null and auditorId != ''">
+            and t.auditor_id = #{auditorId}
+        </if>
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+        <if test="statusCd != null and statusCd != ''">
+            and t.status_cd = #{statusCd}
+        </if>
+        order by t.audit_time asc
+        <if test="page != -1 and page != null ">
+            limit #{page}, #{row}
+        </if>
+    </select>
+
+    <select id="queryContractAuditLogsCount" parameterType="Map" resultType="Map">
+        select count(1) count
+        from contract_audit_log t
+        where 1 = 1
+        <if test="bizType != null and bizType != ''">
+            and t.biz_type = #{bizType}
+        </if>
+        <if test="bizId != null and bizId != ''">
+            and t.biz_id = #{bizId}
+        </if>
+        <if test="bizIds != null">
+            and t.biz_id in
+            <foreach collection="bizIds" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="step != null and step != ''">
+            and t.step = #{step}
+        </if>
+        <if test="result != null and result != ''">
+            and t.result = #{result}
+        </if>
+        <if test="auditorId != null and auditorId != ''">
+            and t.auditor_id = #{auditorId}
+        </if>
+        <if test="storeId != null and storeId != ''">
+            and t.store_id = #{storeId}
+        </if>
+        <if test="statusCd != null and statusCd != ''">
+            and t.status_cd = #{statusCd}
+        </if>
+    </select>
+</mapper>

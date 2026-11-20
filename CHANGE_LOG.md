@@ -1141,3 +1141,112 @@ UPDATE `c_service` SET `status_cd` = '1', `create_time` = NOW()
 --          UPDATE c_service SET status_cd = '0' WHERE service_code IN ('/contract/saveContract','/contract/updateContract','/contract/deleteContract');
 --          ALTER TABLE contract_content DROP COLUMN template_content;
 ```
+
+## 2026-11-20 — 合同审批重构：状态机 + 按钮权限 + 审批记录（剥离 Activiti）
+
+> 执行前必须逻辑备份（第 ⑦ 步会 DROP TABLE，回滚只能靠备份）：
+> `mysqldump -u<user> -p <db> contract contract_change_plan contract_audit contract_audit_record contract_audit_config p_privilege p_privilege_user p_privilege_rel m_menu c_service t_dict > contract_audit_refactor_bak_20261120.sql`
+
+> 代码命名与表结构严格对齐：`contract_audit_log` ←→ `ContractAuditLogDto/Po`、`IContractAuditLogServiceDao`(+`ContractAuditLogServiceDaoImpl`)、`ContractAuditLogServiceDaoImplMapper.xml`、`IContractAuditInnerServiceSMO.saveContractAuditLog/queryContractAuditLogs`（原 `ContractAuditRecord*` 链路已全部删除，无 recordId↔log_id 别名）。
+> 列表查询改 Cmd：`contract.listPendingAuditContracts`（states 11/56 + 最近一次审批记录一次带出，不再前端逐行查审批链）。
+
+```sql
+-- ① 审批记录表（一行 = 一次审核动作：谁、哪个环节、通过/驳回、意见、时间）
+CREATE TABLE IF NOT EXISTS `contract_audit_log` (
+  `log_id` varchar(30) NOT NULL COMMENT '主键，前缀94',
+  `biz_type` char(2) NOT NULL DEFAULT '1' COMMENT '1合同 2变更',
+  `biz_id` varchar(30) NOT NULL COMMENT '合同ID/变更单ID',
+  `step` char(2) NOT NULL COMMENT '1法务校对 2领导审批',
+  `result` char(2) NOT NULL COMMENT '1通过 2驳回',
+  `opinion` varchar(500) DEFAULT NULL COMMENT '审批意见（驳回必填，前端限200字）',
+  `auditor_id` varchar(30) DEFAULT NULL COMMENT '审核人ID',
+  `auditor_name` varchar(100) DEFAULT NULL COMMENT '审核人姓名',
+  `audit_time` datetime NOT NULL COMMENT '审批时间',
+  `store_id` varchar(30) DEFAULT NULL COMMENT '商户ID',
+  `status_cd` char(1) NOT NULL DEFAULT '0' COMMENT '数据状态 0有效 1删除',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`log_id`),
+  KEY `idx_cal_biz` (`biz_id`,`biz_type`,`step`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='合同审批记录（法务校对/领导审批留痕）';
+
+-- ② 状态字典：11 改「法务校对」，新增 56「领导审批」（合同与变更单同口径）
+UPDATE `t_dict` SET `name` = '法务校对', `description` = '法务校对'
+ WHERE `status_cd` = '11' AND `table_name` = 'contract' AND `table_columns` = 'state';
+
+INSERT INTO `t_dict` (`status_cd`,`name`,`description`,`create_time`,`table_name`,`table_columns`)
+SELECT '56','领导审批','领导审批',NOW(),'contract','state'
+  FROM DUAL WHERE NOT EXISTS (
+    SELECT 1 FROM `t_dict` WHERE `status_cd`='56' AND `table_name`='contract' AND `table_columns`='state');
+
+UPDATE `t_dict` SET `name` = '法务校对', `description` = '法务校对'
+ WHERE `status_cd` = '11' AND `table_name` = 'contract_change_plan' AND `table_columns` = 'state';
+
+INSERT INTO `t_dict` (`status_cd`,`name`,`description`,`create_time`,`table_name`,`table_columns`)
+SELECT '56','领导审批','领导审批',NOW(),'contract_change_plan','state'
+  FROM DUAL WHERE NOT EXISTS (
+    SELECT 1 FROM `t_dict` WHERE `status_cd`='56' AND `table_name`='contract_change_plan' AND `table_columns`='state');
+
+-- ③ 菜单改名 + 两个审核按钮权限（挂在「合同待审核」菜单下）
+UPDATE `m_menu` SET `name` = '合同待审核', `description` = '法务校对 / 领导审批 两级状态审核'
+ WHERE `m_id` = '702026111600000002';
+
+INSERT INTO `p_privilege` (`p_id`,`name`,`description`,`create_time`,`status_cd`,`domain`,`resource`,`m_id`)
+SELECT '502026111600000009','合同-法务校对','合同待审核-法务校对（通过/驳回）',NOW(),'0','800900000003','/callComponent/contract/auditContractLegal','702026111600000002'
+  FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `p_privilege` WHERE `p_id`='502026111600000009');
+
+INSERT INTO `p_privilege` (`p_id`,`name`,`description`,`create_time`,`status_cd`,`domain`,`resource`,`m_id`)
+SELECT '502026111600000010','合同-领导审批','合同待审核-领导审批（通过/驳回）',NOW(),'0','800900000003','/callComponent/contract/auditContractLeader','702026111600000002'
+  FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `p_privilege` WHERE `p_id`='502026111600000010');
+
+-- 停用审核人设置权限（审批人改为「有按钮权限的人」）
+UPDATE `p_privilege` SET `status_cd`='1' WHERE `p_id`='502026111600000003';
+
+-- ④ 停用审批实例/待办/审核人配置相关服务（保留 contract.auditContract、contract.queryContractAuditFlow）
+UPDATE `c_service` SET `status_cd`='1'
+ WHERE `service_code` IN ('contract.submitContractAudit','contract.cancelContractAudit',
+   'contract.listContractAuditTasks','contract.listContractAuditHistory','contract.listContractAuditStatistics',
+   'contract.saveContractAuditorConfig','contract.queryContractAuditorConfig');
+
+-- ⑤ 存量迁移：旧已办记录 → contract_audit_log（执行前先 count 核对）
+INSERT INTO `contract_audit_log`
+  (`log_id`,`biz_type`,`biz_id`,`step`,`result`,`opinion`,`auditor_id`,`auditor_name`,`audit_time`,`store_id`,`status_cd`,`create_time`)
+SELECT CONCAT('94', REPLACE(UUID(),'-','')), a.`audit_type`, a.`biz_id`, r.`step`, r.`result`, r.`opinion`,
+       r.`auditor_id`, r.`auditor_name`, IFNULL(r.`audit_time`, NOW()), a.`store_id`, '0', NOW()
+  FROM `contract_audit_record` r
+  JOIN `contract_audit` a ON a.`audit_id` = r.`audit_id`
+ WHERE r.`result` IN ('1','2') AND r.`status_cd` = '0'
+   AND NOT EXISTS (SELECT 1 FROM `contract_audit_log` l WHERE l.`biz_id`=a.`biz_id` AND l.`audit_time`=r.`audit_time`);
+
+-- ⑥ 存量在途实例回写合同/变更单状态（先回写再删表）
+UPDATE `contract` c
+  JOIN `contract_audit` a ON a.`biz_id`=c.`contract_id` AND a.`audit_type`='1' AND a.`status_cd`='0'
+   SET c.`state` = CASE WHEN a.`state`='1' THEN '22' WHEN a.`state`='2' THEN '33'
+                        WHEN a.`current_step`='2' THEN '56' ELSE '11' END
+ WHERE c.`status_cd`='0' AND a.`state` IN ('0','1','2');
+
+UPDATE `contract_change_plan` p
+  JOIN `contract_audit` a ON a.`biz_id`=p.`plan_id` AND a.`audit_type`='2' AND a.`status_cd`='0'
+   SET p.`state` = CASE WHEN a.`state`='1' THEN '22' WHEN a.`state`='2' THEN '33'
+                        WHEN a.`current_step`='2' THEN '56' ELSE '11' END
+ WHERE p.`status_cd`='0' AND a.`state` IN ('0','1','2');
+
+-- ⑦ 旧表删除（⑤⑥ 迁移并核对无误后执行）
+DROP TABLE IF EXISTS `contract_audit`;
+DROP TABLE IF EXISTS `contract_audit_record`;
+DROP TABLE IF EXISTS `contract_audit_config`;
+
+-- ⑧ 合同待审核列表（查询走 Cmd，替代原 /contract/queryContract + 逐行查审批链）
+INSERT IGNORE INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_cd`,`name`,`seq`,`messageQueueName`,`is_instance`,`url`,`method`,`timeout`,`retry_count`,`provide_app_id`,`create_time`,`status_cd`) VALUES
+ ('2156','982026111600000026','contract.listPendingAuditContracts','API','合同待审核列表','1',NULL,'CMD','http://store-service','GET','60','3','8000418004',NOW(),'0');
+
+INSERT IGNORE INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_times`,`invoke_model`,`create_time`,`status_cd`) VALUES
+ ('3138','8000418004','982026111600000026','Q','1000','S',NOW(),'0');
+
+-- ⑨ 授权上线清单：把旧「审核人配置」中的人员直接授权 502026111600000009（法务）/ 502026111600000010（领导），双人复核
+-- ⑩ 执行后刷新缓存：POST /app/cache.flushCache?cache=APP_ROUTE_SERVICE（可再刷 MAPPING / SERVICE_SQL），或重启 service-api、store-service、community-service
+-- ⑪ 回滚：mysql -u<user> -p <db> < contract_audit_refactor_bak_20261120.sql
+--          + 代码回滚 + UPDATE c_service SET status_cd='0' WHERE service_code IN (...7个...)
+--          + UPDATE p_privilege SET status_cd='0' WHERE p_id='502026111600000003'
+--          + UPDATE m_menu SET name='合同审核' WHERE m_id='702026111600000002'
+--          + DELETE FROM c_route WHERE id='3138'; DELETE FROM c_service WHERE id='2156'
+```

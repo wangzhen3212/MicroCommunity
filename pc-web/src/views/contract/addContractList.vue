@@ -5,7 +5,7 @@
         <div class="cc-wb-title-row">
           <span class="cc-wb-name">{{ pageTitle }}</span>
           <span class="cc-wb-tag" :class="auditState ? 'is-audit' : 'is-draft'">
-            {{ auditState ? $t('contractState.auditing') : $t('contractState.draft') }}
+            {{ $t(stateTextKey) }}
           </span>
         </div>
         <p class="cc-wb-sub">
@@ -143,7 +143,7 @@
           :plan-count="plans.length"
           :fee-total="includeFeeTotal"
           :has-content="!!content"
-          :audit="audit"
+          :state="form.state"
           :records="records"
         />
       </div>
@@ -176,11 +176,20 @@ import {
   updateContract
 } from '@/api/contract/contractWorkbenchApi'
 import { listContractCollectionPlans } from '@/api/contract/contractPerformanceApi'
-import { queryContractAuditFlow, queryContractAuditorConfig, submitContractAudit } from '@/api/contract/contractAuditApi'
+import { queryContractAuditFlow } from '@/api/contract/contractAuditApi'
 import { queryContractRoom } from '@/api/contract/contractDetailRoomApi'
 import { queryContractFile } from '@/api/contract/contractDetailFileApi'
 import { computeContractFeeAmount, computeContractRentAmount } from '@/api/contract/contractFeeCompositionApi'
-import { amountToChinese, guessCategory, renderContractContent, sanitizeHtml, termMonths, CONTRACT_CATEGORY } from '@/utils/contractUtil'
+import {
+  CONTRACT_CATEGORY,
+  CONTRACT_STATE,
+  amountToChinese,
+  auditStepNameOf,
+  guessCategory,
+  renderContractContent,
+  sanitizeHtml,
+  termMonths
+} from '@/utils/contractUtil'
 import {
   PAYER_OBJ_TYPE,
   applyManualAmount,
@@ -223,7 +232,6 @@ export default {
       plans: [],
       files: [],
       content: '',
-      audit: null,
       records: [],
       rentAmountMap: {},
       rentTotalAmount: '',
@@ -250,7 +258,11 @@ export default {
       return this.$t('contractWorkbench.titleNew')
     },
     auditState() {
-      return String(this.form.state) === '11'
+      const state = String(this.form.state)
+      return state === CONTRACT_STATE.AUDIT || state === CONTRACT_STATE.AUDIT_LEADER
+    },
+    stateTextKey() {
+      return auditStepNameOf(this.form.state) || 'contractState.draft'
     },
     templateName() {
       if (!this.form.templateId) {
@@ -516,11 +528,9 @@ export default {
       })
     },
     loadAuditFlow(contractId) {
-      queryContractAuditFlow({ bizId: contractId, auditType: '1' }).then(data => {
-        this.audit = data.audit || null
+      queryContractAuditFlow({ bizId: contractId, bizType: '1' }).then(data => {
         this.records = data.records || []
       }).catch(() => {
-        this.audit = null
         this.records = []
       })
     },
@@ -904,38 +914,14 @@ export default {
         return
       }
       this.submitting = true
-      queryContractAuditorConfig({}).then(config => {
-        const legalAuditors = (config && config.legalAuditors) || []
-        const leaderAuditors = (config && config.leaderAuditors) || []
-        if (!legalAuditors.length || !leaderAuditors.length) {
-          this.submitting = false
-          this.$message.error(this.$t('contractWorkbench.msg.auditorMissing'))
-          return
-        }
-        this.saveAndSubmit()
-      }).catch(error => {
-        this.submitting = false
-        this.$message.error(error.message || this.$t('contractWorkbench.msg.submitError'))
-      })
+      this.saveAndSubmit()
     },
     saveAndSubmit() {
-      const payload = this.buildPayload('')
+      const payload = this.buildPayload(CONTRACT_STATE.AUDIT)
       const save = this.isEdit ? updateContract(payload) : saveContract(payload)
       save.then(() => {
-        if (!this.isEdit) {
-          this.$message.success(this.$t('contractWorkbench.msg.submitSuccess'))
-          this.leavePage()
-          return
-        }
-        submitContractAudit({
-          auditType: '1',
-          bizId: this.form.contractId
-        }).then(() => {
-          this.$message.success(this.$t('contractWorkbench.msg.submitSuccess'))
-          this.leavePage()
-        }).catch(error => {
-          this.$message.error(error.message || this.$t('contractWorkbench.msg.auditorMissing'))
-        })
+        this.$message.success(this.$t('contractWorkbench.msg.submitSuccess'))
+        this.leavePage()
       }).catch(error => {
         this.$message.error(error.message || this.$t('contractWorkbench.msg.submitError'))
       }).finally(() => {

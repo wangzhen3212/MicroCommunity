@@ -1,29 +1,11 @@
 <template>
-  <div class="contract-audit-center cc-page">
-    <contract-audit-stat :statistics="statistics" @change="switchTab" />
-
+  <div class="contract-pending-audit cc-page">
     <div class="cc-surface">
-      <div v-if="hasPrivilege('502026111600000003')" class="cc-surface-head">
+      <div class="cc-surface-head">
+        <div class="cc-surface-title">{{ $t('contractPendingAudit.title') }}</div>
         <div class="cc-surface-actions">
-          <el-button @click="openConfig">
-            <i class="el-icon-setting"></i>
-            <span>{{ $t('contractAuditCenter.ruleSetting') }}</span>
-          </el-button>
+          <span class="cc-surface-subtitle">{{ $t('contractPendingAudit.subtitle') }}</span>
         </div>
-      </div>
-
-      <div class="cc-tabs">
-        <div
-          v-for="tab in tabs"
-          :key="tab.key"
-          class="cc-tab"
-          :class="{ 'is-active': activeTab === tab.key }"
-          @click="switchTab(tab.key)"
-        >
-          {{ $t(tab.labelKey) }}
-          <span class="cc-tab-count">{{ tab.count }}</span>
-        </div>
-        <p class="cc-tabs-tip">{{ $t('contractAuditCenter.nodeTip') }}</p>
       </div>
 
       <div class="cc-toolbar">
@@ -31,51 +13,71 @@
           v-model="condition.searchText"
           style="width: 280px"
           clearable
-          :placeholder="$t('contractAuditCenter.filter.keywordPlaceholder')"
+          :placeholder="$t('contractPendingAudit.filter.keywordPlaceholder')"
           @keyup.enter.native="handleSearch"
         />
-        <el-select
-          v-model="condition.auditType"
-          style="width: 150px"
-          clearable
-          :placeholder="$t('contractAuditCenter.filter.auditType')"
-        >
-          <el-option :label="$t('contractAuditCenter.filter.auditTypeAll')" value="" />
-          <el-option :label="$t('contractAuditCenter.typeContract')" value="1" />
-          <el-option :label="$t('contractAuditCenter.typeChange')" value="2" />
-        </el-select>
         <el-button type="primary" @click="handleSearch">
+          <i class="el-icon-search"></i>
           {{ $t('common.search') }}
         </el-button>
         <el-button @click="handleReset">
+          <i class="el-icon-refresh"></i>
           {{ $t('common.reset') }}
         </el-button>
       </div>
 
-      <div v-loading="loading" class="cc-audit-list">
-        <div v-for="(item, index) in items" :key="itemKey(item, index)" class="cc-audit-row">
-          <contract-audit-item :item="item" />
-          <div class="cc-audit-ops">
+      <el-table
+        :data="contracts"
+        v-loading="loading"
+        :empty-text="$t('contractPendingAudit.record.none')"
+        style="width: 100%"
+      >
+        <el-table-column :label="$t('contractPendingAudit.table.code')" min-width="240">
+          <template slot-scope="scope">
+            <div class="cc-cell-title">{{ scope.row.contractName }}</div>
+            <div class="cc-cell-meta">{{ scope.row.contractCode }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('contractPendingAudit.table.partya')" min-width="140">
+          <template slot-scope="scope">{{ scope.row.partyA || '-' }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('contractPendingAudit.table.partyB')" min-width="140">
+          <template slot-scope="scope">{{ scope.row.partyB || '-' }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('contractPendingAudit.table.amount')" align="right" width="130">
+          <template slot-scope="scope">{{ formatAmount(scope.row.amount) }}</template>
+        </el-table-column>
+        <el-table-column :label="$t('contractPendingAudit.table.state')" align="center" width="130">
+          <template slot-scope="scope">
+            <contract-status-tag :state="scope.row.state" :state-name="scope.row.stateName" />
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('contractPendingAudit.table.lastAudit')" min-width="200">
+          <template slot-scope="scope">
+            <div v-if="lastRecordOf(scope.row)" class="cc-cell-record">
+              <span>{{ lastRecordOf(scope.row).stepName || '-' }}</span>
+              <span>{{ lastRecordOf(scope.row).auditorName || '-' }}</span>
+              <span>{{ lastRecordOf(scope.row).resultName || '-' }}</span>
+              <span class="cc-cell-record-time">{{ formatTime(lastRecordOf(scope.row).auditTime) }}</span>
+            </div>
+            <div v-else class="cc-cell-empty">{{ $t('contractPendingAudit.record.none') }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('contractPendingAudit.table.operation')" align="right" width="190">
+          <template slot-scope="scope">
             <el-button
-              v-if="canAudit(item)"
+              v-if="actionOf(scope.row.state)"
               type="primary"
               size="mini"
-              @click="openAuditDialog(item)"
-            >{{ $t('contractAuditCenter.op.audit') }}</el-button>
-            <el-button
-              v-if="canCancel(item)"
-              size="mini"
-              @click="handleCancel(item)"
-            >{{ $t('contractAuditCenter.op.cancel') }}</el-button>
-            <el-button size="mini" @click="handleView(item)">
-              {{ $t('contractAuditCenter.op.view') }}
+              @click="openAuditDialog(scope.row)"
+            >{{ $t(actionOf(scope.row.state).labelKey) }}</el-button>
+            <span v-else class="cc-cell-no-privilege">{{ $t('contractPendingAudit.op.noPrivilege') }}</span>
+            <el-button type="text" size="mini" @click="openDetail(scope.row)">
+              {{ $t('contractPendingAudit.op.view') }}
             </el-button>
-          </div>
-        </div>
-        <div v-if="!loading && !items.length" class="cc-empty">
-          {{ $t('contractAuditCenter.empty') }}
-        </div>
-      </div>
+          </template>
+        </el-table-column>
+      </el-table>
 
       <div class="cc-surface-foot">
         <el-pagination
@@ -91,50 +93,35 @@
       </div>
     </div>
 
-    <contract-audit-dialog ref="auditDialog" @success="refresh" />
-    <contract-auditor-config ref="auditorConfig" @success="refresh" />
+    <contract-audit-dialog ref="auditDialog" @success="getList" />
     <contract-detail-drawer ref="detailDrawer" />
   </div>
 </template>
 
 <script>
-import ContractAuditStat from '@/components/contract/contractAuditStat'
-import ContractAuditItem from '@/components/contract/contractAuditItem'
+import ContractStatusTag from '@/components/contract/contractStatusTag'
 import ContractAuditDialog from '@/components/contract/contractAuditDialog'
-import ContractAuditorConfig from '@/components/contract/contractAuditorConfig'
 import ContractDetailDrawer from '@/components/contract/contractDetailDrawer'
+import { listPendingAuditContracts } from '@/api/contract/contractAuditApi'
 import {
-  cancelContractAudit,
-  listContractAuditHistory,
-  listContractAuditStatistics,
-  listContractAuditTasks
-} from '@/api/contract/contractAuditApi'
-import { getUserId } from '@/api/user/userApi'
+  AUDIT_BIZ_TYPE,
+  auditActionOf,
+  formatAmount
+} from '@/utils/contractUtil'
 
 export default {
   name: 'ContractApplyAuditOrdersList',
   components: {
-    ContractAuditStat,
-    ContractAuditItem,
+    ContractStatusTag,
     ContractAuditDialog,
-    ContractAuditorConfig,
     ContractDetailDrawer
   },
   data() {
     return {
       loading: false,
-      statistics: {},
-      items: [],
-      activeTab: 'pending',
-      currentUserId: '',
-      directHandled: false,
-      directParams: {
-        auditId: '',
-        bizId: ''
-      },
+      contracts: [],
       condition: {
-        searchText: '',
-        auditType: ''
+        searchText: ''
       },
       page: {
         current: 1,
@@ -143,122 +130,43 @@ export default {
       }
     }
   },
-  computed: {
-    tabs() {
-      return [
-        {
-          key: 'pending',
-          labelKey: 'contractAuditCenter.tab.pending',
-          count: this.statistics.pending || 0
-        },
-        {
-          key: 'pass',
-          labelKey: 'contractAuditCenter.tab.pass',
-          count: this.statistics.monthPass || 0
-        },
-        {
-          key: 'reject',
-          labelKey: 'contractAuditCenter.tab.reject',
-          count: this.statistics.monthReject || 0
-        }
-      ]
-    }
-  },
   created() {
-    this.currentUserId = getUserId()
-    const query = this.$route.query || {}
-    if (query.auditType) {
-      this.condition.auditType = String(query.auditType)
-    }
-    if (query.auditId) {
-      this.directParams.auditId = String(query.auditId)
-    }
-    if (query.bizId) {
-      this.directParams.bizId = String(query.bizId)
-    }
-    this.loadStatistics()
     this.getList()
   },
   methods: {
-    itemKey(item, index) {
-      if (item && item.audit && item.audit.auditId) {
-        return item.audit.auditId
-      }
-      return index
+    formatAmount,
+    actionOf(state) {
+      return auditActionOf(state, this.hasPrivilege)
     },
     buildParams() {
-      const params = {
+      return {
         page: this.page.current,
         row: this.page.size,
         searchText: this.condition.searchText
       }
-      if (this.condition.auditType) {
-        params.auditType = this.condition.auditType
-      }
-      if (this.directParams.auditId) {
-        params.auditId = this.directParams.auditId
-      }
-      if (this.directParams.bizId) {
-        params.bizId = this.directParams.bizId
-      }
-      if (this.activeTab === 'pass') {
-        params.state = '1'
-      } else if (this.activeTab === 'reject') {
-        params.state = '2'
-      }
-      return params
     },
     getList() {
       this.loading = true
-      const request = this.activeTab === 'pending' ? listContractAuditTasks : listContractAuditHistory
-      request(this.buildParams()).then(res => {
-        this.items = res.data || []
+      listPendingAuditContracts(this.buildParams()).then(res => {
+        this.contracts = res.data || []
         this.page.total = res.total || 0
-        this.handleDirectTarget()
       }).catch(error => {
-        this.items = []
+        this.contracts = []
         this.page.total = 0
-        this.$message.error(error.message || this.$t('contractAuditCenter.msg.fetchError'))
+        this.$message.error(error.message || this.$t('contractPendingAudit.msg.fetchError'))
       }).finally(() => {
         this.loading = false
       })
     },
-    handleDirectTarget() {
-      if (this.directHandled) {
-        return
-      }
-      const auditId = this.directParams.auditId
-      const bizId = this.directParams.bizId
-      if (!auditId && !bizId) {
-        return
-      }
-      this.directHandled = true
-      const target = this.items.find(item => {
-        const audit = (item && item.audit) || {}
-        if (auditId) {
-          return String(audit.auditId) === String(auditId)
-        }
-        return String(audit.bizId) === String(bizId)
-      })
-      if (!target) {
-        return
-      }
-      if (this.canAudit(target)) {
-        this.openAuditDialog(target)
-      } else {
-        this.$message.warning(this.$t('contractAuditCenter.msg.noPrivilege'))
-      }
+    lastRecordOf(row) {
+      const record = row.lastAuditLog || {}
+      return record.auditTime ? record : null
     },
-    loadStatistics() {
-      listContractAuditStatistics({}).then(data => {
-        this.statistics = data || {}
-      }).catch(() => {
-        this.statistics = {}
-      })
-    },
-    refresh() {
-      this.loadStatistics()
-      this.getList()
+    formatTime(time) {
+      if (!time) {
+        return '-'
+      }
+      return String(time).replace('T', ' ').substring(0, 19)
     },
     handleSearch() {
       this.page.current = 1
@@ -266,15 +174,6 @@ export default {
     },
     handleReset() {
       this.condition.searchText = ''
-      this.condition.auditType = ''
-      this.directParams = {
-        auditId: '',
-        bizId: ''
-      }
-      this.handleSearch()
-    },
-    switchTab(tab) {
-      this.activeTab = tab
       this.handleSearch()
     },
     handleSizeChange(size) {
@@ -285,107 +184,57 @@ export default {
       this.page.current = current
       this.getList()
     },
-    currentRecord(item) {
-      const audit = (item && item.audit) || {}
-      const records = (item && item.records) || []
-      for (let index = 0; index < records.length; index++) {
-        const record = records[index]
-        if (String(record.step) === String(audit.currentStep)) {
-          return record
-        }
-      }
-      return null
-    },
-    canAudit(item) {
-      const audit = (item && item.audit) || {}
-      if (String(audit.state) !== '0') {
-        return false
-      }
-      const record = this.currentRecord(item)
-      return !!record && String(record.result) === '0' &&
-        String(record.auditorId) === String(this.currentUserId)
-    },
-    canCancel(item) {
-      const audit = (item && item.audit) || {}
-      if (String(audit.state) !== '0' || String(audit.currentStep) !== '1') {
-        return false
-      }
-      if (String(audit.submitStaffId) !== String(this.currentUserId)) {
-        return false
-      }
-      const record = this.currentRecord(item)
-      return !record || String(record.result) === '0'
-    },
-    openAuditDialog(item) {
-      this.$refs.auditDialog.open(item)
-    },
-    openConfig() {
-      this.$refs.auditorConfig.open()
-    },
-    handleCancel(item) {
-      const audit = (item && item.audit) || {}
-      this.$confirm(this.$t('contractAuditCenter.dialog.cancelConfirm'), '提示', { type: 'warning' }).then(() => {
-        cancelContractAudit({ auditId: audit.auditId }).then(() => {
-          this.$message.success(this.$t('contractAuditCenter.dialog.cancelSuccess'))
-          this.refresh()
-        }).catch(error => {
-          this.$message.error(error.message || this.$t('contractAuditCenter.dialog.error'))
-        })
-      }).catch(() => {
+    openAuditDialog(row) {
+      this.$refs.auditDialog.open({
+        bizType: AUDIT_BIZ_TYPE.CONTRACT,
+        bizId: row.contractId,
+        state: row.state,
+        contractCode: row.contractCode,
+        contractName: row.contractName
       })
     },
-    handleView(item) {
-      const audit = (item && item.audit) || {}
-      this.$refs.detailDrawer.open({
-        contractId: audit.bizId,
-        contractCode: audit.bizCode,
-        contractName: audit.bizName,
-        amount: audit.bizAmount,
-        partyB: audit.bizPartyB,
-        state: audit.bizState,
-        stateName: audit.bizStateName
-      })
+    openDetail(row) {
+      this.$refs.detailDrawer.open(row)
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.contract-audit-center {
-  .cc-surface-head {
-    justify-content: flex-end;
-    margin-bottom: 0;
-  }
-
-  .cc-tabs {
-    padding-top: 8px;
-  }
-
-  .cc-tabs-tip {
-    margin-left: auto;
-    padding-bottom: 10px;
+.contract-pending-audit {
+  .cc-surface-subtitle {
     font-size: 12px;
     color: #909399;
   }
 
-  .cc-audit-list {
-    min-height: 200px;
+  .cc-cell-title {
+    font-weight: 600;
+    color: #303133;
   }
 
-  .cc-audit-row {
-    display: flex;
-    align-items: flex-start;
-    background: #fff;
-    border: 1px solid #ebeef5;
-    border-radius: 12px;
-    padding: 12px 8px;
-    margin-bottom: 12px;
+  .cc-cell-meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #909399;
+  }
 
-    .cc-audit-ops {
-      margin-left: auto;
-      white-space: nowrap;
-      padding: 4px 8px;
-    }
+  .cc-cell-record {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    color: #606266;
+  }
+
+  .cc-cell-record-time {
+    color: #909399;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cc-cell-empty,
+  .cc-cell-no-privilege {
+    font-size: 12px;
+    color: #909399;
   }
 }
 </style>

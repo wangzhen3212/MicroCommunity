@@ -77,11 +77,11 @@
               {{ $t('contractChangeManage.op.view') }}
             </button>
             <button
-              v-if="String(plan.state) === '11'"
+              v-if="actionOf(plan.state)"
               type="button"
               class="cc-change-btn is-primary"
-              @click="handleAudit(plan)"
-            >{{ $t('contractChangeManage.op.audit') }}</button>
+              @click="openAuditDialog(plan)"
+            >{{ $t(actionOf(plan.state).labelKey) }}</button>
             <button
               v-if="canDelete(plan)"
               type="button"
@@ -111,6 +111,7 @@
     />
 
     <contract-change-form ref="contractChangeForm" :contracts="contracts" @success="refresh" />
+    <contract-audit-dialog ref="auditDialog" @success="refresh" />
     <delete-contract-change-plan ref="deleteDialog" @success="refresh" />
   </div>
 </template>
@@ -118,16 +119,19 @@
 <script>
 import ContractChangeForm from '@/components/contract/contractChangeForm'
 import DeleteContractChangePlan from '@/components/contract/deleteContractChangePlan'
+import ContractAuditDialog from '@/components/contract/contractAuditDialog'
 import { queryContract } from '@/api/contract/contractManageApi'
 
 import { queryContractChangePlan } from '@/api/contract/contractChangeManageApi'
 import { PLAN_TYPE } from '@/utils/contractPlanUtil'
+import { AUDIT_BIZ_TYPE, auditActionOf } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractChangeManageList',
   components: {
     ContractChangeForm,
-    DeleteContractChangePlan
+    DeleteContractChangePlan,
+    ContractAuditDialog
   },
   data() {
     return {
@@ -202,7 +206,7 @@ export default {
       if (value === '33') {
         return 'is-danger'
       }
-      if (value === '11') {
+      if (value === '11' || value === '56') {
         return 'is-warning'
       }
       return 'is-info'
@@ -311,13 +315,16 @@ export default {
     handleView(row) {
       this.$router.push(`/views/contract/contractChangeDetails?planId=${row.planId}`)
     },
-    handleAudit(row) {
-      this.$router.push({
-        path: '/pages/admin/contractApplyAuditOrders',
-        query: {
-          bizId: row.planId,
-          auditType: '2'
-        }
+    actionOf(state) {
+      return auditActionOf(state, this.hasPrivilege)
+    },
+    openAuditDialog(row) {
+      this.$refs.auditDialog.open({
+        bizType: AUDIT_BIZ_TYPE.CHANGE,
+        bizId: row.planId,
+        state: row.state,
+        contractCode: row.contractCode,
+        contractName: row.contractName
       })
     },
     handleDelete(row) {

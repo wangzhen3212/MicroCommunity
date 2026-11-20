@@ -2,25 +2,24 @@ package com.java110.store.bmo.contract.impl;
 
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.factory.GenerateCodeFactory;
-import com.java110.dto.contract.ContractAuditConfigDto;
-import com.java110.dto.contract.ContractAuditDto;
-import com.java110.dto.contract.ContractAuditRecordDto;
+import com.java110.dto.contract.ContractAuditLogDto;
+import com.java110.dto.contract.ContractChangePlanDto;
 import com.java110.dto.contract.ContractDto;
+import com.java110.dto.privilege.HasPrivilegeDto;
+import com.java110.dto.user.UserDto;
+import com.java110.intf.community.IMenuInnerServiceSMO;
 import com.java110.intf.store.IContractAuditInnerServiceSMO;
 import com.java110.intf.store.IContractChangePlanInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
-import com.java110.po.contract.ContractAuditPo;
-import com.java110.po.contract.ContractAuditRecordPo;
+import com.java110.intf.user.IUserV1InnerServiceSMO;
+import com.java110.po.contract.ContractAuditLogPo;
 import com.java110.po.contract.ContractChangePlanPo;
 import com.java110.po.contract.ContractPo;
 import com.java110.store.bmo.contract.IContractAuditBMO;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
 import com.java110.utils.exception.CmdException;
-import com.java110.utils.util.Assert;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,15 +29,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 合同两级审批实现（法务校对 -> 领导审核，不接入 Activiti）
+ * 合同两级审批实现（状态机 + 按钮权限 + 审批记录留痕，不接入 Activiti）
  */
 @Service("contractAuditBMOImpl")
 public class ContractAuditBMOImpl implements IContractAuditBMO {
 
-    private static Logger logger = LoggerFactory.getLogger(ContractAuditBMOImpl.class);
+    /**
+     * 按钮权限：合同-法务校对 / 合同-领导审批
+     */
+    private static final String PRIVILEGE_LEGAL = "502026111600000009";
+    private static final String PRIVILEGE_LEADER = "502026111600000010";
 
-    private static final String PREFIX_AUDIT_ID = "92";
-    private static final String PREFIX_RECORD_ID = "93";
+    private static final String PREFIX_LOG_ID = "94";
+
+    private static final int OPINION_MAX_LENGTH = 200;
 
     @Autowired
     private IContractAuditInnerServiceSMO contractAuditInnerServiceSMOImpl;
@@ -50,207 +54,176 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
     private IContractChangePlanInnerServiceSMO contractChangePlanInnerServiceSMOImpl;
 
     @Autowired
+    private IMenuInnerServiceSMO menuInnerServiceSMOImpl;
+
+    @Autowired
+    private IUserV1InnerServiceSMO userV1InnerServiceSMOImpl;
+
+    @Autowired
     private IUpdateContractBMO updateContractBMOImpl;
 
     @Override
-    public ContractAuditDto submitAudit(JSONObject reqJson, String storeId) {
-        String auditType = reqJson.getString("auditType");
-        String bizId = reqJson.getString("bizId");
-        Assert.hasLength(auditType, "请求报文中未包含审批类型");
-        Assert.hasLength(bizId, "请求报文中未包含业务ID");
-
-        if (queryDoingAudit(auditType, bizId) != null) {
-            throw new CmdException("该单据正在审批中，请勿重复提交");
-        }
-
-        List<ContractAuditConfigDto> configs = queryAuditorConfigs(storeId);
-        ContractAuditConfigDto legalConfig = pickAuditor(configs, ContractAuditDto.STEP_LEGAL, reqJson.getString("legalAuditorId"));
-        ContractAuditConfigDto leaderConfig = pickAuditor(configs, ContractAuditDto.STEP_LEADER, reqJson.getString("leaderAuditorId"));
-        if (legalConfig == null) {
-            throw new CmdException("未配置法务校对审核人，请先在审核人设置中配置");
-        }
-        if (leaderConfig == null) {
-            throw new CmdException("未配置领导审核审核人，请先在审核人设置中配置");
-        }
-
-        ContractAuditPo auditPo = new ContractAuditPo();
-        auditPo.setAuditId(GenerateCodeFactory.getGeneratorId(PREFIX_AUDIT_ID));
-        auditPo.setAuditCode(generateAuditCode());
-        auditPo.setAuditType(auditType);
-        auditPo.setBizId(bizId);
-        auditPo.setCurrentStep(ContractAuditDto.STEP_LEGAL);
-        auditPo.setState(ContractAuditDto.STATE_DOING);
-        auditPo.setSubmitStaffId(reqJson.getString("submitStaffId"));
-        auditPo.setSubmitStaffName(reqJson.getString("submitStaffName"));
-        auditPo.setSubmitTime(DateUtil.getCurrentDate());
-        auditPo.setStoreId(storeId);
-        int flag = contractAuditInnerServiceSMOImpl.saveContractAudit(auditPo);
-        if (flag < 1) {
-            throw new CmdException("提交审批失败");
-        }
-
-        saveRecord(auditPo.getAuditId(), ContractAuditDto.STEP_LEGAL, ContractAuditDto.STEP_LEGAL_NAME, legalConfig, "1");
-        saveRecord(auditPo.getAuditId(), ContractAuditDto.STEP_LEADER, ContractAuditDto.STEP_LEADER_NAME, leaderConfig, "2");
-
-        updateBizState(auditType, bizId, storeId, ContractDto.STATE_AUDIT);
-
-        ContractAuditDto auditDto = new ContractAuditDto();
-        auditDto.setAuditId(auditPo.getAuditId());
-        auditDto.setAuditCode(auditPo.getAuditCode());
-        auditDto.setAuditType(auditType);
-        auditDto.setBizId(bizId);
-        auditDto.setCurrentStep(ContractAuditDto.STEP_LEGAL);
-        auditDto.setState(ContractAuditDto.STATE_DOING);
-        return auditDto;
-    }
-
-    @Override
     public void audit(JSONObject reqJson, String storeId, String userId) {
-        String auditId = reqJson.getString("auditId");
+        String bizType = StringUtil.isEmpty(reqJson.getString("bizType"))
+                ? ContractAuditLogDto.BIZ_TYPE_CONTRACT : reqJson.getString("bizType");
+        String bizId = reqJson.getString("bizId");
         String result = reqJson.getString("result");
         String opinion = reqJson.getString("opinion");
-        boolean pass = ContractAuditRecordDto.RESULT_PASS.equals(result);
-        if (!pass && !ContractAuditRecordDto.RESULT_REJECT.equals(result)) {
+
+        boolean pass = ContractAuditLogDto.RESULT_PASS.equals(result);
+        if (!pass && !ContractAuditLogDto.RESULT_REJECT.equals(result)) {
             throw new CmdException("审批结果不正确");
         }
         if (!pass) {
             if (StringUtil.isEmpty(opinion)) {
                 throw new CmdException("驳回时必须填写审批意见");
             }
-            if (opinion.length() > 200) {
-                throw new CmdException("审批意见不能超过200字");
+            if (opinion.length() > OPINION_MAX_LENGTH) {
+                throw new CmdException("审批意见不能超过" + OPINION_MAX_LENGTH + "字");
             }
         }
 
-        ContractAuditDto auditDto = new ContractAuditDto();
-        auditDto.setAuditId(auditId);
-        auditDto.setStoreId(storeId);
-        List<ContractAuditDto> auditDtos = contractAuditInnerServiceSMOImpl.queryContractAudits(auditDto);
-        Assert.listOnlyOne(auditDtos, "未查询到审批实例");
-        ContractAuditDto audit = auditDtos.get(0);
-        if (!ContractAuditDto.STATE_DOING.equals(audit.getState())) {
-            throw new CmdException("该审批已结束，无法再次审批");
+        String state = queryBizState(bizType, bizId, storeId);
+        if (StringUtil.isEmpty(state)) {
+            throw new CmdException("未查询到待审核单据");
         }
 
-        ContractAuditRecordDto recordDto = new ContractAuditRecordDto();
-        recordDto.setAuditId(auditId);
-        recordDto.setStep(audit.getCurrentStep());
-        recordDto.setStatusCd("0");
-        List<ContractAuditRecordDto> recordDtos = contractAuditInnerServiceSMOImpl.queryContractAuditRecords(recordDto);
-        Assert.listOnlyOne(recordDtos, "未查询到当前环节审批记录");
-        ContractAuditRecordDto record = recordDtos.get(0);
-        if (!ContractAuditRecordDto.RESULT_DOING.equals(record.getResult())) {
-            throw new CmdException("当前环节已处理");
-        }
-        if (StringUtil.isEmpty(userId) || !userId.equals(record.getAuditorId())) {
-            throw new CmdException("您不是当前环节的审核人，无权审批");
+        String step;
+        String privilegeId;
+        if (ContractDto.STATE_AUDIT.equals(state)) {
+            step = ContractAuditLogDto.STEP_LEGAL;
+            privilegeId = PRIVILEGE_LEGAL;
+        } else if (ContractDto.STATE_AUDIT_LEADER.equals(state)) {
+            step = ContractAuditLogDto.STEP_LEADER;
+            privilegeId = PRIVILEGE_LEADER;
+        } else {
+            throw new CmdException("该单据不处于待审核状态");
         }
 
-        ContractAuditRecordPo recordPo = new ContractAuditRecordPo();
-        recordPo.setRecordId(record.getRecordId());
-        recordPo.setResult(result);
-        recordPo.setOpinion(opinion);
-        recordPo.setAuditTime(DateUtil.getCurrentDate());
-        recordPo.setStatusCd("0");
-        contractAuditInnerServiceSMOImpl.updateContractAuditRecord(recordPo);
+        checkAuditPrivilege(privilegeId, userId, stepNameOf(step));
+
+        saveAuditLog(bizType, bizId, step, result, opinion, userId, storeId);
 
         if (!pass) {
-            finishAudit(audit, ContractAuditDto.STATE_REJECT);
-            updateBizState(audit.getAuditType(), audit.getBizId(), storeId, ContractDto.STATE_FAIL);
+            updateBizState(bizType, bizId, storeId, ContractDto.STATE_FAIL);
             return;
         }
 
-        if (ContractAuditDto.STEP_LEGAL.equals(audit.getCurrentStep())) {
-            ContractAuditPo updatePo = new ContractAuditPo();
-            updatePo.setAuditId(audit.getAuditId());
-            updatePo.setCurrentStep(ContractAuditDto.STEP_LEADER);
-            updatePo.setStatusCd("0");
-            contractAuditInnerServiceSMOImpl.updateContractAudit(updatePo);
+        if (ContractAuditLogDto.STEP_LEGAL.equals(step)) {
+            updateBizState(bizType, bizId, storeId, ContractDto.STATE_AUDIT_LEADER);
             return;
         }
 
-        finishAudit(audit, ContractAuditDto.STATE_PASS);
-        // 变更单：两级审批全部通过后回写合同并留痕
-        if (ContractAuditDto.AUDIT_TYPE_CHANGE.equals(audit.getAuditType())) {
-            updateContractBMOImpl.applyChangePlan(audit.getBizId(), storeId);
+        // 领导审批通过：变更单先回写合同正文，再置为审核完成
+        if (ContractAuditLogDto.BIZ_TYPE_CHANGE.equals(bizType)) {
+            updateContractBMOImpl.applyChangePlan(bizId, storeId);
         }
-        updateBizState(audit.getAuditType(), audit.getBizId(), storeId, ContractDto.STATE_AUDIT_FINISH);
+        updateBizState(bizType, bizId, storeId, ContractDto.STATE_AUDIT_FINISH);
     }
 
     @Override
-    public void cancelAudit(String auditId, String storeId, String userId) {
-        ContractAuditDto auditDto = new ContractAuditDto();
-        auditDto.setAuditId(auditId);
-        auditDto.setStoreId(storeId);
-        List<ContractAuditDto> auditDtos = contractAuditInnerServiceSMOImpl.queryContractAudits(auditDto);
-        Assert.listOnlyOne(auditDtos, "未查询到审批实例");
-        ContractAuditDto audit = auditDtos.get(0);
-        if (!ContractAuditDto.STATE_DOING.equals(audit.getState())) {
-            throw new CmdException("该审批已结束，无法撤回");
-        }
-        if (!ContractAuditDto.STEP_LEGAL.equals(audit.getCurrentStep())) {
-            throw new CmdException("法务校对已处理，无法撤回");
-        }
-        if (StringUtil.isEmpty(userId) || !userId.equals(audit.getSubmitStaffId())) {
-            throw new CmdException("只有提交人可以撤回审批");
-        }
+    public Map<String, Object> queryAuditFlow(String bizType, String bizId, String storeId) {
+        String state = queryBizState(bizType, bizId, storeId);
+        String currentStep = currentStepOf(state);
 
-        ContractAuditRecordDto recordDto = new ContractAuditRecordDto();
-        recordDto.setAuditId(auditId);
-        recordDto.setStep(ContractAuditDto.STEP_LEGAL);
-        recordDto.setStatusCd("0");
-        List<ContractAuditRecordDto> recordDtos = contractAuditInnerServiceSMOImpl.queryContractAuditRecords(recordDto);
-        if (recordDtos != null) {
-            for (ContractAuditRecordDto record : recordDtos) {
-                if (!ContractAuditRecordDto.RESULT_DOING.equals(record.getResult())) {
-                    throw new CmdException("法务校对已处理，无法撤回");
-                }
+        ContractAuditLogDto logDto = new ContractAuditLogDto();
+        logDto.setBizType(bizType);
+        logDto.setBizId(bizId);
+        logDto.setStoreId(storeId);
+        logDto.setStatusCd("0");
+        logDto.setPage(-1);
+        List<ContractAuditLogDto> logs = contractAuditInnerServiceSMOImpl.queryContractAuditLogs(logDto);
+        List<Map<String, Object>> records = new ArrayList<>();
+        if (logs != null) {
+            for (ContractAuditLogDto log : logs) {
+                records.add(wrapAuditLog(log));
             }
         }
 
-        finishAudit(audit, ContractAuditDto.STATE_CANCEL);
-        updateBizState(audit.getAuditType(), audit.getBizId(), storeId, ContractDto.STATE_DRAFT);
+        Map<String, Object> data = new HashMap<>();
+        data.put("state", state);
+        data.put("stateName", stateNameOf(state));
+        data.put("currentStep", currentStep);
+        data.put("currentStepName", stepNameOf(currentStep));
+        data.put("records", records);
+        return data;
     }
 
     @Override
-    public List<ContractAuditConfigDto> queryAuditorConfigs(String storeId) {
-        ContractAuditConfigDto configDto = new ContractAuditConfigDto();
-        configDto.setStoreId(storeId);
-        configDto.setStatusCd("0");
-        return contractAuditInnerServiceSMOImpl.queryContractAuditConfigs(configDto);
-    }
-
-    @Override
-    public ContractAuditDto queryDoingAudit(String auditType, String bizId) {
-        ContractAuditDto auditDto = new ContractAuditDto();
-        auditDto.setAuditType(auditType);
-        auditDto.setBizId(bizId);
-        auditDto.setState(ContractAuditDto.STATE_DOING);
-        auditDto.setStatusCd("0");
-        List<ContractAuditDto> auditDtos = contractAuditInnerServiceSMOImpl.queryContractAudits(auditDto);
-        if (auditDtos == null || auditDtos.isEmpty()) {
-            return null;
+    public Map<String, Map<String, Object>> queryLatestAuditLogs(String bizType, String[] bizIds, String storeId) {
+        Map<String, Map<String, Object>> latestLogs = new HashMap<>();
+        if (bizIds == null || bizIds.length < 1) {
+            return latestLogs;
         }
-        return auditDtos.get(0);
+        ContractAuditLogDto logDto = new ContractAuditLogDto();
+        logDto.setBizType(bizType);
+        logDto.setBizIds(bizIds);
+        logDto.setStoreId(storeId);
+        logDto.setStatusCd("0");
+        logDto.setPage(-1);
+        List<ContractAuditLogDto> logs = contractAuditInnerServiceSMOImpl.queryContractAuditLogs(logDto);
+        if (logs == null) {
+            return latestLogs;
+        }
+        for (ContractAuditLogDto log : logs) {
+            latestLogs.put(log.getBizId(), wrapAuditLog(log));
+        }
+        return latestLogs;
     }
 
     /**
-     * 结束审批实例
+     * 审批记录输出结构：环节、结果含中文名，前端直接展示
      */
-    private void finishAudit(ContractAuditDto audit, String state) {
-        ContractAuditPo auditPo = new ContractAuditPo();
-        auditPo.setAuditId(audit.getAuditId());
-        auditPo.setState(state);
-        auditPo.setFinishTime(DateUtil.getCurrentDate());
-        auditPo.setStatusCd("0");
-        contractAuditInnerServiceSMOImpl.updateContractAudit(auditPo);
+    private Map<String, Object> wrapAuditLog(ContractAuditLogDto log) {
+        Map<String, Object> record = new HashMap<>();
+        record.put("logId", log.getLogId());
+        record.put("bizType", log.getBizType());
+        record.put("bizId", log.getBizId());
+        record.put("step", log.getStep());
+        record.put("stepName", stepNameOf(log.getStep()));
+        record.put("result", log.getResult());
+        record.put("resultName", resultNameOf(log.getResult()));
+        record.put("opinion", log.getOpinion());
+        record.put("auditorId", log.getAuditorId());
+        record.put("auditorName", log.getAuditorName());
+        record.put("auditTime", log.getAuditTime() == null ? "" : DateUtil.getFormatTimeString(log.getAuditTime(), DateUtil.DATE_FORMATE_STRING_A));
+        return record;
     }
 
     /**
-     * 回写单据状态（合同 state / 变更 state）
+     * 查询单据当前状态（合同 / 变更单），不存在返回空串
      */
-    private void updateBizState(String auditType, String bizId, String storeId, String state) {
-        if (ContractAuditDto.AUDIT_TYPE_CHANGE.equals(auditType)) {
+    private String queryBizState(String bizType, String bizId, String storeId) {
+        if (StringUtil.isEmpty(bizId)) {
+            return "";
+        }
+        if (ContractAuditLogDto.BIZ_TYPE_CHANGE.equals(bizType)) {
+            ContractChangePlanDto planDto = new ContractChangePlanDto();
+            planDto.setPlanId(bizId);
+            planDto.setStoreId(storeId);
+            planDto.setStatusCd("0");
+            List<ContractChangePlanDto> planDtos = contractChangePlanInnerServiceSMOImpl.queryContractChangePlans(planDto);
+            if (planDtos == null || planDtos.isEmpty()) {
+                return "";
+            }
+            return planDtos.get(0).getState();
+        }
+        ContractDto contractDto = new ContractDto();
+        contractDto.setContractId(bizId);
+        contractDto.setStoreId(storeId);
+        contractDto.setStatusCd("0");
+        List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
+        if (contractDtos == null || contractDtos.isEmpty()) {
+            return "";
+        }
+        return contractDtos.get(0).getState();
+    }
+
+    /**
+     * 回写单据状态
+     */
+    private void updateBizState(String bizType, String bizId, String storeId, String state) {
+        if (ContractAuditLogDto.BIZ_TYPE_CHANGE.equals(bizType)) {
             ContractChangePlanPo changePlanPo = new ContractChangePlanPo();
             changePlanPo.setPlanId(bizId);
             changePlanPo.setState(state);
@@ -265,94 +238,110 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
         contractInnerServiceSMOImpl.updateContract(contractPo);
     }
 
-    private void saveRecord(String auditId, String step, String stepName, ContractAuditConfigDto config, String seq) {
-        ContractAuditRecordPo recordPo = new ContractAuditRecordPo();
-        recordPo.setRecordId(GenerateCodeFactory.getGeneratorId(PREFIX_RECORD_ID));
-        recordPo.setAuditId(auditId);
-        recordPo.setStep(step);
-        recordPo.setStepName(stepName);
-        recordPo.setAuditorId(config.getStaffId());
-        recordPo.setAuditorName(config.getStaffName());
-        recordPo.setAuditorTel(config.getStaffTel());
-        recordPo.setResult(ContractAuditRecordDto.RESULT_DOING);
-        recordPo.setSeq(seq);
-        recordPo.setStatusCd("0");
-        int flag = contractAuditInnerServiceSMOImpl.saveContractAuditRecord(recordPo);
+    /**
+     * 审批记录留痕：环节、结果、意见、审核人、审核时间
+     */
+    private void saveAuditLog(String bizType, String bizId, String step, String result, String opinion,
+                              String userId, String storeId) {
+        ContractAuditLogPo logPo = new ContractAuditLogPo();
+        logPo.setLogId(GenerateCodeFactory.getGeneratorId(PREFIX_LOG_ID));
+        logPo.setBizType(bizType);
+        logPo.setBizId(bizId);
+        logPo.setStep(step);
+        logPo.setResult(result);
+        logPo.setOpinion(opinion);
+        logPo.setAuditorId(userId);
+        logPo.setAuditorName(queryUserName(userId));
+        logPo.setAuditTime(DateUtil.getCurrentDate());
+        logPo.setStoreId(storeId);
+        logPo.setStatusCd("0");
+        int flag = contractAuditInnerServiceSMOImpl.saveContractAuditLog(logPo);
         if (flag < 1) {
-            throw new CmdException("保存审批环节记录失败");
+            throw new CmdException("保存审批记录失败");
         }
     }
 
     /**
-     * 选择环节审核人（优先使用提交人确认的审核人，否则取配置中的第一位）
+     * 按钮权限校验：有权限的人才能审核
      */
-    private ContractAuditConfigDto pickAuditor(List<ContractAuditConfigDto> configs, String step, String staffId) {
-        if (configs == null || configs.isEmpty()) {
-            return null;
+    private void checkAuditPrivilege(String privilegeId, String userId, String stepName) {
+        if (StringUtil.isEmpty(userId)) {
+            throw new CmdException("未获取到登录用户信息，无法审核");
         }
-        ContractAuditConfigDto defaultConfig = null;
-        for (ContractAuditConfigDto config : configs) {
-            if (!step.equals(config.getStep())) {
-                continue;
-            }
-            if (!StringUtil.isEmpty(staffId) && staffId.equals(config.getStaffId())) {
-                return config;
-            }
-            if (defaultConfig == null) {
-                defaultConfig = config;
-            }
+        HasPrivilegeDto hasPrivilegeDto = new HasPrivilegeDto();
+        hasPrivilegeDto.setpId(privilegeId);
+        hasPrivilegeDto.setUserId(userId);
+        List<HasPrivilegeDto> privilegeDtos = menuInnerServiceSMOImpl.hasPrivilege(hasPrivilegeDto);
+        if (privilegeDtos == null || privilegeDtos.isEmpty()) {
+            throw new CmdException("您没有【" + stepName + "】审核权限");
         }
-        return defaultConfig;
+    }
+
+    private String queryUserName(String userId) {
+        if (StringUtil.isEmpty(userId)) {
+            return "";
+        }
+        UserDto userDto = new UserDto();
+        userDto.setUserId(userId);
+        List<UserDto> userDtos = userV1InnerServiceSMOImpl.queryUsers(userDto);
+        if (userDtos == null || userDtos.isEmpty()) {
+            return "";
+        }
+        return userDtos.get(0).getName();
     }
 
     /**
-     * 生成审批单号 SP-{yyyy}-{4位序号}
+     * 当前审批环节：11 法务校对 / 56 领导审批
      */
-    private String generateAuditCode() {
-        String year = DateUtil.getNow("yyyy");
-        ContractAuditDto countDto = new ContractAuditDto();
-        countDto.setAuditCodeLike("SP-" + year + "-");
-        countDto.setStatusCd("");
-        int count = contractAuditInnerServiceSMOImpl.queryContractAuditsCount(countDto);
-        return "SP-" + year + "-" + String.format("%04d", count + 1);
+    private String currentStepOf(String state) {
+        if (ContractDto.STATE_AUDIT.equals(state)) {
+            return ContractAuditLogDto.STEP_LEGAL;
+        }
+        if (ContractDto.STATE_AUDIT_LEADER.equals(state)) {
+            return ContractAuditLogDto.STEP_LEADER;
+        }
+        return "";
     }
 
-    /**
-     * 查询审批环节记录（供 CMD 使用）
-     */
-    public List<ContractAuditRecordDto> queryRecords(String[] auditIds) {
-        if (auditIds == null || auditIds.length < 1) {
-            return new ArrayList<>();
+    private String stepNameOf(String step) {
+        if (ContractAuditLogDto.STEP_LEGAL.equals(step)) {
+            return "法务校对";
         }
-        ContractAuditRecordDto recordDto = new ContractAuditRecordDto();
-        recordDto.setAuditIds(auditIds);
-        recordDto.setStatusCd("0");
-        return contractAuditInnerServiceSMOImpl.queryContractAuditRecords(recordDto);
+        if (ContractAuditLogDto.STEP_LEADER.equals(step)) {
+            return "领导审批";
+        }
+        return "";
     }
 
-    @Override
-    public List<Map> wrapAuditRecords(List<ContractAuditDto> auditDtos) {
-        List<Map> result = new ArrayList<>();
-        if (auditDtos == null || auditDtos.isEmpty()) {
-            return result;
+    private String resultNameOf(String result) {
+        if (ContractAuditLogDto.RESULT_PASS.equals(result)) {
+            return "通过";
         }
-        String[] auditIds = new String[auditDtos.size()];
-        for (int i = 0; i < auditDtos.size(); i++) {
-            auditIds[i] = auditDtos.get(i).getAuditId();
+        if (ContractAuditLogDto.RESULT_REJECT.equals(result)) {
+            return "驳回";
         }
-        List<ContractAuditRecordDto> recordDtos = queryRecords(auditIds);
-        for (ContractAuditDto auditDto : auditDtos) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("audit", auditDto);
-            List<ContractAuditRecordDto> records = new ArrayList<>();
-            for (ContractAuditRecordDto record : recordDtos) {
-                if (auditDto.getAuditId().equals(record.getAuditId())) {
-                    records.add(record);
-                }
-            }
-            item.put("records", records);
-            result.add(item);
+        return "";
+    }
+
+    private String stateNameOf(String state) {
+        if (ContractDto.STATE_DRAFT.equals(state)) {
+            return "草稿";
         }
-        return result;
+        if (ContractDto.STATE_AUDIT.equals(state)) {
+            return "法务校对";
+        }
+        if (ContractDto.STATE_AUDIT_LEADER.equals(state)) {
+            return "领导审批";
+        }
+        if (ContractDto.STATE_AUDIT_FINISH.equals(state)) {
+            return "已生效";
+        }
+        if (ContractDto.STATE_FAIL.equals(state)) {
+            return "已驳回";
+        }
+        if (ContractDto.STATE_COMPLAINT.equals(state)) {
+            return "已终止";
+        }
+        return "";
     }
 }

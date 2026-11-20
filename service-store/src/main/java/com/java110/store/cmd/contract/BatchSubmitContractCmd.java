@@ -7,10 +7,9 @@ import com.java110.core.context.CmdContextUtils;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
-import com.java110.dto.contract.ContractAuditDto;
 import com.java110.dto.contract.ContractDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
-import com.java110.store.bmo.contract.IContractAuditBMO;
+import com.java110.po.contract.ContractPo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
@@ -22,16 +21,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 批量提交合同两级审批（逐条校验状态与审核人配置，返回成功/失败明细）
+ * 批量提交合同审核（草稿/已驳回 -> 法务校对，逐条校验并返回成功/失败明细）
  */
 @Java110Cmd(serviceCode = "contract.batchSubmitContract")
 public class BatchSubmitContractCmd extends Cmd {
 
     @Autowired
     private IContractInnerServiceSMO contractInnerServiceSMOImpl;
-
-    @Autowired
-    private IContractAuditBMO contractAuditBMOImpl;
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
@@ -43,7 +39,6 @@ public class BatchSubmitContractCmd extends Cmd {
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
-        String userId = CmdContextUtils.getUserId(context);
         JSONArray contractIds = reqJson.getJSONArray("contractIds");
         if (contractIds == null || contractIds.isEmpty()) {
             throw new CmdException("请求报文中未包含合同");
@@ -54,7 +49,7 @@ public class BatchSubmitContractCmd extends Cmd {
         for (int i = 0; i < contractIds.size(); i++) {
             String contractId = contractIds.getString(i);
             try {
-                submitContract(contractId, storeId, userId);
+                submitContract(contractId, storeId);
                 successCount++;
             } catch (Exception e) {
                 failList.add(buildFail(contractId, e.getMessage()));
@@ -69,9 +64,9 @@ public class BatchSubmitContractCmd extends Cmd {
     }
 
     /**
-     * 单条提交：草稿/已驳回可提交，统一走合同审核流程
+     * 单条提交：草稿/已驳回可提交，直接置为法务校对（state=11）
      */
-    private void submitContract(String contractId, String storeId, String userId) {
+    private void submitContract(String contractId, String storeId) {
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(contractId);
         contractDto.setStoreId(storeId);
@@ -85,12 +80,14 @@ public class BatchSubmitContractCmd extends Cmd {
             throw new CmdException("仅草稿或已驳回的合同可提交审核");
         }
 
-        JSONObject auditJson = new JSONObject();
-        auditJson.put("auditType", ContractAuditDto.AUDIT_TYPE_CONTRACT);
-        auditJson.put("bizId", contractId);
-        auditJson.put("submitStaffId", userId);
-        auditJson.put("submitStaffName", contract.getStartUserId());
-        contractAuditBMOImpl.submitAudit(auditJson, storeId);
+        ContractPo contractPo = new ContractPo();
+        contractPo.setContractId(contractId);
+        contractPo.setState(ContractDto.STATE_AUDIT);
+        contractPo.setStatusCd("0");
+        int flag = contractInnerServiceSMOImpl.updateContract(contractPo);
+        if (flag < 1) {
+            throw new CmdException("提交审核失败");
+        }
     }
 
     private Map<String, Object> buildFail(String contractId, String msg) {

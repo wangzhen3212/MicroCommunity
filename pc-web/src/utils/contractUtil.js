@@ -5,9 +5,34 @@
 export const CONTRACT_STATE = {
   DRAFT: '10',
   AUDIT: '11',
+  AUDIT_LEADER: '56',
   EFFECTIVE: '22',
   FAIL: '33',
   STOPPED: '44'
+}
+
+/**
+ * 审批单据类型：1 合同 / 2 变更单
+ */
+export const AUDIT_BIZ_TYPE = {
+  CONTRACT: '1',
+  CHANGE: '2'
+}
+
+/**
+ * 审批结果：1 通过 / 2 驳回
+ */
+export const AUDIT_RESULT = {
+  PASS: '1',
+  REJECT: '2'
+}
+
+/**
+ * 审核按钮权限码：法务校对 / 领导审批
+ */
+export const AUDIT_PRIVILEGE = {
+  LEGAL: '502026111600000009',
+  LEADER: '502026111600000010'
 }
 
 export const CONTRACT_CATEGORY = {
@@ -45,6 +70,9 @@ export function stateTagOf(state) {
   if (value === CONTRACT_STATE.AUDIT) {
     return { type: 'warning', key: 'contractState.auditing' }
   }
+  if (value === CONTRACT_STATE.AUDIT_LEADER) {
+    return { type: 'warning', key: 'contractState.leaderAudit' }
+  }
   if (value === CONTRACT_STATE.EFFECTIVE) {
     return { type: 'success', key: 'contractState.effective' }
   }
@@ -55,6 +83,41 @@ export function stateTagOf(state) {
     return { type: 'info', key: 'contractState.stopped' }
   }
   return { type: 'info', key: '' }
+}
+
+/**
+ * 单据当前所处审核环节对应文案（state=11 法务校对 / 56 领导审批 / 22 完成）
+ */
+export function auditStepNameOf(state) {
+  const value = String(state === null || state === undefined ? '' : state)
+  if (value === CONTRACT_STATE.AUDIT) {
+    return 'contractState.auditing'
+  }
+  if (value === CONTRACT_STATE.AUDIT_LEADER) {
+    return 'contractState.leaderAudit'
+  }
+  if (value === CONTRACT_STATE.EFFECTIVE) {
+    return 'contractState.done'
+  }
+  if (value === CONTRACT_STATE.FAIL) {
+    return 'contractState.fail'
+  }
+  return ''
+}
+
+/**
+ * 按状态 + 按钮权限推导可执行的审核动作，无权限或状态不可审返回 null
+ */
+export function auditActionOf(state, hasPrivilege) {
+  const value = String(state === null || state === undefined ? '' : state)
+  const check = typeof hasPrivilege === 'function' ? hasPrivilege : function () { return false }
+  if (value === CONTRACT_STATE.AUDIT && check(AUDIT_PRIVILEGE.LEGAL)) {
+    return { step: AUDIT_STEP.LEGAL, privilege: AUDIT_PRIVILEGE.LEGAL, labelKey: 'contractPendingAudit.op.legalAudit' }
+  }
+  if (value === CONTRACT_STATE.AUDIT_LEADER && check(AUDIT_PRIVILEGE.LEADER)) {
+    return { step: AUDIT_STEP.LEADER, privilege: AUDIT_PRIVILEGE.LEADER, labelKey: 'contractPendingAudit.op.leaderAudit' }
+  }
+  return null
 }
 
 /**

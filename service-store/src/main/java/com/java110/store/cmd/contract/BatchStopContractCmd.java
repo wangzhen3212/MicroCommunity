@@ -7,14 +7,10 @@ import com.java110.core.context.CmdContextUtils;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
-import com.java110.dto.contract.ContractAuditDto;
 import com.java110.dto.contract.ContractDto;
-import com.java110.intf.store.IContractAuditInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
-import com.java110.po.contract.ContractAuditPo;
 import com.java110.po.contract.ContractPo;
 import com.java110.utils.exception.CmdException;
-import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,16 +22,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 批量终止合同（逐条校验状态，审批中的合同同时结束在途审批实例）
+ * 批量终止合同（逐条校验状态）
  */
 @Java110Cmd(serviceCode = "contract.batchStopContract")
 public class BatchStopContractCmd extends Cmd {
 
     @Autowired
     private IContractInnerServiceSMO contractInnerServiceSMOImpl;
-
-    @Autowired
-    private IContractAuditInnerServiceSMO contractAuditInnerServiceSMOImpl;
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
@@ -52,8 +45,8 @@ public class BatchStopContractCmd extends Cmd {
             throw new CmdException("请求报文中未包含合同");
         }
 
-        List<String> allowStates = Arrays.asList(ContractDto.STATE_DRAFT,
-                ContractDto.STATE_AUDIT, ContractDto.STATE_AUDIT_FINISH);
+        List<String> allowStates = Arrays.asList(ContractDto.STATE_DRAFT, ContractDto.STATE_AUDIT,
+                ContractDto.STATE_AUDIT_LEADER, ContractDto.STATE_AUDIT_FINISH);
         int successCount = 0;
         List<Map<String, Object>> failList = new ArrayList<>();
         for (int i = 0; i < contractIds.size(); i++) {
@@ -98,21 +91,5 @@ public class BatchStopContractCmd extends Cmd {
         if (flag < 1) {
             throw new CmdException("终止合同失败");
         }
-
-        ContractAuditDto auditDto = new ContractAuditDto();
-        auditDto.setBizId(contractId);
-        auditDto.setAuditType(ContractAuditDto.AUDIT_TYPE_CONTRACT);
-        auditDto.setState(ContractAuditDto.STATE_DOING);
-        auditDto.setStatusCd("0");
-        List<ContractAuditDto> auditDtos = contractAuditInnerServiceSMOImpl.queryContractAudits(auditDto);
-        if (auditDtos == null || auditDtos.isEmpty()) {
-            return;
-        }
-        ContractAuditPo auditPo = new ContractAuditPo();
-        auditPo.setAuditId(auditDtos.get(0).getAuditId());
-        auditPo.setState(ContractAuditDto.STATE_CANCEL);
-        auditPo.setFinishTime(DateUtil.getCurrentDate());
-        auditPo.setStatusCd("0");
-        contractAuditInnerServiceSMOImpl.updateContractAudit(auditPo);
     }
 }

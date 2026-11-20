@@ -10,11 +10,12 @@ import com.java110.core.event.cmd.CmdEvent;
 import com.java110.store.bmo.contract.IContractAuditBMO;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * 合同审批通过 / 驳回（法务校对、领导审核两级，仅当前环节审核人可操作）
+ * 合同审批通过 / 驳回（法务校对、领导审批两级状态流转 + 审批记录留痕）
  */
 @Java110Cmd(serviceCode = "contract.auditContract")
 public class AuditContractCmd extends Cmd {
@@ -24,8 +25,11 @@ public class AuditContractCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
-        Assert.hasKeyAndValue(reqJson, "auditId", "请求报文中未包含审批实例ID");
+        Assert.hasKeyAndValue(reqJson, "bizId", "请求报文中未包含业务ID");
         Assert.hasKeyAndValue(reqJson, "result", "请求报文中未包含审批结果");
+        if (StringUtil.isEmpty(reqJson.getString("bizType"))) {
+            reqJson.put("bizType", "1");
+        }
     }
 
     @Override

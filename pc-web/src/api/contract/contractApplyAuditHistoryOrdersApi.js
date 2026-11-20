@@ -3,9 +3,6 @@ import request from '@/utils/request'
 // 已办列表改读自建两级审批接口，旧工作流历史任务接口仅作兜底
 export {
   auditContract,
-  cancelContractAudit,
-  listContractAuditHistory,
-  listContractAuditStatistics,
   queryContractAuditFlow
 } from '@/api/contract/contractAuditApi'
 
@@ -29,33 +26,6 @@ export function queryContractHistoryTask(params) {
     }).then(response => {
       const res = response.data
       resolve(res)
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
-
-/**
- * 提交合同审核
- * @param {Object} data 审核数据
- * @param {number} data.state 审核状态 (1100: 同意, 1200: 拒绝)
- * @param {string} data.remark 审核备注
- * @param {string} data.contractId 合同ID
- * @returns {Promise} 包含审核结果的Promise对象
- */
-export function submitContractAudit(data) {
-  return new Promise((resolve, reject) => {
-request({
-      url: '/contract/submitContractAudit',
-      method: 'post',
-      data
-    }).then(response => {
-      const res = response.data
-      if (res.code === 0) {
-        resolve(res)
-      } else {
-        reject(new Error(res.msg || 'error'))
-      }
     }).catch(error => {
       reject(error)
     })

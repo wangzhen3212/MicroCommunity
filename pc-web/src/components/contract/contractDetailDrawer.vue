@@ -122,7 +122,7 @@
 
       <div class="cc-drawer-section">
         <div class="cc-section-title">{{ $t('contractDetailDrawer.audit') }}</div>
-        <contract-audit-flow :audit="audit" :records="records" />
+        <contract-audit-flow :state="stateValue" :records="records" />
       </div>
 
       <div class="cc-drawer-section">
@@ -195,7 +195,6 @@ export default {
       rooms: [],
       files: [],
       changes: [],
-      audit: null,
       records: [],
       content: ''
     }
@@ -222,6 +221,7 @@ export default {
     canStop() {
       return this.stateValue === CONTRACT_STATE.DRAFT ||
         this.stateValue === CONTRACT_STATE.AUDIT ||
+        this.stateValue === CONTRACT_STATE.AUDIT_LEADER ||
         this.stateValue === CONTRACT_STATE.EFFECTIVE
     },
     canDelete() {
@@ -241,7 +241,6 @@ export default {
       this.rooms = []
       this.files = []
       this.changes = []
-      this.audit = null
       this.records = []
       this.content = ''
       this.loadPlans()
@@ -297,12 +296,10 @@ export default {
     loadAuditFlow() {
       queryContractAuditFlow({
         bizId: this.contract.contractId,
-        auditType: '1'
+        bizType: '1'
       }).then(data => {
-        this.audit = data.audit || null
         this.records = data.records || []
       }).catch(() => {
-        this.audit = null
         this.records = []
       })
     },

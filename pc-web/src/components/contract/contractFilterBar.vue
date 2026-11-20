@@ -16,7 +16,9 @@
       clearable
     >
       <el-option :label="$t('contractState.draft')" value="10" />
+      <el-option :label="$t('contractLedger.stat.auditing')" value="auditing" />
       <el-option :label="$t('contractState.auditing')" value="11" />
+      <el-option :label="$t('contractState.leaderAudit')" value="56" />
       <el-option :label="$t('contractState.effective')" value="22" />
       <el-option :label="$t('contractState.fail')" value="33" />
       <el-option :label="$t('contractState.stopped')" value="44" />
