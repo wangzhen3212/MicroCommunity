@@ -11,6 +11,7 @@ import com.java110.dto.contract.ContractChangePlanDto;
 import com.java110.dto.contract.ContractChangePlanDetailDto;
 import com.java110.dto.contract.ContractChangePlanRoomDto;
 import com.java110.dto.contract.ContractCollectionPlanDto;
+import com.java110.dto.contract.ContractFeeDto;
 import com.java110.dto.contract.ContractRoomDto;
 import com.java110.dto.fee.FeeDto;
 import com.java110.dto.owner.OwnerRoomRelDto;
@@ -25,6 +26,7 @@ import com.java110.intf.store.IContractChangePlanInnerServiceSMO;
 import com.java110.intf.store.IContractChangePlanRoomInnerServiceSMO;
 import com.java110.intf.store.IContractCollectionPlanInnerServiceSMO;
 import com.java110.intf.store.IContractFileInnerServiceSMO;
+import com.java110.intf.store.IContractFeeInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.intf.store.IContractRoomInnerServiceSMO;
 import com.java110.intf.store.IContractTypeTemplateInnerServiceSMO;
@@ -35,6 +37,7 @@ import com.java110.po.contract.ContractAttrPo;
 import com.java110.po.contract.ContractChangePlanPo;
 import com.java110.po.contract.ContractCollectionPlanPo;
 import com.java110.po.contract.ContractFilePo;
+import com.java110.po.contract.ContractFeePo;
 import com.java110.po.contract.ContractRoomPo;
 import com.java110.po.contract.ContractTypeTemplatePo;
 import com.java110.po.owner.OwnerRoomRelPo;
@@ -110,7 +113,12 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     @Autowired
     private IContractTypeTemplateInnerServiceSMO contractTypeTemplateInnerServiceSMOImpl;
 
+    @Autowired
+    private IContractFeeInnerServiceSMO contractFeeInnerServiceSMOImpl;
+
     private static final String PREFIX_PLAN_ID = "95";
+
+    private static final String PREFIX_FEE_ID = "94";
 
     /**
      * @param contractPo
@@ -157,6 +165,8 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         saveContractContent(reqJson, contractPo);
 
         saveContractCollectionPlans(reqJson, contractPo);
+
+        saveContractFees(reqJson, contractPo);
 
         if (!reqJson.containsKey("contractTypeSpecs")) {
             return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
@@ -233,6 +243,57 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             }
             contractCollectionPlanInnerServiceSMOImpl.saveContractCollectionPlan(planPo);
         }
+    }
+
+    /**
+     * 重建合同费用构成（老费用行置为失效后重新写入；payload 无 fees 时不动）
+     */
+    private void saveContractFees(JSONObject reqJson, ContractPo contractPo) {
+        if (!reqJson.containsKey("fees")) {
+            return;
+        }
+        JSONArray fees = reqJson.getJSONArray("fees");
+        ContractFeePo deletePo = new ContractFeePo();
+        deletePo.setContractId(contractPo.getContractId());
+        deletePo.setStoreId(contractPo.getStoreId());
+        deletePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
+        contractFeeInnerServiceSMOImpl.updateContractFee(deletePo);
+        if (fees == null || fees.isEmpty()) {
+            return;
+        }
+        for (int feeIndex = 0; feeIndex < fees.size(); feeIndex++) {
+            JSONObject fee = fees.getJSONObject(feeIndex);
+            ContractFeePo feePo = BeanConvertUtil.covertBean(fee, ContractFeePo.class);
+            feePo.setCfId(GenerateCodeFactory.getGeneratorId(PREFIX_FEE_ID));
+            feePo.setContractId(contractPo.getContractId());
+            feePo.setStoreId(contractPo.getStoreId());
+            feePo.setStatusCd(StatusConstant.STATUS_CD_VALID);
+            if (StringUtil.isEmpty(feePo.getFeeSeq())) {
+                feePo.setFeeSeq(String.valueOf(feeIndex + 1));
+            }
+            feePo.setIncludeInAmount(normalizeIncludeInAmount(fee.get("includeInAmount")));
+            if (StringUtil.isEmpty(feePo.getCoefficient())) {
+                feePo.setCoefficient("1.0000");
+            }
+            contractFeeInnerServiceSMOImpl.saveContractFee(feePo);
+        }
+    }
+
+    /**
+     * 是否计入合同金额归一化为 1/0（前端可能传布尔）
+     */
+    private String normalizeIncludeInAmount(Object includeInAmount) {
+        if (includeInAmount == null) {
+            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
+        }
+        if (includeInAmount instanceof Boolean) {
+            return ((Boolean) includeInAmount) ? ContractFeeDto.INCLUDE_IN_AMOUNT_YES : ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
+        }
+        String value = String.valueOf(includeInAmount);
+        if ("1".equals(value) || "true".equalsIgnoreCase(value)) {
+            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
+        }
+        return ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
     }
 
     @Override
@@ -336,6 +397,9 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         contractPo.setStoreId(storeId);
         contractPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
         contractInnerServiceSMOImpl.updateContract(contractPo);
+
+        // 回写主表后按最新合同字段重渲染库中正文，保证详情/打印与主表一致
+        contractContentBMOImpl.refreshContent(contractChangePlanDto.getContractId(), storeId);
 
         // 只有 资产变更时 操作 合同房屋
         if (ContractChangePlanDto.PLAN_TYPE_CHANGE_ROOM.equals(contractChangePlanDto.getPlanType())) {

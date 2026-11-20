@@ -50,6 +50,12 @@ export default {
     }
   },
   methods: {
+    menuText(name) {
+      if (!name) return ''
+      const key = 'menu.' + name
+      const text = this.$t(key)
+      return text === key ? name : text
+    },
     async loadPrivileges(pgId) {
       try {
         const params = {
@@ -74,7 +80,7 @@ export default {
           const group = {
             id: `g_${item.gId}`,
             gId: item.gId,
-            text: this.$t('menu.' + item.gName),
+            text: this.menuText(item.gName),
             children: this.formatMenuData(item.gId)
           }
           groups.push(group)
@@ -94,7 +100,7 @@ export default {
             const menu = {
               id: `m_${item.mId}`,
               mId: item.mId,
-              text: this.$t('menu.' + item.mName),
+              text: this.menuText(item.mName),
               children: this.formatPrivilegeData(item.mId)
             }
             menus.push(menu)
@@ -109,7 +115,7 @@ export default {
           const node = {
             id: `p_${item.pId}`,
             pId: item.pId,
-            text: this.$t('menu.' + item.pName)
+            text: this.menuText(item.pName)
           }
           if (item.pgId) {
             this.checkedKeys.push(`p_${item.pId}`)

@@ -79,7 +79,30 @@
 
       <div class="cc-drawer-section">
         <div class="cc-section-title">{{ $t('contractDetailDrawer.plans') }}</div>
-        <el-table v-if="plans.length" :data="plans" size="mini" border>
+        <el-table v-if="fees.length" :data="fees" size="mini" border>
+          <el-table-column prop="feeName" :label="$t('contractDetailDrawer.feeItem')" />
+          <el-table-column :label="$t('contractDetailDrawer.formula')" align="center">
+            <template slot-scope="scope">{{ scope.row.computingFormulaName || '-' }}</template>
+          </el-table-column>
+          <el-table-column :label="$t('contractDetailDrawer.unitPrice')" align="center">
+            <template slot-scope="scope">{{ formatAmount(scope.row.unitPrice) }}</template>
+          </el-table-column>
+          <el-table-column :label="$t('contractDetailDrawer.feeAmount')" align="center">
+            <template slot-scope="scope">{{ formatAmount(scope.row.amount) }}</template>
+          </el-table-column>
+          <el-table-column :label="$t('contractDetailDrawer.include')" align="center" width="80">
+            <template slot-scope="scope">
+              <span class="cc-badge" :class="includeClass(scope.row.includeInAmount)">
+                {{ includeText(scope.row.includeInAmount) }}
+              </span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="fees.length" class="cc-fee-summary">
+          <span>{{ $t('contractDetailDrawer.feeTotal') }}：{{ formatAmount(feeSummary.feeTotal) }}</span>
+          <span>{{ $t('contractDetailDrawer.includeTotal') }}：{{ formatAmount(feeSummary.includeTotal) }}</span>
+        </div>
+        <el-table v-if="plans.length" :data="plans" size="mini" border class="margin-top-sm">
           <el-table-column prop="planName" :label="$t('contractDetailDrawer.planName')" />
           <el-table-column :label="$t('contractDetailDrawer.planTime')" align="center">
             <template slot-scope="scope">{{ formatTime(scope.row.planTime) }}</template>
@@ -93,7 +116,7 @@
             </template>
           </el-table-column>
         </el-table>
-        <div v-else class="cc-empty">{{ $t('contractDetailDrawer.noPlans') }}</div>
+        <div v-if="!fees.length && !plans.length" class="cc-empty">{{ $t('contractDetailDrawer.noFees') }}</div>
       </div>
 
       <div class="cc-drawer-section">
@@ -192,6 +215,8 @@ export default {
       visible: false,
       contract: null,
       plans: [],
+      fees: [],
+      feeSummary: { feeTotal: '0.00', includeTotal: '0.00' },
       rooms: [],
       files: [],
       changes: [],
@@ -238,6 +263,8 @@ export default {
       this.contract = contract
       this.visible = true
       this.plans = []
+      this.fees = []
+      this.feeSummary = { feeTotal: '0.00', includeTotal: '0.00' }
       this.rooms = []
       this.files = []
       this.changes = []
@@ -256,8 +283,12 @@ export default {
     loadPlans() {
       listContractCollectionPlans({ contractId: this.contract.contractId }).then(data => {
         this.plans = data.plans || []
+        this.fees = data.fees || []
+        this.feeSummary = data.feeSummary || { feeTotal: '0.00', includeTotal: '0.00' }
       }).catch(() => {
         this.plans = []
+        this.fees = []
+        this.feeSummary = { feeTotal: '0.00', includeTotal: '0.00' }
       })
     },
     loadRooms() {
@@ -343,6 +374,14 @@ export default {
         return 'is-danger'
       }
       return 'is-info'
+    },
+    includeText(includeInAmount) {
+      return String(includeInAmount) === '1'
+        ? this.$t('contractDetailDrawer.includeYes')
+        : this.$t('contractDetailDrawer.includeNo')
+    },
+    includeClass(includeInAmount) {
+      return String(includeInAmount) === '1' ? 'is-success' : 'is-info'
     }
   }
 }
@@ -383,6 +422,18 @@ export default {
         border: 1px solid #ebeef5;
         padding: 4px 8px;
       }
+    }
+  }
+
+  .cc-fee-summary {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 4px 0;
+    font-size: 13px;
+    color: #303133;
+
+    >span {
+      margin-left: 16px;
     }
   }
 

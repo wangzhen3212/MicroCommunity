@@ -7,6 +7,7 @@ import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.contract.ContractCollectionPlanDto;
+import com.java110.dto.contract.ContractFeeDto;
 import com.java110.dto.fee.FeeDto;
 
 import com.java110.dto.owner.OwnerRoomRelDto;
@@ -22,6 +23,7 @@ import com.java110.po.contract.ContractPo;
 import com.java110.po.contract.ContractAttrPo;
 import com.java110.po.contract.ContractCollectionPlanPo;
 import com.java110.po.contract.ContractFilePo;
+import com.java110.po.contract.ContractFeePo;
 import com.java110.po.contract.ContractRoomPo;
 import com.java110.po.contract.ContractTypeTemplatePo;
 import com.java110.po.owner.OwnerRoomRelPo;
@@ -81,7 +83,12 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
     @Autowired
     private IContractTypeTemplateInnerServiceSMO contractTypeTemplateInnerServiceSMOImpl;
 
+    @Autowired
+    private IContractFeeInnerServiceSMO contractFeeInnerServiceSMOImpl;
+
     private static final String PREFIX_PLAN_ID = "95";
+
+    private static final String PREFIX_FEE_ID = "94";
 
 
     /**
@@ -136,6 +143,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
         saveContractContent(reqJson, contractPo);
 
         saveContractCollectionPlans(reqJson, contractPo);
+
+        saveContractFees(reqJson, contractPo);
 
         if (!draft && StoreDto.STORE_ADMIN.equals(contractPo.getStoreId())) {
             noticeRentUpdateState(contractPo);
@@ -212,6 +221,51 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             }
             contractCollectionPlanInnerServiceSMOImpl.saveContractCollectionPlan(planPo);
         }
+    }
+
+    /**
+     * 保存合同费用构成（费用项快照 + 试算结果；payload 无 fees 时不动）
+     */
+    private void saveContractFees(JSONObject reqJson, ContractPo contractPo) {
+        if (!reqJson.containsKey("fees")) {
+            return;
+        }
+        JSONArray fees = reqJson.getJSONArray("fees");
+        if (fees == null || fees.isEmpty()) {
+            return;
+        }
+        for (int feeIndex = 0; feeIndex < fees.size(); feeIndex++) {
+            JSONObject fee = fees.getJSONObject(feeIndex);
+            ContractFeePo feePo = BeanConvertUtil.covertBean(fee, ContractFeePo.class);
+            feePo.setCfId(GenerateCodeFactory.getGeneratorId(PREFIX_FEE_ID));
+            feePo.setContractId(contractPo.getContractId());
+            feePo.setStoreId(contractPo.getStoreId());
+            if (StringUtil.isEmpty(feePo.getFeeSeq())) {
+                feePo.setFeeSeq(String.valueOf(feeIndex + 1));
+            }
+            feePo.setIncludeInAmount(normalizeIncludeInAmount(fee.get("includeInAmount")));
+            if (StringUtil.isEmpty(feePo.getCoefficient())) {
+                feePo.setCoefficient("1.0000");
+            }
+            contractFeeInnerServiceSMOImpl.saveContractFee(feePo);
+        }
+    }
+
+    /**
+     * 是否计入合同金额归一化为 1/0（前端可能传布尔）
+     */
+    private String normalizeIncludeInAmount(Object includeInAmount) {
+        if (includeInAmount == null) {
+            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
+        }
+        if (includeInAmount instanceof Boolean) {
+            return ((Boolean) includeInAmount) ? ContractFeeDto.INCLUDE_IN_AMOUNT_YES : ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
+        }
+        String value = String.valueOf(includeInAmount);
+        if ("1".equals(value) || "true".equalsIgnoreCase(value)) {
+            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
+        }
+        return ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
     }
 
     /**

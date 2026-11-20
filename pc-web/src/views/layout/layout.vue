@@ -8,7 +8,7 @@
           text-color="#fff" active-text-color="#409EFF">
           <template v-for="(item, index) in catalogs">
             <el-menu-item :index="item.caId" v-if="!item.privId || hasPrivilege(item.privId)" :key="index"
-              @click="_changeMenuCatalog(item, true)">{{ $t('menu.' + item.name) }}</el-menu-item>
+              @click="_changeMenuCatalog(item, true)">{{ menuText(item.name) }}</el-menu-item>
           </template>
         </el-menu>
       </div>
@@ -58,7 +58,7 @@
               <template v-for="(menu, index) in menuTree">
                 <li :key="index" v-if="menu.childs && menu.childs.length > 0" :class="{ active: menu.active }"
                   v-on:mouseenter="_prefetchMenu(menu)" @click="switchMenu(menu)">
-                  <i class="fa " v-bind:class="menu.icon"></i><span class="margin-left-xs">{{ $t('menu.' + menu.name)
+                  <i class="fa " v-bind:class="menu.icon"></i><span class="margin-left-xs">{{ menuText(menu.name)
                     }}</span>
                 </li>
               </template>
@@ -66,11 +66,11 @@
           </div>
           <div class="vc-menu-sub" v-if="subMenus && subMenus.length > 0">
             <ul>
-              <li class="title">{{ $t('menu.' + curMenuName) }}</li>
+              <li class="title">{{ menuText(curMenuName) }}</li>
               <template v-for="(subMenu, index) in subMenus">
                 <li :key="index" v-if="subMenu.isShow == 'Y'" :class="{ active: subMenu.active }"
                   v-on:mouseenter="_prefetchMenu(subMenu)" v-on:click="_gotoPage(subMenu.href, subMenu.name)">
-                  {{ $t('menu.' + subMenu.name) }}
+                  {{ menuText(subMenu.name) }}
                 </li>
               </template>
               <li class="sub-footer" @click="_closeSubMenu()"><i class="fa fa-dedent"></i></li>
@@ -86,7 +86,7 @@
             <template v-for="(tab, index) in visitedTabs">
               <div :key="index" v-if="tab.title" :class="['tabs-item', { active: $route.path === tab.path }]"
                 @click="goTab(tab)">
-                <span class="tabs-item-title">{{ $t('menu.' + tab.title) }}</span>
+                <span class="tabs-item-title">{{ menuText(tab.title) }}</span>
                 <i class="el-icon-close tabs-item-close" @click.stop="removeTab(tab)" v-if="visitedTabs.length > 1"></i>
               </div>
             </template>
@@ -186,6 +186,12 @@ export default {
     }
   },
   methods: {
+    menuText(name) {
+      if (!name) return ''
+      const key = 'menu.' + name
+      const text = this.$t(key)
+      return text === key ? name : text
+    },
     async getSystemInfo() {
       const { data } = await listSystemInfo({ page: 1, row: 1 });
       this.systemInfo.systemSimpleTitle = data[0].systemSimpleTitle

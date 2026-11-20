@@ -9,9 +9,11 @@ import com.java110.intf.common.IContractApplyUserInnerServiceSMO;
 import com.java110.intf.community.IRoomInnerServiceSMO;
 import com.java110.intf.fee.IFeeInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
+import com.java110.intf.store.IContractFeeInnerServiceSMO;
 import com.java110.intf.store.IContractRoomInnerServiceSMO;
 import com.java110.intf.user.IOwnerRoomRelInnerServiceSMO;
 import com.java110.po.contract.ContractPo;
+import com.java110.po.contract.ContractFeePo;
 import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.room.RoomPo;
 import com.java110.store.bmo.contract.IDeleteContractBMO;
@@ -49,6 +51,9 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
     @Autowired
     private IContractApplyUserInnerServiceSMO contractApplyUserInnerServiceSMOImpl;
 
+    @Autowired
+    private IContractFeeInnerServiceSMO contractFeeInnerServiceSMOImpl;
+
     /**
      * @param contractPo 数据
      * @return 订单服务能够接受的报文
@@ -67,9 +72,21 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
             return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "保存失败");
         }
 
+        deleteContractFee(contractPo);
 
         return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
 
+    }
+
+    /**
+     * 合同删除时费用构成同步失效
+     */
+    private void deleteContractFee(ContractPo contractPo) {
+        ContractFeePo contractFeePo = new ContractFeePo();
+        contractFeePo.setContractId(contractPo.getContractId());
+        contractFeePo.setStoreId(contractPo.getStoreId());
+        contractFeePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
+        contractFeeInnerServiceSMOImpl.updateContractFee(contractFeePo);
     }
 
 

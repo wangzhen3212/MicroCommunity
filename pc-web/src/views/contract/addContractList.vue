@@ -509,8 +509,18 @@ export default {
     loadPlans(contractId) {
       listContractCollectionPlans({ contractId }).then(data => {
         this.plans = data.plans || []
+        this.fees = this.normalizeFees(data.fees)
       }).catch(() => {
         this.plans = []
+        this.fees = []
+      })
+    },
+    normalizeFees(list) {
+      return (list || []).map((row, index) => {
+        const fee = { ...row }
+        fee.feeSeq = row.feeSeq || String(index + 1)
+        fee.includeInAmount = String(row.includeInAmount) === '1' || row.includeInAmount === true
+        return fee
       })
     },
     loadFiles(contractId) {

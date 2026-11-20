@@ -1,6 +1,9 @@
 package com.java110.store.bmo.contract;
 
 import com.java110.dto.contract.ContractContentDto;
+import com.java110.dto.contract.ContractDto;
+
+import java.util.Map;
 
 /**
  * 合同正文读写业务接口（同事务写 contract_content，按 contract_id upsert）
@@ -24,4 +27,29 @@ public interface IContractContentBMO {
      * @return 正文，未配置返回 null
      */
     ContractContentDto getContent(String contractId);
+
+    /**
+     * 构建正文渲染变量（合同字段 + 金额大写 + 关联房屋）
+     *
+     * @param contractDto 合同
+     * @return 变量表
+     */
+    Map<String, Object> buildVariables(ContractDto contractDto);
+
+    /**
+     * 打印正文：库中正文优先，其次用含变量原文重渲染
+     *
+     * @param contractId 合同ID
+     * @param storeId    商户ID
+     * @return 可打印正文，均无返回 null
+     */
+    String getPrintContent(String contractId, String storeId);
+
+    /**
+     * 按最新合同字段重渲染含变量原文并写回库中正文（content_version 自增）
+     *
+     * @param contractId 合同ID
+     * @param storeId    商户ID
+     */
+    void refreshContent(String contractId, String storeId);
 }
