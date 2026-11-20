@@ -66,6 +66,7 @@
           <div class="cc-panel-head">
             <span class="cc-panel-index">02</span>
             <h4 class="cc-panel-title">{{ sectionTargetTitle }}</h4>
+            <span v-if="isRent" class="cc-panel-tip">{{ $t('contractWorkbench.target.feeOptionalTip') }}</span>
           </div>
           <div class="cc-panel-body">
             <contract-target-table
@@ -76,17 +77,37 @@
               :rent-total-amount="rentTotalAmount"
               :start-time="form.startTime"
               :end-time="form.endTime"
+              :fee-visible="feePanelVisible"
+              :fee-count="fees.length"
+              :fee-disabled="!hasRooms"
               @add-house="openHouseDialog"
               @remove-house="removeHouse"
               @add-target="addTarget"
               @remove-target="removeTarget"
               @fill-amount="handleFillAmount"
               @clear="clearTargets"
-            />
+              @toggle-fee="toggleFeePanel"
+            >
+              <template v-slot:fee-panel>
+                <contract-fee-plan-panel
+                  v-if="feePanelVisible"
+                  :category="form.category"
+                  :rooms="rooms"
+                  :fees="fees"
+                  :plans="plans"
+                  :amount="form.amount"
+                  :start-time="form.startTime"
+                  :end-time="form.endTime"
+                  :pay-mode="form.payMode"
+                  @plan-change="handlePlanChange"
+                  @fees-change="handleFeesChange"
+                />
+              </template>
+            </contract-target-table>
           </div>
         </div>
 
-        <div v-if="hasTemplate" class="cc-panel">
+        <div v-if="hasTemplate && !isRent" class="cc-panel">
           <div class="cc-panel-head">
             <span class="cc-panel-index">03</span>
             <h4 class="cc-panel-title">{{ sectionPlanTitle }}</h4>
@@ -196,6 +217,8 @@ import {
   applyServerAmount,
   detailAmountMap,
   isManualFormula,
+  normalizeFeeForSubmit,
+  normalizePlanForSubmit,
   payerObjTypeOf,
   sumIncludedAmount
 } from '@/utils/contractFeeUtil'
@@ -230,6 +253,7 @@ export default {
       targets: [],
       fees: [],
       plans: [],
+      feePanelVisible: false,
       files: [],
       content: '',
       records: [],
@@ -510,9 +534,11 @@ export default {
       listContractCollectionPlans({ contractId }).then(data => {
         this.plans = data.plans || []
         this.fees = this.normalizeFees(data.fees)
+        this.feePanelVisible = this.fees.length > 0
       }).catch(() => {
         this.plans = []
         this.fees = []
+        this.feePanelVisible = false
       })
     },
     normalizeFees(list) {
@@ -579,6 +605,7 @@ export default {
         this.fees = []
         this.targets = []
         this.plans = []
+        this.feePanelVisible = false
         this.form.amount = ''
         this.amountManual = false
         return
@@ -615,10 +642,12 @@ export default {
         this.targets = []
         this.plans = []
         this.form.payMode = ''
+        this.feePanelVisible = false
         return
       }
       this.rooms = []
       this.fees = []
+      this.feePanelVisible = false
     },
     handlePartyaChange(partyaId) {
       const matched = this.partyas.filter(item => item.partyaId === partyaId)[0]
@@ -810,6 +839,32 @@ export default {
       }
       this.recalcFeeRows(true)
     },
+    toggleFeePanel() {
+      if (!this.feePanelVisible) {
+        if (!this.hasRooms) {
+          this.$message.warning(this.$t('contractWorkbench.target.feeRoomFirst'))
+          return
+        }
+        this.feePanelVisible = true
+        return
+      }
+      if (this.readonly) {
+        this.feePanelVisible = false
+        return
+      }
+      if (!this.fees.length) {
+        this.feePanelVisible = false
+        return
+      }
+      this.$confirm(this.$t('contractWorkbench.target.feeClearConfirm'), '提示', {
+        type: 'warning'
+      }).then(() => {
+        this.fees = []
+        this.feePanelVisible = false
+        this.handleFeesChange(this.fees)
+      }).catch(() => {
+      })
+    },
     openHouseDialog() {
       this.$refs.houseDialog.open(this.rooms)
     },
@@ -838,6 +893,8 @@ export default {
     clearTargets() {
       if (String(this.form.category) === '1') {
         this.rooms = []
+        this.fees = []
+        this.feePanelVisible = false
         return
       }
       this.targets = []
@@ -869,9 +926,9 @@ export default {
         ...this.form,
         state: state,
         rooms: this.rooms,
-        plans: this.isRent ? [] : this.plans,
+        plans: this.isRent ? [] : this.plans.map(normalizePlanForSubmit),
         targets: this.targets,
-        fees: this.fees,
+        fees: this.fees.map(normalizeFeeForSubmit),
         content: renderContractContent(this.content, variables),
         templateContent: this.content,
         variables: variables,
@@ -1112,6 +1169,13 @@ export default {
       font-weight: 600;
       line-height: 20px;
       color: #303133;
+    }
+
+    .cc-panel-tip {
+      margin-left: auto;
+      font-size: 11px;
+      line-height: 18px;
+      color: #909399;
     }
 
     .cc-panel-body {

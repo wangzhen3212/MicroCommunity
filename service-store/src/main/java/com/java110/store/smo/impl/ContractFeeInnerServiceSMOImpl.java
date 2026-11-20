@@ -6,6 +6,7 @@ import com.java110.dto.contract.ContractFeeDto;
 import com.java110.intf.store.IContractFeeInnerServiceSMO;
 import com.java110.po.contract.ContractFeePo;
 import com.java110.store.dao.IContractFeeServiceDao;
+import com.java110.store.util.ContractFeeNormalizeUtil;
 import com.java110.utils.util.BeanConvertUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,11 +25,13 @@ public class ContractFeeInnerServiceSMOImpl extends BaseServiceSMO implements IC
 
     @Override
     public int saveContractFee(@RequestBody ContractFeePo contractFeePo) {
+        ContractFeeNormalizeUtil.normalizeForSave(contractFeePo);
         return contractFeeServiceDaoImpl.saveContractFeeInfo(BeanConvertUtil.beanCovertMap(contractFeePo));
     }
 
     @Override
     public int updateContractFee(@RequestBody ContractFeePo contractFeePo) {
+        ContractFeeNormalizeUtil.normalizeForUpdate(contractFeePo);
         return contractFeeServiceDaoImpl.updateContractFeeInfo(BeanConvertUtil.beanCovertMap(contractFeePo));
     }
 

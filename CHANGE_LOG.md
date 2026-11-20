@@ -1359,3 +1359,28 @@ CREATE INDEX idx_contract_cpr_community_id          ON contract_change_plan_room
 CREATE INDEX idx_contract_cpda_community_id         ON contract_change_plan_detail_attr(community_id, detail_id);
 ```
 
+## 2026-11-20 — 合同费用构成空串归一（修复 1366 Incorrect decimal value）+「关联费用」可选开关
+
+背景：起草/编辑租赁合同保存时报 `Incorrect decimal value: '' for column 'manual_amount'`（严格模式下把空串当 decimal 绑定）。原因是费用行 `manualAmount` 非手工公式时恒为 `''`，后端 `BeanConvertUtil.covertBean` 原样转成 `Po.manualAmount=''`，Mapper 直绑 `#{manualAmount}`。
+
+本次改动（**无 DDL、无 Mapper 变更、无新增服务码**）：
+
+1. 新增 `service-store/.../store/util/ContractFeeNormalizeUtil.java`：费用行 / 收款计划行写库前的唯一归一收口。
+   - `normalizeForSave`：空串、空白、null 一律补列默认值（`fee_seq=1`、金额 `0.00`、系数 `1.0000`、期数 `0`、`include_in_amount=1`）；`manual_amount` 空串转 `NULL`（保留“未手工录入”语义）；`cycle` 空串转 `NULL`。
+   - `normalizeForUpdate`：空串补默认值，**null 保持 null**（软删/局部更新不被补值）；`includeInAmount` 为 null 时不参与更新。
+   - `normalizePlanForSave` / `normalizePlanForUpdate`：`plan_amount` / `ratio` / `plan_seq` 同规则归一，`plan_time` / `pay_time` 空串转 `NULL`。
+   - `normalizeIncludeInAmount`：布尔 / `'1'` / `'true'` → `'1'`，其余 → `'0'`（两个 BMO 的私有同名方法已删除，改调本工具）。
+   - 非法数字（如 `'abc'`、`'--'`）抛 `IllegalArgumentException("费用项[xxx]的格式不正确…")`，由 CMD 层转成前端提示。
+2. 归一调用点（写库唯一入口）：`ContractFeeInnerServiceSMOImpl.saveContractFee/updateContractFee`、`ContractCollectionPlanInnerServiceSMOImpl.saveContractCollectionPlan/updateContractCollectionPlan`。
+3. 前端提交归一：`utils/contractFeeUtil.js` 新增 `normalizeFeeForSubmit` / `normalizePlanForSubmit`，`addContractList.vue` 的 `buildPayload()` 使用；`ContractFeeAddDialog.vue` 的手工金额提交前 `trim()`，非手工公式不提交 `manualAmount`（传 `null`）。
+4. 前端交互（需求 2）：租赁合同 02 区块「关联出租房屋」工具栏右上角新增「关联费用 / 收起费用」按钮（`ContractTargetTable` 增加 `feeVisible` / `feeCount` / `feeDisabled` props、`toggle-fee` 事件、`fee-panel` 具名插槽），费用构成面板就地展开在房屋表格下方；**默认收起**，点击「收起费用」二次确认后清空已关联费用并联动合同金额；03 区块改为 `hasTemplate && !isRent`。
+5. 费用构成改为**非必填**：`ContractSummaryPanel` 中租赁合同费用项标记 `optional`，`failedLabels()` 过滤可选项，不再拦截「提交审批」；未关联费用时 `fees=[]` 落库无费用行（编辑时旧行照旧 `status_cd='1'`）。
+6. i18n：`contractWorkbenchLang.js` 三语补 `target.linkFee / collapseFee / feeCount / feeRoomFirst / feeOptionalTip / feeClearConfirm` 与 `integrity.feeOptional`。
+
+```sql
+-- 本次无 SQL / 无 DDL / 无 c_service、c_route 变更
+
+-- 执行后：重启 store-service（Java 归一代码生效），前端重新发布即可
+-- 回滚：代码回滚 + 重启 store-service，前端发布回滚；历史数据无需处理（本次未改表结构、未刷数据）
+```
+

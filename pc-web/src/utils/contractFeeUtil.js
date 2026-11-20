@@ -133,3 +133,40 @@ export function sumIncludedAmount(fees) {
     .filter(row => !!row.includeInAmount)
     .reduce((sum, row) => sum + toNumber(row.amount), 0)
 }
+
+function isEmptyValue(value) {
+  return value === null || value === undefined || String(value).trim() === ''
+}
+
+/**
+ * 费用行提交归一：金额空串 / 非法 → 默认值；非手工公式不提交手工金额
+ */
+export function normalizeFeeForSubmit(row) {
+  const source = row || {}
+  const fee = { ...source }
+  fee.unitPrice = formatAmount(source.unitPrice)
+  fee.additionalAmount = formatAmount(source.additionalAmount)
+  fee.baseAmount = formatAmount(source.baseAmount)
+  fee.amount = formatAmount(source.amount)
+  fee.coefficient = isEmptyValue(source.coefficient) ? '1.0000' : String(source.coefficient).trim()
+  fee.months = toNumber(source.months)
+  fee.cycle = isEmptyValue(source.cycle) ? '' : String(source.cycle).trim()
+  if (isManualFormula(source.computingFormula) && !isEmptyValue(source.manualAmount)) {
+    fee.manualAmount = String(source.manualAmount).trim()
+  } else {
+    fee.manualAmount = null
+  }
+  return fee
+}
+
+/**
+ * 计划行提交归一：planTime 空串不传；planAmount / ratio 空串转默认值
+ */
+export function normalizePlanForSubmit(row) {
+  const source = row || {}
+  const plan = { ...source }
+  plan.planAmount = formatAmount(source.planAmount)
+  plan.ratio = isEmptyValue(source.ratio) ? '0.00' : String(source.ratio).trim()
+  plan.planTime = isEmptyValue(source.planTime) ? '' : source.planTime
+  return plan
+}

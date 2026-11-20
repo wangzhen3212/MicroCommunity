@@ -7,7 +7,6 @@ import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.contract.ContractCollectionPlanDto;
-import com.java110.dto.contract.ContractFeeDto;
 import com.java110.dto.fee.FeeDto;
 
 import com.java110.dto.owner.OwnerRoomRelDto;
@@ -31,6 +30,7 @@ import com.java110.po.renting.RentingPoolPo;
 import com.java110.po.room.RoomPo;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.store.bmo.contract.ISaveContractBMO;
+import com.java110.store.util.ContractFeeNormalizeUtil;
 import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
@@ -247,29 +247,12 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             if (StringUtil.isEmpty(feePo.getFeeSeq())) {
                 feePo.setFeeSeq(String.valueOf(feeIndex + 1));
             }
-            feePo.setIncludeInAmount(normalizeIncludeInAmount(fee.get("includeInAmount")));
+            feePo.setIncludeInAmount(ContractFeeNormalizeUtil.normalizeIncludeInAmount(fee.get("includeInAmount")));
             if (StringUtil.isEmpty(feePo.getCoefficient())) {
                 feePo.setCoefficient("1.0000");
             }
             contractFeeInnerServiceSMOImpl.saveContractFee(feePo);
         }
-    }
-
-    /**
-     * 是否计入合同金额归一化为 1/0（前端可能传布尔）
-     */
-    private String normalizeIncludeInAmount(Object includeInAmount) {
-        if (includeInAmount == null) {
-            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
-        }
-        if (includeInAmount instanceof Boolean) {
-            return ((Boolean) includeInAmount) ? ContractFeeDto.INCLUDE_IN_AMOUNT_YES : ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
-        }
-        String value = String.valueOf(includeInAmount);
-        if ("1".equals(value) || "true".equalsIgnoreCase(value)) {
-            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
-        }
-        return ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
     }
 
     /**

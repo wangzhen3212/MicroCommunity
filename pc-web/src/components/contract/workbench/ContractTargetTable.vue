@@ -9,7 +9,31 @@
       </el-button>
       <el-button size="mini" @click="fillAmount">{{ $t('contractWorkbench.target.fillTotal') }}</el-button>
       <el-button size="mini" @click="$emit('clear')">{{ $t('contractWorkbench.target.clear') }}</el-button>
-      <span class="cc-target-total">{{ formatAmount(totalAmount) }}</span>
+      <div class="cc-target-right">
+        <el-tooltip
+          v-if="isRent"
+          :disabled="!feeDisabled"
+          :content="$t('contractWorkbench.target.feeRoomFirst')"
+          placement="top"
+        >
+          <span class="cc-target-fee-wrap">
+            <el-button
+              size="mini"
+              class="cc-target-fee"
+              :type="feeVisible ? 'info' : 'primary'"
+              :plain="feeVisible"
+              :disabled="feeDisabled"
+              :title="feeVisible && feeCount > 0 ? $t('contractWorkbench.target.feeCount', { count: feeCount }) : ''"
+              @click="handleToggleFee"
+            >
+              <i :class="feeVisible ? 'el-icon-arrow-up' : 'el-icon-link'"></i>
+              {{ feeVisible ? $t('contractWorkbench.target.collapseFee') : $t('contractWorkbench.target.linkFee') }}
+              <span v-if="feeVisible && feeCount > 0" class="cc-target-fee-count">{{ feeCount }}</span>
+            </el-button>
+          </span>
+        </el-tooltip>
+        <span class="cc-target-total">{{ formatAmount(totalAmount) }}</span>
+      </div>
     </div>
 
     <el-table v-if="isRent" :data="rooms" size="mini" border>
@@ -80,6 +104,8 @@
       </el-table-column>
     </el-table>
 
+    <slot v-if="isRent" name="fee-panel"></slot>
+
     <div v-if="isEmpty" class="cc-empty">{{ $t('contractWorkbench.target.empty') }}</div>
   </div>
 </template>
@@ -124,6 +150,18 @@ export default {
     endTime: {
       type: String,
       default: ''
+    },
+    feeVisible: {
+      type: Boolean,
+      default: false
+    },
+    feeCount: {
+      type: Number,
+      default: 0
+    },
+    feeDisabled: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
@@ -191,6 +229,12 @@ export default {
     },
     fillAmount() {
       this.$emit('fill-amount', this.totalAmount)
+    },
+    handleToggleFee() {
+      if (this.feeDisabled) {
+        return
+      }
+      this.$emit('toggle-fee')
     }
   }
 }
@@ -202,11 +246,29 @@ export default {
   align-items: center;
   margin-bottom: 10px;
 
-  .cc-target-total {
+  .cc-target-right {
+    display: flex;
+    align-items: center;
     margin-left: auto;
-    font-size: 14px;
-    font-weight: 600;
-    color: #409eff;
+
+    .cc-target-fee-wrap {
+      line-height: 1;
+    }
+
+    .cc-target-fee-count {
+      margin-left: 4px;
+      padding: 0 5px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .35);
+      font-size: 11px;
+    }
+
+    .cc-target-total {
+      margin-left: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #409eff;
+    }
   }
 }
 

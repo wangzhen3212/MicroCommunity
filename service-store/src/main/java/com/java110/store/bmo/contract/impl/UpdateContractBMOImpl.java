@@ -11,7 +11,6 @@ import com.java110.dto.contract.ContractChangePlanDto;
 import com.java110.dto.contract.ContractChangePlanDetailDto;
 import com.java110.dto.contract.ContractChangePlanRoomDto;
 import com.java110.dto.contract.ContractCollectionPlanDto;
-import com.java110.dto.contract.ContractFeeDto;
 import com.java110.dto.contract.ContractRoomDto;
 import com.java110.dto.fee.FeeDto;
 import com.java110.dto.owner.OwnerRoomRelDto;
@@ -46,6 +45,7 @@ import com.java110.po.room.RoomPo;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
 import com.java110.store.bmo.contractFile.IDeleteContractFileBMO;
+import com.java110.store.util.ContractFeeNormalizeUtil;
 import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
@@ -287,29 +287,12 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             if (StringUtil.isEmpty(feePo.getFeeSeq())) {
                 feePo.setFeeSeq(String.valueOf(feeIndex + 1));
             }
-            feePo.setIncludeInAmount(normalizeIncludeInAmount(fee.get("includeInAmount")));
+            feePo.setIncludeInAmount(ContractFeeNormalizeUtil.normalizeIncludeInAmount(fee.get("includeInAmount")));
             if (StringUtil.isEmpty(feePo.getCoefficient())) {
                 feePo.setCoefficient("1.0000");
             }
             contractFeeInnerServiceSMOImpl.saveContractFee(feePo);
         }
-    }
-
-    /**
-     * 是否计入合同金额归一化为 1/0（前端可能传布尔）
-     */
-    private String normalizeIncludeInAmount(Object includeInAmount) {
-        if (includeInAmount == null) {
-            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
-        }
-        if (includeInAmount instanceof Boolean) {
-            return ((Boolean) includeInAmount) ? ContractFeeDto.INCLUDE_IN_AMOUNT_YES : ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
-        }
-        String value = String.valueOf(includeInAmount);
-        if ("1".equals(value) || "true".equalsIgnoreCase(value)) {
-            return ContractFeeDto.INCLUDE_IN_AMOUNT_YES;
-        }
-        return ContractFeeDto.INCLUDE_IN_AMOUNT_NO;
     }
 
     @Override

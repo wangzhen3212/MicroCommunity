@@ -287,16 +287,26 @@ export default {
         this.computing = false
       })
     },
+    trimManualAmount() {
+      const value = this.form.manualAmount
+      if (value === null || value === undefined) {
+        return ''
+      }
+      return String(value).trim()
+    },
     handleSubmit() {
       this.$refs.form.validate(valid => {
         if (!valid) {
           return
         }
+        let manualAmount = null
         if (this.isManual) {
-          if (!this.form.manualAmount) {
+          manualAmount = this.trimManualAmount()
+          if (!manualAmount) {
             this.$message.warning(this.$t('contractWorkbench.msg.feeAmountEmpty'))
             return
           }
+          this.form.manualAmount = manualAmount
           applyManualAmount(this.form)
         } else if (!(parseFloat(this.form.amount) > 0)) {
           this.$message.warning(this.computeError || this.$t('contractWorkbench.msg.feeComputeError'))
@@ -314,7 +324,7 @@ export default {
           cycle: this.form.cycle,
           months: this.form.months,
           coefficient: '1',
-          manualAmount: this.form.manualAmount,
+          manualAmount: manualAmount,
           baseAmount: this.form.baseAmount,
           amount: this.form.amount,
           computeRemark: this.form.computeRemark,

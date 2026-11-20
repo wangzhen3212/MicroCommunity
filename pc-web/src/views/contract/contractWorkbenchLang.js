@@ -83,7 +83,13 @@ export const messages = {
         price: 'Unit Price',
         device: 'Device',
         service: 'Service Content',
-        empty: 'No target added yet'
+        empty: 'No target added yet',
+        linkFee: 'Link Fees',
+        collapseFee: 'Collapse Fees',
+        feeCount: '{count} fee item(s) linked',
+        feeRoomFirst: 'Please link leased houses before linking fees',
+        feeOptionalTip: 'Fee composition is optional, can be added later',
+        feeClearConfirm: 'Collapsing will clear the linked fee composition. Cancel the link?'
       },
       plan: {
         feeTitle: 'Fee Composition (House Lease)',
@@ -183,6 +189,7 @@ export const messages = {
         target: 'Target List',
         targetRent: 'Leased Houses',
         fee: 'Fee Composition',
+        feeOptional: 'Fee Composition (optional)',
         payMode: 'Payment Mode',
         plan: 'Payment Plan / Text'
       },
@@ -303,7 +310,13 @@ export const messages = {
         price: '单价',
         device: '设备',
         service: '服务内容',
-        empty: '尚未添加标的'
+        empty: '尚未添加标的',
+        linkFee: '关联费用',
+        collapseFee: '收起费用',
+        feeCount: '已关联 {count} 项费用',
+        feeRoomFirst: '请先关联出租房屋再关联费用',
+        feeOptionalTip: '费用构成非必填，可稍后补充',
+        feeClearConfirm: '收起将清空已关联的费用构成，确定取消关联？'
       },
       plan: {
         feeTitle: '费用构成（房屋出租）',
@@ -403,6 +416,7 @@ export const messages = {
         target: '标的清单',
         targetRent: '出租房屋清单',
         fee: '费用构成',
+        feeOptional: '费用构成（可选）',
         payMode: '付款方式',
         plan: '收款计划/正文'
       },
@@ -523,7 +537,13 @@ export const messages = {
         price: '單價',
         device: '設備',
         service: '服務內容',
-        empty: '尚未添加標的'
+        empty: '尚未添加標的',
+        linkFee: '關聯費用',
+        collapseFee: '收起費用',
+        feeCount: '已關聯 {count} 項費用',
+        feeRoomFirst: '請先關聯出租房屋再關聯費用',
+        feeOptionalTip: '費用構成非必填，可稍後補充',
+        feeClearConfirm: '收起將清空已關聯的費用構成，確定取消關聯？'
       },
       plan: {
         feeTitle: '費用構成（房屋出租）',
@@ -623,6 +643,7 @@ export const messages = {
         target: '標的清單',
         targetRent: '出租房屋清單',
         fee: '費用構成',
+        feeOptional: '費用構成（可選）',
         payMode: '付款方式',
         plan: '收款計劃/正文'
       },

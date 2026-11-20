@@ -30,8 +30,8 @@
         <span class="cc-badge" :class="integrityClass">{{ integrityPassed }}/{{ integrityItems.length }}</span>
       </div>
       <div v-for="item in integrityItems" :key="item.key" class="cc-integrity-row">
-        <i :class="item.pass ? 'el-icon-circle-check is-pass' : 'el-icon-warning-outline is-fail'"></i>
-        <span>{{ $t(item.labelKey) }}</span>
+        <i :class="integrityIconClass(item)"></i>
+        <span :class="{ 'is-optional': item.optional && !item.pass }">{{ $t(item.labelKey) }}</span>
       </div>
       <div class="cc-summary-tip">{{ $t('contractWorkbench.summary.integrityTip') }}</div>
     </div>
@@ -133,8 +133,9 @@ export default {
       if (isRent) {
         items.push({
           key: 'fee',
-          labelKey: 'contractWorkbench.integrity.fee',
-          pass: toNumber(this.feeTotal) > 0
+          labelKey: 'contractWorkbench.integrity.feeOptional',
+          pass: toNumber(this.feeTotal) > 0,
+          optional: true
         })
       } else {
         items.push({
@@ -146,7 +147,7 @@ export default {
       return items
     },
     integrityPassed() {
-      return this.integrityItems.filter(item => item.pass).length
+      return this.integrityItems.filter(item => item.pass || item.optional).length
     },
     integrityClass() {
       return this.integrityPassed === this.integrityItems.length ? 'is-success' : 'is-warning'
@@ -155,8 +156,14 @@ export default {
   methods: {
     formatAmount,
     formatTerm,
+    integrityIconClass(item) {
+      if (item.pass) {
+        return 'el-icon-circle-check is-pass'
+      }
+      return item.optional ? 'el-icon-info is-optional' : 'el-icon-warning-outline is-fail'
+    },
     failedLabels() {
-      return this.integrityItems.filter(item => !item.pass).map(item => this.$t(item.labelKey))
+      return this.integrityItems.filter(item => !item.pass && !item.optional).map(item => this.$t(item.labelKey))
     }
   }
 }
@@ -194,6 +201,14 @@ export default {
       &.is-fail {
         color: #e6a23c;
       }
+
+      &.is-optional {
+        color: #c0c4cc;
+      }
+    }
+
+    span.is-optional {
+      color: #909399;
     }
   }
 
