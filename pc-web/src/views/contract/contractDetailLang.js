@@ -45,6 +45,14 @@ export const messages = {
       contractArea: 'Contract Area',
       searchPlaceholder: 'Please enter room number like 1-1-1'
     },
+    contractDetailShop: {
+      shopNum: 'Shop Number',
+      location: 'Location',
+      area: 'Area',
+      rent: 'Rent',
+      shopStatus: 'Shop Status',
+      empty: 'No related shop'
+    },
     contractDetailFile: {
       relatedFiles: 'Related Files'
     },
@@ -205,6 +213,14 @@ export const messages = {
       contractArea: '合同面积',
       searchPlaceholder: '请输入房屋编号 楼栋-单元-房屋 如1-1-1'
     },
+    contractDetailShop: {
+      shopNum: '商铺编号',
+      location: '坐落位置',
+      area: '面积',
+      rent: '租金',
+      shopStatus: '商铺状态',
+      empty: '暂无关联商铺'
+    },
     contractDetailFile: {
       relatedFiles: '相关附件'
     },
@@ -364,6 +380,14 @@ contractDetailReceipt: {
       businessAcceptance: '業務受理',
       contractArea: '合同面積',
       searchPlaceholder: '請輸入房屋編號 樓棟-單元-房屋 如1-1-1'
+    },
+    contractDetailShop: {
+      shopNum: '商鋪編號',
+      location: '坐落位置',
+      area: '面積',
+      rent: '租金',
+      shopStatus: '商鋪狀態',
+      empty: '暫無關聯商鋪'
     },
     contractDetailFile: {
       relatedFiles: '相關附件'

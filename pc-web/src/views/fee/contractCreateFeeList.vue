@@ -21,18 +21,33 @@
 
     <div slot="content">
       <div class="filter-container">
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-input v-model="contractCreateFeeInfo.conditions.contractNameLike"
+        <el-row :gutter="10">
+          <el-col :span="4">
+            <el-input v-model="contractCreateFeeInfo.conditions.contractNameLike" style="width: 150px"
               :placeholder="$t('contractCreateFee.enterContractName')" clearable
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
-          <el-col :span="6">
-            <el-input v-model="contractCreateFeeInfo.conditions.bContacts"
+          <el-col :span="4">
+            <el-input v-model="contractCreateFeeInfo.conditions.bContacts" style="width: 150px"
               :placeholder="$t('contractCreateFee.enterPartyB')" clearable
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="4">
+            <el-input v-model="contractCreateFeeInfo.conditions.ownerName" style="width: 150px"
+              :placeholder="$t('contractCreateFee.enterOwnerName')" clearable
+              @keyup.enter.native="_queryContract"></el-input>
+          </el-col>
+          <el-col :span="4">
+            <el-input v-model="contractCreateFeeInfo.conditions.roomNum" style="width: 150px"
+              :placeholder="$t('contractCreateFee.enterRoomNum')" clearable
+              @keyup.enter.native="_queryContract"></el-input>
+          </el-col>
+          <el-col :span="4">
+            <el-input v-model="contractCreateFeeInfo.conditions.shopNum" style="width: 150px"
+              :placeholder="$t('contractCreateFee.enterShopNum')" clearable
+              @keyup.enter.native="_queryContract"></el-input>
+          </el-col>
+          <el-col :span="4" class="filter-buttons">
             <el-button type="primary" size="small" @click="_queryContract">
               {{ $t('common.query') }}
             </el-button>
@@ -47,6 +62,14 @@
         <el-tab-pane :label="$t('contractCreateFee.contractFee')" name="simplifyPayerObjFee">
           <simplify-contract-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyPayerObjFee'"
             ref="simplifyPayerObjFee" :key="'simplifyPayerObjFee' + contractCreateFeeInfo.contractId"></simplify-contract-fee>
+        </el-tab-pane>
+        <el-tab-pane :label="$t('contractCreateFee.relRoomFee')" name="relRoomFee">
+          <contract-room-fee v-if="contractCreateFeeInfo._currentTab === 'relRoomFee'" ref="relRoomFee"
+            :key="'relRoomFee' + contractCreateFeeInfo.contractId"></contract-room-fee>
+        </el-tab-pane>
+        <el-tab-pane :label="$t('contractCreateFee.relShopFee')" name="relShopFee">
+          <contract-shop-fee v-if="contractCreateFeeInfo._currentTab === 'relShopFee'" ref="relShopFee"
+            :key="'relShopFee' + contractCreateFeeInfo.contractId"></contract-shop-fee>
         </el-tab-pane>
         <el-tab-pane :label="$t('contractCreateFee.paymentHistory')" name="simplifyHisFee">
           <simplify-his-fee v-if="contractCreateFeeInfo._currentTab === 'simplifyHisFee'" ref="simplifyHisFee"
@@ -63,6 +86,10 @@
         <el-tab-pane :label="$t('contractCreateFee.contractRooms')" name="contractDetailRoom">
           <contract-detail-room v-if="contractCreateFeeInfo._currentTab === 'contractDetailRoom'" ref="contractDetailRoom"
             :key="'contractDetailRoom' + contractCreateFeeInfo.contractId"></contract-detail-room>
+        </el-tab-pane>
+        <el-tab-pane :label="$t('contractCreateFee.contractShops')" name="contractDetailShop">
+          <contract-detail-shop v-if="contractCreateFeeInfo._currentTab === 'contractDetailShop'" ref="contractDetailShop"
+            :key="'contractDetailShop' + contractCreateFeeInfo.contractId"></contract-detail-shop>
         </el-tab-pane>
         <el-tab-pane v-if="hasPrivilege('502020092373407363')" :label="$t('contractCreateFee.reprintReceipt')"
           name="simplifyFeeReceipt">
@@ -90,6 +117,9 @@ import SimplifyHisFee from '@/components/fee/simplifyHisFee'
 import PrePayFeeDetail from '@/components/fee/prePayFeeDetail'
 import CarDetailOwner from '@/components/fee/carDetailOwner'
 import ContractDetailRoom from '@/components/contract/contractDetailRoom'
+import ContractDetailShop from '@/components/contract/contractDetailShop'
+import ContractRoomFee from '@/components/fee/contractRoomFee'
+import ContractShopFee from '@/components/fee/contractShopFee'
 import SimplifyFeeReceipt from '@/components/fee/simplifyFeeReceipt'
 import DeleteFee from '@/components/fee/deleteFee'
 import EditFee from '@/components/fee/editFee'
@@ -109,6 +139,9 @@ export default {
     PrePayFeeDetail,
     CarDetailOwner,
     ContractDetailRoom,
+    ContractDetailShop,
+    ContractRoomFee,
+    ContractShopFee,
     SimplifyFeeReceipt,
     DeleteFee,
     EditFee,
@@ -133,6 +166,9 @@ export default {
           contractCode: '',
           contractNameLike: '',
           bContacts: '',
+          ownerName: '',
+          roomNum: '',
+          shopNum: '',
           state: CONTRACT_STATE.EFFECTIVE
         }
       }
@@ -218,6 +254,18 @@ export default {
       }
       if (tabName === 'contractDetailRoom') {
         return {
+          contractId: params.contractId,
+          payerObjType: '3333'
+        }
+      }
+      if (tabName === 'contractDetailShop') {
+        return {
+          contractId: params.contractId,
+          payerObjType: '4444'
+        }
+      }
+      if (tabName === 'relRoomFee' || tabName === 'relShopFee') {
+        return {
           contractId: params.contractId
         }
       }
@@ -237,6 +285,9 @@ export default {
       this.contractCreateFeeInfo.conditions.contractCode = ''
       this.contractCreateFeeInfo.conditions.contractNameLike = ''
       this.contractCreateFeeInfo.conditions.bContacts = ''
+      this.contractCreateFeeInfo.conditions.ownerName = ''
+      this.contractCreateFeeInfo.conditions.roomNum = ''
+      this.contractCreateFeeInfo.conditions.shopNum = ''
       this.contractCreateFeeInfo.conditions.state = CONTRACT_STATE.EFFECTIVE
       this._queryContract()
     },
@@ -248,6 +299,14 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.filter-buttons {
+  white-space: nowrap;
+}
+
+::v-deep .el-tabs__nav-scroll {
+  overflow-x: auto;
+}
+
 .contract-tree-panel {
   height: 100%;
 }

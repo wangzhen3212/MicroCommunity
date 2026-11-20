@@ -149,6 +149,8 @@ public class ContractRoomInnerServiceSMOImpl extends BaseServiceSMO implements I
                     continue;
                 }
                 contractRoomDto.setCommunityId(tmpShopDto.getCommunityId());
+                contractRoomDto.setShopNum(tmpShopDto.getShopNum());
+                contractRoomDto.setLocationName(tmpShopDto.getLocationName());
                 contractRoomDto.setRoomName(StringUtil.isEmpty(tmpShopDto.getShopNum())
                         ? tmpShopDto.getLocationName() : tmpShopDto.getShopNum());
                 contractRoomDto.setBuiltUpArea(tmpShopDto.getBuiltUpArea());

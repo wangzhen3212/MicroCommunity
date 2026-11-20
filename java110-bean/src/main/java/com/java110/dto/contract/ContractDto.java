@@ -155,6 +155,10 @@ public class ContractDto extends PageDto implements Serializable {
      */
     private String searchText;
 
+    private String ownerName;
+    private String roomNum;
+    private String shopNum;
+
     private List<ContractAttrDto> attrs;
 
     public String getaLink() {
@@ -685,5 +689,29 @@ public class ContractDto extends PageDto implements Serializable {
 
     public void setSearchText(String searchText) {
         this.searchText = searchText;
+    }
+
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+    }
+
+    public String getRoomNum() {
+        return roomNum;
+    }
+
+    public void setRoomNum(String roomNum) {
+        this.roomNum = roomNum;
+    }
+
+    public String getShopNum() {
+        return shopNum;
+    }
+
+    public void setShopNum(String shopNum) {
+        this.shopNum = shopNum;
     }
 }

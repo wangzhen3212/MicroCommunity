@@ -39,7 +39,23 @@ export const messages = {
       owner: 'Owner',
       contractRooms: 'Contract Rooms',
       reprintReceipt: 'Reprint Receipt',
-      emptyContract: 'Please add a contract first'
+      emptyContract: 'Please add a contract first',
+      enterOwnerName: 'Enter owner name',
+      enterRoomNum: 'Enter room number',
+      enterShopNum: 'Enter shop number',
+      contractShops: 'Contract Shops',
+      relRoomFee: 'Related Room Fees',
+      relShopFee: 'Related Shop Fees'
+    },
+    contractRoomFee: {
+      selectRoom: 'Please select a room',
+      payment: 'Payment',
+      noRoom: 'No related room for this contract'
+    },
+    contractShopFee: {
+      selectShop: 'Please select a shop',
+      payment: 'Payment',
+      noShop: 'No related shop for this contract'
     },
     contractDetailFee: {
       temporaryFee: 'Temporary Fee',
@@ -191,7 +207,23 @@ export const messages = {
       owner: '业主',
       contractRooms: '合同房屋',
       reprintReceipt: '补打收据',
-      emptyContract: '请先添加合同'
+      emptyContract: '请先添加合同',
+      enterOwnerName: '请输入业主名称',
+      enterRoomNum: '请输入房屋编号',
+      enterShopNum: '请输入商铺编号',
+      contractShops: '合同商铺',
+      relRoomFee: '关联房屋费用',
+      relShopFee: '关联商铺费用'
+    },
+    contractRoomFee: {
+      selectRoom: '请选择房屋',
+      payment: '缴费',
+      noRoom: '该合同暂无关联房屋'
+    },
+    contractShopFee: {
+      selectShop: '请选择商铺',
+      payment: '缴费',
+      noShop: '该合同暂无关联商铺'
     },
     contractDetailFee: {
       temporaryFee: '临时费用',
@@ -343,7 +375,23 @@ note: '注：批量创建的费用在合同收费的查看费用中显示'
       owner: '業主',
       contractRooms: '合同房屋',
       reprintReceipt: '補打收據',
-      emptyContract: '請先添加合同'
+      emptyContract: '請先添加合同',
+      enterOwnerName: '請輸入業主名稱',
+      enterRoomNum: '請輸入房屋編號',
+      enterShopNum: '請輸入商鋪編號',
+      contractShops: '合同商鋪',
+      relRoomFee: '關聯房屋費用',
+      relShopFee: '關聯商鋪費用'
+    },
+    contractRoomFee: {
+      selectRoom: '請選擇房屋',
+      payment: '繳費',
+      noRoom: '該合同暫無關聯房屋'
+    },
+    contractShopFee: {
+      selectShop: '請選擇商鋪',
+      payment: '繳費',
+      noShop: '該合同暫無關聯商鋪'
     },
     contractDetailFee: {
       temporaryFee: '臨時費用',

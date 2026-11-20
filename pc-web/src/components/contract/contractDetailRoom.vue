@@ -57,6 +57,7 @@ export default {
       contractDetailRoomInfo: {
         rooms: [],
         contractId: '',
+        payerObjType: '3333',
         roomNum: '',
         totalArea: '0'
       },
@@ -70,11 +71,13 @@ export default {
   methods: {
     open(data) {
       this.contractDetailRoomInfo.contractId = data.contractId
+      this.contractDetailRoomInfo.payerObjType = data.payerObjType || '3333'
       this._loadContractDetailRoomData(1, this.pagination.pageSize)
     },
     _loadContractDetailRoomData(page, row) {
       const params = {
         contractId: this.contractDetailRoomInfo.contractId,
+        payerObjType: this.contractDetailRoomInfo.payerObjType,
         page: page || 1,
         row: row || 10
       }

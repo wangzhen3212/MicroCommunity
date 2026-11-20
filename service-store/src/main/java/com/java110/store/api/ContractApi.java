@@ -1057,6 +1057,7 @@ public class ContractApi {
     public ResponseEntity<String> queryContractRoom(@RequestHeader(value = "store-id") String storeId,
                                                     @RequestParam(value = "communityId") String communityId,
                                                     @RequestParam(value = "contractId", required = false) String contractId,
+                                                    @RequestParam(value = "payerObjType", required = false) String payerObjType,
                                                     @RequestParam(value = "page") int page,
                                                     @RequestParam(value = "row") int row) {
         Assert.hasLength(communityId, "必填，请填写小区信息");
@@ -1066,6 +1067,7 @@ public class ContractApi {
         contractRoomDto.setStoreId(storeId);
         contractRoomDto.setCommunityId(communityId);
         contractRoomDto.setContractId(contractId);
+        contractRoomDto.setPayerObjType(payerObjType);
         return getContractRoomBMOImpl.get(contractRoomDto);
     }
 

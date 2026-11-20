@@ -185,6 +185,20 @@
         <if test="endTimeEnd !=null and endTimeEnd != ''">
             and t.end_time &lt;= #{endTimeEnd}
         </if>
+        <if test="ownerName !=null and ownerName != ''">
+            and exists (select 1 from contract_room cr where cr.contract_id = t.contract_id and cr.status_cd = '0'
+            and cr.owner_name like concat('%', #{ownerName}, '%'))
+        </if>
+        <if test="roomNum !=null and roomNum != ''">
+            and exists (select 1 from contract_room cr where cr.contract_id = t.contract_id and cr.status_cd = '0'
+            and ifnull(cr.payer_obj_type, '3333') = '3333'
+            and cr.room_name like concat('%', #{roomNum}, '%'))
+        </if>
+        <if test="shopNum !=null and shopNum != ''">
+            and exists (select 1 from contract_room cr where cr.contract_id = t.contract_id and cr.status_cd = '0'
+            and cr.payer_obj_type = '4444'
+            and cr.room_name like concat('%', #{shopNum}, '%'))
+        </if>
         order by t.create_time desc
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
@@ -439,6 +453,20 @@
         </if>
         <if test="endTimeEnd !=null and endTimeEnd != ''">
             and t.end_time &lt;= #{endTimeEnd}
+        </if>
+        <if test="ownerName !=null and ownerName != ''">
+            and exists (select 1 from contract_room cr where cr.contract_id = t.contract_id and cr.status_cd = '0'
+            and cr.owner_name like concat('%', #{ownerName}, '%'))
+        </if>
+        <if test="roomNum !=null and roomNum != ''">
+            and exists (select 1 from contract_room cr where cr.contract_id = t.contract_id and cr.status_cd = '0'
+            and ifnull(cr.payer_obj_type, '3333') = '3333'
+            and cr.room_name like concat('%', #{roomNum}, '%'))
+        </if>
+        <if test="shopNum !=null and shopNum != ''">
+            and exists (select 1 from contract_room cr where cr.contract_id = t.contract_id and cr.status_cd = '0'
+            and cr.payer_obj_type = '4444'
+            and cr.room_name like concat('%', #{shopNum}, '%'))
         </if>
     </select>
 

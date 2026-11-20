@@ -24,6 +24,9 @@ public class ContractRoomDto extends RoomDto implements Serializable {
     private String roomId;
     private String roomName;
     private String payerObjType;
+    private String shopNum;
+    private String locationName;
+
 
 
 
@@ -103,6 +106,23 @@ public class ContractRoomDto extends RoomDto implements Serializable {
     public void setPayerObjType(String payerObjType) {
         this.payerObjType = payerObjType;
     }
+
+    public String getShopNum() {
+        return shopNum;
+    }
+
+    public void setShopNum(String shopNum) {
+        this.shopNum = shopNum;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
+    }
+
 
 
 
