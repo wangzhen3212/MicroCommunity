@@ -21,29 +21,29 @@
 
     <div slot="content">
       <div class="filter-container">
-        <el-row :gutter="10">
+        <el-row :gutter="10" >
           <el-col :span="4">
-            <el-input v-model="contractCreateFeeInfo.conditions.contractNameLike" style="width: 150px"
+            <el-input v-model="contractCreateFeeInfo.conditions.contractNameLike" 
               :placeholder="$t('contractCreateFee.enterContractName')" clearable
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
           <el-col :span="4">
-            <el-input v-model="contractCreateFeeInfo.conditions.bContacts" style="width: 150px"
+            <el-input v-model="contractCreateFeeInfo.conditions.bContacts" 
               :placeholder="$t('contractCreateFee.enterPartyB')" clearable
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
           <el-col :span="4">
-            <el-input v-model="contractCreateFeeInfo.conditions.ownerName" style="width: 150px"
+            <el-input v-model="contractCreateFeeInfo.conditions.ownerName" 
               :placeholder="$t('contractCreateFee.enterOwnerName')" clearable
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
           <el-col :span="4">
-            <el-input v-model="contractCreateFeeInfo.conditions.roomNum" style="width: 150px"
+            <el-input v-model="contractCreateFeeInfo.conditions.roomNum"
               :placeholder="$t('contractCreateFee.enterRoomNum')" clearable
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
           <el-col :span="4">
-            <el-input v-model="contractCreateFeeInfo.conditions.shopNum" style="width: 150px"
+            <el-input v-model="contractCreateFeeInfo.conditions.shopNum" 
               :placeholder="$t('contractCreateFee.enterShopNum')" clearable
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
