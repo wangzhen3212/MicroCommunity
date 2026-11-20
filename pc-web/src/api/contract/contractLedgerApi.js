@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 合同台账统计（总数/分类计数/生效数/待审数/总金额/覆盖房屋数）
 export function queryContractStatistics(params) {
@@ -6,7 +7,10 @@ export function queryContractStatistics(params) {
     request({
       url: '/contract.listContractStatistics',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -26,7 +30,10 @@ export function exportContracts(params) {
     request({
       url: '/contract.exportContracts',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -46,7 +53,10 @@ export function batchSubmitContract(data) {
     request({
       url: '/contract.batchSubmitContract',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -66,7 +76,10 @@ export function batchStopContract(data) {
     request({
       url: '/contract.batchStopContract',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

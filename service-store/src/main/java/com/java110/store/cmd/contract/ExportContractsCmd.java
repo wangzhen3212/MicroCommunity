@@ -9,6 +9,7 @@ import com.java110.core.event.cmd.CmdEvent;
 import com.java110.dto.contract.ContractDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
@@ -51,6 +52,7 @@ public class ExportContractsCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -108,6 +110,7 @@ public class ExportContractsCmd extends Cmd {
     private List<String[]> buildPerformanceRows(JSONObject reqJson, String storeId) {
         Map<String, Object> info = new HashMap<>();
         info.put("storeId", storeId);
+        info.put("communityId", reqJson.getString("communityId"));
         info.put("page", -1);
         if (!StringUtil.isEmpty(reqJson.getString("category"))) {
             info.put("category", reqJson.getString("category"));
@@ -139,6 +142,7 @@ public class ExportContractsCmd extends Cmd {
     private List<String[]> buildRemindRows(JSONObject reqJson, String storeId) {
         Map<String, Object> info = new HashMap<>();
         info.put("storeId", storeId);
+        info.put("communityId", reqJson.getString("communityId"));
         info.put("page", -1);
         info.put("days", StringUtil.isEmpty(reqJson.getString("days")) ? DEFAULT_DAYS : reqJson.getString("days"));
         if (!StringUtil.isEmpty(reqJson.getString("category"))) {

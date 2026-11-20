@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 查询合同变更任务列表
 export function queryContractChangeTask(params) {
@@ -22,7 +23,10 @@ export function needAuditContractPlan(data) {
     request({
       url: '/contract/needAuditContractPlan',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       resolve(res)

@@ -101,6 +101,7 @@ public class ContractDto extends PageDto implements Serializable {
     private String nextUserId;
 
     private String communityId;
+    private String[] communityIds;
     private String audit;
 
     private String hasAudit;
@@ -508,6 +509,14 @@ public class ContractDto extends PageDto implements Serializable {
 
     public void setCommunityId(String communityId) {
         this.communityId = communityId;
+    }
+
+    public String[] getCommunityIds() {
+        return communityIds;
+    }
+
+    public void setCommunityIds(String[] communityIds) {
+        this.communityIds = communityIds;
     }
 
     public List<ContractAttrDto> getAttrs() {

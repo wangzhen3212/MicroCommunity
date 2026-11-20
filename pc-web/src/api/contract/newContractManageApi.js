@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 查询合同列表
 export function getContractList(params) {
@@ -6,7 +7,10 @@ export function getContractList(params) {
     request({
       url: '/contract/queryContract',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       resolve(res)
@@ -23,7 +27,10 @@ export function updateContract(data) {
 request({
       url: '/contract.updateContract',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -43,7 +50,10 @@ export function deleteContract(data) {
 request({
       url: '/contract.deleteContract',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

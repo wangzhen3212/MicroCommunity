@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 查询合同详情
 export function queryContract(params) {
@@ -6,7 +7,10 @@ export function queryContract(params) {
     request({
       url: '/contract/queryContract',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
 const res = response.data
       resolve(res)
@@ -22,7 +26,10 @@ export function getContractRooms(params) {
     request({
       url: '/contract/queryContractRoom',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
 const res = response.data
       resolve(res)
@@ -38,7 +45,10 @@ export function getContractFiles(params) {
     request({
       url: '/contract/getContractFiles',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
 const res = response.data
       resolve(res)
@@ -54,7 +64,10 @@ export function getContractFees(params) {
     request({
       url: '/contract/getContractFees',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
 const res = response.data
       resolve(res)
@@ -70,7 +83,10 @@ export function getContractHisFees(params) {
     request({
       url: '/contract/getContractHisFees',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
 const res = response.data
       resolve(res)

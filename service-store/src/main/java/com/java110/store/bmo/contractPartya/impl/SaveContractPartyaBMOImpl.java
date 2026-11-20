@@ -31,6 +31,7 @@ public class SaveContractPartyaBMOImpl implements ISaveContractPartyaBMO {
             ContractPartyaPo clearPo = new ContractPartyaPo();
             clearPo.setPartyaId(contractPartyaPo.getPartyaId());
             clearPo.setStoreId(contractPartyaPo.getStoreId());
+            clearPo.setCommunityId(contractPartyaPo.getCommunityId());
             contractPartyaInnerServiceSMOImpl.clearDefaultContractPartya(clearPo);
         }
         int flag = contractPartyaInnerServiceSMOImpl.saveContractPartya(contractPartyaPo);

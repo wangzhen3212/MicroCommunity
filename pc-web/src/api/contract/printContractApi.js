@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 /**
  * 获取合同打印模板
@@ -10,7 +11,10 @@ export function getPrintContractTemplate(params) {
     request({
       url: '/contract/printContractTemplate',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       resolve(res)

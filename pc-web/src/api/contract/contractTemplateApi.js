@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 合同模板卡片列表
 export function listContractTemplates(params) {
@@ -6,7 +7,10 @@ export function listContractTemplates(params) {
     request({
       url: '/contract.listContractTemplates',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -29,7 +33,10 @@ export function updateContractTemplate(data) {
     request({
       url: '/contract.updateContractTemplate',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -49,7 +56,10 @@ export function queryContractTypeTemplate(params) {
     request({
       url: '/contract/queryContractTypeTemplate',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -69,7 +79,10 @@ export function saveContractTypeTemplate(data) {
     request({
       url: '/contract/saveContractTypeTemplate',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -89,7 +102,10 @@ export function deleteContractTypeTemplate(data) {
     request({
       url: '/contract/deleteContractTypeTemplate',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -109,7 +125,10 @@ export function printContractTemplate(params) {
     request({
       url: '/contract/printContractTemplate',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       resolve(res)

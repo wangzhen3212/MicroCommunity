@@ -13,6 +13,7 @@ public class ContractPartyaPo implements Serializable {
     private String partyaId;
     private String statusCd = "0";
     private String storeId;
+    private String communityId;
 
     private String shortName;
     private String creditCode;
@@ -70,6 +71,14 @@ public class ContractPartyaPo implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getShortName() {

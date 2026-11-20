@@ -28,6 +28,7 @@ public class QueryContractAuditFlowCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "bizId", "请求报文中未包含业务ID");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
         if (StringUtil.isEmpty(reqJson.getString("bizType"))) {
             reqJson.put("bizType", ContractAuditLogDto.BIZ_TYPE_CONTRACT);
         }
@@ -37,7 +38,7 @@ public class QueryContractAuditFlowCmd extends Cmd {
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
         Map<String, Object> data = contractAuditBMOImpl.queryAuditFlow(reqJson.getString("bizType"),
-                reqJson.getString("bizId"), storeId);
+                reqJson.getString("bizId"), storeId, reqJson.getString("communityId"));
         context.setResponseEntity(ResultVo.createResponseEntity(data));
     }
 }

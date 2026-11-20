@@ -8,10 +8,10 @@
     <!-- 保存合同变更明细信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractChangePlanDetailInfo" parameterType="Map">
         insert into contract_change_plan_detail(
-        a_link,a_contacts,amount,detail_id,store_id,operator,signing_time,b_contacts,party_a,b_link,
+        a_link,a_contacts,amount,detail_id,store_id,community_id,operator,signing_time,b_contacts,party_a,b_link,
         party_b,contract_id,obj_id,plan_id,contract_name,start_time,end_time,contract_code,obj_type,operator_link,operate
         ) values (
-        #{aLink},#{aContacts},#{amount},#{detailId},#{storeId},#{operator},#{signingTime},#{bContacts},
+        #{aLink},#{aContacts},#{amount},#{detailId},#{storeId},ifnull(#{communityId}, '-1'),#{operator},#{signingTime},#{bContacts},
         #{partyA},#{bLink},#{partyB},#{contractId},#{objId},#{planId},#{contractName},#{startTime},#{endTime},
         #{contractCode},#{objType},#{operatorLink},#{operate}
         )
@@ -21,7 +21,7 @@
     <!-- 查询合同变更明细信息 add by wuxw 2018-07-03 -->
     <select id="getContractChangePlanDetailInfo" parameterType="Map" resultType="Map">
         select t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts aContacts,t.amount,t.detail_id,t.detail_id detailId,t.store_id,t.store_id
-        storeId,t.operator,t.signing_time,t.signing_time signingTime,t.b_contacts,t.b_contacts
+        storeId,t.community_id,t.community_id communityId,t.operator,t.signing_time,t.signing_time signingTime,t.b_contacts,t.b_contacts
         bContacts,t.party_a,t.party_a partyA,t.b_link,t.b_link bLink,t.party_b,t.party_b
         partyB,t.contract_id,t.contract_id contractId,t.obj_id,t.obj_id objId,t.plan_id,t.plan_id
         planId,t.contract_name,t.contract_name contractName,t.start_time,t.start_time startTime,t.end_time,t.end_time
@@ -49,6 +49,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="operator !=null and operator != ''">
             and t.operator= #{operator}
@@ -125,6 +128,9 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         <if test="operator !=null and operator != ''">
             , t.operator= #{operator}
         </if>
@@ -175,6 +181,9 @@
         <if test="detailId !=null and detailId != ''">
             and t.detail_id= #{detailId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
 
     </update>
 
@@ -197,6 +206,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="operator !=null and operator != ''">
             and t.operator= #{operator}

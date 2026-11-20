@@ -6,15 +6,15 @@
     <!-- 审批留痕：一行 = 一次审核动作（通过 / 驳回） -->
     <insert id="saveContractAuditLogInfo" parameterType="Map">
         insert into contract_audit_log(log_id, biz_type, biz_id, step, result, opinion, auditor_id, auditor_name,
-                                       audit_time, store_id, status_cd, create_time)
+                                       audit_time, store_id, community_id, status_cd, create_time)
         values (#{logId}, ifnull(#{bizType}, '1'), #{bizId}, #{step}, #{result}, #{opinion},
-                #{auditorId}, #{auditorName}, ifnull(#{auditTime}, now()), #{storeId}, '0', now())
+                #{auditorId}, #{auditorName}, ifnull(#{auditTime}, now()), #{storeId}, ifnull(#{communityId}, '-1'), '0', now())
     </insert>
 
     <select id="queryContractAuditLogs" parameterType="Map" resultType="Map">
         select t.log_id logId, t.biz_type bizType, t.biz_id bizId, t.step step, t.result result,
         t.opinion opinion, t.auditor_id auditorId, t.auditor_name auditorName, t.audit_time auditTime,
-        t.store_id storeId, t.status_cd statusCd, t.create_time createTime
+        t.store_id storeId, t.community_id communityId, t.status_cd statusCd, t.create_time createTime
         from contract_audit_log t
         where 1 = 1
         <if test="logId != null and logId != ''">
@@ -43,6 +43,9 @@
         </if>
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
         <if test="statusCd != null and statusCd != ''">
             and t.status_cd = #{statusCd}
@@ -80,6 +83,9 @@
         </if>
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
         <if test="statusCd != null and statusCd != ''">
             and t.status_cd = #{statusCd}

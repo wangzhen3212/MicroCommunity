@@ -16,6 +16,7 @@ public class ContractRemindLogPo implements Serializable {
     private String receiveTel;
     private String content;
     private String storeId;
+    private String communityId;
     private String statusCd = "0";
 
     public String getLogId() {
@@ -80,6 +81,14 @@ public class ContractRemindLogPo implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getStatusCd() {

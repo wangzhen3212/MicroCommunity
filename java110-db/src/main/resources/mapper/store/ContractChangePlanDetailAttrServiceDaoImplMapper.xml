@@ -11,9 +11,9 @@
     <!-- 保存合同变更属性信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractChangePlanDetailAttrInfo" parameterType="Map">
         insert into contract_change_plan_detail_attr(
-attr_id,contract_id,detail_id,spec_cd,store_id,value
+attr_id,contract_id,detail_id,spec_cd,store_id,community_id,value
 ) values (
-#{attrId},#{contractId},#{detailId},#{specCd},#{storeId},#{value}
+#{attrId},#{contractId},#{detailId},#{specCd},#{storeId},ifnull(#{communityId}, '-1'),#{value}
 )
     </insert>
 
@@ -21,7 +21,7 @@ attr_id,contract_id,detail_id,spec_cd,store_id,value
 
     <!-- 查询合同变更属性信息 add by wuxw 2018-07-03 -->
     <select id="getContractChangePlanDetailAttrInfo" parameterType="Map" resultType="Map">
-        select  t.attr_id,t.attr_id attrId,t.contract_id,t.contract_id contractId,t.detail_id,t.detail_id detailId,t.spec_cd,t.spec_cd specCd,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id storeId,t.value 
+        select  t.attr_id,t.attr_id attrId,t.contract_id,t.contract_id contractId,t.detail_id,t.detail_id detailId,t.spec_cd,t.spec_cd specCd,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id storeId,t.community_id,t.community_id communityId,t.value 
 from contract_change_plan_detail_attr t 
 where 1 =1 
 <if test="attrId !=null and attrId != ''">
@@ -41,6 +41,9 @@ where 1 =1
 </if> 
 <if test="storeId !=null and storeId != ''">
    and t.store_id= #{storeId}
+</if> 
+<if test="communityId !=null and communityId != ''">
+   and t.community_id= #{communityId}
 </if> 
 <if test="value !=null and value != ''">
    and t.value= #{value}
@@ -73,11 +76,17 @@ order by t.create_time desc
 <if test="storeId !=null and storeId != ''">
 , t.store_id= #{storeId}
 </if> 
+<if test="communityId !=null and communityId != ''">
+, t.community_id= #{communityId}
+</if> 
 <if test="value !=null and value != ''">
 , t.value= #{value}
 </if> 
  where 1=1 <if test="attrId !=null and attrId != ''">
 and t.attr_id= #{attrId}
+</if> 
+<if test="communityId !=null and communityId != ''">
+and t.community_id= #{communityId}
 </if> 
 
     </update>
@@ -104,6 +113,9 @@ where 1 =1
 </if> 
 <if test="storeId !=null and storeId != ''">
    and t.store_id= #{storeId}
+</if> 
+<if test="communityId !=null and communityId != ''">
+   and t.community_id= #{communityId}
 </if> 
 <if test="value !=null and value != ''">
    and t.value= #{value}

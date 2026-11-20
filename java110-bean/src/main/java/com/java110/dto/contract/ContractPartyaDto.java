@@ -17,6 +17,7 @@ public class ContractPartyaDto extends PageDto implements Serializable {
     private String aContacts;
     private String partyaId;
     private String storeId;
+    private String communityId;
 
     private String shortName;
     private String creditCode;
@@ -79,6 +80,14 @@ public class ContractPartyaDto extends PageDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getShortName() {

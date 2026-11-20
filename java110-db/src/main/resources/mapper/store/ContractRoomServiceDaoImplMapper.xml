@@ -8,9 +8,9 @@
     <!-- 保存合同房屋信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractRoomInfo" parameterType="Map">
         insert into contract_room(
-        cr_id,owner_name,contract_id,owner_id,store_id,room_id,room_name,payer_obj_type
+        cr_id,owner_name,contract_id,owner_id,store_id,community_id,room_id,room_name,payer_obj_type
         ) values (
-        #{crId},#{ownerName},#{contractId},#{ownerId},#{storeId},#{roomId},#{roomName},ifnull(#{payerObjType},'3333')
+        #{crId},#{ownerName},#{contractId},#{ownerId},#{storeId},ifnull(#{communityId}, '-1'),#{roomId},#{roomName},ifnull(#{payerObjType},'3333')
         )
     </insert>
 
@@ -18,7 +18,7 @@
     <!-- 查询合同房屋信息 add by wuxw 2018-07-03 -->
     <select id="getContractRoomInfo" parameterType="Map" resultType="Map">
         select t.cr_id,t.cr_id crId,t.owner_name,t.owner_name ownerName,t.contract_id,t.contract_id contractId,t.status_cd,t.status_cd statusCd,t.owner_id,t.owner_id ownerId,t.store_id,t.store_id
-        storeId,t.room_id,t.room_id roomId,t.room_name,t.room_name roomName,t.payer_obj_type,t.payer_obj_type payerObjType
+        storeId,t.community_id,t.community_id communityId,t.room_id,t.room_id roomId,t.room_name,t.room_name roomName,t.payer_obj_type,t.payer_obj_type payerObjType
         from contract_room t
         where 1 =1
         <if test="crId !=null and crId != ''">
@@ -38,6 +38,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="roomId !=null and roomId != ''">
             and t.room_id= #{roomId}
@@ -79,6 +82,9 @@
         <if test="payerObjType !=null and payerObjType != ''">
             , t.payer_obj_type= #{payerObjType}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         where 1=1
         <if test="crId !=null and crId != ''">
             and t.cr_id= #{crId}
@@ -88,6 +94,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
 
     </update>
@@ -115,6 +124,9 @@
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
         <if test="roomId !=null and roomId != ''">
             and t.room_id= #{roomId}
         </if>
@@ -132,6 +144,9 @@
         <foreach collection="roomIds" item="item" open="(" close=")" separator=",">
             #{item}
         </foreach>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
         group by t.room_id
 
 

@@ -12,6 +12,7 @@ import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.contract.ContractDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
@@ -41,12 +42,14 @@ public class PushContractRemindCmd extends Cmd {
         if (!reqJson.containsKey("contractIds")) {
             throw new CmdException("请求报文中未包含需要提醒的合同");
         }
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
+        String communityId = reqJson.getString("communityId");
         JSONArray contractIds = reqJson.getJSONArray("contractIds");
         if (contractIds == null || contractIds.isEmpty()) {
             throw new CmdException("请求报文中未包含需要提醒的合同");
@@ -60,7 +63,7 @@ public class PushContractRemindCmd extends Cmd {
         for (int i = 0; i < contractIds.size(); i++) {
             String contractId = contractIds.getString(i);
             try {
-                saveRemindLog(contractId, storeId, remindType, channels);
+                saveRemindLog(contractId, storeId, communityId, remindType, channels);
                 successCount++;
             } catch (Exception e) {
                 Map<String, Object> fail = new HashMap<>();
@@ -80,10 +83,11 @@ public class PushContractRemindCmd extends Cmd {
     /**
      * 按渠道逐个留痕（短信通道异常不影响站内信）
      */
-    private void saveRemindLog(String contractId, String storeId, String remindType, List<String> channels) {
+    private void saveRemindLog(String contractId, String storeId, String communityId, String remindType, List<String> channels) {
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(contractId);
         contractDto.setStoreId(storeId);
+        contractDto.setCommunityId(communityId);
         contractDto.setStatusCd("0");
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
         if (contractDtos == null || contractDtos.isEmpty()) {
@@ -101,6 +105,7 @@ public class PushContractRemindCmd extends Cmd {
             info.put("receiveTel", CHANNEL_SMS.equals(channel) ? contract.getOperatorLink() : null);
             info.put("content", content);
             info.put("storeId", storeId);
+            info.put("communityId", communityId);
             contractInnerServiceSMOImpl.saveContractRemindLog(info);
         }
     }

@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 export function getStaffInfo(params) {
   return request({
@@ -117,7 +118,10 @@ export function listAdminContracts(params) {
   return request({
     url: '/contract.queryAdminContract',
     method: 'get',
-    params
+    params: {
+      ...params,
+      communityId: getCommunityId()
+    }
   })
 }
 

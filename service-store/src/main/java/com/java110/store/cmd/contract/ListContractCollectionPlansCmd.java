@@ -37,26 +37,31 @@ public class ListContractCollectionPlansCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含合同ID");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
         String contractId = reqJson.getString("contractId");
+        String communityId = reqJson.getString("communityId");
 
         ContractCollectionPlanDto planDto = new ContractCollectionPlanDto();
         planDto.setContractId(contractId);
+        planDto.setCommunityId(communityId);
         planDto.setStatusCd("0");
         List<ContractCollectionPlanDto> plans = contractCollectionPlanInnerServiceSMOImpl.queryContractCollectionPlans(planDto);
 
         ContractFeeDto feeDto = new ContractFeeDto();
         feeDto.setContractId(contractId);
+        feeDto.setCommunityId(communityId);
         feeDto.setStatusCd("0");
         List<ContractFeeDto> fees = contractFeeInnerServiceSMOImpl.queryContractFees(feeDto);
 
         Map<String, Object> info = new HashMap<>();
         info.put("contractId", contractId);
         info.put("storeId", storeId);
+        info.put("communityId", communityId);
         List<Map> statistics = contractCollectionPlanInnerServiceSMOImpl.queryContractCollectionPlanStatistics(info);
         Map<String, Object> summary = new HashMap<>();
         if (statistics != null && !statistics.isEmpty()) {

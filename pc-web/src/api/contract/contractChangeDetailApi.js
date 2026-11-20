@@ -7,7 +7,10 @@ export function queryContract(params) {
     request({
       url: '/contract/queryContract',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       resolve(response.data)
     }).catch(error => {
@@ -38,7 +41,10 @@ export function queryContractRoom(params) {
     request({
       url: '/contract/queryContractRoom',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       resolve(response.data)
     }).catch(error => {
@@ -100,7 +106,10 @@ export function saveContractChangePlan(data) {
 request({
       url: '/contract/saveContractChangePlan',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

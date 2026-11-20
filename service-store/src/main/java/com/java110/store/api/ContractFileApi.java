@@ -40,9 +40,11 @@ public class ContractFileApi {
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含contractId");
         Assert.hasKeyAndValue(reqJson, "fileRealName", "请求报文中未包含fileRealName");
         Assert.hasKeyAndValue(reqJson, "fileSaveName", "请求报文中未包含fileSaveName");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractFilePo contractFilePo = BeanConvertUtil.covertBean(reqJson, ContractFilePo.class);
+        contractFilePo.setCommunityId(reqJson.getString("communityId"));
         return saveContractFileBMOImpl.save(contractFilePo);
     }
 
@@ -60,9 +62,11 @@ public class ContractFileApi {
         Assert.hasKeyAndValue(reqJson, "fileRealName", "请求报文中未包含fileRealName");
         Assert.hasKeyAndValue(reqJson, "fileSaveName", "请求报文中未包含fileSaveName");
         Assert.hasKeyAndValue(reqJson, "contractFileId", "contractFileId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractFilePo contractFilePo = BeanConvertUtil.covertBean(reqJson, ContractFilePo.class);
+        contractFilePo.setCommunityId(reqJson.getString("communityId"));
         return updateContractFileBMOImpl.update(contractFilePo);
     }
 
@@ -79,6 +83,7 @@ public class ContractFileApi {
         Assert.hasKeyAndValue(reqJson, "contractFileId", "contractFileId不能为空");
 
         ContractFilePo contractFilePo = BeanConvertUtil.covertBean(reqJson, ContractFilePo.class);
+        contractFilePo.setCommunityId(reqJson.getString("communityId"));
         return deleteContractFileBMOImpl.delete(contractFilePo);
     }
 
@@ -91,12 +96,15 @@ public class ContractFileApi {
      */
     @RequestMapping(value = "/queryContractFile", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractFile(@RequestHeader(value = "store-id") String storeId,
+                                                    @RequestParam(value = "communityId") String communityId,
                                                     @RequestParam(value = "contractId", required = false) String contractId,
                                                     @RequestParam(value = "page") int page,
                                                     @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractFileDto contractFileDto = new ContractFileDto();
         contractFileDto.setPage(page);
         contractFileDto.setRow(row);
+        contractFileDto.setCommunityId(communityId);
         contractFileDto.setContractId(contractId);
         return getContractFileBMOImpl.get(contractFileDto);
     }

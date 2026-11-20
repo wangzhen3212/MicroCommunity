@@ -13,6 +13,7 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
 
     private String context;
     private String storeId;
+    private String communityId;
     private String templateId;
     private String templateName;
     private String templateVersion;
@@ -43,6 +44,14 @@ public class ContractTypeTemplateDto extends PageDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public Date getCreateTime() {

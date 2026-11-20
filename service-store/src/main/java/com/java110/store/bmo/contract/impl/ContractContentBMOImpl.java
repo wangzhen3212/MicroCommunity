@@ -42,7 +42,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
     private IContractRoomInnerServiceSMO contractRoomInnerServiceSMOImpl;
 
     @Override
-    public void saveOrUpdateContent(String contractId, String templateId, String content, String templateContent) {
+    public void saveOrUpdateContent(String contractId, String communityId, String templateId, String content, String templateContent) {
         if (StringUtil.isEmpty(contractId)) {
             throw new CmdException("保存合同正文失败，合同ID为空");
         }
@@ -51,6 +51,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
             ContractContentPo contentPo = new ContractContentPo();
             contentPo.setContentId(GenerateCodeFactory.getGeneratorId(PREFIX_CONTENT_ID));
             contentPo.setContractId(contractId);
+            contentPo.setCommunityId(communityId);
             contentPo.setTemplateId(templateId);
             contentPo.setContent(content == null ? "" : content);
             contentPo.setTemplateContent(templateContent == null ? "" : templateContent);
@@ -64,6 +65,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
         ContractContentPo contentPo = new ContractContentPo();
         contentPo.setContentId(contentDto.getContentId());
         contentPo.setContractId(contractId);
+        contentPo.setCommunityId(StringUtil.isEmpty(communityId) ? contentDto.getCommunityId() : communityId);
         contentPo.setTemplateId(templateId);
         contentPo.setContent(content == null ? "" : content);
         contentPo.setTemplateContent(templateContent == null ? "" : templateContent);
@@ -76,11 +78,17 @@ public class ContractContentBMOImpl implements IContractContentBMO {
 
     @Override
     public ContractContentDto getContent(String contractId) {
+        return getContent(contractId, null);
+    }
+
+    @Override
+    public ContractContentDto getContent(String contractId, String communityId) {
         if (StringUtil.isEmpty(contractId)) {
             return null;
         }
         ContractContentDto contentDto = new ContractContentDto();
         contentDto.setContractId(contractId);
+        contentDto.setCommunityId(communityId);
         contentDto.setStatusCd("0");
         List<ContractContentDto> contentDtos = contractContentInnerServiceSMOImpl.queryContractContents(contentDto);
         if (contentDtos == null || contentDtos.isEmpty()) {
@@ -115,8 +123,8 @@ public class ContractContentBMOImpl implements IContractContentBMO {
     }
 
     @Override
-    public String getPrintContent(String contractId, String storeId) {
-        ContractContentDto contentDto = getContent(contractId);
+    public String getPrintContent(String contractId, String storeId, String communityId) {
+        ContractContentDto contentDto = getContent(contractId, communityId);
         if (contentDto == null) {
             return null;
         }
@@ -126,7 +134,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
         if (StringUtil.isEmpty(contentDto.getTemplateContent())) {
             return null;
         }
-        ContractDto contractDto = queryContract(contractId, storeId);
+        ContractDto contractDto = queryContract(contractId, storeId, communityId);
         if (contractDto == null) {
             return null;
         }
@@ -134,11 +142,11 @@ public class ContractContentBMOImpl implements IContractContentBMO {
     }
 
     @Override
-    public void refreshContent(String contractId, String storeId) {
+    public void refreshContent(String contractId, String storeId, String communityId) {
         if (StringUtil.isEmpty(contractId)) {
             return;
         }
-        ContractContentDto contentDto = getContent(contractId);
+        ContractContentDto contentDto = getContent(contractId, communityId);
         if (contentDto == null) {
             logger.warn("合同 {} 无正文记录，跳过正文刷新", contractId);
             return;
@@ -147,7 +155,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
             logger.warn("合同 {} 正文无变量原文，跳过正文刷新", contractId);
             return;
         }
-        ContractDto contractDto = queryContract(contractId, storeId);
+        ContractDto contractDto = queryContract(contractId, storeId, communityId);
         if (contractDto == null) {
             logger.warn("合同 {} 查询不到合同信息，跳过正文刷新", contractId);
             return;
@@ -155,13 +163,14 @@ public class ContractContentBMOImpl implements IContractContentBMO {
         String renderedContent = ContractContentUtil.render(contentDto.getTemplateContent(), buildVariables(contractDto));
         String templateId = StringUtil.isEmpty(contentDto.getTemplateId())
                 ? contractDto.getTemplateId() : contentDto.getTemplateId();
-        saveOrUpdateContent(contractId, templateId, renderedContent, contentDto.getTemplateContent());
+        saveOrUpdateContent(contractId, communityId, templateId, renderedContent, contentDto.getTemplateContent());
     }
 
-    private ContractDto queryContract(String contractId, String storeId) {
+    private ContractDto queryContract(String contractId, String storeId, String communityId) {
         ContractDto contractQueryDto = new ContractDto();
         contractQueryDto.setContractId(contractId);
         contractQueryDto.setStoreId(storeId);
+        contractQueryDto.setCommunityId(communityId);
         contractQueryDto.setStatusCd("0");
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractQueryDto);
         if (contractDtos == null || contractDtos.isEmpty()) {
@@ -177,6 +186,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
         ContractRoomDto contractRoomDto = new ContractRoomDto();
         contractRoomDto.setContractId(contractDto.getContractId());
         contractRoomDto.setStoreId(contractDto.getStoreId());
+        contractRoomDto.setCommunityId(contractDto.getCommunityId());
         contractRoomDto.setStatusCd("0");
         List<ContractRoomDto> contractRoomDtos = contractRoomInnerServiceSMOImpl.queryContractRooms(contractRoomDto);
         if (contractRoomDtos == null || contractRoomDtos.isEmpty()) {

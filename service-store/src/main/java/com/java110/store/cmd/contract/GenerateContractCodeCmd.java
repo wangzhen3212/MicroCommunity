@@ -9,6 +9,7 @@ import com.java110.core.event.cmd.CmdEvent;
 import com.java110.dto.contract.ContractDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
@@ -28,6 +29,7 @@ public class GenerateContractCodeCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override

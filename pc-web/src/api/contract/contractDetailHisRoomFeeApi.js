@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 查询费用明细
 export function queryFeeDetail(params) {
@@ -6,7 +7,10 @@ export function queryFeeDetail(params) {
     request({
       url: '/fee.queryFeeDetail',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
 const res = response.data
       resolve(res)

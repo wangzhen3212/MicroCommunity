@@ -23,6 +23,7 @@ public class ContractFilePo implements Serializable {
     private String fileRealName;
     private String contractFileId;
     private String contractId;
+    private String communityId;
     private String fileSaveName;
     private String statusCd = "0";
     public String getFileRealName() {
@@ -42,6 +43,12 @@ public class ContractFilePo implements Serializable {
     }
     public void setContractId(String contractId) {
         this.contractId = contractId;
+    }
+    public String getCommunityId() {
+        return communityId;
+    }
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
     public String getFileSaveName() {
         return fileSaveName;

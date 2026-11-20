@@ -14,11 +14,12 @@ public interface IContractContentBMO {
      * 保存或更新合同正文，content_version 自增
      *
      * @param contractId      合同ID
+     * @param communityId     小区ID（子表继承主表值）
      * @param templateId      模板ID
      * @param content         渲染后的正文HTML（详情/打印/预览使用）
      * @param templateContent 含变量占位符的正文原文（编辑回显使用）
      */
-    void saveOrUpdateContent(String contractId, String templateId, String content, String templateContent);
+    void saveOrUpdateContent(String contractId, String communityId, String templateId, String content, String templateContent);
 
     /**
      * 按合同查询正文
@@ -27,6 +28,15 @@ public interface IContractContentBMO {
      * @return 正文，未配置返回 null
      */
     ContractContentDto getContent(String contractId);
+
+    /**
+     * 按合同 + 小区查询正文
+     *
+     * @param contractId  合同ID
+     * @param communityId 小区ID
+     * @return 正文，未配置返回 null
+     */
+    ContractContentDto getContent(String contractId, String communityId);
 
     /**
      * 构建正文渲染变量（合同字段 + 金额大写 + 关联房屋）
@@ -39,17 +49,19 @@ public interface IContractContentBMO {
     /**
      * 打印正文：库中正文优先，其次用含变量原文重渲染
      *
-     * @param contractId 合同ID
-     * @param storeId    商户ID
+     * @param contractId  合同ID
+     * @param storeId     商户ID
+     * @param communityId 小区ID
      * @return 可打印正文，均无返回 null
      */
-    String getPrintContent(String contractId, String storeId);
+    String getPrintContent(String contractId, String storeId, String communityId);
 
     /**
      * 按最新合同字段重渲染含变量原文并写回库中正文（content_version 自增）
      *
-     * @param contractId 合同ID
-     * @param storeId    商户ID
+     * @param contractId  合同ID
+     * @param storeId     商户ID
+     * @param communityId 小区ID
      */
-    void refreshContent(String contractId, String storeId);
+    void refreshContent(String contractId, String storeId, String communityId);
 }

@@ -44,6 +44,7 @@ public class QueryAdminOwnerContractCmd extends Cmd {
         super.validatePageInfo(reqJson);
         super.validateAdmin(cmdDataFlowContext);
         Assert.hasKeyAndValue(reqJson,"ownerId","未包含业主ID");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override

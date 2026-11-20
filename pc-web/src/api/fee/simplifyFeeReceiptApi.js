@@ -51,7 +51,10 @@ export function queryContract(params) {
     request({
       url: '/contract/queryContract',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       resolve(response.data)
     }).catch(error => {

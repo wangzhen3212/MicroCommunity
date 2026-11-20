@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 到期提醒清单（剩余天数升序，带提醒记录）
 export function listContractReminds(params) {
@@ -6,7 +7,10 @@ export function listContractReminds(params) {
     request({
       url: '/contract.listContractReminds',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -29,7 +33,10 @@ export function pushContractRemind(data) {
     request({
       url: '/contract.pushContractRemind',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

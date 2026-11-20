@@ -11,6 +11,7 @@ import com.java110.dto.contract.ContractDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.po.contract.ContractPo;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,11 +35,13 @@ public class BatchSubmitContractCmd extends Cmd {
         if (!reqJson.containsKey("contractIds")) {
             throw new CmdException("请求报文中未包含合同");
         }
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
+        String communityId = reqJson.getString("communityId");
         JSONArray contractIds = reqJson.getJSONArray("contractIds");
         if (contractIds == null || contractIds.isEmpty()) {
             throw new CmdException("请求报文中未包含合同");
@@ -49,7 +52,7 @@ public class BatchSubmitContractCmd extends Cmd {
         for (int i = 0; i < contractIds.size(); i++) {
             String contractId = contractIds.getString(i);
             try {
-                submitContract(contractId, storeId);
+                submitContract(contractId, storeId, communityId);
                 successCount++;
             } catch (Exception e) {
                 failList.add(buildFail(contractId, e.getMessage()));
@@ -66,10 +69,11 @@ public class BatchSubmitContractCmd extends Cmd {
     /**
      * 单条提交：草稿/已驳回可提交，直接置为法务校对（state=11）
      */
-    private void submitContract(String contractId, String storeId) {
+    private void submitContract(String contractId, String storeId, String communityId) {
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(contractId);
         contractDto.setStoreId(storeId);
+        contractDto.setCommunityId(communityId);
         contractDto.setStatusCd("0");
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
         if (contractDtos == null || contractDtos.isEmpty()) {
@@ -82,6 +86,7 @@ public class BatchSubmitContractCmd extends Cmd {
 
         ContractPo contractPo = new ContractPo();
         contractPo.setContractId(contractId);
+        contractPo.setCommunityId(communityId);
         contractPo.setState(ContractDto.STATE_AUDIT);
         contractPo.setStatusCd("0");
         int flag = contractInnerServiceSMOImpl.updateContract(contractPo);

@@ -5,10 +5,10 @@
 
     <!-- 保存合同甲方主体信息 -->
     <insert id="saveContractPartyaInfo" parameterType="Map">
-        insert into contract_partya(party_a, a_link, a_contacts, partya_id, store_id,
+        insert into contract_partya(party_a, a_link, a_contacts, partya_id, store_id, community_id,
                                     short_name, credit_code, legal_person, bank_name, bank_account,
                                     contact_person, contact_tel, seal_flag, default_flag)
-        values (#{partyA}, #{aLink}, #{aContacts}, #{partyaId}, #{storeId},
+        values (#{partyA}, #{aLink}, #{aContacts}, #{partyaId}, #{storeId}, ifnull(#{communityId}, '-1'),
                 #{shortName}, #{creditCode}, #{legalPerson}, #{bankName}, #{bankAccount},
                 #{contactPerson}, #{contactTel}, ifnull(#{sealFlag}, '0'), ifnull(#{defaultFlag}, '0'))
     </insert>
@@ -17,6 +17,7 @@
     <select id="getContractPartyaInfo" parameterType="Map" resultType="Map">
         select t.party_a,t.party_a partyA,t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts
         aContacts,t.partya_id,t.partya_id partyaId,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id storeId,
+        t.community_id, t.community_id communityId,
         t.short_name shortName, t.credit_code creditCode, t.legal_person legalPerson, t.bank_name bankName,
         t.bank_account bankAccount, t.contact_person contactPerson, t.contact_tel contactTel,
         ifnull(t.seal_flag,'0') sealFlag, ifnull(t.default_flag,'0') defaultFlag, t.create_time createTime
@@ -49,6 +50,9 @@
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
         order by ifnull(t.default_flag,'0') desc, t.create_time desc
         <if test="page != -1 and page != null ">
             limit #{page}, #{row}
@@ -72,6 +76,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
         </if>
         <if test="shortName !=null and shortName != ''">
             , t.short_name= #{shortName}
@@ -104,6 +111,9 @@
         <if test="partyaId !=null and partyaId != ''">
             and t.partya_id= #{partyaId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
     </update>
 
     <!-- 查询合同甲方主体数量 -->
@@ -132,6 +142,9 @@
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
     </select>
 
     <!-- 清除其它默认主体（保证默认主体唯一） -->
@@ -140,6 +153,9 @@
         where t.status_cd = '0' and ifnull(t.default_flag, '0') = '1'
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
         <if test="partyaId != null and partyaId != ''">
             and t.partya_id &lt;&gt; #{partyaId}

@@ -38,6 +38,7 @@ public class ContractFeeDto extends PageDto implements Serializable {
     private String computeRemark;
     private String remark;
     private String storeId;
+    private String communityId;
 
     private Date createTime;
 
@@ -217,6 +218,14 @@ public class ContractFeeDto extends PageDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public Date getCreateTime() {

@@ -8,10 +8,10 @@
     <!-- 保存合同收款计划信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractCollectionPlanInfo" parameterType="Map">
         insert into contract_collection_plan(
-        contract_id,fee_name,plan_name,plan_id,remark,store_id,fee_id,
+        contract_id,fee_name,plan_name,plan_id,remark,store_id,community_id,fee_id,
         plan_seq,plan_time,plan_amount,ratio,pay_state,pay_time,trigger_desc,fee_type
         ) values (
-        #{contractId},#{feeName},#{planName},#{planId},#{remark},#{storeId},#{feeId},
+        #{contractId},#{feeName},#{planName},#{planId},#{remark},#{storeId},ifnull(#{communityId}, '-1'),#{feeId},
         #{planSeq},#{planTime},#{planAmount},#{ratio},ifnull(#{payState},'0'),#{payTime},#{triggerDesc},#{feeType}
         )
     </insert>
@@ -21,7 +21,7 @@
     <select id="getContractCollectionPlanInfo" parameterType="Map" resultType="Map">
         select t.contract_id,t.contract_id contractId,t.fee_name,t.fee_name feeName,t.plan_name,t.plan_name
         planName,t.plan_id,t.plan_id planId,t.remark,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id
-        storeId,t.fee_id,t.fee_id feeId,
+        storeId,t.community_id,t.community_id communityId,t.fee_id,t.fee_id feeId,
         t.plan_seq planSeq, t.plan_time planTime, t.plan_amount planAmount, t.ratio ratio,
         case when ifnull(t.pay_state,'0') = '0' and t.plan_time &lt; now() then '2' else ifnull(t.pay_state,'0') end payState, t.pay_time payTime, t.trigger_desc triggerDesc, t.fee_type feeType,
         t.create_time createTime
@@ -53,6 +53,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="feeId !=null and feeId != ''">
             and t.fee_id= #{feeId}
@@ -101,6 +104,9 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         <if test="feeId !=null and feeId != ''">
             , t.fee_id= #{feeId}
         </if>
@@ -141,6 +147,9 @@
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
 
     </update>
 
@@ -176,6 +185,9 @@
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
         <if test="feeId !=null and feeId != ''">
             and t.fee_id= #{feeId}
         </if>
@@ -209,6 +221,9 @@
         </if>
         <if test="storeId != null and storeId != ''">
             and p.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and p.community_id = #{communityId}
         </if>
         group by p.contract_id
     </select>

@@ -20,6 +20,7 @@ public class ContractAttrDto extends PageDto implements Serializable {
     private String[] contractIds;
     private String specCd;
     private String storeId;
+    private String communityId;
     private String value;
 
 
@@ -58,6 +59,14 @@ public class ContractAttrDto extends PageDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getValue() {

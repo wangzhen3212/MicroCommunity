@@ -8,6 +8,7 @@ import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,14 +32,17 @@ public class ListContractRemindsCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         super.validatePageInfo(reqJson);
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
+        String communityId = reqJson.getString("communityId");
 
         Map<String, Object> info = new HashMap<>();
         info.put("storeId", storeId);
+        info.put("communityId", communityId);
         info.put("days", StringUtil.isEmpty(reqJson.getString("days")) ? DEFAULT_DAYS : reqJson.getString("days"));
         if (!StringUtil.isEmpty(reqJson.getString("category"))) {
             info.put("category", reqJson.getString("category"));
@@ -57,7 +61,7 @@ public class ListContractRemindsCmd extends Cmd {
         List<Map> reminds = new ArrayList<>();
         if (count > 0) {
             reminds = contractInnerServiceSMOImpl.queryContractReminds(info);
-            refreshRemindLogs(reminds);
+            refreshRemindLogs(reminds, communityId);
         }
 
         ResultVo resultVo = new ResultVo((int) Math.ceil((double) count / (double) reqJson.getInteger("row")),
@@ -68,13 +72,14 @@ public class ListContractRemindsCmd extends Cmd {
     /**
      * 批量查询提醒记录并挂到清单行上
      */
-    private void refreshRemindLogs(List<Map> reminds) {
+    private void refreshRemindLogs(List<Map> reminds, String communityId) {
         String[] contractIds = new String[reminds.size()];
         for (int i = 0; i < reminds.size(); i++) {
             contractIds[i] = reminds.get(i).get("contractId").toString();
         }
         Map<String, Object> info = new HashMap<>();
         info.put("contractIds", contractIds);
+        info.put("communityId", communityId);
         List<Map> logs = contractInnerServiceSMOImpl.queryContractRemindLogs(info);
         for (Map remind : reminds) {
             List<Map> contractLogs = new ArrayList<>();

@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 生成合同编号（HC-{yyyy}-{ZL|CG|WB}-{4位序号}）
 export function generateContractCode(params) {
@@ -6,7 +7,10 @@ export function generateContractCode(params) {
     request({
       url: '/contract.generateContractCode',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -26,7 +30,10 @@ export function saveContractDraft(data) {
     request({
       url: '/contract.saveContractDraft',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -46,7 +53,10 @@ export function previewContractContent(data) {
     request({
       url: '/contract.previewContractContent',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -66,7 +76,10 @@ export function queryContractContent(params) {
     request({
       url: '/contract.queryContractContent',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -86,7 +99,10 @@ export function saveContract(data) {
     request({
       url: '/contract.saveContract',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -106,7 +122,10 @@ export function updateContract(data) {
     request({
       url: '/contract.updateContract',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

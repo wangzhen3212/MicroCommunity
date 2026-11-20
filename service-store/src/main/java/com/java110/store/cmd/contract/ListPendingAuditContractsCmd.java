@@ -11,6 +11,7 @@ import com.java110.dto.contract.ContractDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.store.bmo.contract.IContractAuditBMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,11 +36,13 @@ public class ListPendingAuditContractsCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         super.validatePageInfo(reqJson);
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
+        String communityId = reqJson.getString("communityId");
 
         ContractDto contractDto = BeanConvertUtil.covertBean(reqJson, ContractDto.class);
         contractDto.setStoreId(storeId);
@@ -59,7 +62,7 @@ public class ListPendingAuditContractsCmd extends Cmd {
             contractIds[index] = contractDtos.get(index).getContractId();
         }
         Map<String, Map<String, Object>> latestAuditLogs = contractAuditBMOImpl.queryLatestAuditLogs(
-                ContractAuditLogDto.BIZ_TYPE_CONTRACT, contractIds, storeId);
+                ContractAuditLogDto.BIZ_TYPE_CONTRACT, contractIds, storeId, communityId);
 
         for (ContractDto contract : contractDtos) {
             data.add(wrapPendingContract(contract, latestAuditLogs.get(contract.getContractId())));

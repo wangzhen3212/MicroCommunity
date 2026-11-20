@@ -13,6 +13,7 @@ import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.po.contract.ContractPo;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.ContractContentUtil;
 import com.java110.utils.util.StringUtil;
@@ -37,15 +38,18 @@ public class SaveContractDraftCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
+        String communityId = reqJson.getString("communityId");
         String contractId = reqJson.getString("contractId");
         ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
         contractPo.setStoreId(storeId);
+        contractPo.setCommunityId(communityId);
         contractPo.setState(ContractDto.STATE_DRAFT);
         contractPo.setStatusCd("0");
 
@@ -56,6 +60,7 @@ public class SaveContractDraftCmd extends Cmd {
             }
             ContractDto contractDto = new ContractDto();
             contractDto.setStoreId(storeId);
+            contractDto.setCommunityId(communityId);
             contractDto.setContractCode(contractCode);
             List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
             if (contractDtos != null && !contractDtos.isEmpty()) {
@@ -71,6 +76,15 @@ public class SaveContractDraftCmd extends Cmd {
                 throw new CmdException("保存合同草稿失败");
             }
         } else {
+            ContractDto oldContractDto = new ContractDto();
+            oldContractDto.setContractId(contractId);
+            oldContractDto.setStoreId(storeId);
+            oldContractDto.setCommunityId(communityId);
+            oldContractDto.setStatusCd("0");
+            List<ContractDto> oldContractDtos = contractInnerServiceSMOImpl.queryContracts(oldContractDto);
+            if (oldContractDtos == null || oldContractDtos.isEmpty()) {
+                throw new CmdException("未找到本小区的合同，无法保存草稿");
+            }
             contractPo.setContractId(contractId);
             int flag = contractInnerServiceSMOImpl.updateContract(contractPo);
             if (flag < 1) {
@@ -85,7 +99,7 @@ public class SaveContractDraftCmd extends Cmd {
                 templateContent = content;
             }
             String renderedContent = ContractContentUtil.render(templateContent, reqJson.getJSONObject("variables"));
-            contractContentBMOImpl.saveOrUpdateContent(contractId, contractPo.getTemplateId(),
+            contractContentBMOImpl.saveOrUpdateContent(contractId, communityId, contractPo.getTemplateId(),
                     renderedContent, templateContent);
         }
 

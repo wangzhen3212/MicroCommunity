@@ -63,7 +63,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
     private IUpdateContractBMO updateContractBMOImpl;
 
     @Override
-    public void audit(JSONObject reqJson, String storeId, String userId) {
+    public void audit(JSONObject reqJson, String storeId, String communityId, String userId) {
         String bizType = StringUtil.isEmpty(reqJson.getString("bizType"))
                 ? ContractAuditLogDto.BIZ_TYPE_CONTRACT : reqJson.getString("bizType");
         String bizId = reqJson.getString("bizId");
@@ -83,7 +83,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
             }
         }
 
-        String state = queryBizState(bizType, bizId, storeId);
+        String state = queryBizState(bizType, bizId, storeId, communityId);
         if (StringUtil.isEmpty(state)) {
             throw new CmdException("未查询到待审核单据");
         }
@@ -102,34 +102,35 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
 
         checkAuditPrivilege(privilegeId, userId, stepNameOf(step));
 
-        saveAuditLog(bizType, bizId, step, result, opinion, userId, storeId);
+        saveAuditLog(bizType, bizId, step, result, opinion, userId, storeId, communityId);
 
         if (!pass) {
-            updateBizState(bizType, bizId, storeId, ContractDto.STATE_FAIL);
+            updateBizState(bizType, bizId, storeId, communityId, ContractDto.STATE_FAIL);
             return;
         }
 
         if (ContractAuditLogDto.STEP_LEGAL.equals(step)) {
-            updateBizState(bizType, bizId, storeId, ContractDto.STATE_AUDIT_LEADER);
+            updateBizState(bizType, bizId, storeId, communityId, ContractDto.STATE_AUDIT_LEADER);
             return;
         }
 
         // 领导审批通过：变更单先回写合同正文，再置为审核完成
         if (ContractAuditLogDto.BIZ_TYPE_CHANGE.equals(bizType)) {
-            updateContractBMOImpl.applyChangePlan(bizId, storeId);
+            updateContractBMOImpl.applyChangePlan(bizId, storeId, communityId);
         }
-        updateBizState(bizType, bizId, storeId, ContractDto.STATE_AUDIT_FINISH);
+        updateBizState(bizType, bizId, storeId, communityId, ContractDto.STATE_AUDIT_FINISH);
     }
 
     @Override
-    public Map<String, Object> queryAuditFlow(String bizType, String bizId, String storeId) {
-        String state = queryBizState(bizType, bizId, storeId);
+    public Map<String, Object> queryAuditFlow(String bizType, String bizId, String storeId, String communityId) {
+        String state = queryBizState(bizType, bizId, storeId, communityId);
         String currentStep = currentStepOf(state);
 
         ContractAuditLogDto logDto = new ContractAuditLogDto();
         logDto.setBizType(bizType);
         logDto.setBizId(bizId);
         logDto.setStoreId(storeId);
+        logDto.setCommunityId(communityId);
         logDto.setStatusCd("0");
         logDto.setPage(-1);
         List<ContractAuditLogDto> logs = contractAuditInnerServiceSMOImpl.queryContractAuditLogs(logDto);
@@ -150,7 +151,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
     }
 
     @Override
-    public Map<String, Map<String, Object>> queryLatestAuditLogs(String bizType, String[] bizIds, String storeId) {
+    public Map<String, Map<String, Object>> queryLatestAuditLogs(String bizType, String[] bizIds, String storeId, String communityId) {
         Map<String, Map<String, Object>> latestLogs = new HashMap<>();
         if (bizIds == null || bizIds.length < 1) {
             return latestLogs;
@@ -159,6 +160,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
         logDto.setBizType(bizType);
         logDto.setBizIds(bizIds);
         logDto.setStoreId(storeId);
+        logDto.setCommunityId(communityId);
         logDto.setStatusCd("0");
         logDto.setPage(-1);
         List<ContractAuditLogDto> logs = contractAuditInnerServiceSMOImpl.queryContractAuditLogs(logDto);
@@ -193,7 +195,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
     /**
      * 查询单据当前状态（合同 / 变更单），不存在返回空串
      */
-    private String queryBizState(String bizType, String bizId, String storeId) {
+    private String queryBizState(String bizType, String bizId, String storeId, String communityId) {
         if (StringUtil.isEmpty(bizId)) {
             return "";
         }
@@ -201,6 +203,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
             ContractChangePlanDto planDto = new ContractChangePlanDto();
             planDto.setPlanId(bizId);
             planDto.setStoreId(storeId);
+            planDto.setCommunityId(communityId);
             planDto.setStatusCd("0");
             List<ContractChangePlanDto> planDtos = contractChangePlanInnerServiceSMOImpl.queryContractChangePlans(planDto);
             if (planDtos == null || planDtos.isEmpty()) {
@@ -211,6 +214,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(bizId);
         contractDto.setStoreId(storeId);
+        contractDto.setCommunityId(communityId);
         contractDto.setStatusCd("0");
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
         if (contractDtos == null || contractDtos.isEmpty()) {
@@ -222,10 +226,11 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
     /**
      * 回写单据状态
      */
-    private void updateBizState(String bizType, String bizId, String storeId, String state) {
+    private void updateBizState(String bizType, String bizId, String storeId, String communityId, String state) {
         if (ContractAuditLogDto.BIZ_TYPE_CHANGE.equals(bizType)) {
             ContractChangePlanPo changePlanPo = new ContractChangePlanPo();
             changePlanPo.setPlanId(bizId);
+            changePlanPo.setCommunityId(communityId);
             changePlanPo.setState(state);
             changePlanPo.setStatusCd("0");
             contractChangePlanInnerServiceSMOImpl.updateContractChangePlan(changePlanPo);
@@ -233,6 +238,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
         }
         ContractPo contractPo = new ContractPo();
         contractPo.setContractId(bizId);
+        contractPo.setCommunityId(communityId);
         contractPo.setState(state);
         contractPo.setStatusCd("0");
         contractInnerServiceSMOImpl.updateContract(contractPo);
@@ -242,7 +248,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
      * 审批记录留痕：环节、结果、意见、审核人、审核时间
      */
     private void saveAuditLog(String bizType, String bizId, String step, String result, String opinion,
-                              String userId, String storeId) {
+                              String userId, String storeId, String communityId) {
         ContractAuditLogPo logPo = new ContractAuditLogPo();
         logPo.setLogId(GenerateCodeFactory.getGeneratorId(PREFIX_LOG_ID));
         logPo.setBizType(bizType);
@@ -254,6 +260,7 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
         logPo.setAuditorName(queryUserName(userId));
         logPo.setAuditTime(DateUtil.getCurrentDate());
         logPo.setStoreId(storeId);
+        logPo.setCommunityId(communityId);
         logPo.setStatusCd("0");
         int flag = contractAuditInnerServiceSMOImpl.saveContractAuditLog(logPo);
         if (flag < 1) {

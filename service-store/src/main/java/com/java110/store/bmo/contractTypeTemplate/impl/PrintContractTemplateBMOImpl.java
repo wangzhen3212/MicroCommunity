@@ -127,7 +127,7 @@ public class PrintContractTemplateBMOImpl implements IPrintContractTemplateBMO {
             return printInfo;
         }
         String contractId = contractDto.getContractId();
-        ContractContentDto contentDto = contractContentBMOImpl.getContent(contractId);
+        ContractContentDto contentDto = contractContentBMOImpl.getContent(contractId, contractDto.getCommunityId());
         int contentVersion = contentDto == null ? 0 : contentDto.getContentVersion();
         printInfo.put("contentVersion", contentVersion);
 
@@ -137,7 +137,8 @@ public class PrintContractTemplateBMOImpl implements IPrintContractTemplateBMO {
             return printInfo;
         }
 
-        String renderedContent = contractContentBMOImpl.getPrintContent(contractId, contractDto.getStoreId());
+        String renderedContent = contractContentBMOImpl.getPrintContent(contractId, contractDto.getStoreId(),
+                contractDto.getCommunityId());
         if (!StringUtil.isEmpty(renderedContent)) {
             printInfo.put("printContent", renderedContent);
             printInfo.put("contentSource", CONTENT_SOURCE_RENDERED);

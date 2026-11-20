@@ -5,15 +5,15 @@
 
     <!-- 保存合同变更计划信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractChangePlanInfo" parameterType="Map">
-        insert into contract_change_plan(plan_type, contract_id, plan_id, remark, change_person, state, store_id)
-        values (#{planType}, #{contractId}, #{planId}, #{remark}, #{changePerson}, #{state}, #{storeId})
+        insert into contract_change_plan(plan_type, contract_id, plan_id, remark, change_person, state, store_id, community_id)
+        values (#{planType}, #{contractId}, #{planId}, #{remark}, #{changePerson}, #{state}, #{storeId}, ifnull(#{communityId}, '-1'))
     </insert>
 
     <!-- 查询合同变更计划信息 add by wuxw 2018-07-03 -->
     <select id="getContractChangePlanInfo" parameterType="Map" resultType="Map">
         select t.plan_type,t.plan_type planType,t.contract_id,t.contract_id contractId,t.plan_id,t.plan_id
         planId,t.remark,t.status_cd,t.status_cd statusCd,t.change_person,t.change_person
-        changePerson,t.state,t.store_id,t.store_id storeId,
+        changePerson,t.state,t.store_id,t.store_id storeId,t.community_id,t.community_id communityId,
         c.a_link,c.a_link aLink,c.a_contacts,c.a_contacts aContacts,c.amount,c.operator,c.signing_time,
         c.signing_time signingTime,c.b_contacts,c.b_contacts
         bContacts,c.party_a,c.party_a partyA,c.b_link,c.b_link bLink,c.party_b,c.party_b
@@ -71,6 +71,9 @@
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
         <!--<if test="startTime != null and startTime != ''">
             and t.create_time &gt; #{startTime}
             and t.create_time &lt; #{endTime}
@@ -111,9 +114,15 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         where 1=1
         <if test="planId !=null and planId != ''">
             and t.plan_id= #{planId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
     </update>
 
@@ -161,6 +170,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="logStartTime != null and logStartTime != ''">
             and t.create_time &gt;= #{logStartTime}

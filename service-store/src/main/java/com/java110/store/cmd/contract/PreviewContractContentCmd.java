@@ -9,6 +9,7 @@ import com.java110.core.event.cmd.CmdEvent;
 import com.java110.dto.contract.ContractTypeTemplateDto;
 import com.java110.intf.store.IContractTypeTemplateInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.ContractContentUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
@@ -29,6 +30,7 @@ public class PreviewContractContentCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -38,7 +40,7 @@ public class PreviewContractContentCmd extends Cmd {
         String templateId = reqJson.getString("templateId");
 
         if (StringUtil.isEmpty(content) && !StringUtil.isEmpty(templateId)) {
-            content = queryTemplateContent(templateId, storeId);
+            content = queryTemplateContent(templateId, storeId, reqJson.getString("communityId"));
         }
         if (StringUtil.isEmpty(content)) {
             throw new CmdException("合同正文为空，无法预览");
@@ -50,10 +52,11 @@ public class PreviewContractContentCmd extends Cmd {
         context.setResponseEntity(ResultVo.createResponseEntity(data));
     }
 
-    private String queryTemplateContent(String templateId, String storeId) {
+    private String queryTemplateContent(String templateId, String storeId, String communityId) {
         ContractTypeTemplateDto templateDto = new ContractTypeTemplateDto();
         templateDto.setTemplateId(templateId);
         templateDto.setStoreId(storeId);
+        templateDto.setCommunityId(communityId);
         templateDto.setStatusCd("0");
         List<ContractTypeTemplateDto> templateDtos = contractTypeTemplateInnerServiceSMOImpl.queryContractTypeTemplates(templateDto);
         if (templateDtos == null || templateDtos.isEmpty()) {

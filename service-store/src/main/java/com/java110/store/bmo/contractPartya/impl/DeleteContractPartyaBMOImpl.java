@@ -39,6 +39,7 @@ public class DeleteContractPartyaBMOImpl implements IDeleteContractPartyaBMO {
         ContractPartyaDto contractPartyaDto = new ContractPartyaDto();
         contractPartyaDto.setPartyaId(contractPartyaPo.getPartyaId());
         contractPartyaDto.setStoreId(contractPartyaPo.getStoreId());
+        contractPartyaDto.setCommunityId(contractPartyaPo.getCommunityId());
         List<ContractPartyaDto> partyaDtos = contractPartyaInnerServiceSMOImpl.queryContractPartyas(contractPartyaDto);
         if (partyaDtos == null || partyaDtos.isEmpty()) {
             throw new IllegalArgumentException("甲方主体不存在");
@@ -61,6 +62,7 @@ public class DeleteContractPartyaBMOImpl implements IDeleteContractPartyaBMO {
         ContractDto contractDto = new ContractDto();
         contractDto.setPartyaId(contractPartyaDto.getPartyaId());
         contractDto.setStoreId(contractPartyaDto.getStoreId());
+        contractDto.setCommunityId(contractPartyaDto.getCommunityId());
         contractDto.setStatusCd("0");
         if (contractInnerServiceSMOImpl.queryContractsCount(contractDto) > 0) {
             throw new IllegalArgumentException("该甲方主体已被合同引用，不能删除");
@@ -72,6 +74,7 @@ public class DeleteContractPartyaBMOImpl implements IDeleteContractPartyaBMO {
         ContractDto legacyContractDto = new ContractDto();
         legacyContractDto.setPartyA(contractPartyaDto.getPartyA());
         legacyContractDto.setStoreId(contractPartyaDto.getStoreId());
+        legacyContractDto.setCommunityId(contractPartyaDto.getCommunityId());
         legacyContractDto.setStatusCd("0");
         if (contractInnerServiceSMOImpl.queryContractsCount(legacyContractDto) > 0) {
             throw new IllegalArgumentException("该甲方主体已被合同引用，不能删除");

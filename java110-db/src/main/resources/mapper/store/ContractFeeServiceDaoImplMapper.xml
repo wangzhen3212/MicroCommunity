@@ -9,13 +9,13 @@
         cf_id, contract_id, fee_seq, config_id, fee_type_cd, fee_type_name, fee_name,
         computing_formula, computing_formula_name, unit_price, additional_amount, cycle, months,
         coefficient, manual_amount, base_amount, amount, include_in_amount, compute_remark, remark,
-        store_id, status_cd, create_time
+        store_id, community_id, status_cd, create_time
         ) values (
         #{cfId}, #{contractId}, ifnull(#{feeSeq}, 1), #{configId}, #{feeTypeCd}, #{feeTypeName}, #{feeName},
         #{computingFormula}, #{computingFormulaName}, ifnull(#{unitPrice}, 0.00), ifnull(#{additionalAmount}, 0.00),
         #{cycle}, ifnull(#{months}, 0), ifnull(#{coefficient}, 1.0000), #{manualAmount}, ifnull(#{baseAmount}, 0.00),
         ifnull(#{amount}, 0.00), ifnull(#{includeInAmount}, '1'), #{computeRemark}, #{remark},
-        #{storeId}, '0', now()
+        #{storeId}, ifnull(#{communityId}, '-1'), '0', now()
         )
     </insert>
 
@@ -80,6 +80,9 @@
             <if test="storeId != null and storeId != ''">
                 t.store_id = #{storeId},
             </if>
+            <if test="communityId != null and communityId != ''">
+                t.community_id = #{communityId},
+            </if>
             <if test="statusCd != null and statusCd != ''">
                 t.status_cd = #{statusCd},
             </if>
@@ -94,6 +97,9 @@
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
         </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
     </update>
 
     <!-- 查询合同费用构成（按 fee_seq 保序） -->
@@ -104,7 +110,7 @@
         t.unit_price unitPrice, t.additional_amount additionalAmount, t.cycle cycle, t.months months,
         t.coefficient coefficient, t.manual_amount manualAmount, t.base_amount baseAmount, t.amount amount,
         t.include_in_amount includeInAmount, t.compute_remark computeRemark, t.remark remark,
-        t.store_id storeId, t.status_cd statusCd, t.create_time createTime
+        t.store_id storeId, t.community_id communityId, t.status_cd statusCd, t.create_time createTime
         from contract_fee t
         where 1 = 1
         <if test="cfId != null and cfId != ''">
@@ -124,6 +130,9 @@
         </if>
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
         order by t.fee_seq asc, t.create_time asc
         <if test="page != -1 and page != null ">
@@ -153,6 +162,9 @@
         </if>
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
     </select>
 </mapper>

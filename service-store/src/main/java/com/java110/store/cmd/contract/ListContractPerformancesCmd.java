@@ -9,6 +9,7 @@ import com.java110.core.event.cmd.CmdEvent;
 import com.java110.dto.contract.ContractDto;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ public class ListContractPerformancesCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         super.validatePageInfo(reqJson);
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -39,6 +41,7 @@ public class ListContractPerformancesCmd extends Cmd {
 
         Map<String, Object> info = buildQueryInfo(reqJson);
         info.put("storeId", storeId);
+        info.put("communityId", reqJson.getString("communityId"));
 
         int count = contractInnerServiceSMOImpl.queryContractPerformancesCount(info);
 

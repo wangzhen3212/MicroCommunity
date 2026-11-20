@@ -5,8 +5,8 @@
 
     <!-- 保存合同正文 -->
     <insert id="saveContractContentInfo" parameterType="Map">
-        insert into contract_content(content_id, contract_id, template_id, content, template_content, content_version, status_cd, create_time)
-        values (#{contentId}, #{contractId}, #{templateId}, #{content}, #{templateContent}, ifnull(#{contentVersion}, 0), '0', now())
+        insert into contract_content(content_id, contract_id, community_id, template_id, content, template_content, content_version, status_cd, create_time)
+        values (#{contentId}, #{contractId}, ifnull(#{communityId}, '-1'), #{templateId}, #{content}, #{templateContent}, ifnull(#{contentVersion}, 0), '0', now())
     </insert>
 
     <!-- 修改合同正文（按 contract_id upsert，content_version 自增） -->
@@ -23,6 +23,9 @@
             <if test="templateId != null and templateId != ''">
                 t.template_id = #{templateId},
             </if>
+            <if test="communityId != null and communityId != ''">
+                t.community_id = #{communityId},
+            </if>
             <if test="statusCd != null and statusCd != ''">
                 t.status_cd = #{statusCd},
             </if>
@@ -35,11 +38,14 @@
         <if test="contractId != null and contractId != ''">
             and t.contract_id = #{contractId}
         </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
     </update>
 
     <!-- 查询合同正文（详情/编辑/预览/打印按需单条查询） -->
     <select id="getContractContentInfo" parameterType="Map" resultType="Map">
-        select t.content_id contentId, t.contract_id contractId, t.template_id templateId, t.content content,
+        select t.content_id contentId, t.contract_id contractId, t.community_id communityId, t.template_id templateId, t.content content,
         t.template_content templateContent, t.content_version contentVersion, t.status_cd statusCd,
         t.create_time createTime, t.update_time updateTime
         from contract_content t
@@ -49,6 +55,9 @@
         </if>
         <if test="contractId != null and contractId != ''">
             and t.contract_id = #{contractId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
         <if test="statusCd != null and statusCd != ''">
             and t.status_cd = #{statusCd}
@@ -67,6 +76,9 @@
         </if>
         <if test="contractId != null and contractId != ''">
             and t.contract_id = #{contractId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
         <if test="statusCd != null and statusCd != ''">
             and t.status_cd = #{statusCd}

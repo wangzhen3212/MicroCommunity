@@ -161,6 +161,7 @@ public class ContractApi {
     public ResponseEntity<String> stopContract(@RequestBody JSONObject reqJson) {
 
         Assert.hasKeyAndValue(reqJson, "contractId", "contractId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
         ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
         contractPo.setState(ContractDto.STATE_COMPLAINT);
@@ -185,6 +186,7 @@ public class ContractApi {
         contractDto.setTaskId(reqJson.getString("taskId"));
         contractDto.setContractId(reqJson.getString("contractId"));
         contractDto.setStoreId(storeId);
+        contractDto.setCommunityId(reqJson.getString("communityId"));
         contractDto.setAuditCode(reqJson.getString("state"));
         contractDto.setAuditMessage(reqJson.getString("remark"));
         contractDto.setCurrentUserId(userId);
@@ -205,6 +207,7 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "state", "请求报文中未包含状态");
         Assert.hasKeyAndValue(reqJson, "stateDesc", "请求报文中未包含状态");
         Assert.hasKeyAndValue(reqJson, "contractId", "contractId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
@@ -318,6 +321,7 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含contractId");
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
         Assert.hasKeyAndValue(reqJson, "specCd", "请求报文中未包含specCd");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractAttrPo contractAttrPo = BeanConvertUtil.covertBean(reqJson, ContractAttrPo.class);
@@ -339,6 +343,7 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
         Assert.hasKeyAndValue(reqJson, "specCd", "请求报文中未包含specCd");
         Assert.hasKeyAndValue(reqJson, "attrId", "attrId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractAttrPo contractAttrPo = BeanConvertUtil.covertBean(reqJson, ContractAttrPo.class);
@@ -374,12 +379,15 @@ public class ContractApi {
      */
     @RequestMapping(value = "/queryContractAttr", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractAttr(@RequestHeader(value = "store-id") String storeId,
+                                                    @RequestParam(value = "communityId") String communityId,
                                                     @RequestParam(value = "page") int page,
                                                     @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractAttrDto contractAttrDto = new ContractAttrDto();
         contractAttrDto.setPage(page);
         contractAttrDto.setRow(row);
         contractAttrDto.setStoreId(storeId);
+        contractAttrDto.setCommunityId(communityId);
         return getContractAttrBMOImpl.get(contractAttrDto);
     }
 
@@ -398,10 +406,12 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "category", "请求报文中未包含category");
         Assert.hasKeyAndValue(reqJson, "templateName", "请求报文中未包含templateName");
         Assert.hasKeyAndValue(reqJson, "context", "请求报文中未包含context");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractTypeTemplatePo contractTypeTemplatePo = BeanConvertUtil.covertBean(reqJson, ContractTypeTemplatePo.class);
         contractTypeTemplatePo.setStoreId(storeId);
+        contractTypeTemplatePo.setCommunityId(reqJson.getString("communityId"));
         return saveContractTypeTemplateBMOImpl.save(contractTypeTemplatePo);
 
     }
@@ -421,10 +431,12 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "templateName", "请求报文中未包含templateName");
         Assert.hasKeyAndValue(reqJson, "context", "请求报文中未包含context");
         Assert.hasKeyAndValue(reqJson, "templateId", "templateId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
 
         ContractTypeTemplatePo contractTypeTemplatePo = BeanConvertUtil.covertBean(reqJson, ContractTypeTemplatePo.class);
+        contractTypeTemplatePo.setCommunityId(reqJson.getString("communityId"));
         return updateContractTypeTemplateBMOImpl.update(contractTypeTemplatePo);
     }
 
@@ -457,13 +469,16 @@ public class ContractApi {
      */
     @RequestMapping(value = "/queryContractTypeTemplate", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractTypeTemplate(@RequestHeader(value = "store-id") String storeId,
+                                                            @RequestParam(value = "communityId") String communityId,
                                                             @RequestParam(value = "templateId", required = false) String templateId,
                                                             @RequestParam(value = "page") int page,
                                                             @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractTypeTemplateDto contractTypeTemplateDto = new ContractTypeTemplateDto();
         contractTypeTemplateDto.setPage(page);
         contractTypeTemplateDto.setRow(row);
         contractTypeTemplateDto.setStoreId(storeId);
+        contractTypeTemplateDto.setCommunityId(communityId);
         contractTypeTemplateDto.setTemplateId(templateId);
         return getContractTypeTemplateBMOImpl.get(contractTypeTemplateDto);
     }
@@ -489,9 +504,11 @@ public class ContractApi {
                                                          @RequestBody JSONObject reqJson) {
 
         Assert.hasKeyAndValue(reqJson, "planType", "请求报文中未包含planType");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
         ContractChangePlanPo contractChangePlanPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanPo.class);
         contractChangePlanPo.setStoreId(storeId);
+        contractChangePlanPo.setCommunityId(reqJson.getString("communityId"));
         contractChangePlanPo.setChangePerson(userId);
 
         contractChangePlanPo.setState(ContractChangePlanDto.STATE_W);
@@ -507,6 +524,7 @@ public class ContractApi {
 //                    contractChangePlanRoomPos.add(BeanConvertUtil.covertBean(rooms.getJSONObject(roomIndex), ContractChangePlanRoomPo.class));
                     roomInfo = rooms.getJSONObject(roomIndex);
                     contractChangePlanRoomPo = BeanConvertUtil.covertBean(roomInfo, ContractChangePlanRoomPo.class);
+                    contractChangePlanRoomPo.setCommunityId(reqJson.getString("communityId"));
                     contractChangePlanRoomPo.setRoomName(roomInfo.getString("floorNum")
                             + "-" + roomInfo.getString("unitNum")
                             + "-" + roomInfo.getString("roomNum"));
@@ -517,6 +535,7 @@ public class ContractApi {
 
         ContractChangePlanDetailPo contractChangePlanDetailPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanDetailPo.class);
         contractChangePlanDetailPo.setStoreId(storeId);
+        contractChangePlanDetailPo.setCommunityId(reqJson.getString("communityId"));
         return saveContractChangePlanBMOImpl.save(contractChangePlanPo, contractChangePlanDetailPo, contractChangePlanRoomPos, reqJson);
     }
 
@@ -536,9 +555,11 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "state", "请求报文中未包含state");
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
         Assert.hasKeyAndValue(reqJson, "planId", "planId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractChangePlanPo contractChangePlanPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanPo.class);
+        contractChangePlanPo.setCommunityId(reqJson.getString("communityId"));
         return updateContractChangePlanBMOImpl.update(contractChangePlanPo);
     }
 
@@ -555,9 +576,11 @@ public class ContractApi {
                                                            @RequestBody JSONObject reqJson) {
 
         Assert.hasKeyAndValue(reqJson, "planId", "planId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
         ContractChangePlanPo contractChangePlanPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanPo.class);
         contractChangePlanPo.setStoreId(storeId);
+        contractChangePlanPo.setCommunityId(reqJson.getString("communityId"));
         return deleteContractChangePlanBMOImpl.delete(contractChangePlanPo);
     }
 
@@ -571,6 +594,7 @@ public class ContractApi {
      */
     @RequestMapping(value = "/queryContractChangePlan", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractChangePlan(@RequestHeader(value = "store-id") String storeId,
+                                                          @RequestParam(value = "communityId") String communityId,
                                                           @RequestParam(value = "page") int page,
                                                           @RequestParam(value = "row") int row,
                                                           @RequestParam(value = "contractId", required = false) String contractId,
@@ -581,10 +605,12 @@ public class ContractApi {
                                                           @RequestParam(value = "logEndTime", required = false) String logEndTime,
                                                           @RequestParam(value = "staffNameLike", required = false) String staffNameLike,
                                                           @RequestParam(value = "planId", required = false) String planId) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractChangePlanDto contractChangePlanDto = new ContractChangePlanDto();
         contractChangePlanDto.setPage(page);
         contractChangePlanDto.setRow(row);
         contractChangePlanDto.setStoreId(storeId);
+        contractChangePlanDto.setCommunityId(communityId);
         contractChangePlanDto.setContractId(contractId);
         contractChangePlanDto.setContractName(contractName);
         contractChangePlanDto.setPlanId(planId);
@@ -610,11 +636,13 @@ public class ContractApi {
             @RequestHeader(value = "store-id") String storeId,
             @RequestHeader(value = "user-id") String userId,
             @RequestBody JSONObject reqJson) {
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
         ContractChangePlanDto contractChangePlanDto = new ContractChangePlanDto();
         contractChangePlanDto.setTaskId(reqJson.getString("taskId"));
         contractChangePlanDto.setPlanId(reqJson.getString("planId"));
         contractChangePlanDto.setContractId(reqJson.getString("contractId"));
         contractChangePlanDto.setStoreId(storeId);
+        contractChangePlanDto.setCommunityId(reqJson.getString("communityId"));
         contractChangePlanDto.setAuditCode(reqJson.getString("state"));
         contractChangePlanDto.setAuditMessage(reqJson.getString("remark"));
         contractChangePlanDto.setCurrentUserId(userId);
@@ -649,10 +677,12 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "startTime", "请求报文中未包含startTime");
         Assert.hasKeyAndValue(reqJson, "endTime", "请求报文中未包含endTime");
         Assert.hasKeyAndValue(reqJson, "signingTime", "请求报文中未包含signingTime");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractChangePlanDetailPo contractChangePlanDetailPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanDetailPo.class);
         contractChangePlanDetailPo.setStoreId(storeId);
+        contractChangePlanDetailPo.setCommunityId(reqJson.getString("communityId"));
         return saveContractChangePlanDetailBMOImpl.save(contractChangePlanDetailPo);
     }
 
@@ -683,9 +713,11 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "endTime", "请求报文中未包含endTime");
         Assert.hasKeyAndValue(reqJson, "signingTime", "请求报文中未包含signingTime");
         Assert.hasKeyAndValue(reqJson, "detailId", "detailId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractChangePlanDetailPo contractChangePlanDetailPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanDetailPo.class);
+        contractChangePlanDetailPo.setCommunityId(reqJson.getString("communityId"));
         return updateContractChangePlanDetailBMOImpl.update(contractChangePlanDetailPo);
     }
 
@@ -718,14 +750,17 @@ public class ContractApi {
      */
     @RequestMapping(value = "/queryContractChangePlanDetail", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractChangePlanDetail(@RequestHeader(value = "store-id") String storeId,
+                                                                @RequestParam(value = "communityId") String communityId,
                                                                 @RequestParam(value = "planId", required = false) String planId,
                                                                 @RequestParam(value = "contractId", required = false) String contractId,
                                                                 @RequestParam(value = "page") int page,
                                                                 @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractChangePlanDetailDto contractChangePlanDetailDto = new ContractChangePlanDetailDto();
         contractChangePlanDetailDto.setPage(page);
         contractChangePlanDetailDto.setRow(row);
         contractChangePlanDetailDto.setStoreId(storeId);
+        contractChangePlanDetailDto.setCommunityId(communityId);
         contractChangePlanDetailDto.setPlanId(planId);
         contractChangePlanDetailDto.setContractId(contractId);
         return getContractChangePlanDetailBMOImpl.get(contractChangePlanDetailDto);
@@ -747,6 +782,7 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "detailId", "请求报文中未包含detailId");
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
         Assert.hasKeyAndValue(reqJson, "specCd", "请求报文中未包含specCd");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractChangePlanDetailAttrPo contractChangePlanDetailAttrPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanDetailAttrPo.class);
@@ -769,6 +805,7 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
         Assert.hasKeyAndValue(reqJson, "specCd", "请求报文中未包含specCd");
         Assert.hasKeyAndValue(reqJson, "attrId", "attrId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
         ContractChangePlanDetailAttrPo contractChangePlanDetailAttrPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanDetailAttrPo.class);
         return updateContractChangePlanDetailAttrBMOImpl.update(contractChangePlanDetailAttrPo);
@@ -803,12 +840,15 @@ public class ContractApi {
      */
     @RequestMapping(value = "/queryContractChangePlanDetailAttr", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractChangePlanDetailAttr(@RequestHeader(value = "store-id") String storeId,
+                                                                    @RequestParam(value = "communityId") String communityId,
                                                                     @RequestParam(value = "page") int page,
                                                                     @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractChangePlanDetailAttrDto contractChangePlanDetailAttrDto = new ContractChangePlanDetailAttrDto();
         contractChangePlanDetailAttrDto.setPage(page);
         contractChangePlanDetailAttrDto.setRow(row);
         contractChangePlanDetailAttrDto.setStoreId(storeId);
+        contractChangePlanDetailAttrDto.setCommunityId(communityId);
         return getContractChangePlanDetailAttrBMOImpl.get(contractChangePlanDetailAttrDto);
     }
 
@@ -822,20 +862,24 @@ public class ContractApi {
      */
     @RequestMapping(value = "/printContractTemplate", method = RequestMethod.GET)
     public ResponseEntity<String> printContractTemplate(@RequestHeader(value = "store-id") String storeId,
+                                                        @RequestParam(value = "communityId") String communityId,
                                                         @RequestParam(value = "templateId", required = false) String templateId,
                                                         @RequestParam(value = "contractId", required = false) String contractId,
                                                         @RequestParam(value = "page") int page,
                                                         @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractTypeTemplateDto contractTypeTemplateDto = new ContractTypeTemplateDto();
         contractTypeTemplateDto.setPage(page);
         contractTypeTemplateDto.setRow(row);
         contractTypeTemplateDto.setStoreId(storeId);
+        contractTypeTemplateDto.setCommunityId(communityId);
         contractTypeTemplateDto.setTemplateId(templateId);
 
         ContractDto contractDto = new ContractDto();
         contractDto.setPage(page);
         contractDto.setRow(row);
         contractDto.setStoreId(storeId);
+        contractDto.setCommunityId(communityId);
         contractDto.setContractId(contractId);
 
         return printContractTemplateBMO.get(contractTypeTemplateDto, contractDto);
@@ -859,10 +903,12 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "feeId", "请求报文中未包含feeId");
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
         Assert.hasKeyAndValue(reqJson, "planName", "请求报文中未包含planName");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractCollectionPlanPo contractCollectionPlanPo = BeanConvertUtil.covertBean(reqJson, ContractCollectionPlanPo.class);
         contractCollectionPlanPo.setStoreId(storeId);
+        contractCollectionPlanPo.setCommunityId(reqJson.getString("communityId"));
         return saveContractCollectionPlanBMOImpl.save(contractCollectionPlanPo);
     }
 
@@ -883,10 +929,12 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "storeId", "请求报文中未包含storeId");
         Assert.hasKeyAndValue(reqJson, "planName", "请求报文中未包含planName");
         Assert.hasKeyAndValue(reqJson, "planId", "planId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractCollectionPlanPo contractCollectionPlanPo = BeanConvertUtil.covertBean(reqJson, ContractCollectionPlanPo.class);
         contractCollectionPlanPo.setStoreId(storeId);
+        contractCollectionPlanPo.setCommunityId(reqJson.getString("communityId"));
         return updateContractCollectionPlanBMOImpl.update(contractCollectionPlanPo);
     }
 
@@ -903,10 +951,12 @@ public class ContractApi {
                                                                @RequestBody JSONObject reqJson) {
 
         Assert.hasKeyAndValue(reqJson, "planId", "planId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractCollectionPlanPo contractCollectionPlanPo = BeanConvertUtil.covertBean(reqJson, ContractCollectionPlanPo.class);
         contractCollectionPlanPo.setStoreId(storeId);
+        contractCollectionPlanPo.setCommunityId(reqJson.getString("communityId"));
         return deleteContractCollectionPlanBMOImpl.delete(contractCollectionPlanPo);
     }
 
@@ -923,10 +973,12 @@ public class ContractApi {
                                                               @RequestParam(value = "communityId") String communityId,
                                                               @RequestParam(value = "page") int page,
                                                               @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractCollectionPlanDto contractCollectionPlanDto = new ContractCollectionPlanDto();
         contractCollectionPlanDto.setPage(page);
         contractCollectionPlanDto.setRow(row);
         contractCollectionPlanDto.setStoreId(storeId);
+        contractCollectionPlanDto.setCommunityId(communityId);
         return getContractCollectionPlanBMOImpl.get(contractCollectionPlanDto);
     }
 
@@ -944,9 +996,11 @@ public class ContractApi {
 
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含contractId");
         Assert.hasKeyAndValue(reqJson, "roomId", "请求报文中未包含roomId");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractRoomPo contractRoomPo = BeanConvertUtil.covertBean(reqJson, ContractRoomPo.class);
+        contractRoomPo.setCommunityId(reqJson.getString("communityId"));
         return saveContractRoomBMOImpl.save(contractRoomPo);
     }
 
@@ -964,9 +1018,11 @@ public class ContractApi {
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含contractId");
         Assert.hasKeyAndValue(reqJson, "roomId", "请求报文中未包含roomId");
         Assert.hasKeyAndValue(reqJson, "crId", "crId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractRoomPo contractRoomPo = BeanConvertUtil.covertBean(reqJson, ContractRoomPo.class);
+        contractRoomPo.setCommunityId(reqJson.getString("communityId"));
         return updateContractRoomBMOImpl.update(contractRoomPo);
     }
 
@@ -999,13 +1055,16 @@ public class ContractApi {
      */
     @RequestMapping(value = "/queryContractRoom", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractRoom(@RequestHeader(value = "store-id") String storeId,
+                                                    @RequestParam(value = "communityId") String communityId,
                                                     @RequestParam(value = "contractId", required = false) String contractId,
                                                     @RequestParam(value = "page") int page,
                                                     @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractRoomDto contractRoomDto = new ContractRoomDto();
         contractRoomDto.setPage(page);
         contractRoomDto.setRow(row);
         contractRoomDto.setStoreId(storeId);
+        contractRoomDto.setCommunityId(communityId);
         contractRoomDto.setContractId(contractId);
         return getContractRoomBMOImpl.get(contractRoomDto);
     }

@@ -74,6 +74,7 @@ public class UpdateContractCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含合同ID");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -89,6 +90,7 @@ public class UpdateContractCmd extends Cmd {
             ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
             contractPo.setContractId(reqJson.getString("contractId"));
             contractPo.setStoreId(storeId);
+            contractPo.setCommunityId(reqJson.getString("communityId"));
             contractPo.setContractFilePo(buildContractFiles(reqJson));
             context.setResponseEntity(updateContractBMOImpl.update(contractPo, reqJson));
         } catch (Exception e) {

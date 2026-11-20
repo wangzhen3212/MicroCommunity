@@ -8,10 +8,10 @@
     <!-- 保存合同模板信息 -->
     <insert id="saveContractTypeTemplateInfo" parameterType="Map">
         insert into contract_type_template(
-        context,store_id,category,template_id,
+        context,store_id,community_id,category,template_id,
         template_name,template_version,template_desc,use_count,source_type
         ) values (
-        #{context},#{storeId},ifnull(#{category},'2'),#{templateId},
+        #{context},#{storeId},ifnull(#{communityId},'-1'),ifnull(#{category},'2'),#{templateId},
         #{templateName},ifnull(#{templateVersion},'V1.0'),#{templateDesc},ifnull(#{useCount},0),ifnull(#{sourceType},'online')
         )
     </insert>
@@ -20,7 +20,7 @@
     <!-- 查询合同模板信息 -->
     <select id="getContractTypeTemplateInfo" parameterType="Map" resultType="Map">
         select t.context,t.status_cd,t.status_cd statusCd,t.store_id,t.store_id
-        storeId,t.category,t.template_id templateId,
+        storeId,t.community_id,t.community_id communityId,t.category,t.template_id templateId,
         t.template_name templateName, t.template_version templateVersion, t.template_desc templateDesc,
         ifnull(t.use_count,0) useCount, ifnull(t.source_type,'online') sourceType, t.create_time createTime
         from contract_type_template t
@@ -33,6 +33,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
@@ -69,6 +72,9 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         <if test="category !=null and category != ''">
             , t.category= #{category}
         </if>
@@ -91,6 +97,9 @@
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
     </update>
 
     <!-- 查询合同模板数量 -->
@@ -106,6 +115,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="templateId !=null and templateId != ''">
             and t.template_id= #{templateId}
@@ -135,6 +147,9 @@
         </if>
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
     </update>
 

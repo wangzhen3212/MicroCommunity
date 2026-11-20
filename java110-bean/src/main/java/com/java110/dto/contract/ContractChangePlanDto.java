@@ -34,6 +34,7 @@ public class ContractChangePlanDto extends ContractDto implements Serializable {
     private String changePersonName;
     private String state;
     private String storeId;
+    private String communityId;
     private String nextUserId;
 
     private Date createTime;
@@ -103,6 +104,14 @@ public class ContractChangePlanDto extends ContractDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public Date getCreateTime() {

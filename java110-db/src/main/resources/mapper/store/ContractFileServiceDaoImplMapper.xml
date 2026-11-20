@@ -11,9 +11,9 @@
     <!-- 保存合同附件信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractFileInfo" parameterType="Map">
         insert into contract_file(
-        file_real_name,contract_file_id,contract_id,file_save_name
+        file_real_name,contract_file_id,contract_id,community_id,file_save_name
         ) values (
-        #{fileRealName},#{contractFileId},#{contractId},#{fileSaveName}
+        #{fileRealName},#{contractFileId},#{contractId},ifnull(#{communityId}, '-1'),#{fileSaveName}
         )
     </insert>
 
@@ -21,7 +21,7 @@
 
     <!-- 查询合同附件信息 add by wuxw 2018-07-03 -->
     <select id="getContractFileInfo" parameterType="Map" resultType="Map">
-        select  t.create_time,t.create_time createTime,t.file_real_name,t.file_real_name fileRealName,t.contract_file_id,t.contract_file_id contractFileId,t.contract_id,t.contract_id contractId,t.file_save_name,t.file_save_name fileSaveName,t.status_cd,t.status_cd statusCd
+        select  t.create_time,t.create_time createTime,t.file_real_name,t.file_real_name fileRealName,t.contract_file_id,t.contract_file_id contractFileId,t.contract_id,t.contract_id contractId,t.community_id,t.community_id communityId,t.file_save_name,t.file_save_name fileSaveName,t.status_cd,t.status_cd statusCd
         from contract_file t
         where 1 =1
         <if test="createTime !=null and createTime != ''">
@@ -35,6 +35,9 @@
         </if>
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="fileSaveName !=null and fileSaveName != ''">
             and t.file_save_name= #{fileSaveName}
@@ -67,12 +70,18 @@
         <if test="fileSaveName !=null and fileSaveName != ''">
             , t.file_save_name= #{fileSaveName}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         where 1=1
         <if test="contractFileId !=null and contractFileId != ''">
             and t.contract_file_id= #{contractFileId}
         </if>
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
     </update>
 
@@ -92,6 +101,9 @@
         </if>
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="fileSaveName !=null and fileSaveName != ''">
             and t.file_save_name= #{fileSaveName}

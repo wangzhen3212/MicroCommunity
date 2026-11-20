@@ -58,6 +58,7 @@ public class DeleteContractCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含合同ID");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -70,6 +71,7 @@ public class DeleteContractCmd extends Cmd {
             ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
             contractPo.setContractId(reqJson.getString("contractId"));
             contractPo.setStoreId(storeId);
+            contractPo.setCommunityId(reqJson.getString("communityId"));
             context.setResponseEntity(deleteContractBMOImpl.delete(contractPo));
         } catch (Exception e) {
             context.setResponseEntity(ResultVo.error("删除合同失败：" + e.getMessage()));

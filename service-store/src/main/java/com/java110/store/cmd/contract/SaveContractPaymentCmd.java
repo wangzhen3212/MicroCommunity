@@ -25,6 +25,7 @@ public class SaveContractPaymentCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "planId", "请求报文中未包含收款计划期次");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -32,7 +33,7 @@ public class SaveContractPaymentCmd extends Cmd {
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
         String userId = CmdContextUtils.getUserId(context);
-        contractPaymentBMOImpl.savePayment(reqJson, storeId, userId);
+        contractPaymentBMOImpl.savePayment(reqJson, storeId, reqJson.getString("communityId"), userId);
         context.setResponseEntity(ResultVo.success());
     }
 }

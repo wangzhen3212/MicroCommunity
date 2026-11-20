@@ -28,11 +28,13 @@ public class QueryContractContentCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "contractId", "请求报文中未包含合同ID");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
-        ContractContentDto contentDto = contractContentBMOImpl.getContent(reqJson.getString("contractId"));
+        ContractContentDto contentDto = contractContentBMOImpl.getContent(reqJson.getString("contractId"),
+                reqJson.getString("communityId"));
         boolean raw = "true".equalsIgnoreCase(reqJson.getString("raw")) || "1".equals(reqJson.getString("raw"));
         Map<String, Object> data = new HashMap<>();
         if (contentDto == null) {

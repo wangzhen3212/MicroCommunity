@@ -77,6 +77,7 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(contractChangePlanDetailPo.getContractId());
         contractDto.setStoreId(contractChangePlanDetailPo.getStoreId());
+        contractDto.setCommunityId(contractChangePlanDetailPo.getCommunityId());
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
 
         Assert.listOnlyOne(contractDtos, "合同不存在");
@@ -305,6 +306,7 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
             ContractRoomDto contractRoomDto = new ContractRoomDto();
             contractRoomDto.setContractId(contractChangePlanPo.getContractId());
             contractRoomDto.setRoomId(contractChangePlanRoomPo.getRoomId());
+            contractRoomDto.setCommunityId(contractChangePlanPo.getCommunityId());
             List<ContractRoomDto> contractRoomDtos
                     = contractRoomInnerServiceSMOImpl.queryContractRooms(contractRoomDto);
 
@@ -318,6 +320,7 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
                 tmpContractChangePlanRoomPo.setRoomId(contractRoomDtos.get(0).getRoomId());
                 tmpContractChangePlanRoomPo.setRoomName(contractRoomDtos.get(0).getRoomName());
                 tmpContractChangePlanRoomPo.setStoreId(contractRoomDtos.get(0).getStoreId());
+                tmpContractChangePlanRoomPo.setCommunityId(contractChangePlanPo.getCommunityId());
                 tmpContractChangePlanRoomPo.setOperate("DEL");
                 contractChangePlanRoomInnerServiceSMOImpl.saveContractChangePlanRoom(tmpContractChangePlanRoomPo);
             }
@@ -326,6 +329,7 @@ public class SaveContractChangePlanBMOImpl implements ISaveContractChangePlanBMO
             contractChangePlanRoomPo.setPlanId(contractChangePlanPo.getPlanId());
             contractChangePlanRoomPo.setPrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_prId));
             contractChangePlanRoomPo.setStoreId(contractChangePlanPo.getStoreId());
+            contractChangePlanRoomPo.setCommunityId(contractChangePlanPo.getCommunityId());
             contractChangePlanRoomPo.setOperate("ADD");
             contractChangePlanRoomInnerServiceSMOImpl.saveContractChangePlanRoom(contractChangePlanRoomPo);
         }

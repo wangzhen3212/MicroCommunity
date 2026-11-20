@@ -12,6 +12,7 @@ import com.java110.intf.common.IContractChangeUserInnerServiceSMO;
 import com.java110.intf.store.IContractAttrInnerServiceSMO;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.DateUtil;
 import com.java110.vo.ResultVo;
@@ -41,6 +42,7 @@ public class QueryAdminContractCmd extends Cmd {
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
         super.validatePageInfo(reqJson);
         super.validateAdmin(cmdDataFlowContext);
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override

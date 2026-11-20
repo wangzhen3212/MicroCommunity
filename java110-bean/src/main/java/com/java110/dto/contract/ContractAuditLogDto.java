@@ -38,6 +38,7 @@ public class ContractAuditLogDto extends PageDto implements Serializable {
     private String auditorName;
     private Date auditTime;
     private String storeId;
+    private String communityId;
     private String statusCd = "0";
     private Date createTime;
 
@@ -132,6 +133,14 @@ public class ContractAuditLogDto extends PageDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getStatusCd() {

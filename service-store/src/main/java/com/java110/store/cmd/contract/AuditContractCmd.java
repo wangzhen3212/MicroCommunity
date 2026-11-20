@@ -27,6 +27,7 @@ public class AuditContractCmd extends Cmd {
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "bizId", "请求报文中未包含业务ID");
         Assert.hasKeyAndValue(reqJson, "result", "请求报文中未包含审批结果");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
         if (StringUtil.isEmpty(reqJson.getString("bizType"))) {
             reqJson.put("bizType", "1");
         }
@@ -37,7 +38,7 @@ public class AuditContractCmd extends Cmd {
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
         String userId = CmdContextUtils.getUserId(context);
-        contractAuditBMOImpl.audit(reqJson, storeId, userId);
+        contractAuditBMOImpl.audit(reqJson, storeId, reqJson.getString("communityId"), userId);
         context.setResponseEntity(ResultVo.success());
     }
 }

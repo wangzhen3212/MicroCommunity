@@ -128,6 +128,7 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             for (ContractFilePo file : filePos) {
                 if (!StringUtil.isEmpty(file.getFileRealName()) && !StringUtil.isEmpty(file.getFileSaveName())) {
                     file.setContractId(contractPo.getContractId());
+                    file.setCommunityId(contractPo.getCommunityId());
                     contractFileInnerServiceSMOImpl.saveContractFile(file);
                 }
             }
@@ -184,14 +185,15 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             templateContent = content;
         }
         String renderedContent = ContractContentUtil.render(templateContent, reqJson.getJSONObject("variables"));
-        contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), contractPo.getTemplateId(),
-                renderedContent, templateContent);
+        contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), contractPo.getCommunityId(),
+                contractPo.getTemplateId(), renderedContent, templateContent);
         if (StringUtil.isEmpty(contractPo.getTemplateId())) {
             return;
         }
         ContractTypeTemplatePo templatePo = new ContractTypeTemplatePo();
         templatePo.setTemplateId(contractPo.getTemplateId());
         templatePo.setStoreId(contractPo.getStoreId());
+        templatePo.setCommunityId(contractPo.getCommunityId());
         templatePo.setStatusCd("0");
         contractTypeTemplateInnerServiceSMOImpl.addContractTypeTemplateUseCount(templatePo);
     }
@@ -213,6 +215,7 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             planPo.setPlanId(GenerateCodeFactory.getGeneratorId(PREFIX_PLAN_ID));
             planPo.setContractId(contractPo.getContractId());
             planPo.setStoreId(contractPo.getStoreId());
+            planPo.setCommunityId(contractPo.getCommunityId());
             if (StringUtil.isEmpty(planPo.getPlanSeq())) {
                 planPo.setPlanSeq(String.valueOf(planIndex + 1));
             }
@@ -240,6 +243,7 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             feePo.setCfId(GenerateCodeFactory.getGeneratorId(PREFIX_FEE_ID));
             feePo.setContractId(contractPo.getContractId());
             feePo.setStoreId(contractPo.getStoreId());
+            feePo.setCommunityId(contractPo.getCommunityId());
             if (StringUtil.isEmpty(feePo.getFeeSeq())) {
                 feePo.setFeeSeq(String.valueOf(feeIndex + 1));
             }
@@ -329,6 +333,7 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             contractRoomPo.setCrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_crId));
             contractRoomPo.setContractId(contractPo.getContractId());
             contractRoomPo.setStoreId(contractPo.getStoreId());
+            contractRoomPo.setCommunityId(contractPo.getCommunityId());
             String payerObjType = StringUtil.isEmpty(contractRoomPo.getPayerObjType())
                     ? FeeDto.PAYER_OBJ_TYPE_ROOM : contractRoomPo.getPayerObjType();
             contractRoomPo.setPayerObjType(payerObjType);
@@ -451,6 +456,7 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
         contractAttrPo.setSpecCd(jsonObject.getString("specCd"));
         contractAttrPo.setValue(jsonObject.getString("value"));
         contractAttrPo.setStoreId(contractPo.getStoreId());
+        contractAttrPo.setCommunityId(contractPo.getCommunityId());
         int count = contractAttrInnerServiceSMOImpl.saveContractAttr(contractAttrPo);
 
         if (count < 1) {

@@ -1062,10 +1062,10 @@ DELETE FROM `c_service`
 
 ```sql
 -- ① room.queryLeasableRooms（community-service，查询无业主的可出租房屋/商铺）
-INSERT IGNORE INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_cd`,`name`,`seq`,`messageQueueName`,`is_instance`,`url`,`method`,`timeout`,`retry_count`,`provide_app_id`,`create_time`,`status_cd`) VALUES
+INSERT  INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_cd`,`name`,`seq`,`messageQueueName`,`is_instance`,`url`,`method`,`timeout`,`retry_count`,`provide_app_id`,`create_time`,`status_cd`) VALUES
  ('2156','982026111600000026','room.queryLeasableRooms','API','查询可出租房源（无业主）','1',NULL,'CMD','http://community-service','GET','60','3','8000418004',NOW(),'0');
 
-INSERT IGNORE INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_times`,`invoke_model`,`create_time`,`status_cd`) VALUES
+INSERT  INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_times`,`invoke_model`,`create_time`,`status_cd`) VALUES
  ('3138','8000418004','982026111600000026','Q','1000','S',NOW(),'0');
 
 -- ② payFeeRule.listRoomFeeRuleWithBill（房屋收费计费设置与账单合并视图）
@@ -1317,5 +1317,45 @@ WHERE c.status_cd = '0'
 
 -- ④ 执行后：重启 store-service（未改 c_service/c_route，无需 flushCache）
 -- ⑤ 回滚：DROP TABLE IF EXISTS `contract_fee`;  （代码回滚 + 重启 store-service；contract_content 未被改表结构，无需回滚）
+```
+
+## 2026-11-20 — 合同模块小区隔离（community_id 落地）
+
+
+```sql
+ALTER TABLE contract                ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_partya         ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_type_template  ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_change_plan    ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_collection_plan ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_audit_log      ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_remind_log     ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+
+-- B. 子表加列
+ALTER TABLE contract_room                    ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_fee                     ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_file                    ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER contract_id;
+ALTER TABLE contract_attr                    ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_content                 ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER contract_id;
+ALTER TABLE contract_change_plan_detail      ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_change_plan_room        ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+ALTER TABLE contract_change_plan_detail_attr ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
+
+-- C. 索引
+CREATE INDEX idx_contract_community_id              ON contract(community_id);
+CREATE INDEX idx_contract_partya_community_id       ON contract_partya(community_id);
+CREATE INDEX idx_contract_template_community_id     ON contract_type_template(community_id);
+CREATE INDEX idx_contract_change_community_id       ON contract_change_plan(community_id);
+CREATE INDEX idx_contract_plan_community_id         ON contract_collection_plan(community_id);
+CREATE INDEX idx_contract_audit_community_id        ON contract_audit_log(community_id, biz_id);
+CREATE INDEX idx_contract_remind_community_id       ON contract_remind_log(community_id, contract_id);
+CREATE INDEX idx_contract_room_community_id         ON contract_room(community_id, contract_id);
+CREATE INDEX idx_contract_fee_community_id          ON contract_fee(community_id, contract_id);
+CREATE INDEX idx_contract_file_community_id         ON contract_file(community_id, contract_id);
+CREATE INDEX idx_contract_attr_community_id         ON contract_attr(community_id, contract_id);
+CREATE INDEX idx_contract_content_community_id      ON contract_content(community_id, contract_id);
+CREATE INDEX idx_contract_cpd_community_id          ON contract_change_plan_detail(community_id, plan_id);
+CREATE INDEX idx_contract_cpr_community_id          ON contract_change_plan_room(community_id, plan_id);
+CREATE INDEX idx_contract_cpda_community_id         ON contract_change_plan_detail_attr(community_id, detail_id);
 ```
 

@@ -40,9 +40,11 @@ public class ContractChangePlanRoomApi {
 
         Assert.hasKeyAndValue(reqJson, "planId", "请求报文中未包含planId");
         Assert.hasKeyAndValue(reqJson, "roomId", "请求报文中未包含roomId");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractChangePlanRoomPo contractChangePlanRoomPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanRoomPo.class);
+        contractChangePlanRoomPo.setCommunityId(reqJson.getString("communityId"));
         return saveContractChangePlanRoomBMOImpl.save(contractChangePlanRoomPo);
     }
 
@@ -60,9 +62,11 @@ public class ContractChangePlanRoomApi {
         Assert.hasKeyAndValue(reqJson, "planId", "请求报文中未包含planId");
         Assert.hasKeyAndValue(reqJson, "roomId", "请求报文中未包含roomId");
         Assert.hasKeyAndValue(reqJson, "prId", "prId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractChangePlanRoomPo contractChangePlanRoomPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanRoomPo.class);
+        contractChangePlanRoomPo.setCommunityId(reqJson.getString("communityId"));
         return updateContractChangePlanRoomBMOImpl.update(contractChangePlanRoomPo);
     }
 
@@ -82,6 +86,7 @@ public class ContractChangePlanRoomApi {
 
 
         ContractChangePlanRoomPo contractChangePlanRoomPo = BeanConvertUtil.covertBean(reqJson, ContractChangePlanRoomPo.class);
+        contractChangePlanRoomPo.setCommunityId(reqJson.getString("communityId"));
         return deleteContractChangePlanRoomBMOImpl.delete(contractChangePlanRoomPo);
     }
 
@@ -95,12 +100,17 @@ public class ContractChangePlanRoomApi {
      */
     @RequestMapping(value = "/queryContractChangePlanRoom", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractChangePlanRoom(@RequestHeader(value = "shore-id") String storeId,
+                                                              @RequestParam(value = "communityId") String communityId,
+                                                              @RequestParam(value = "planId", required = false) String planId,
                                                               @RequestParam(value = "page") int page,
                                                               @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractChangePlanRoomDto contractChangePlanRoomDto = new ContractChangePlanRoomDto();
         contractChangePlanRoomDto.setPage(page);
         contractChangePlanRoomDto.setRow(row);
         contractChangePlanRoomDto.setStoreId(storeId);
+        contractChangePlanRoomDto.setCommunityId(communityId);
+        contractChangePlanRoomDto.setPlanId(planId);
         return getContractChangePlanRoomBMOImpl.get(contractChangePlanRoomDto);
     }
 }

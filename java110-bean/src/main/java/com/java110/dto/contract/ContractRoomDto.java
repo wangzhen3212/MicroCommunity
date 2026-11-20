@@ -20,6 +20,7 @@ public class ContractRoomDto extends RoomDto implements Serializable {
     private String contractId;
     private String ownerId;
     private String storeId;
+    private String communityId;
     private String roomId;
     private String roomName;
     private String payerObjType;
@@ -69,6 +70,14 @@ public class ContractRoomDto extends RoomDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getRoomId() {

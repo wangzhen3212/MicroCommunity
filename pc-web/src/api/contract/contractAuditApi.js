@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 审核通过/驳回（bizType 1 合同 / 2 变更单，result 1 通过 / 2 驳回）
 export function auditContract(data) {
@@ -6,7 +7,10 @@ export function auditContract(data) {
     request({
       url: '/contract.auditContract',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -26,7 +30,10 @@ export function listPendingAuditContracts(params) {
     request({
       url: '/contract.listPendingAuditContracts',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -49,7 +56,10 @@ export function queryContractAuditFlow(params) {
     request({
       url: '/contract.queryContractAuditFlow',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

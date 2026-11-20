@@ -8,9 +8,9 @@
     <!-- 保存合同房屋变更信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractChangePlanRoomInfo" parameterType="Map">
         insert into contract_change_plan_room(
-        operate,owner_name,contract_id,pr_id,plan_id,owner_id,store_id,room_id,room_name
+        operate,owner_name,contract_id,pr_id,plan_id,owner_id,store_id,community_id,room_id,room_name
         ) values (
-        #{operate},#{ownerName},#{contractId},#{prId},#{planId},#{ownerId},#{storeId},#{roomId},#{roomName}
+        #{operate},#{ownerName},#{contractId},#{prId},#{planId},#{ownerId},#{storeId},ifnull(#{communityId}, '-1'),#{roomId},#{roomName}
         )
     </insert>
 
@@ -19,7 +19,7 @@
     <select id="getContractChangePlanRoomInfo" parameterType="Map" resultType="Map">
         select t.owner_name,t.owner_name ownerName,t.contract_id,t.contract_id contractId,t.pr_id,t.pr_id prId,t.plan_id,
         t.plan_id planId,t.owner_id,t.owner_id
-        ownerId,t.store_id,t.store_id storeId,t.room_id,t.room_id roomId,t.room_name,t.room_name roomName,t.operate
+        ownerId,t.store_id,t.store_id storeId,t.community_id,t.community_id communityId,t.room_id,t.room_id roomId,t.room_name,t.room_name roomName,t.operate
         from contract_change_plan_room t
         where 1 =1
         <if test="ownerName !=null and ownerName != ''">
@@ -40,6 +40,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="roomId !=null and roomId != ''">
             and t.room_id= #{roomId}
@@ -79,6 +82,9 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         <if test="roomId !=null and roomId != ''">
             , t.room_id= #{roomId}
         </if>
@@ -88,6 +94,9 @@
         where 1=1
         <if test="prId !=null and prId != ''">
             and t.pr_id= #{prId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
 
     </update>
@@ -114,6 +123,9 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
         </if>
         <if test="roomId !=null and roomId != ''">
             and t.room_id= #{roomId}

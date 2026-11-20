@@ -24,12 +24,13 @@ public class ContractPaymentBMOImpl implements IContractPaymentBMO {
     private IContractCollectionPlanInnerServiceSMO contractCollectionPlanInnerServiceSMOImpl;
 
     @Override
-    public void savePayment(JSONObject reqJson, String storeId, String userId) {
+    public void savePayment(JSONObject reqJson, String storeId, String communityId, String userId) {
         String planId = reqJson.getString("planId");
         Assert.hasLength(planId, "请求报文中未包含收款计划期次");
 
         ContractCollectionPlanDto planDto = new ContractCollectionPlanDto();
         planDto.setPlanId(planId);
+        planDto.setCommunityId(communityId);
         planDto.setStatusCd("0");
         List<ContractCollectionPlanDto> planDtos = contractCollectionPlanInnerServiceSMOImpl.queryContractCollectionPlans(planDto);
         if (planDtos == null || planDtos.isEmpty()) {
@@ -40,6 +41,7 @@ public class ContractPaymentBMOImpl implements IContractPaymentBMO {
         ContractCollectionPlanPo planPo = new ContractCollectionPlanPo();
         planPo.setPlanId(planId);
         planPo.setStoreId(storeId);
+        planPo.setCommunityId(communityId);
         planPo.setStatusCd("0");
 
         // 撤销付款：期次回到未到期

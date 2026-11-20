@@ -102,7 +102,10 @@ export function setDefaultContractPartya(data) {
     request({
       url: '/contract.setDefaultContractPartya',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

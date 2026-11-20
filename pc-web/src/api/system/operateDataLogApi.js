@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 查询费用项历史记录
 export function queryHisFeeConfig(params) {
@@ -102,7 +103,10 @@ export function queryContractChangePlan(params) {
     request({
       url: '/contract/queryContractChangePlan',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       resolve(res)

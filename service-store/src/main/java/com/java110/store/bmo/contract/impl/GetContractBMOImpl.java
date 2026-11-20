@@ -153,6 +153,7 @@ public class GetContractBMOImpl implements IGetContractBMO {
 
         ContractAttrDto contractAttrDto = new ContractAttrDto();
         contractAttrDto.setContractIds(contractIds.toArray(new String[contractIds.size()]));
+        contractAttrDto.setCommunityId(contractDtos.get(0).getCommunityId());
         List<ContractAttrDto> contractAttrDtos = contractAttrInnerServiceSMOImpl.queryContractAttrs(contractAttrDto);
 
         List<ContractAttrDto> attrs = null;

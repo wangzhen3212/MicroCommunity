@@ -1,6 +1,7 @@
 package com.java110.store.bmo.contract.impl;
 
 import com.java110.core.annotation.Java110Transactional;
+import com.java110.dto.contract.ContractDto;
 import com.java110.dto.room.RoomDto;
 import com.java110.dto.contract.ContractRoomDto;
 import com.java110.dto.fee.FeeDto;
@@ -60,6 +61,8 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
      */
     @Java110Transactional
     public ResponseEntity<String> delete(ContractPo contractPo) {
+        // 校验合同归属小区
+        validateContractBelong(contractPo);
         // 校验合同费用
         validateContractFee(contractPo);
         deleteContractRoomRel(contractPo);
@@ -79,12 +82,27 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
     }
 
     /**
+     * 合同必须属于当前小区，防止跨小区删除
+     */
+    private void validateContractBelong(ContractPo contractPo) {
+        ContractDto contractDto = new ContractDto();
+        contractDto.setContractId(contractPo.getContractId());
+        contractDto.setStoreId(contractPo.getStoreId());
+        contractDto.setCommunityId(contractPo.getCommunityId());
+        contractDto.setStatusCd(StatusConstant.STATUS_CD_VALID);
+        if (contractInnerServiceSMOImpl.queryContractsCount(contractDto) < 1) {
+            throw new CmdException("未找到本小区的合同，无法删除");
+        }
+    }
+
+    /**
      * 合同删除时费用构成同步失效
      */
     private void deleteContractFee(ContractPo contractPo) {
         ContractFeePo contractFeePo = new ContractFeePo();
         contractFeePo.setContractId(contractPo.getContractId());
         contractFeePo.setStoreId(contractPo.getStoreId());
+        contractFeePo.setCommunityId(contractPo.getCommunityId());
         contractFeePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
         contractFeeInnerServiceSMOImpl.updateContractFee(contractFeePo);
     }
@@ -96,6 +114,7 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
         ContractRoomDto contractRoomDto = new ContractRoomDto();
         contractRoomDto.setContractId(contractPo.getContractId());
         contractRoomDto.setStoreId(contractPo.getStoreId());
+        contractRoomDto.setCommunityId(contractPo.getCommunityId());
         List<ContractRoomDto> contractRoomDtos = contractRoomInnerServiceSMOImpl.queryContractRooms(contractRoomDto);
 
         if (contractRoomDtos == null || contractRoomDtos.size() < 1) {
@@ -109,6 +128,7 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
             contractRoomDto = new ContractRoomDto();
             contractRoomDto.setRoomId(tmpContractRoomDto.getRoomId());
             contractRoomDto.setStoreId(contractPo.getStoreId());
+            contractRoomDto.setCommunityId(contractPo.getCommunityId());
             tmpContractRoomDtos = contractRoomInnerServiceSMOImpl.queryContractRooms(contractRoomDto);
 
             //还有其他的合同 先不处理

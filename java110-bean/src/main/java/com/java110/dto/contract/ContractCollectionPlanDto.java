@@ -25,6 +25,7 @@ public class ContractCollectionPlanDto extends PageDto implements Serializable {
     private String planId;
     private String remark;
     private String storeId;
+    private String communityId;
     private String feeId;
     private String planSeq;
     private String planTime;
@@ -97,6 +98,14 @@ public class ContractCollectionPlanDto extends PageDto implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getFeeId() {

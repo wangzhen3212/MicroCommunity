@@ -20,6 +20,7 @@
         select count(1) count
         from contract t
         where 1=1
+        and t.community_id = #{communityId}
         and t.state in ('11','22','44')
         and t.store_id =  #{storeId}
         and t.create_time &gt; #{startDate}
@@ -32,6 +33,7 @@
         select count(1) count
         from contract_change_plan t
         where 1=1
+        and t.community_id = #{communityId}
         and t.plan_type = '3003'
         and t.state in ('11','22','55')
         and t.store_id =  #{storeId}
@@ -45,6 +47,7 @@
         select count(1) count
         from contract_change_plan t
         where 1=1
+        and t.community_id = #{communityId}
         and t.plan_type = '2002'
         and t.state in ('11','22','55')
         and t.store_id =  #{storeId}
@@ -58,6 +61,7 @@
         select count(1) count
         from contract_change_plan t
         where 1=1
+        and t.community_id = #{communityId}
         and t.plan_type = '1001'
         and t.state in ('11','22','55')
         and t.store_id =  #{storeId}
@@ -71,6 +75,7 @@
         select count(1) count
         from contract t
         where 1=1
+        and t.community_id = #{communityId}
         and t.state in ('11','22','44')
         and t.store_id =  #{storeId}
         and t.create_time &gt; #{startDate}

@@ -49,6 +49,7 @@ public class QueryContractByRoomIdCmd extends Cmd {
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
         super.validatePageInfo(reqJson);
         Assert.hasKeyAndValue(reqJson, "roomId", "未包含房屋信息");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -56,6 +57,7 @@ public class QueryContractByRoomIdCmd extends Cmd {
 
         ContractRoomDto contractRoomDto = new ContractRoomDto();
         contractRoomDto.setRoomId(reqJson.getString("roomId"));
+        contractRoomDto.setCommunityId(reqJson.getString("communityId"));
         List<ContractRoomDto> roomDtos = contractRoomInnerServiceSMOImpl.queryContractRooms(contractRoomDto);
         if(roomDtos == null || roomDtos.size()<1){
             return ;

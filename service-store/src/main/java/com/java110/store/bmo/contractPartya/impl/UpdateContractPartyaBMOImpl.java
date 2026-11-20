@@ -27,6 +27,7 @@ public class UpdateContractPartyaBMOImpl implements IUpdateContractPartyaBMO {
             ContractPartyaPo clearPo = new ContractPartyaPo();
             clearPo.setPartyaId(contractPartyaPo.getPartyaId());
             clearPo.setStoreId(contractPartyaPo.getStoreId());
+            clearPo.setCommunityId(contractPartyaPo.getCommunityId());
             contractPartyaInnerServiceSMOImpl.clearDefaultContractPartya(clearPo);
         }
 

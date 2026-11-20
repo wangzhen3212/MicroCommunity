@@ -29,6 +29,7 @@ public class SetDefaultContractPartyaCmd extends Cmd {
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         Assert.hasKeyAndValue(reqJson, "partyaId", "请求报文中未包含甲方主体ID");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -36,10 +37,12 @@ public class SetDefaultContractPartyaCmd extends Cmd {
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         String storeId = CmdContextUtils.getStoreId(context);
         String partyaId = reqJson.getString("partyaId");
+        String communityId = reqJson.getString("communityId");
 
         ContractPartyaDto partyaDto = new ContractPartyaDto();
         partyaDto.setPartyaId(partyaId);
         partyaDto.setStoreId(storeId);
+        partyaDto.setCommunityId(communityId);
         partyaDto.setStatusCd("0");
         List<ContractPartyaDto> partyaDtos = contractPartyaInnerServiceSMOImpl.queryContractPartyas(partyaDto);
         Assert.listOnlyOne(partyaDtos, "未查询到甲方主体");
@@ -47,11 +50,13 @@ public class SetDefaultContractPartyaCmd extends Cmd {
         ContractPartyaPo clearPo = new ContractPartyaPo();
         clearPo.setPartyaId(partyaId);
         clearPo.setStoreId(storeId);
+        clearPo.setCommunityId(communityId);
         contractPartyaInnerServiceSMOImpl.clearDefaultContractPartya(clearPo);
 
         ContractPartyaPo partyaPo = new ContractPartyaPo();
         partyaPo.setPartyaId(partyaId);
         partyaPo.setStoreId(storeId);
+        partyaPo.setCommunityId(communityId);
         partyaPo.setDefaultFlag("1");
         partyaPo.setStatusCd("0");
         int flag = contractPartyaInnerServiceSMOImpl.updateContractPartya(partyaPo);

@@ -10,6 +10,7 @@ public class ContractChangePlanDetailPo implements Serializable {
     private String detailId;
 
     private String storeId;
+    private String communityId;
     private String operator;
     private String signingTime;
     private String bContacts;
@@ -68,6 +69,14 @@ public class ContractChangePlanDetailPo implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getOperator() {

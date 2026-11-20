@@ -456,6 +456,9 @@
         and t.create_time &gt; #{startTime}
         and t.create_time &lt; #{endTime}
         and t.store_id = #{storeId}
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
         group by DATE_FORMAT(t.create_time,'%Y-%m-%d')
     </select>
     <select id="getPropertyFeeSummaryDataCount" parameterType="Map" resultType="Map">

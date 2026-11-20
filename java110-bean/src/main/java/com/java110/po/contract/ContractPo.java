@@ -11,6 +11,7 @@ public class ContractPo implements Serializable {
     private String statusCd = "0";
 
     private String storeId;
+    private String communityId;
     private String operator;
     private String signingTime;
     private String bContacts;
@@ -76,6 +77,14 @@ public class ContractPo implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
     public String getOperator() {

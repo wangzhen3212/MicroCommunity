@@ -129,9 +129,12 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
         ContractDto queryDto = new ContractDto();
         queryDto.setContractId(contractPo.getContractId());
+        queryDto.setCommunityId(contractPo.getCommunityId());
         queryDto.setStatusCd("0");
         List<ContractDto> oldContractDtos = contractInnerServiceSMOImpl.queryContracts(queryDto);
         Assert.listOnlyOne(oldContractDtos, "未找到需要修改的合同");
+        String communityId = oldContractDtos.get(0).getCommunityId();
+        contractPo.setCommunityId(communityId);
         String oldState = oldContractDtos.get(0).getState();
         if (ContractDto.STATE_AUDIT.equals(oldState) || ContractDto.STATE_AUDIT_LEADER.equals(oldState)) {
             return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "该合同正在审批中，签约信息已锁定，无法修改");
@@ -147,6 +150,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         //附件保存--先删除原来所有的附件再进行保存
         ContractFilePo contractFilePo = new ContractFilePo();
         contractFilePo.setContractId(contractPo.getContractId());
+        contractFilePo.setCommunityId(communityId);
         deleteContractFileBMOImpl.delete(contractFilePo);
 
         List<ContractFilePo> filePos = contractPo.getContractFilePo();
@@ -154,6 +158,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             for (ContractFilePo file : filePos) {
                 if (!StringUtil.isEmpty(file.getFileRealName()) && !StringUtil.isEmpty(file.getFileSaveName())) {
                     file.setContractId(contractPo.getContractId());
+                    file.setCommunityId(communityId);
                     contractFileInnerServiceSMOImpl.saveContractFile(file);
                 }
             }
@@ -162,11 +167,11 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
         noticeRentUpdateState(contractPo);
 
-        saveContractContent(reqJson, contractPo);
+        saveContractContent(reqJson, contractPo, communityId);
 
-        saveContractCollectionPlans(reqJson, contractPo);
+        saveContractCollectionPlans(reqJson, contractPo, communityId);
 
-        saveContractFees(reqJson, contractPo);
+        saveContractFees(reqJson, contractPo, communityId);
 
         if (!reqJson.containsKey("contractTypeSpecs")) {
             return ResultVo.createResponseEntity(ResultVo.CODE_OK, "保存成功");
@@ -190,7 +195,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     /**
      * 保存合同正文（渲染后正文与含变量原文双列写入，同时累加模板使用次数）
      */
-    private void saveContractContent(JSONObject reqJson, ContractPo contractPo) {
+    private void saveContractContent(JSONObject reqJson, ContractPo contractPo, String communityId) {
         String content = reqJson.getString("content");
         String templateContent = reqJson.getString("templateContent");
         if (StringUtil.isEmpty(content) && StringUtil.isEmpty(templateContent)) {
@@ -200,14 +205,15 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             templateContent = content;
         }
         String renderedContent = ContractContentUtil.render(templateContent, reqJson.getJSONObject("variables"));
-        contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), contractPo.getTemplateId(),
-                renderedContent, templateContent);
+        contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), communityId,
+                contractPo.getTemplateId(), renderedContent, templateContent);
         if (StringUtil.isEmpty(contractPo.getTemplateId())) {
             return;
         }
         ContractTypeTemplatePo templatePo = new ContractTypeTemplatePo();
         templatePo.setTemplateId(contractPo.getTemplateId());
         templatePo.setStoreId(contractPo.getStoreId());
+        templatePo.setCommunityId(communityId);
         templatePo.setStatusCd("0");
         contractTypeTemplateInnerServiceSMOImpl.addContractTypeTemplateUseCount(templatePo);
     }
@@ -215,18 +221,20 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     /**
      * 重建收款计划期次（老期次置为失效后重新写入）
      */
-    private void saveContractCollectionPlans(JSONObject reqJson, ContractPo contractPo) {
+    private void saveContractCollectionPlans(JSONObject reqJson, ContractPo contractPo, String communityId) {
         if (!reqJson.containsKey("plans")) {
             return;
         }
         JSONArray plans = reqJson.getJSONArray("plans");
         ContractCollectionPlanDto oldPlanDto = new ContractCollectionPlanDto();
         oldPlanDto.setContractId(contractPo.getContractId());
+        oldPlanDto.setCommunityId(communityId);
         List<ContractCollectionPlanDto> oldPlans = contractCollectionPlanInnerServiceSMOImpl.queryContractCollectionPlans(oldPlanDto);
         if (oldPlans != null && !oldPlans.isEmpty()) {
             ContractCollectionPlanPo deletePo = new ContractCollectionPlanPo();
             deletePo.setContractId(contractPo.getContractId());
             deletePo.setStoreId(contractPo.getStoreId());
+            deletePo.setCommunityId(communityId);
             deletePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
             contractCollectionPlanInnerServiceSMOImpl.updateContractCollectionPlan(deletePo);
         }
@@ -239,6 +247,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             planPo.setPlanId(GenerateCodeFactory.getGeneratorId(PREFIX_PLAN_ID));
             planPo.setContractId(contractPo.getContractId());
             planPo.setStoreId(contractPo.getStoreId());
+            planPo.setCommunityId(communityId);
             planPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
             if (StringUtil.isEmpty(planPo.getPlanSeq())) {
                 planPo.setPlanSeq(String.valueOf(planIndex + 1));
@@ -253,7 +262,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     /**
      * 重建合同费用构成（老费用行置为失效后重新写入；payload 无 fees 时不动）
      */
-    private void saveContractFees(JSONObject reqJson, ContractPo contractPo) {
+    private void saveContractFees(JSONObject reqJson, ContractPo contractPo, String communityId) {
         if (!reqJson.containsKey("fees")) {
             return;
         }
@@ -261,6 +270,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         ContractFeePo deletePo = new ContractFeePo();
         deletePo.setContractId(contractPo.getContractId());
         deletePo.setStoreId(contractPo.getStoreId());
+        deletePo.setCommunityId(communityId);
         deletePo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
         contractFeeInnerServiceSMOImpl.updateContractFee(deletePo);
         if (fees == null || fees.isEmpty()) {
@@ -272,6 +282,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             feePo.setCfId(GenerateCodeFactory.getGeneratorId(PREFIX_FEE_ID));
             feePo.setContractId(contractPo.getContractId());
             feePo.setStoreId(contractPo.getStoreId());
+            feePo.setCommunityId(communityId);
             feePo.setStatusCd(StatusConstant.STATUS_CD_VALID);
             if (StringUtil.isEmpty(feePo.getFeeSeq())) {
                 feePo.setFeeSeq(String.valueOf(feeIndex + 1));
@@ -335,10 +346,13 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     @Override
     public ResponseEntity<String> needAuditContractPlan(ContractChangePlanDto contractChangePlanDto, JSONObject reqJson) {
 
+        String communityId = contractChangePlanDto.getCommunityId();
+
         //查询老的合同信息
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(contractChangePlanDto.getContractId());
         contractDto.setStoreId(contractChangePlanDto.getStoreId());
+        contractDto.setCommunityId(communityId);
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
 
         Assert.listOnlyOne(contractDtos, "合同不存在");
@@ -346,6 +360,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         ContractChangePlanDto tmpContractChangePlanDto = new ContractChangePlanDto();
         tmpContractChangePlanDto.setPlanId(contractChangePlanDto.getPlanId());
         tmpContractChangePlanDto.setStoreId(contractChangePlanDto.getStoreId());
+        tmpContractChangePlanDto.setCommunityId(communityId);
         List<ContractChangePlanDto> contractChangePlanDtos = contractChangePlanInnerServiceSMOImpl.queryContractChangePlans(tmpContractChangePlanDto);
         Assert.listOnlyOne(contractChangePlanDtos, "合同计划不存在");
         contractChangePlanDto.setStartUserId(contractChangePlanDtos.get(0).getChangePerson());
@@ -358,7 +373,8 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             contractChangePlanPo.setState(ContractDto.STATE_AUDIT_FINISH);
             contractChangePlanPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
             contractChangePlanInnerServiceSMOImpl.updateContractChangePlan(contractChangePlanPo);
-            applyChangePlan(contractChangePlanDto.getPlanId(), contractChangePlanDto.getStoreId());
+            applyChangePlan(contractChangePlanDto.getPlanId(), contractChangePlanDto.getStoreId(),
+                    contractChangePlanDto.getCommunityId());
         } else { //修改为审核中
             ContractChangePlanPo contractChangePlanPo = new ContractChangePlanPo();
             contractChangePlanPo.setPlanId(contractChangePlanDto.getPlanId());
@@ -374,24 +390,28 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
      */
     @Override
     @Java110Transactional
-    public void applyChangePlan(String planId, String storeId) {
+    public void applyChangePlan(String planId, String storeId, String communityId) {
 
         ContractChangePlanDto queryPlanDto = new ContractChangePlanDto();
         queryPlanDto.setPlanId(planId);
         queryPlanDto.setStoreId(storeId);
+        queryPlanDto.setCommunityId(communityId);
         List<ContractChangePlanDto> planDtos = contractChangePlanInnerServiceSMOImpl.queryContractChangePlans(queryPlanDto);
         Assert.listOnlyOne(planDtos, "合同变更单不存在");
         ContractChangePlanDto contractChangePlanDto = planDtos.get(0);
+        contractChangePlanDto.setCommunityId(communityId);
 
         ContractDto contractQueryDto = new ContractDto();
         contractQueryDto.setContractId(contractChangePlanDto.getContractId());
         contractQueryDto.setStoreId(storeId);
+        contractQueryDto.setCommunityId(communityId);
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractQueryDto);
         Assert.listOnlyOne(contractDtos, "合同不存在");
 
         ContractChangePlanDetailDto contractChangePlanDetailDto = new ContractChangePlanDetailDto();
         contractChangePlanDetailDto.setPlanId(planId);
         contractChangePlanDetailDto.setStoreId(storeId);
+        contractChangePlanDetailDto.setCommunityId(communityId);
         contractChangePlanDetailDto.setOperate("ADD");
         List<ContractChangePlanDetailDto> contractChangePlanDetailDtos =
                 contractChangePlanDetailInnerServiceSMOImpl.queryContractChangePlanDetails(contractChangePlanDetailDto);
@@ -400,11 +420,12 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         ContractPo contractPo = BeanConvertUtil.covertBean(contractChangePlanDetailDtos.get(0), ContractPo.class);
         contractPo.setContractId(contractChangePlanDto.getContractId());
         contractPo.setStoreId(storeId);
+        contractPo.setCommunityId(communityId);
         contractPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
         contractInnerServiceSMOImpl.updateContract(contractPo);
 
         // 回写主表后按最新合同字段重渲染库中正文，保证详情/打印与主表一致
-        contractContentBMOImpl.refreshContent(contractChangePlanDto.getContractId(), storeId);
+        contractContentBMOImpl.refreshContent(contractChangePlanDto.getContractId(), storeId, communityId);
 
         // 只有 资产变更时 操作 合同房屋
         if (ContractChangePlanDto.PLAN_TYPE_CHANGE_ROOM.equals(contractChangePlanDto.getPlanType())) {
@@ -428,6 +449,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         //查询合同房屋
         ContractRoomDto contractRoomDto = new ContractRoomDto();
         contractRoomDto.setStoreId(contractChangePlanDto.getStoreId());
+        contractRoomDto.setCommunityId(contractChangePlanDto.getCommunityId());
         contractRoomDto.setContractId(contractDto.getContractId());
         List<ContractRoomDto> oldContractRoomDtos = contractRoomInnerServiceSMOImpl.queryContractRooms(contractRoomDto);
         if (oldContractRoomDtos == null || oldContractRoomDtos.size() < 1) {
@@ -465,6 +487,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         //查询合同房屋
         ContractRoomDto contractRoomDto = new ContractRoomDto();
         contractRoomDto.setStoreId(contractChangePlanDto.getStoreId());
+        contractRoomDto.setCommunityId(contractChangePlanDto.getCommunityId());
         contractRoomDto.setContractId(contractDto.getContractId());
         List<ContractRoomDto> oldContractRoomDtos = contractRoomInnerServiceSMOImpl.queryContractRooms(contractRoomDto);
         // 查询 是否有资产变更
@@ -472,6 +495,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         ContractChangePlanRoomDto contractChangePlanRoomDto = new ContractChangePlanRoomDto();
         contractChangePlanRoomDto.setPlanId(contractChangePlanDto.getPlanId());
         contractChangePlanRoomDto.setStoreId(contractChangePlanDto.getStoreId());
+        contractChangePlanRoomDto.setCommunityId(contractChangePlanDto.getCommunityId());
         contractChangePlanRoomDto.setOperate("ADD");
 
         List<ContractChangePlanRoomDto> contractChangePlanRoomDtos
@@ -501,6 +525,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             contractRoomPo = new ContractRoomPo();
             contractRoomPo.setContractId(contractChangePlanRoomDtos.get(0).getContractId());
             contractRoomPo.setStoreId(contractChangePlanRoomDtos.get(0).getStoreId());
+            contractRoomPo.setCommunityId(contractChangePlanRoomDtos.get(0).getCommunityId());
             contractRoomPo.setCrId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_crId));
             contractRoomPo.setOwnerId(tmpContractChangePlanRoomDto.getOwnerId());
             contractRoomPo.setOwnerName(tmpContractChangePlanRoomDto.getOwnerName());
@@ -575,6 +600,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             contractRoomPo = new ContractRoomPo();
             contractRoomPo.setContractId(oldContractRoomDtos.get(0).getContractId());
             contractRoomPo.setStoreId(oldContractRoomDtos.get(0).getStoreId());
+            contractRoomPo.setCommunityId(oldContractRoomDtos.get(0).getCommunityId());
             contractRoomPo.setCrId(oldContractRoomDto.getCrId());
             contractRoomInnerServiceSMOImpl.deleteContractRoom(contractRoomPo);
 
@@ -638,6 +664,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     private void updateContractAttr(JSONObject jsonObject, ContractPo contractPo) {
         ContractAttrDto contractAttrDto = new ContractAttrDto();
         contractAttrDto.setContractId(contractPo.getContractId());
+        contractAttrDto.setCommunityId(contractPo.getCommunityId());
         contractAttrDto.setSpecCd(jsonObject.getString("specCd"));
         List<ContractAttrDto> contractAttrDtos = contractAttrInnerServiceSMOImpl.queryContractAttrs(contractAttrDto);
 
@@ -645,6 +672,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         ContractAttrPo contractAttrPo = new ContractAttrPo();
         contractAttrPo.setAttrId(contractAttrDtos.get(0).getAttrId());
         contractAttrPo.setContractId(contractPo.getContractId());
+        contractAttrPo.setCommunityId(contractPo.getCommunityId());
         contractAttrPo.setSpecCd(jsonObject.getString("specCd"));
         contractAttrPo.setValue(jsonObject.getString("value"));
         contractAttrPo.setStoreId(contractPo.getStoreId());
@@ -664,6 +692,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
         ContractDto contractDto = new ContractDto();
         contractDto.setContractId(contractPo.getContractId());
+        contractDto.setCommunityId(contractPo.getCommunityId());
         List<ContractDto> contractDtos = contractInnerServiceSMOImpl.queryContracts(contractDto);
 
         Assert.listOnlyOne(contractDtos, "未找到需要审核合同");

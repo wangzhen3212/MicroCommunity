@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { getCommunityId } from '@/api/community/communityApi'
 
 // 履约汇总列表（已付/待付/逾期/进度/下一节点，sumTotal 为汇总卡）
 export function listContractPerformances(params) {
@@ -6,7 +7,10 @@ export function listContractPerformances(params) {
     request({
       url: '/contract.listContractPerformances',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -30,7 +34,10 @@ export function listContractCollectionPlans(params) {
     request({
       url: '/contract.listContractCollectionPlans',
       method: 'get',
-      params
+      params: {
+        ...params,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {
@@ -50,7 +57,10 @@ export function saveContractPayment(data) {
     request({
       url: '/contract.saveContractPayment',
       method: 'post',
-      data
+      data: {
+        ...data,
+        communityId: getCommunityId()
+      }
     }).then(response => {
       const res = response.data
       if (res.code === 0) {

@@ -65,6 +65,7 @@ public class ExpirationContractRemindTemplate extends TaskSystemQuartz {
             logInfo.put("sendTime", DateUtil.getNow(DateUtil.DATE_FORMATE_STRING_A));
             logInfo.put("content", buildContent(remind, days));
             logInfo.put("storeId", remind.get("storeId"));
+            logInfo.put("communityId", remind.get("communityId"));
             contractInnerServiceSMOImpl.saveContractRemindLog(logInfo);
         }
     }

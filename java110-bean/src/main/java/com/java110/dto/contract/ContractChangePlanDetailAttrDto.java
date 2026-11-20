@@ -19,6 +19,7 @@ private String contractId;
 private String detailId;
 private String specCd;
 private String storeId;
+private String communityId;
 private String value;
 
 
@@ -56,6 +57,14 @@ public String getStoreId() {
     }
 public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+public String getCommunityId() {
+        return communityId;
+    }
+
+public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 public String getValue() {
         return value;

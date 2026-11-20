@@ -8,6 +8,7 @@ import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.intf.store.IContractInnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -26,6 +27,7 @@ public class ListContractStatisticsCmd extends Cmd {
 
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
     }
 
     @Override
@@ -34,9 +36,7 @@ public class ListContractStatisticsCmd extends Cmd {
 
         Map<String, Object> info = new HashMap<>();
         info.put("storeId", storeId);
-        if (reqJson.containsKey("communityId")) {
-            info.put("communityId", reqJson.getString("communityId"));
-        }
+        info.put("communityId", reqJson.getString("communityId"));
         List<Map> statistics = contractInnerServiceSMOImpl.queryContractStatistics(info);
         Map<String, Object> data = new HashMap<>();
         if (statistics != null && !statistics.isEmpty()) {

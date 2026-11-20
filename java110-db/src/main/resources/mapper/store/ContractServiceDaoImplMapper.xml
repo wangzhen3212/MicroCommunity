@@ -5,12 +5,12 @@
 
     <!-- 保存合同管理信息 add by wuxw 2018-07-03 -->
     <insert id="saveContractInfo" parameterType="Map">
-        insert into contract(a_link, a_contacts, amount, store_id, operator, signing_time, b_contacts,
+        insert into contract(a_link, a_contacts, amount, store_id, community_id, operator, signing_time, b_contacts,
                              party_a, b_link, party_b,
                              contract_id, obj_id, contract_name, start_time, end_time, state, contract_code, obj_type,
                              operator_link, contract_parent_id,
                              obj_name, obj_person_name, obj_person_id, start_user_id, partya_id, template_id, pay_mode)
-        values (#{aLink}, #{aContacts}, #{amount}, #{storeId}, #{operator}, #{signingTime},
+        values (#{aLink}, #{aContacts}, #{amount}, #{storeId}, ifnull(#{communityId}, '-1'), #{operator}, #{signingTime},
                 #{bContacts}, #{partyA}, #{bLink}, #{partyB},
                 #{contractId}, #{objId}, #{contractName}, #{startTime}, #{endTime}, #{state}, #{contractCode},
                 #{objType}, #{operatorLink}, #{contractParentId},
@@ -21,7 +21,7 @@
     <select id="getContractInfo" parameterType="Map" resultType="Map">
         select t.a_link,t.a_link aLink,t.a_contacts,t.a_contacts aContacts,t.amount,t.status_cd,t.status_cd
         statusCd,t.store_id,t.store_id
-        storeId,t.operator,t.signing_time,t.signing_time signingTime,t.b_contacts,t.b_contacts
+        storeId,t.community_id,t.community_id communityId,t.operator,t.signing_time,t.signing_time signingTime,t.b_contacts,t.b_contacts
         bContacts,t.party_a,t.party_a partyA,t.b_link,t.b_link bLink,t.party_b,t.party_b
         partyB,t.contract_id,t.contract_id contractId,t.obj_id,t.obj_id objId,t.contract_name,t.contract_name
         contractName,t.start_time,t.start_time startTime,t.end_time,t.end_time
@@ -52,6 +52,15 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
+        <if test="communityIds !=null">
+            and t.community_id in
+            <foreach collection="communityIds" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="operator !=null and operator != ''">
             and t.operator= #{operator}
@@ -200,6 +209,9 @@
         <if test="storeId !=null and storeId != ''">
             , t.store_id= #{storeId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            , t.community_id= #{communityId}
+        </if>
         <if test="operator !=null and operator != ''">
             , t.operator= #{operator}
         </if>
@@ -267,6 +279,9 @@
         <if test="contractId !=null and contractId != ''">
             and t.contract_id= #{contractId}
         </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
     </update>
 
     <!-- 查询合同管理数量 add by wuxw 2018-07-03 -->
@@ -292,6 +307,15 @@
         </if>
         <if test="storeId !=null and storeId != ''">
             and t.store_id= #{storeId}
+        </if>
+        <if test="communityId !=null and communityId != ''">
+            and t.community_id= #{communityId}
+        </if>
+        <if test="communityIds !=null">
+            and t.community_id in
+            <foreach collection="communityIds" item="item" index="index" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
         </if>
         <if test="operator !=null and operator != ''">
             and t.operator= #{operator}
@@ -426,6 +450,9 @@
         <foreach collection="ownerIds" item="item" index="index" open="(" close=")" separator=",">
             #{item}
         </foreach>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
+        </if>
         group by t.obj_id
     </select>
 
@@ -449,6 +476,9 @@
         <if test="storeId != null and storeId != ''">
             and cr.store_id = #{storeId}
         </if>
+        <if test="communityId != null and communityId != ''">
+            and cr.community_id = #{communityId}
+        </if>
         ) roomCount
         from contract t
         left join contract_type_template ctt on t.template_id = ctt.template_id and ctt.status_cd = '0' and ctt.store_id =
@@ -456,6 +486,9 @@
         where t.status_cd = '0'
         <if test="storeId != null and storeId != ''">
             and t.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
     </select>
 
@@ -480,6 +513,9 @@
         where c.status_cd = '0'
         <if test="storeId != null and storeId != ''">
             and c.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and c.community_id = #{communityId}
         </if>
         <if test="category != null and category != ''">
             and ifnull(ctt.category, '2') = #{category}
@@ -520,6 +556,9 @@
         <if test="storeId != null and storeId != ''">
             and c.store_id = #{storeId}
         </if>
+        <if test="communityId != null and communityId != ''">
+            and c.community_id = #{communityId}
+        </if>
         <if test="category != null and category != ''">
             and ifnull(ctt.category, '2') = #{category}
         </if>
@@ -550,6 +589,7 @@
         select c.contract_id contractId, c.contract_code contractCode, c.contract_name contractName,
         c.end_time endTime, c.start_time startTime, c.amount amount, c.operator operator, c.party_b partyB,
         c.state state, ctt.template_name templateName, ifnull(ctt.category, '2') category, c.store_id storeId,
+        c.community_id communityId,
         datediff(c.end_time, now()) daysLeft,
         (select count(1) from contract_remind_log l where l.contract_id = c.contract_id and l.status_cd = '0') remindCount
         from contract c
@@ -558,6 +598,9 @@
         where c.status_cd = '0' and c.state = '22' and c.end_time is not null
         <if test="storeId != null and storeId != ''">
             and c.store_id = #{storeId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and c.community_id = #{communityId}
         </if>
         <if test="category != null and category != ''">
             and ifnull(ctt.category, '2') = #{category}
@@ -586,6 +629,9 @@
         <if test="storeId != null and storeId != ''">
             and c.store_id = #{storeId}
         </if>
+        <if test="communityId != null and communityId != ''">
+            and c.community_id = #{communityId}
+        </if>
         <if test="category != null and category != ''">
             and ifnull(ctt.category, '2') = #{category}
         </if>
@@ -602,19 +648,22 @@
 
     <insert id="saveContractRemindLog" parameterType="Map">
         insert into contract_remind_log(log_id, contract_id, remind_type, channel, send_time, receive_tel, content,
-                                        store_id, status_cd, create_time)
+                                        store_id, community_id, status_cd, create_time)
         values (#{logId}, #{contractId}, #{remindType}, #{channel}, #{sendTime}, #{receiveTel}, #{content},
-                #{storeId}, '0', now())
+                #{storeId}, ifnull(#{communityId}, '-1'), '0', now())
     </insert>
 
     <select id="queryContractRemindLogs" parameterType="Map" resultType="Map">
         select t.log_id logId, t.contract_id contractId, t.remind_type remindType, t.channel channel,
         t.send_time sendTime, t.receive_tel receiveTel, t.content content, t.status_cd statusCd,
-        t.create_time createTime
+        t.community_id communityId, t.create_time createTime
         from contract_remind_log t
         where t.status_cd = '0'
         <if test="contractId != null and contractId != ''">
             and t.contract_id = #{contractId}
+        </if>
+        <if test="communityId != null and communityId != ''">
+            and t.community_id = #{communityId}
         </if>
         <if test="contractIds != null">
             and t.contract_id in

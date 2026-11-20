@@ -36,8 +36,9 @@ public interface IUpdateContractBMO {
     /**
      * 两级审批全部通过后回写变更到合同主表（租期/主体/资产），并同步合同房屋与业主关系
      *
-     * @param planId  变更单ID
-     * @param storeId 商户ID
+     * @param planId      变更单ID
+     * @param storeId     商户ID
+     * @param communityId 小区ID
      */
-    void applyChangePlan(String planId, String storeId);
+    void applyChangePlan(String planId, String storeId, String communityId);
 }

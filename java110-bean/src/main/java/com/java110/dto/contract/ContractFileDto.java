@@ -18,6 +18,7 @@ public class ContractFileDto extends PageDto implements Serializable {
     private String fileRealName;
 private String contractFileId;
 private String contractId;
+private String communityId;
 private String fileSaveName;
 
 
@@ -43,6 +44,12 @@ public String getContractId() {
     }
 public void setContractId(String contractId) {
         this.contractId = contractId;
+    }
+public String getCommunityId() {
+        return communityId;
+    }
+public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 public String getFileSaveName() {
         return fileSaveName;

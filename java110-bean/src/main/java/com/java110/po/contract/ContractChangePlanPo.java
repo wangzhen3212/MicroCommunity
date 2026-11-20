@@ -12,6 +12,7 @@ public class ContractChangePlanPo implements Serializable {
     private String changePerson;
     private String state;
     private String storeId;
+    private String communityId;
 
 
 
@@ -77,6 +78,14 @@ public class ContractChangePlanPo implements Serializable {
 
     public void setStoreId(String storeId) {
         this.storeId = storeId;
+    }
+
+    public String getCommunityId() {
+        return communityId;
+    }
+
+    public void setCommunityId(String communityId) {
+        this.communityId = communityId;
     }
 
 }

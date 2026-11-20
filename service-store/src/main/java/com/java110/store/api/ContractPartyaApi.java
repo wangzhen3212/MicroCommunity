@@ -42,10 +42,12 @@ public class ContractPartyaApi {
         Assert.hasKeyAndValue(reqJson, "partyA", "请求报文中未包含partyA");
         Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
         Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractPartyaPo contractPartyaPo = BeanConvertUtil.covertBean(reqJson, ContractPartyaPo.class);
         contractPartyaPo.setStoreId(storeId);
+        contractPartyaPo.setCommunityId(reqJson.getString("communityId"));
 
         return saveContractPartyaBMOImpl.save(contractPartyaPo);
     }
@@ -66,10 +68,12 @@ public class ContractPartyaApi {
         Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
         Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
         Assert.hasKeyAndValue(reqJson, "partyaId", "partyaId不能为空");
+        Assert.hasKeyAndValue(reqJson, "communityId", "必填，请填写小区信息");
 
 
         ContractPartyaPo contractPartyaPo = BeanConvertUtil.covertBean(reqJson, ContractPartyaPo.class);
         contractPartyaPo.setStoreId(storeId);
+        contractPartyaPo.setCommunityId(reqJson.getString("communityId"));
 
         return updateContractPartyaBMOImpl.update(contractPartyaPo);
     }
@@ -92,6 +96,7 @@ public class ContractPartyaApi {
 
         ContractPartyaPo contractPartyaPo = BeanConvertUtil.covertBean(reqJson, ContractPartyaPo.class);
         contractPartyaPo.setStoreId(storeId);
+        contractPartyaPo.setCommunityId(reqJson.getString("communityId"));
         return deleteContractPartyaBMOImpl.delete(contractPartyaPo);
     }
 
@@ -105,15 +110,18 @@ public class ContractPartyaApi {
      */
     @RequestMapping(value = "/queryContractPartya", method = RequestMethod.GET)
     public ResponseEntity<String> queryContractPartya(@RequestHeader(value = "store-id") String storeId,
+                                                      @RequestParam(value = "communityId") String communityId,
                                                       @RequestParam(value = "partyA", required = false) String partyA,
                                                       @RequestParam(value = "aContacts", required = false) String aContacts,
                                                       @RequestParam(value = "aLink", required = false) String aLink,
                                                       @RequestParam(value = "page") int page,
                                                       @RequestParam(value = "row") int row) {
+        Assert.hasLength(communityId, "必填，请填写小区信息");
         ContractPartyaDto contractPartyaDto = new ContractPartyaDto();
         contractPartyaDto.setPage(page);
         contractPartyaDto.setRow(row);
         contractPartyaDto.setStoreId(storeId);
+        contractPartyaDto.setCommunityId(communityId);
         contractPartyaDto.setPartyA(partyA);
         contractPartyaDto.setaContacts(aContacts);
         contractPartyaDto.setaLink(aLink);
