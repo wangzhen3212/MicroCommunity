@@ -42,6 +42,7 @@ import com.java110.po.contract.ContractTypeTemplatePo;
 import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.renting.RentingPoolPo;
 import com.java110.po.room.RoomPo;
+import com.java110.store.bmo.contract.IBindOwnerRoomRelBMO;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
 import com.java110.store.bmo.contractFile.IDeleteContractFileBMO;
@@ -115,6 +116,9 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
     @Autowired
     private IContractFeeInnerServiceSMO contractFeeInnerServiceSMOImpl;
+
+    @Autowired
+    private IBindOwnerRoomRelBMO bindOwnerRoomRelBMOImpl;
 
     private static final String PREFIX_PLAN_ID = "95";
 
@@ -410,9 +414,10 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         // 回写主表后按最新合同字段重渲染库中正文，保证详情/打印与主表一致
         contractContentBMOImpl.refreshContent(contractChangePlanDto.getContractId(), storeId, communityId);
 
-        // 只有 资产变更时 操作 合同房屋
+        // 只有 资产变更时 操作 合同房屋，并在审批通过时统一绑定业主与资产关系（保存阶段不再绑定）
         if (ContractChangePlanDto.PLAN_TYPE_CHANGE_ROOM.equals(contractChangePlanDto.getPlanType())) {
             dealContractChangePlanRoom(contractChangePlanDto, contractDtos.get(0));
+            bindOwnerRoomRelBMOImpl.bindOwnerRoomRel(contractChangePlanDto.getContractId(), storeId, communityId);
         }
 
         // 如果是租期变更时 将房屋的时间修改为变更后的时间
@@ -498,9 +503,8 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     }
 
     private void doAddRoomRel(ContractDto contractDto, List<ContractRoomDto> oldContractRoomDtos, List<ContractChangePlanRoomDto> contractChangePlanRoomDtos) {
-        //删除之前数据 插入新数据
+        //插入新的关系值（业主关系由审批通过时统一绑定）
         ContractRoomPo contractRoomPo = null;
-        //插入新的关系值
         for (ContractChangePlanRoomDto tmpContractChangePlanRoomDto : contractChangePlanRoomDtos) {
             if (isOldRoom(tmpContractChangePlanRoomDto, oldContractRoomDtos)) {
                 continue;
@@ -515,61 +519,6 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             contractRoomPo.setRoomId(tmpContractChangePlanRoomDto.getRoomId());
             contractRoomPo.setRoomName(tmpContractChangePlanRoomDto.getRoomName());
             contractRoomInnerServiceSMOImpl.saveContractRoom(contractRoomPo);
-
-            //刷业主
-            OwnerRoomRelDto ownerRoomRelDto = new OwnerRoomRelDto();
-            ownerRoomRelDto.setRoomId(contractRoomPo.getRoomId());
-            List<OwnerRoomRelDto> ownerRoomRelDtos = ownerRoomRelInnerServiceSMOImpl.queryOwnerRoomRels(ownerRoomRelDto);
-
-            if (ownerRoomRelDtos != null && ownerRoomRelDtos.size() > 0) { // 说明业主没有发生变化，后续工作不做处理
-                if (contractDto.getObjId().equals(ownerRoomRelDtos.get(0).getOwnerId())) {
-                    continue;
-                }
-            }
-
-            //绑定关系
-            String relId = GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId);
-            OwnerRoomRelPo ownerRoomRelPo = new OwnerRoomRelPo();
-            ownerRoomRelPo.setEndTime(contractDto.getEndTime());
-            ownerRoomRelPo.setStartTime(contractDto.getStartTime());
-            ownerRoomRelPo.setOwnerId(contractDto.getObjId());
-            ownerRoomRelPo.setRelId(relId);
-            ownerRoomRelPo.setRemark("签订合同自动绑定");
-            ownerRoomRelPo.setRoomId(contractRoomPo.getRoomId());
-            ownerRoomRelPo.setState("2001");
-            ownerRoomRelPo.setUserId("-1");
-            ownerRoomRelPo.setOperate("ADD");
-            ownerRoomRelPo.setbId("-1");
-            ownerRoomRelInnerServiceSMOImpl.saveBusinessOwnerRoomRels(ownerRoomRelPo);
-
-            ownerRoomRelPo = new OwnerRoomRelPo();
-            ownerRoomRelPo.setEndTime(contractDto.getEndTime());
-            ownerRoomRelPo.setStartTime(contractDto.getStartTime());
-            ownerRoomRelPo.setOwnerId(contractDto.getObjId());
-            ownerRoomRelPo.setRelId(relId);
-            ownerRoomRelPo.setRemark("签订合同自动绑定");
-            ownerRoomRelPo.setRoomId(contractRoomPo.getRoomId());
-            ownerRoomRelPo.setState("2001");
-            ownerRoomRelPo.setUserId("-1");
-            ownerRoomRelInnerServiceSMOImpl.saveOwnerRoomRels(ownerRoomRelPo);
-
-            //修改房屋状态
-            RoomPo roomPo = new RoomPo();
-            roomPo.setRoomId(contractRoomPo.getRoomId());
-            roomPo.setState(RoomDto.STATE_SELL);
-            roomPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
-            roomInnerServiceSMOImpl.updateRooms(roomPo);
-            //删除老的
-            if (ownerRoomRelDtos != null && ownerRoomRelDtos.size() > 0) {
-                ownerRoomRelPo = new OwnerRoomRelPo();
-                ownerRoomRelPo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
-                ownerRoomRelPo.setRelId(ownerRoomRelDtos.get(0).getRelId());
-                ownerRoomRelInnerServiceSMOImpl.updateOwnerRoomRels(ownerRoomRelPo);
-                ownerRoomRelPo = BeanConvertUtil.covertBean(ownerRoomRelDtos.get(0), OwnerRoomRelPo.class);
-                ownerRoomRelPo.setbId("-1");
-                ownerRoomRelPo.setOperate("DEL");
-                ownerRoomRelInnerServiceSMOImpl.saveBusinessOwnerRoomRels(ownerRoomRelPo);
-            }
         }
     }
 
@@ -600,12 +549,6 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
             ownerRoomRelPo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
             ownerRoomRelPo.setRelId(ownerRoomRelDtos.get(0).getRelId());
             ownerRoomRelInnerServiceSMOImpl.updateOwnerRoomRels(ownerRoomRelPo);
-
-            //插入删除关系
-            ownerRoomRelPo = BeanConvertUtil.covertBean(ownerRoomRelDtos.get(0), OwnerRoomRelPo.class);
-            ownerRoomRelPo.setbId("-1");
-            ownerRoomRelPo.setOperate("DEL");
-            ownerRoomRelInnerServiceSMOImpl.saveBusinessOwnerRoomRels(ownerRoomRelPo);
 
             //修改房屋状态
             RoomPo roomPo = new RoomPo();

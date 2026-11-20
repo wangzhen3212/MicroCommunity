@@ -25,13 +25,10 @@ import com.java110.po.contract.ContractFilePo;
 import com.java110.po.contract.ContractFeePo;
 import com.java110.po.contract.ContractRoomPo;
 import com.java110.po.contract.ContractTypeTemplatePo;
-import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.renting.RentingPoolPo;
-import com.java110.po.room.RoomPo;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.store.bmo.contract.ISaveContractBMO;
 import com.java110.store.util.ContractFeeNormalizeUtil;
-import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.ContractContentUtil;
@@ -100,6 +97,12 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
     @Java110Transactional
     public ResponseEntity<String> save(ContractPo contractPo, JSONObject reqJson) {
 
+        // 兼容旧前端/旧调用方：只传了业主人员ID时，回填合同对象ID
+        if ((StringUtil.isEmpty(contractPo.getObjId()) || contractPo.getObjId().startsWith("-"))
+                && !StringUtil.isEmpty(contractPo.getObjPersonId())) {
+            contractPo.setObjId(contractPo.getObjPersonId());
+        }
+
         validateRoom(contractPo, reqJson);
 
         boolean draft = ContractDto.STATE_DRAFT.equals(reqJson.getString("state"));
@@ -138,7 +141,7 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             return ResultVo.createResponseEntity(ResultVo.CODE_ERROR, "保存失败");
         }
 
-        saveContractRoomRel(reqJson, contractPo);
+        saveContractRooms(reqJson, contractPo);
 
         // 正文与收款计划（同事务写入，正文独立表）
         saveContractContent(reqJson, contractPo);
@@ -303,12 +306,16 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
         }
     }
 
-    private void saveContractRoomRel(JSONObject reqJson, ContractPo contractPo) {
+    /**
+     * 保存合同关联房屋/商铺（只落 contract_room，业主冗余取自合同主体，不触碰资产产权关系）
+     */
+    private void saveContractRooms(JSONObject reqJson, ContractPo contractPo) {
 
-        //保存关联房屋
         if (!reqJson.containsKey("rooms")) {
             return;
         }
+        String ownerName = StringUtil.isEmpty(contractPo.getObjPersonName())
+                ? contractPo.getPartyB() : contractPo.getObjPersonName();
         JSONArray rooms = reqJson.getJSONArray("rooms");
         for (int conFileIndex = 0; conFileIndex < rooms.size(); conFileIndex++) {
             JSONObject resourceStore = rooms.getJSONObject(conFileIndex);
@@ -317,6 +324,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             contractRoomPo.setContractId(contractPo.getContractId());
             contractRoomPo.setStoreId(contractPo.getStoreId());
             contractRoomPo.setCommunityId(contractPo.getCommunityId());
+            contractRoomPo.setOwnerId(contractPo.getObjId());
+            contractRoomPo.setOwnerName(ownerName);
             String payerObjType = StringUtil.isEmpty(contractRoomPo.getPayerObjType())
                     ? FeeDto.PAYER_OBJ_TYPE_ROOM : contractRoomPo.getPayerObjType();
             contractRoomPo.setPayerObjType(payerObjType);
@@ -333,65 +342,10 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
                     resourceStore.getString("floorNum") + "-"
                             + resourceStore.getString("unitNum") + "-" + resourceStore.getString("roomNum"));
             contractRoomInnerServiceSMOImpl.saveContractRoom(contractRoomPo);
-
-            //刷业主
-            OwnerRoomRelDto ownerRoomRelDto = new OwnerRoomRelDto();
-            ownerRoomRelDto.setRoomId(contractRoomPo.getRoomId());
-            List<OwnerRoomRelDto> ownerRoomRelDtos = ownerRoomRelInnerServiceSMOImpl.queryOwnerRoomRels(ownerRoomRelDto);
-
-            if (ownerRoomRelDtos != null && ownerRoomRelDtos.size() > 0) { // 说明业主没有发生变化，后续工作不做处理
-                if (!StringUtil.isEmpty(contractPo.getObjId())
-                        && contractPo.getObjId().equals(ownerRoomRelDtos.get(0).getOwnerId())) {
-                    continue;
-                }
-            }
-
-            //补充 B过程数据 ADD
-            String relId = GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_relId);
-            OwnerRoomRelPo ownerRoomRelPo = new OwnerRoomRelPo();
-            ownerRoomRelPo.setEndTime(contractPo.getEndTime());
-            ownerRoomRelPo.setStartTime(contractPo.getStartTime());
-            ownerRoomRelPo.setOwnerId(contractPo.getObjId());
-            ownerRoomRelPo.setRelId(relId);
-            ownerRoomRelPo.setRemark("签订合同自动绑定");
-            ownerRoomRelPo.setRoomId(contractRoomPo.getRoomId());
-            ownerRoomRelPo.setState("2001");
-            ownerRoomRelPo.setUserId("-1");
-            ownerRoomRelPo.setOperate("ADD");
-            ownerRoomRelPo.setbId("-1");
-            ownerRoomRelInnerServiceSMOImpl.saveBusinessOwnerRoomRels(ownerRoomRelPo);
-
-            ownerRoomRelPo = new OwnerRoomRelPo();
-            ownerRoomRelPo.setEndTime(contractPo.getEndTime());
-            ownerRoomRelPo.setStartTime(contractPo.getStartTime());
-            ownerRoomRelPo.setOwnerId(contractPo.getObjId());
-            ownerRoomRelPo.setRelId(relId);
-            ownerRoomRelPo.setRemark("签订合同自动绑定");
-            ownerRoomRelPo.setRoomId(contractRoomPo.getRoomId());
-            ownerRoomRelPo.setState("2001");
-            ownerRoomRelPo.setUserId("-1");
-            ownerRoomRelInnerServiceSMOImpl.saveOwnerRoomRels(ownerRoomRelPo);
-
-            //修改房屋状态
-            RoomPo roomPo = new RoomPo();
-            roomPo.setRoomId(contractRoomPo.getRoomId());
-            roomPo.setState(RoomDto.STATE_SELL);
-            roomPo.setStatusCd(StatusConstant.STATUS_CD_VALID);
-            roomInnerServiceSMOImpl.updateRooms(roomPo);
-            //删除老的
-            if (ownerRoomRelDtos != null && ownerRoomRelDtos.size() > 0) {
-                ownerRoomRelPo = new OwnerRoomRelPo();
-                ownerRoomRelPo.setStatusCd(StatusConstant.STATUS_CD_INVALID);
-                ownerRoomRelPo.setRelId(ownerRoomRelDtos.get(0).getRelId());
-                ownerRoomRelInnerServiceSMOImpl.updateOwnerRoomRels(ownerRoomRelPo);
-                ownerRoomRelPo = BeanConvertUtil.covertBean(ownerRoomRelDtos.get(0), OwnerRoomRelPo.class);
-                ownerRoomRelPo.setbId("-1");
-                ownerRoomRelPo.setOperate("DEL");
-                ownerRoomRelInnerServiceSMOImpl.saveBusinessOwnerRoomRels(ownerRoomRelPo);
-            }
         }
 
     }
+
 
     /**
      * 修改 房屋租赁状态

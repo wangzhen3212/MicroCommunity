@@ -13,6 +13,7 @@ import com.java110.doc.annotation.Java110ExampleDoc;
 import com.java110.doc.annotation.Java110ParamDoc;
 import com.java110.doc.annotation.Java110ParamsDoc;
 import com.java110.doc.annotation.Java110ResponseDoc;
+import com.java110.dto.contract.ContractDto;
 import com.java110.po.contract.ContractFilePo;
 import com.java110.po.contract.ContractPo;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
@@ -85,6 +86,10 @@ public class UpdateContractCmd extends Cmd {
             if (StringUtil.isEmpty(storeId)) {
                 throw new CmdException("未获取到商户信息，请重新登录后重试");
             }
+            boolean draft = ContractDto.STATE_DRAFT.equals(reqJson.getString("state"));
+            if (!draft) {
+                validateSubmit(reqJson);
+            }
             reqJson.put("userId", userId);
 
             ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
@@ -95,6 +100,19 @@ public class UpdateContractCmd extends Cmd {
             context.setResponseEntity(updateContractBMOImpl.update(contractPo, reqJson));
         } catch (Exception e) {
             context.setResponseEntity(ResultVo.error("修改合同失败：" + e.getMessage()));
+        }
+    }
+
+    /**
+     * 提交审批时的必填校验（草稿允许缺省）：房屋出租合同必须选择业主
+     */
+    private void validateSubmit(JSONObject reqJson) throws CmdException {
+        if (!ContractDto.CATEGORY_RENT.equals(reqJson.getString("category"))) {
+            return;
+        }
+        String objId = reqJson.getString("objId");
+        if (StringUtil.isEmpty(objId) || objId.startsWith("-")) {
+            throw new CmdException("请求报文中未包含业主信息");
         }
     }
 

@@ -15,6 +15,7 @@ import com.java110.intf.user.IUserV1InnerServiceSMO;
 import com.java110.po.contract.ContractAuditLogPo;
 import com.java110.po.contract.ContractChangePlanPo;
 import com.java110.po.contract.ContractPo;
+import com.java110.store.bmo.contract.IBindOwnerRoomRelBMO;
 import com.java110.store.bmo.contract.IContractAuditBMO;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
 import com.java110.utils.exception.CmdException;
@@ -61,6 +62,9 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
 
     @Autowired
     private IUpdateContractBMO updateContractBMOImpl;
+
+    @Autowired
+    private IBindOwnerRoomRelBMO bindOwnerRoomRelBMOImpl;
 
     @Override
     public void audit(JSONObject reqJson, String storeId, String communityId, String userId) {
@@ -119,6 +123,11 @@ public class ContractAuditBMOImpl implements IContractAuditBMO {
             updateContractBMOImpl.applyChangePlan(bizId, storeId, communityId);
         }
         updateBizState(bizType, bizId, storeId, communityId, ContractDto.STATE_AUDIT_FINISH);
+
+        // 合同生效后才建立业主与房屋/商铺关系（保存、提交、法务校对阶段均不绑定）
+        if (ContractAuditLogDto.BIZ_TYPE_CONTRACT.equals(bizType)) {
+            bindOwnerRoomRelBMOImpl.bindOwnerRoomRel(bizId, storeId, communityId);
+        }
     }
 
     @Override

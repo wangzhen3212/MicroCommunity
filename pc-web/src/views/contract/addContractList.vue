@@ -676,13 +676,16 @@ export default {
       if (!owner) {
         return
       }
+      const ownerId = owner.memberId || owner.ownerId || ''
       const ownerName = owner.name || ''
       this.form.partyB = ownerName
       this.form.bLink = owner.link || ''
       if (!this.form.bContacts) {
         this.form.bContacts = ownerName
       }
-      this.form.objPersonId = owner.ownerId || owner.memberId || ''
+      this.form.objId = ownerId
+      this.form.objType = '1111'
+      this.form.objPersonId = ownerId
       this.form.objPersonName = ownerName
     },
     handlePlanChange(plans) {

@@ -132,6 +132,11 @@ export default {
       ]
       if (isRent) {
         items.push({
+          key: 'owner',
+          labelKey: 'contractWorkbench.integrity.owner',
+          pass: !!(form.objId && !String(form.objId).startsWith('-'))
+        })
+        items.push({
           key: 'fee',
           labelKey: 'contractWorkbench.integrity.feeOptional',
           pass: toNumber(this.feeTotal) > 0,

@@ -1384,3 +1384,30 @@ CREATE INDEX idx_contract_cpda_community_id         ON contract_change_plan_deta
 -- 回滚：代码回滚 + 重启 store-service，前端发布回滚；历史数据无需处理（本次未改表结构、未刷数据）
 ```
 
+## 2026-11-20 — 合同绑定业主资产关系时机前移到审批通过 + 合同收费页只显示已生效合同
+
+背景：合同在原保存阶段（`SaveContractBMOImpl.saveContractRoomRel`）就写 `owner_room_rel`、改房屋状态、手写 `business_building_owner_room_rel` 流水，草稿/驳回即改产权关系且业主恒为 `-1`（前端选业主未写 `form.objId`）；合同收费页不过滤状态，草稿/审批中/驳回合同都能计费。
+
+本次改动（**无 DDL、无增量 SQL、无新增服务码**）：
+
+1. 新增绑定 BMO：`service-store/.../store/bmo/contract/IBindOwnerRoomRelBMO.java` + `impl/BindOwnerRoomRelBMOImpl.java`，`bindOwnerRoomRel(contractId, storeId, communityId)` 按 `contract_room.payer_obj_type` 分支：
+   - 房屋（3333）：同业主 → 幂等跳过写关系、只兜底置房屋状态 `2001`；业主不同 → 逻辑删除旧 `building_owner_room_rel`（`status_cd='1'`）→ 新增一条（`relId` 取 `CODE_PREFIX_relId`、起止取合同租期、`state=2001`、`userId=-1`、`remark=签订合同自动绑定`）→ 房屋状态 `2001`。
+   - 商铺（4444）：同业主 → 幂等跳过；业主不同 → `deleteBuildingShopOwner`（内部 `status_cd='1'`）→ `saveBuildingShopOwner`（`shopOwnerId` 取 `CODE_PREFIX_shopId`、`ownerId/ownerName` 取合同业主、`link=contract.bLink`、`state=2006` 已出租、起止取合同租期并转 `Date`）→ `updateBuildingShop(state=2006)`。
+   - 车位（6666）等其它类型不参与绑定；业主 ID 为空或以 `-` 开头时 `logger.warn` 跳过、不阻断审批（存量兜底）；写关系/改状态条数 `< 1` 抛 `CmdException`；**不写 `business_building_owner_room_rel` 等业务流水表**（框架维护）。
+2. `SaveContractBMOImpl`：`saveContractRoomRel` 收敛为 `saveContractRooms`，只落 `contract_room`（补 `owner_id=contract.obj_id`、`owner_name=objPersonName|partyB`）；删除 `owner_room_rel` 写入、房屋状态变更、business 流水写入；`save()` 开头 `obj_id` 为空或以 `-` 开头且 `obj_person_id` 有值时回填 `obj_id`（兼容旧前端）。
+3. `ContractAuditBMOImpl`：领导审批通过（`bizType=1`）置 `state=22` 后调 `bindOwnerRoomRelBMOImpl.bindOwnerRoomRel(...)`，与审批同事务（`AuditContractCmd` 已有 `@Java110Transactional`）；`bizType=2`（变更单）仍走 `applyChangePlan`，不重复绑定。
+4. `UpdateContractBMOImpl.applyChangePlan`：`PLAN_TYPE_CHANGE_ROOM` 分支先处理 `contract_room` 增删，再调绑定 BMO；`doAddRoomRel` 不再绑定，`doDelOldRoomRel` 保留 `contract_room` 删除 + 逻辑删旧关系 + 房屋状态置 `2002`（`RoomDto.STATE_FREE`），去掉 business 流水写入。
+5. `SaveContractChangePlanBMOImpl`：删除保存阶段的绑定死代码（`dealContractChangePlanRoom` / `doAddRoomRel` / `doDelOldRoomRel` / `isOldRoom` / `isDelOldRoom`）及无用注入与 import。
+6. `SaveContractCmd` / `UpdateContractCmd`：非草稿提交时校验 `category=1`（房屋出租）的 `objId` 必填且不得以 `-` 开头，否则抛 `CmdException("请求报文中未包含业主信息")`。
+7. 前端 `views/contract/addContractList.vue`：`handleChooseOwner` 写入 `form.objId = owner.memberId||owner.ownerId`、`objType='1111'`、`objPersonId/objPersonName`、`partyB/bLink/bContacts`。
+8. 前端 `components/contract/workbench/ContractSummaryPanel.vue`：租赁合同完整性校验增加 `owner` 项（`objId` 非空且不以 `-` 开头）；`views/contract/contractWorkbenchLang.js` 三语补 `contractWorkbench.integrity.owner`（Owner/业主/業主）。
+9. 前端 `views/fee/contractCreateFeeList.vue`：移除合同状态下拉与 `getDict('contract','state')` 字典加载，查询固定 `state=CONTRACT_STATE.EFFECTIVE`（22），保留合同编号/名称/乙方联系人查询。
+
+```sql
+-- 本次无 SQL / 无 DDL / 无 c_service、c_route 变更
+
+-- 执行后：重启 store-service（绑定 BMO 与审批链路生效），前端重新发布即可
+-- 回滚：代码回滚 + 重启 store-service + 前端发布回滚；本次未新增关系数据，仅绑定写入时机变化，
+--       已由本次审批写入的 building_owner_room_rel / building_shop_owner 记录如需清理请按 room_id/shop_id 定向处理
+```
+

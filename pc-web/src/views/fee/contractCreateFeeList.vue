@@ -33,14 +33,6 @@
               @keyup.enter.native="_queryContract"></el-input>
           </el-col>
           <el-col :span="6">
-            <el-select v-model="contractCreateFeeInfo.conditions.state"
-              :placeholder="$t('contractCreateFee.selectContractStatus')" style="width:100%">
-              <el-option :label="$t('contractCreateFee.selectContractStatus')" value=""></el-option>
-              <el-option v-for="(item, index) in contractCreateFeeInfo.states" :key="index" :label="item.name"
-                :value="item.statusCd"></el-option>
-            </el-select>
-          </el-col>
-          <el-col :span="6">
             <el-button type="primary" size="small" @click="_queryContract">
               {{ $t('common.query') }}
             </el-button>
@@ -89,7 +81,6 @@
 </template>
 
 <script>
-import { getDict } from '@/api/community/communityApi'
 import { getCommunityId } from '@/api/community/communityApi'
 import { queryContract } from '@/api/fee/contractCreateFeeApi'
 
@@ -107,6 +98,7 @@ import SplitFee from '@/components/fee/splitFee'
 import ContractCreateFeeAdd from '@/components/fee/contractCreateFeeAdd'
 import DownloadCollectionLetterOrder from '@/components/fee/downloadCollectionLetterOrder'
 import { openFeeTabPane } from '@/utils/feeTabUtil'
+import { CONTRACT_STATE } from '@/utils/contractUtil'
 
 export default {
   name: 'ContractCreateFeeList',
@@ -129,7 +121,6 @@ export default {
       communityId: '',
       contractCreateFeeInfo: {
         contracts: [],
-        states: [],
         contractId: '',
         contractCode: '',
         contractName: '',
@@ -142,31 +133,23 @@ export default {
           contractCode: '',
           contractNameLike: '',
           bContacts: '',
-          state: ''
+          state: CONTRACT_STATE.EFFECTIVE
         }
       }
     }
   },
   async created() {
     this.communityId = await getCommunityId()
-    await this.loadDictData()
     await this.listContracts(1, 500)
   },
   methods: {
-    async loadDictData() {
-      try {
-        const data = await getDict('contract', 'state')
-        this.contractCreateFeeInfo.states = data
-      } catch (error) {
-        console.error('获取字典数据失败:', error)
-      }
-    },
     async listContracts(page, row) {
       const params = {
         page,
         row,
         communityId: this.communityId,
-        ...this.contractCreateFeeInfo.conditions
+        ...this.contractCreateFeeInfo.conditions,
+        state: CONTRACT_STATE.EFFECTIVE
       }
 
       try {
@@ -254,7 +237,7 @@ export default {
       this.contractCreateFeeInfo.conditions.contractCode = ''
       this.contractCreateFeeInfo.conditions.contractNameLike = ''
       this.contractCreateFeeInfo.conditions.bContacts = ''
-      this.contractCreateFeeInfo.conditions.state = ''
+      this.contractCreateFeeInfo.conditions.state = CONTRACT_STATE.EFFECTIVE
       this._queryContract()
     },
     handleSuccess() {

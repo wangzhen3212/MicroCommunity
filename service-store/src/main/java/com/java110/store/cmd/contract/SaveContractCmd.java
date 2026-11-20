@@ -134,6 +134,13 @@ public class SaveContractCmd extends Cmd {
         if (StringUtil.isEmpty(amount) || !NumberUtil.isDouble(amount) || NumberUtil.getDouble(amount) <= 0) {
             throw new CmdException("合同金额必须大于 0");
         }
+        // 房屋出租合同必须选择业主，否则审批通过后无法建立业主房屋关系
+        if (ContractDto.CATEGORY_RENT.equals(reqJson.getString("category"))) {
+            String objId = reqJson.getString("objId");
+            if (StringUtil.isEmpty(objId) || objId.startsWith("-")) {
+                throw new CmdException("请求报文中未包含业主信息");
+            }
+        }
     }
 
     /**
