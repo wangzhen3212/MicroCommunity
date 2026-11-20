@@ -15,7 +15,7 @@
           <el-dropdown-item command="special">{{ $t('contractWorkbench.doc.clauseSpecial') }}</el-dropdown-item>
         </el-dropdown-menu>
       </el-dropdown>
-      <el-dropdown size="mini" :disabled="readonly" @command="insertVariable">
+      <el-dropdown v-if="showVariable" size="mini" :disabled="readonly" @command="insertVariable">
         <el-button size="mini">
           {{ $t('contractWorkbench.doc.insertVariable') }}<i class="el-icon-arrow-down el-icon--right"></i>
         </el-button>
@@ -67,6 +67,10 @@ export default {
     readonly: {
       type: Boolean,
       default: false
+    },
+    showVariable: {
+      type: Boolean,
+      default: true
     }
   },
   data() {

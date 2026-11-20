@@ -1111,3 +1111,33 @@ VALUES ('3141', '8000418004', '982026112010000001', 'Q', '1000', 'S', '2026-11-2
 --          ALTER TABLE contract_room DROP COLUMN payer_obj_type;
 ```
 
+## 2026-11-20 — 合同增删改 CMD 化 + 正文变量渲染
+
+```sql
+-- 执行前备份：mysqldump -u<user> -p <db> contract_content c_service c_route > contract_cmd_bak.sql
+
+-- ① contract_content 增加 template_content（含变量占位符的正文原文，编辑回显用；content 存渲染后正文）
+ALTER TABLE `contract_content`
+  ADD COLUMN `template_content` longtext COMMENT '含变量占位符的正文模板，编辑回显用' AFTER `content`;
+
+-- ② 合同增删改迁移到 CMD（contract.saveContract / contract.updateContract / contract.deleteContract）
+INSERT IGNORE INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_cd`,`name`,`seq`,`messageQueueName`,`is_instance`,`url`,`method`,`timeout`,`retry_count`,`provide_app_id`,`create_time`,`status_cd`) VALUES
+ ('2156','982026112000000001','contract.saveContract','API','新增合同','1',NULL,'CMD','http://store-service','POST','60','3','8000418004',NOW(),'0'),
+ ('2157','982026112000000002','contract.updateContract','API','修改合同','1',NULL,'CMD','http://store-service','POST','60','3','8000418004',NOW(),'0'),
+ ('2158','982026112000000003','contract.deleteContract','API','删除合同','1',NULL,'CMD','http://store-service','POST','60','3','8000418004',NOW(),'0');
+
+INSERT IGNORE INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_times`,`invoke_model`,`create_time`,`status_cd`) VALUES
+ ('3138','8000418004','982026112000000001','Q','1000','S',NOW(),'0'),
+ ('3139','8000418004','982026112000000002','Q','1000','S',NOW(),'0'),
+ ('3140','8000418004','982026112000000003','Q','1000','S',NOW(),'0');
+
+-- ③ 旧 V0 接口下线（ContractApi 中三个方法已删除，避免两套入口并存）
+UPDATE `c_service` SET `status_cd` = '1', `create_time` = NOW()
+ WHERE `service_code` IN ('/contract/saveContract','/contract/updateContract','/contract/deleteContract');
+
+-- ④ 执行后刷新缓存：POST /app/cache.flushCache?cache=APP_ROUTE_SERVICE（可再刷 MAPPING / SERVICE_SQL），或重启 service-api、service-store
+-- ⑤ 回滚：DELETE FROM c_route WHERE service_id IN ('982026112000000001','982026112000000002','982026112000000003');
+--          DELETE FROM c_service WHERE service_code IN ('contract.saveContract','contract.updateContract','contract.deleteContract');
+--          UPDATE c_service SET status_cd = '0' WHERE service_code IN ('/contract/saveContract','/contract/updateContract','/contract/deleteContract');
+--          ALTER TABLE contract_content DROP COLUMN template_content;
+```

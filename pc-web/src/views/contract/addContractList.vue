@@ -42,10 +42,12 @@
                 :form="form"
                 :partyas="partyas"
                 :templates="templates"
+                :amount-manual="amountManual"
                 @regenerate-code="handleGenerateCode"
                 @template-change="handleTemplateChange"
                 @partya-change="handlePartyaChange"
                 @amount-change="handleAmountChange"
+                @recalc-amount="handleRecalcAmount"
                 @select-owner="openOwnerPicker"
               />
             </el-form>
@@ -116,6 +118,7 @@
               :template-content="templateContent"
               :variables="docVariables"
               :readonly="readonly"
+              :show-variable="false"
             />
           </div>
         </div>
@@ -173,11 +176,11 @@ import {
   updateContract
 } from '@/api/contract/contractWorkbenchApi'
 import { listContractCollectionPlans } from '@/api/contract/contractPerformanceApi'
-import { queryContractAuditFlow, submitContractAudit } from '@/api/contract/contractAuditApi'
+import { queryContractAuditFlow, queryContractAuditorConfig, submitContractAudit } from '@/api/contract/contractAuditApi'
 import { queryContractRoom } from '@/api/contract/contractDetailRoomApi'
 import { queryContractFile } from '@/api/contract/contractDetailFileApi'
 import { computeContractFeeAmount, computeContractRentAmount } from '@/api/contract/contractFeeCompositionApi'
-import { amountToChinese, guessCategory, sanitizeHtml, termMonths, CONTRACT_CATEGORY } from '@/utils/contractUtil'
+import { amountToChinese, guessCategory, renderContractContent, sanitizeHtml, termMonths, CONTRACT_CATEGORY } from '@/utils/contractUtil'
 import {
   PAYER_OBJ_TYPE,
   applyManualAmount,
@@ -225,6 +228,7 @@ export default {
       rentAmountMap: {},
       rentTotalAmount: '',
       recalcTimer: null,
+      amountManual: false,
       form: this.createEmptyForm(),
       parentContract: null
     }
@@ -505,7 +509,7 @@ export default {
       })
     },
     loadContent(contractId) {
-      queryContractContent({ contractId }).then(data => {
+      queryContractContent({ contractId, raw: true }).then(data => {
         this.content = data.content || ''
       }).catch(() => {
         this.content = ''
@@ -556,6 +560,7 @@ export default {
         this.targets = []
         this.plans = []
         this.form.amount = ''
+        this.amountManual = false
         return
       }
       queryContractTypeTemplate({ templateId, page: 1, row: 1 }).then(list => {
@@ -607,6 +612,11 @@ export default {
     },
     handleAmountChange(amount) {
       this.form.amount = amount
+      this.amountManual = true
+    },
+    handleRecalcAmount() {
+      this.amountManual = false
+      this.recalcFeeRows(true)
     },
     openOwnerPicker() {
       if (this.$refs.ownerPicker) {
@@ -683,7 +693,7 @@ export default {
         return
       }
       if (!this.hasRooms) {
-        if (this.hadRooms || force) {
+        if ((this.hadRooms || force) && !this.amountManual) {
           this.form.amount = '0.00'
         }
         this.hadRooms = false
@@ -767,7 +777,7 @@ export default {
       })
     },
     refreshFormAmount(force) {
-      if (!this.isRent || !this.hasRooms) {
+      if (!this.isRent || !this.hasRooms || this.amountManual) {
         return
       }
       if (this.fees.length || force) {
@@ -803,6 +813,7 @@ export default {
     },
     handleFillAmount(total) {
       this.form.amount = total
+      this.amountManual = true
     },
     clearTargets() {
       if (String(this.form.category) === '1') {
@@ -833,6 +844,7 @@ export default {
       })
     },
     buildPayload(state) {
+      const variables = this.docVariables
       return {
         ...this.form,
         state: state,
@@ -840,7 +852,9 @@ export default {
         plans: this.isRent ? [] : this.plans,
         targets: this.targets,
         fees: this.fees,
-        content: this.content,
+        content: renderContractContent(this.content, variables),
+        templateContent: this.content,
+        variables: variables,
         contractFilePo: this.files
       }
     },
@@ -890,6 +904,21 @@ export default {
         return
       }
       this.submitting = true
+      queryContractAuditorConfig({}).then(config => {
+        const legalAuditors = (config && config.legalAuditors) || []
+        const leaderAuditors = (config && config.leaderAuditors) || []
+        if (!legalAuditors.length || !leaderAuditors.length) {
+          this.submitting = false
+          this.$message.error(this.$t('contractWorkbench.msg.auditorMissing'))
+          return
+        }
+        this.saveAndSubmit()
+      }).catch(error => {
+        this.submitting = false
+        this.$message.error(error.message || this.$t('contractWorkbench.msg.submitError'))
+      })
+    },
+    saveAndSubmit() {
       const payload = this.buildPayload('')
       const save = this.isEdit ? updateContract(payload) : saveContract(payload)
       save.then(() => {

@@ -11,6 +11,7 @@ public class ContractContentPo implements Serializable {
     private String contractId;
     private String templateId;
     private String content;
+    private String templateContent;
     private String contentVersion;
     private String statusCd = "0";
 
@@ -44,6 +45,14 @@ public class ContractContentPo implements Serializable {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getTemplateContent() {
+        return templateContent;
+    }
+
+    public void setTemplateContent(String templateContent) {
+        this.templateContent = templateContent;
     }
 
     public String getContentVersion() {

@@ -34,6 +34,7 @@ import com.java110.store.bmo.contract.ISaveContractBMO;
 import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.ContractContentUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -121,10 +122,12 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
         //附件保存
         List<ContractFilePo> filePos = contractPo.getContractFilePo();
         int flag = contractInnerServiceSMOImpl.saveContract(contractPo);
-        for (ContractFilePo file : filePos) {
-            if (file.getFileRealName().length() > 0 && file.getFileSaveName().length() > 0) {
-                file.setContractId(contractPo.getContractId());
-                contractFileInnerServiceSMOImpl.saveContractFile(file);
+        if (filePos != null) {
+            for (ContractFilePo file : filePos) {
+                if (!StringUtil.isEmpty(file.getFileRealName()) && !StringUtil.isEmpty(file.getFileSaveName())) {
+                    file.setContractId(contractPo.getContractId());
+                    contractFileInnerServiceSMOImpl.saveContractFile(file);
+                }
             }
         }
 
@@ -171,14 +174,20 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
     }
 
     /**
-     * 保存合同正文（独立表 upsert，同时累加模板使用次数）
+     * 保存合同正文（渲染后正文与含变量原文双列写入，同时累加模板使用次数）
      */
     private void saveContractContent(JSONObject reqJson, ContractPo contractPo) {
-        if (StringUtil.isEmpty(reqJson.getString("content"))) {
+        String content = reqJson.getString("content");
+        String templateContent = reqJson.getString("templateContent");
+        if (StringUtil.isEmpty(content) && StringUtil.isEmpty(templateContent)) {
             return;
         }
+        if (StringUtil.isEmpty(templateContent)) {
+            templateContent = content;
+        }
+        String renderedContent = ContractContentUtil.render(templateContent, reqJson.getJSONObject("variables"));
         contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), contractPo.getTemplateId(),
-                reqJson.getString("content"));
+                renderedContent, templateContent);
         if (StringUtil.isEmpty(contractPo.getTemplateId())) {
             return;
         }
@@ -262,7 +271,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
                 continue;
             }
             //存在关系 并且是他自己
-            if (contractPo.getObjId().equals(ownerRoomRelDtos.get(0).getOwnerId())) {
+            if (!StringUtil.isEmpty(contractPo.getObjId())
+                    && contractPo.getObjId().equals(ownerRoomRelDtos.get(0).getOwnerId())) {
                 continue;
             }
 
@@ -314,7 +324,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
             List<OwnerRoomRelDto> ownerRoomRelDtos = ownerRoomRelInnerServiceSMOImpl.queryOwnerRoomRels(ownerRoomRelDto);
 
             if (ownerRoomRelDtos != null && ownerRoomRelDtos.size() > 0) { // 说明业主没有发生变化，后续工作不做处理
-                if (contractPo.getObjId().equals(ownerRoomRelDtos.get(0).getOwnerId())) {
+                if (!StringUtil.isEmpty(contractPo.getObjId())
+                        && contractPo.getObjId().equals(ownerRoomRelDtos.get(0).getOwnerId())) {
                     continue;
                 }
             }
@@ -374,7 +385,8 @@ public class SaveContractBMOImpl implements ISaveContractBMO {
     private void noticeRentUpdateState(ContractPo contractPo) {
 
 
-        if (!contractPo.getObjType().equals(FeeDto.PAYER_OBJ_TYPE_ROOM)
+        if (StringUtil.isEmpty(contractPo.getObjType())
+                || !contractPo.getObjType().equals(FeeDto.PAYER_OBJ_TYPE_ROOM)
                 || StringUtil.isEmpty(contractPo.getObjId())
                 || contractPo.getObjId().startsWith("-")) {
             return;

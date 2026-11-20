@@ -21,7 +21,7 @@ export function getContractList(params) {
 export function updateContract(data) {
   return new Promise((resolve, reject) => {
 request({
-      url: '/contract/updateContract',
+      url: '/contract.updateContract',
       method: 'post',
       data
     }).then(response => {
@@ -41,7 +41,7 @@ request({
 export function deleteContract(data) {
   return new Promise((resolve, reject) => {
 request({
-      url: '/contract/deleteContract',
+      url: '/contract.deleteContract',
       method: 'post',
       data
     }).then(response => {

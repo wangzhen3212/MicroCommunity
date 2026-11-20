@@ -24,7 +24,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
     private IContractContentInnerServiceSMO contractContentInnerServiceSMOImpl;
 
     @Override
-    public void saveOrUpdateContent(String contractId, String templateId, String content) {
+    public void saveOrUpdateContent(String contractId, String templateId, String content, String templateContent) {
         if (StringUtil.isEmpty(contractId)) {
             throw new CmdException("保存合同正文失败，合同ID为空");
         }
@@ -35,6 +35,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
             contentPo.setContractId(contractId);
             contentPo.setTemplateId(templateId);
             contentPo.setContent(content == null ? "" : content);
+            contentPo.setTemplateContent(templateContent == null ? "" : templateContent);
             contentPo.setContentVersion("0");
             int flag = contractContentInnerServiceSMOImpl.saveContractContent(contentPo);
             if (flag < 1) {
@@ -47,6 +48,7 @@ public class ContractContentBMOImpl implements IContractContentBMO {
         contentPo.setContractId(contractId);
         contentPo.setTemplateId(templateId);
         contentPo.setContent(content == null ? "" : content);
+        contentPo.setTemplateContent(templateContent == null ? "" : templateContent);
         contentPo.setStatusCd("0");
         int flag = contractContentInnerServiceSMOImpl.updateContractContent(contentPo);
         if (flag < 1) {

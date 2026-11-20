@@ -14,6 +14,7 @@ public class ContractContentDto extends PageDto implements Serializable {
     private String contractId;
     private String templateId;
     private String content;
+    private String templateContent;
     private int contentVersion;
 
     private Date createTime;
@@ -51,6 +52,14 @@ public class ContractContentDto extends PageDto implements Serializable {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getTemplateContent() {
+        return templateContent;
+    }
+
+    public void setTemplateContent(String templateContent) {
+        this.templateContent = templateContent;
     }
 
     public int getContentVersion() {

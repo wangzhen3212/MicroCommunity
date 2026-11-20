@@ -3,7 +3,6 @@ package com.java110.store.api;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.contract.ContractDto;
 import com.java110.dto.contract.ContractAttrDto;
 import com.java110.dto.contract.ContractChangePlanDto;
@@ -21,13 +20,10 @@ import com.java110.po.contract.ContractChangePlanDetailPo;
 import com.java110.po.contract.ContractChangePlanDetailAttrPo;
 import com.java110.po.contract.ContractChangePlanRoomPo;
 import com.java110.po.contract.ContractCollectionPlanPo;
-import com.java110.po.contract.ContractFilePo;
 import com.java110.po.contract.ContractRoomPo;
 import com.java110.po.contract.ContractTypeTemplatePo;
 
-import com.java110.store.bmo.contract.IDeleteContractBMO;
 import com.java110.store.bmo.contract.IGetContractBMO;
-import com.java110.store.bmo.contract.ISaveContractBMO;
 import com.java110.store.bmo.contract.IUpdateContractBMO;
 import com.java110.store.bmo.contractAttr.IDeleteContractAttrBMO;
 import com.java110.store.bmo.contractAttr.IGetContractAttrBMO;
@@ -70,11 +66,8 @@ import java.util.List;
 public class ContractApi {
 
     @Autowired
-    private ISaveContractBMO saveContractBMOImpl;
-    @Autowired
     private IUpdateContractBMO updateContractBMOImpl;
-    @Autowired
-    private IDeleteContractBMO deleteContractBMOImpl;
+
 
     @Autowired
     private IGetContractBMO getContractBMOImpl;
@@ -157,104 +150,6 @@ public class ContractApi {
     private IGetContractRoomBMO getContractRoomBMOImpl;
 
     /**
-     * 微信保存消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/saveContract
-     * @path /app/contract/saveContract
-     */
-    @RequestMapping(value = "/saveContract", method = RequestMethod.POST)
-    public ResponseEntity<String> saveContract(@RequestBody JSONObject reqJson,
-                                               @RequestHeader(value = "store-id") String storeId,
-                                               @RequestHeader(value = "user-id") String userId) {
-
-        Assert.hasKeyAndValue(reqJson, "contractCode", "请求报文中未包含contractCode");
-        Assert.hasKeyAndValue(reqJson, "contractName", "请求报文中未包含contractName");
-        Assert.hasKeyAndValue(reqJson, "partyA", "请求报文中未包含partyA");
-
-
-        Assert.hasKeyAndValue(reqJson, "partyB", "请求报文中未包含partyB");
-        Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
-        Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
-        Assert.hasKeyAndValue(reqJson, "bContacts", "请求报文中未包含bContacts");
-        Assert.hasKeyAndValue(reqJson, "bLink", "请求报文中未包含bLink");
-        Assert.hasKeyAndValue(reqJson, "operator", "请求报文中未包含operator");
-        Assert.hasKeyAndValue(reqJson, "operatorLink", "请求报文中未包含operatorLink");
-        Assert.hasKeyAndValue(reqJson, "startTime", "请求报文中未包含startTime");
-        Assert.hasKeyAndValue(reqJson, "endTime", "请求报文中未包含endTime");
-        Assert.hasKeyAndValue(reqJson, "signingTime", "请求报文中未包含signingTime");
-
-        ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
-        contractPo.setStoreId(storeId);
-        contractPo.setStartUserId(userId);
-        if (!reqJson.containsKey("contractParentId") || "-1".equals(reqJson.getString("contractParentId"))) {
-            contractPo.setContractParentId("-1");
-        }
-        reqJson.put("userId", userId);
-
-
-        if (reqJson.containsKey("contractFilePo")) {
-            JSONArray contractFiles = reqJson.getJSONArray("contractFilePo");
-            List<ContractFilePo> contractFilePos = new ArrayList<>();
-            for (int conFileIndex = 0; conFileIndex < contractFiles.size(); conFileIndex++) {
-                JSONObject resourceStore = contractFiles.getJSONObject(conFileIndex);
-                ContractFilePo contractFilePo = BeanConvertUtil.covertBean(resourceStore, ContractFilePo.class);
-                contractFilePo.setContractFileId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_contractFileId));
-                contractFilePos.add(contractFilePo);
-            }
-            contractPo.setContractFilePo(contractFilePos);
-        }
-
-
-        return saveContractBMOImpl.save(contractPo, reqJson);
-    }
-
-    /**
-     * 微信修改消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/updateContract
-     * @path /app/contract/updateContract
-     */
-    @RequestMapping(value = "/updateContract", method = RequestMethod.POST)
-    public ResponseEntity<String> updateContract(@RequestBody JSONObject reqJson) {
-
-        Assert.hasKeyAndValue(reqJson, "contractCode", "请求报文中未包含contractCode");
-        Assert.hasKeyAndValue(reqJson, "contractName", "请求报文中未包含contractName");
-        Assert.hasKeyAndValue(reqJson, "partyA", "请求报文中未包含partyA");
-
-
-        Assert.hasKeyAndValue(reqJson, "partyB", "请求报文中未包含partyB");
-        Assert.hasKeyAndValue(reqJson, "aContacts", "请求报文中未包含aContacts");
-        Assert.hasKeyAndValue(reqJson, "aLink", "请求报文中未包含aLink");
-        Assert.hasKeyAndValue(reqJson, "bContacts", "请求报文中未包含bContacts");
-        Assert.hasKeyAndValue(reqJson, "bLink", "请求报文中未包含bLink");
-        Assert.hasKeyAndValue(reqJson, "operator", "请求报文中未包含operator");
-        Assert.hasKeyAndValue(reqJson, "operatorLink", "请求报文中未包含operatorLink");
-        Assert.hasKeyAndValue(reqJson, "startTime", "请求报文中未包含startTime");
-        Assert.hasKeyAndValue(reqJson, "endTime", "请求报文中未包含endTime");
-        Assert.hasKeyAndValue(reqJson, "signingTime", "请求报文中未包含signingTime");
-        Assert.hasKeyAndValue(reqJson, "contractId", "contractId不能为空");
-
-
-        ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
-
-        JSONArray contractFiles = reqJson.getJSONArray("contractFilePo");
-        List<ContractFilePo> contractFilePos = new ArrayList<>();
-        for (int conFileIndex = 0; conFileIndex < contractFiles.size(); conFileIndex++) {
-            JSONObject resourceStore = contractFiles.getJSONObject(conFileIndex);
-            ContractFilePo contractFilePo = BeanConvertUtil.covertBean(resourceStore, ContractFilePo.class);
-            contractFilePo.setContractFileId(GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_contractFileId));
-            contractFilePos.add(contractFilePo);
-        }
-        contractPo.setContractFilePo(contractFilePos);
-        return updateContractBMOImpl.update(contractPo, reqJson);
-    }
-
-
-    /**
      * 结束合同
      *
      * @param reqJson
@@ -314,26 +209,6 @@ public class ContractApi {
 
         ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
         return updateContractBMOImpl.update(contractPo, reqJson);
-    }
-
-
-    /**
-     * 微信删除消息模板
-     *
-     * @param reqJson
-     * @return
-     * @serviceCode /contract/deleteContract
-     * @path /app/contract/deleteContract
-     */
-    @RequestMapping(value = "/deleteContract", method = RequestMethod.POST)
-    public ResponseEntity<String> deleteContract(@RequestBody JSONObject reqJson) {
-        Assert.hasKeyAndValue(reqJson, "communityId", "小区ID不能为空");
-
-        Assert.hasKeyAndValue(reqJson, "contractId", "contractId不能为空");
-
-
-        ContractPo contractPo = BeanConvertUtil.covertBean(reqJson, ContractPo.class);
-        return deleteContractBMOImpl.delete(contractPo);
     }
 
 

@@ -46,6 +46,7 @@ import com.java110.store.bmo.contractFile.IDeleteContractFileBMO;
 import com.java110.utils.constant.StatusConstant;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.ContractContentUtil;
 import com.java110.utils.util.DateUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
@@ -142,7 +143,7 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
         List<ContractFilePo> filePos = contractPo.getContractFilePo();
         if (filePos != null) {
             for (ContractFilePo file : filePos) {
-                if (file.getFileRealName().length() > 0 && file.getFileSaveName().length() > 0) {
+                if (!StringUtil.isEmpty(file.getFileRealName()) && !StringUtil.isEmpty(file.getFileSaveName())) {
                     file.setContractId(contractPo.getContractId());
                     contractFileInnerServiceSMOImpl.saveContractFile(file);
                 }
@@ -176,14 +177,20 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
     }
 
     /**
-     * 保存合同正文（独立表 upsert，同时累加模板使用次数）
+     * 保存合同正文（渲染后正文与含变量原文双列写入，同时累加模板使用次数）
      */
     private void saveContractContent(JSONObject reqJson, ContractPo contractPo) {
-        if (StringUtil.isEmpty(reqJson.getString("content"))) {
+        String content = reqJson.getString("content");
+        String templateContent = reqJson.getString("templateContent");
+        if (StringUtil.isEmpty(content) && StringUtil.isEmpty(templateContent)) {
             return;
         }
+        if (StringUtil.isEmpty(templateContent)) {
+            templateContent = content;
+        }
+        String renderedContent = ContractContentUtil.render(templateContent, reqJson.getJSONObject("variables"));
         contractContentBMOImpl.saveOrUpdateContent(contractPo.getContractId(), contractPo.getTemplateId(),
-                reqJson.getString("content"));
+                renderedContent, templateContent);
         if (StringUtil.isEmpty(contractPo.getTemplateId())) {
             return;
         }
@@ -591,7 +598,8 @@ public class UpdateContractBMOImpl implements IUpdateContractBMO {
 
         Assert.listOnlyOne(contractDtos, "未找到需要审核合同");
 
-        if (!contractDtos.get(0).getObjType().equals(FeeDto.PAYER_OBJ_TYPE_ROOM)
+        if (StringUtil.isEmpty(contractDtos.get(0).getObjType())
+                || !contractDtos.get(0).getObjType().equals(FeeDto.PAYER_OBJ_TYPE_ROOM)
                 || StringUtil.isEmpty(contractDtos.get(0).getObjId())
                 || contractDtos.get(0).getObjId().startsWith("-")) {
             return;

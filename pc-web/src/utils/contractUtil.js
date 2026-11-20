@@ -296,6 +296,23 @@ export function saveBase64File(base64, fileName) {
 }
 
 /**
+ * 正文变量渲染：支持 {{key}} 与 ${key}，只替换 variables 中存在的变量
+ */
+export function renderContractContent(content, variables) {
+  if (!content || !variables) {
+    return content || ''
+  }
+  return String(content).replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}|\$\{\s*([a-zA-Z0-9_]+)\s*\}/g, function (match, braceKey, dollarKey) {
+    const key = braceKey || dollarKey
+    if (!Object.prototype.hasOwnProperty.call(variables, key)) {
+      return match
+    }
+    const value = variables[key]
+    return value === null || value === undefined ? '' : String(value)
+  })
+}
+
+/**
  * 正文 HTML 白名单清洗（仅保留安全标签与属性）
  */
 export function sanitizeHtml(html) {

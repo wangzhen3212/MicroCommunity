@@ -84,7 +84,7 @@ export function queryContractContent(params) {
 export function saveContract(data) {
   return new Promise((resolve, reject) => {
     request({
-      url: '/contract/saveContract',
+      url: '/contract.saveContract',
       method: 'post',
       data
     }).then(response => {
@@ -104,7 +104,7 @@ export function saveContract(data) {
 export function updateContract(data) {
   return new Promise((resolve, reject) => {
     request({
-      url: '/contract/updateContract',
+      url: '/contract.updateContract',
       method: 'post',
       data
     }).then(response => {

@@ -14,6 +14,7 @@ import com.java110.po.contract.ContractPo;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.ContractContentUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,8 +78,15 @@ public class SaveContractDraftCmd extends Cmd {
             }
         }
 
-        if (reqJson.containsKey("content")) {
-            contractContentBMOImpl.saveOrUpdateContent(contractId, contractPo.getTemplateId(), reqJson.getString("content"));
+        String content = reqJson.getString("content");
+        String templateContent = reqJson.getString("templateContent");
+        if (!StringUtil.isEmpty(content) || !StringUtil.isEmpty(templateContent)) {
+            if (StringUtil.isEmpty(templateContent)) {
+                templateContent = content;
+            }
+            String renderedContent = ContractContentUtil.render(templateContent, reqJson.getJSONObject("variables"));
+            contractContentBMOImpl.saveOrUpdateContent(contractId, contractPo.getTemplateId(),
+                    renderedContent, templateContent);
         }
 
         Map<String, Object> data = new HashMap<>();

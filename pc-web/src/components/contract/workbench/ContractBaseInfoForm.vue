@@ -34,8 +34,14 @@
       </el-col>
       <el-col :span="6">
         <el-form-item :label="$t('contractWorkbench.field.amount')" required>
-          <el-input v-model="form.amount" :disabled="isRent" @input="$emit('amount-change', form.amount)" />
-          <div v-if="isRent" class="cc-field-tip">{{ $t('contractWorkbench.msg.amountAuto') }}</div>
+          <el-input v-model="form.amount" @input="$emit('amount-change', form.amount)">
+            <el-button v-if="isRent" slot="append" size="mini" @click="$emit('recalc-amount')">
+              {{ $t('contractWorkbench.recalcAmount') }}
+            </el-button>
+          </el-input>
+          <div v-if="isRent" class="cc-field-tip">
+            {{ amountManual ? $t('contractWorkbench.msg.amountManualTip') : $t('contractWorkbench.msg.amountAuto') }}
+          </div>
         </el-form-item>
       </el-col>
     </el-row>
@@ -184,6 +190,10 @@ export default {
       default: function () {
         return []
       }
+    },
+    amountManual: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {

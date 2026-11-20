@@ -15,6 +15,7 @@ export const messages = {
       submit: 'Submit for Approval',
       autoSaveTip: 'Draft saved automatically by clicking "Save Draft"',
       regenerate: 'Regenerate',
+      recalcAmount: 'Recalculate',
       section: {
         base: 'Contract Basic Information',
         target: 'Related Targets',
@@ -205,6 +206,7 @@ export const messages = {
         auditorMissing: 'Legal / leader auditor is not configured, please configure in Audit Center',
         amountEmpty: 'Please fill the contract amount first',
         amountAuto: 'Contract amount is the total of included fee items',
+        amountManualTip: 'Amount is manually adjusted, click "Recalculate" to restore the fee total',
         feeAmountEmpty: 'Please fill the fee amount',
         feeComputing: 'Calculating...',
         feeComputeError: 'Fee calculation failed',
@@ -234,6 +236,7 @@ export const messages = {
       submit: '提交审批',
       autoSaveTip: '点击「保存草稿」可随时保存',
       regenerate: '重新生成',
+      recalcAmount: '重新计算',
       section: {
         base: '合同基本信息',
         target: '关联标的',
@@ -424,6 +427,7 @@ export const messages = {
         auditorMissing: '未配置法务/领导审核人，请先到审核中心设置',
         amountEmpty: '请先填写合同金额',
         amountAuto: '合同金额自动取费用构成中计入项合计',
+        amountManualTip: '金额已手工修改，点击「重新计算」可恢复费用合计',
         feeAmountEmpty: '请填写费用金额',
         feeComputing: '正在试算…',
         feeComputeError: '费用试算失败',
@@ -453,6 +457,7 @@ export const messages = {
       submit: '提交審批',
       autoSaveTip: '點擊「保存草稿」可隨時保存',
       regenerate: '重新生成',
+      recalcAmount: '重新計算',
       section: {
         base: '合同基本信息',
         target: '關聯標的',
@@ -643,6 +648,7 @@ export const messages = {
         auditorMissing: '未配置法務/領導審核人，請先到審核中心設置',
         amountEmpty: '請先填寫合同金額',
         amountAuto: '合同金額自動取費用構成中計入項合計',
+        amountManualTip: '金額已手工修改，點擊「重新計算」可恢復費用合計',
         feeAmountEmpty: '請填寫費用金額',
         feeComputing: '正在試算…',
         feeComputeError: '費用試算失敗',

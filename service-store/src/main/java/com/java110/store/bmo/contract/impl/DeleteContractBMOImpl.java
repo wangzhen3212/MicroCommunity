@@ -16,6 +16,7 @@ import com.java110.po.owner.OwnerRoomRelPo;
 import com.java110.po.room.RoomPo;
 import com.java110.store.bmo.contract.IDeleteContractBMO;
 import com.java110.utils.constant.StatusConstant;
+import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.ListUtil;
@@ -156,7 +157,7 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
         feeDto.setState(FeeDto.STATE_DOING);
         List<FeeDto> feeDtos = feeInnerServiceSMOImpl.queryFees(feeDto);
         if (feeDtos != null && feeDtos.size() > 0) {
-            throw new IllegalArgumentException(roomDtos.get(0).getRoomNum() + "房屋存在未结束的费用 请先处理");
+            throw new CmdException(roomDtos.get(0).getRoomNum() + "房屋存在未结束的费用 请先处理");
         }
 
     }
@@ -179,7 +180,7 @@ public class DeleteContractBMOImpl implements IDeleteContractBMO {
 
         if (!ListUtil.isNull(feeDtos)) {
 
-            throw new IllegalArgumentException("合同存在未结束的费用 请先处理");
+            throw new CmdException("合同存在未结束的费用 请先处理");
 
         }
 

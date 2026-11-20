@@ -10,11 +10,12 @@ public interface IContractContentBMO {
     /**
      * 保存或更新合同正文，content_version 自增
      *
-     * @param contractId 合同ID
-     * @param templateId 模板ID
-     * @param content    正文HTML
+     * @param contractId      合同ID
+     * @param templateId      模板ID
+     * @param content         渲染后的正文HTML（详情/打印/预览使用）
+     * @param templateContent 含变量占位符的正文原文（编辑回显使用）
      */
-    void saveOrUpdateContent(String contractId, String templateId, String content);
+    void saveOrUpdateContent(String contractId, String templateId, String content, String templateContent);
 
     /**
      * 按合同查询正文

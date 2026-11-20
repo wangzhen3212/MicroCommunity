@@ -9,6 +9,7 @@ import com.java110.dto.contract.ContractContentDto;
 import com.java110.store.bmo.contract.IContractContentBMO;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
+import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -32,18 +33,23 @@ public class QueryContractContentCmd extends Cmd {
     @Override
     public void doCmd(CmdEvent event, ICmdDataFlowContext context, JSONObject reqJson) throws CmdException {
         ContractContentDto contentDto = contractContentBMOImpl.getContent(reqJson.getString("contractId"));
+        boolean raw = "true".equalsIgnoreCase(reqJson.getString("raw")) || "1".equals(reqJson.getString("raw"));
         Map<String, Object> data = new HashMap<>();
         if (contentDto == null) {
             data.put("contentId", "");
             data.put("contractId", reqJson.getString("contractId"));
             data.put("templateId", "");
             data.put("content", "");
+            data.put("templateContent", "");
             data.put("contentVersion", 0);
         } else {
+            String templateContent = StringUtil.isEmpty(contentDto.getTemplateContent())
+                    ? contentDto.getContent() : contentDto.getTemplateContent();
             data.put("contentId", contentDto.getContentId());
             data.put("contractId", contentDto.getContractId());
             data.put("templateId", contentDto.getTemplateId());
-            data.put("content", contentDto.getContent());
+            data.put("content", raw ? templateContent : contentDto.getContent());
+            data.put("templateContent", templateContent);
             data.put("contentVersion", contentDto.getContentVersion());
         }
         context.setResponseEntity(ResultVo.createResponseEntity(data));

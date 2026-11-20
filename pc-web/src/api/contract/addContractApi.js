@@ -4,7 +4,7 @@ import request from '@/utils/request'
 export function saveContract(data) {
   return new Promise((resolve, reject) => {
 request({
-      url: '/contract/saveContract',
+      url: '/contract.saveContract',
       method: 'post',
       data
     }).then(response => {
