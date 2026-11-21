@@ -32,7 +32,6 @@
       <span class="cc-partya-state" :class="{ 'is-off': isDisabled }">
         <span class="cc-partya-dot"></span>
         {{ isDisabled ? $t('contractPartyaCenter.disabled') : $t('contractPartyaCenter.enabled') }}
-        <em v-if="isSealed" class="cc-partya-seal">{{ $t('contractPartyaCenter.sealBound') }}</em>
       </span>
       <div class="cc-partya-ops">
         <button
@@ -68,9 +67,6 @@ export default {
   computed: {
     isDefault() {
       return String(this.partya.defaultFlag) === '1'
-    },
-    isSealed() {
-      return String(this.partya.sealFlag) === '1'
     },
     isDisabled() {
       return String(this.partya.statusCd) !== '0'
@@ -223,11 +219,6 @@ export default {
     flex: none;
     border-radius: 50%;
     background: #67c23a;
-  }
-
-  .cc-partya-seal {
-    font-style: normal;
-    color: #909399;
   }
 
   .cc-partya-ops {

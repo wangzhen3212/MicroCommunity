@@ -96,14 +96,19 @@
             <span class="cc-tpl-panel-hint">{{ $t('contractTemplate.editor.clickInsert') }}</span>
           </div>
           <div class="cc-tpl-panel-body">
-            <div class="cc-var-chips">
-              <button
-                v-for="item in variables"
-                :key="item.key"
-                type="button"
-                class="cc-var-chip"
-                @click="insertVariable(item)"
-              >{{ item.label }}</button>
+            <div class="cc-var-groups">
+              <div v-for="group in variableGroups" :key="group.key" class="cc-var-group">
+                <p class="cc-var-group-title">{{ group.label }}</p>
+                <div class="cc-var-chips">
+                  <button
+                    v-for="item in group.items"
+                    :key="item.key"
+                    type="button"
+                    class="cc-var-chip"
+                    @click="insertVariable(item)"
+                  >{{ item.label }}</button>
+                </div>
+              </div>
             </div>
             <p class="cc-var-note">{{ $t('contractTemplate.editor.variableNote') }}</p>
           </div>
@@ -149,6 +154,7 @@
 import ContractDocEditor from '@/components/contract/workbench/ContractDocEditor'
 import ContractPasteImport from '@/components/contract/contractPasteImport'
 import { queryContractTypeTemplate, saveContractTypeTemplate, updateContractTemplate } from '@/api/contract/contractTemplateApi'
+import { buildVariableGroups } from '@/utils/contractDocVariables'
 
 export default {
   name: 'ContractTemplateEditorList',
@@ -177,15 +183,8 @@ export default {
         ? this.$t('contractTemplate.editor.titleEdit')
         : this.$t('contractTemplate.editor.titleCreate')
     },
-    variables() {
-      return [
-        { key: 'amount', label: this.$t('contractWorkbench.doc.varAmount') },
-        { key: 'amountText', label: this.$t('contractWorkbench.doc.varAmountText') },
-        { key: 'startTime', label: this.$t('contractWorkbench.doc.varStart') },
-        { key: 'endTime', label: this.$t('contractWorkbench.doc.varEnd') },
-        { key: 'partyB', label: this.$t('contractWorkbench.doc.varPartyB') },
-        { key: 'houses', label: this.$t('contractWorkbench.doc.varHouses') }
-      ]
+    variableGroups() {
+      return buildVariableGroups(key => this.$t(key))
     },
     plainText() {
       return String(this.form.context || '').replace(/<[^>]+>/g, '')
@@ -505,6 +504,25 @@ $brand: #409eff;
     border-radius: 8px;
     border-color: #e2e8f0;
     font-size: 13px;
+  }
+
+  .cc-var-groups {
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .cc-var-group {
+    & + .cc-var-group {
+      margin-top: 10px;
+    }
+  }
+
+  .cc-var-group-title {
+    margin: 0 0 6px;
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    color: #94a3b8;
   }
 
   .cc-var-chips {

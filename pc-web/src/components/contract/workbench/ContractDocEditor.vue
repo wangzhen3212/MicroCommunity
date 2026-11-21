@@ -19,13 +19,15 @@
         <el-button size="mini">
           {{ $t('contractWorkbench.doc.insertVariable') }}<i class="el-icon-arrow-down el-icon--right"></i>
         </el-button>
-        <el-dropdown-menu slot="dropdown">
-          <el-dropdown-item command="amount">{{ $t('contractWorkbench.doc.varAmount') }}</el-dropdown-item>
-          <el-dropdown-item command="amountText">{{ $t('contractWorkbench.doc.varAmountText') }}</el-dropdown-item>
-          <el-dropdown-item command="startTime">{{ $t('contractWorkbench.doc.varStart') }}</el-dropdown-item>
-          <el-dropdown-item command="endTime">{{ $t('contractWorkbench.doc.varEnd') }}</el-dropdown-item>
-          <el-dropdown-item command="partyB">{{ $t('contractWorkbench.doc.varPartyB') }}</el-dropdown-item>
-          <el-dropdown-item command="houses">{{ $t('contractWorkbench.doc.varHouses') }}</el-dropdown-item>
+        <el-dropdown-menu slot="dropdown" class="cc-var-dropdown">
+          <template v-for="group in variableGroups">
+            <li :key="group.key" class="cc-var-group-title">{{ group.label }}</li>
+            <el-dropdown-item
+              v-for="item in group.items"
+              :key="item.key"
+              :command="item.key"
+            >{{ item.label }}</el-dropdown-item>
+          </template>
         </el-dropdown-menu>
       </el-dropdown>
       <slot name="toolbar"></slot>
@@ -39,6 +41,7 @@
 
 <script>
 import E from 'wangeditor'
+import { buildVariableGroups } from '@/utils/contractDocVariables'
 
 const CLAUSES = {
   maintain: '第 X 条 维修与费用分摊：租赁期间房屋主体结构及公共设施的维修由甲方负责；因乙方使用不当造成的损坏，维修费用由乙方承担。',
@@ -77,6 +80,11 @@ export default {
     return {
       editor: null,
       innerValue: ''
+    }
+  },
+  computed: {
+    variableGroups() {
+      return buildVariableGroups(key => this.$t(key))
     }
   },
   watch: {
@@ -181,6 +189,19 @@ export default {
     .el-dropdown {
       margin-right: 8px;
       margin-left: 0;
+    }
+  }
+
+  .cc-var-dropdown {
+    max-height: 320px;
+    overflow-y: auto;
+
+    .cc-var-group-title {
+      padding: 6px 20px 2px;
+      font-size: 11px;
+      line-height: 16px;
+      color: #9ca3af;
+      list-style: none;
     }
   }
 

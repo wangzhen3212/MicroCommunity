@@ -180,7 +180,6 @@ import {
   CONTRACT_CATEGORY,
   CONTRACT_STATE,
   PAYER_OBJ_TYPE,
-  amountToChinese,
   auditStepNameOf,
   detailAmountMap,
   guessCategory,
@@ -190,6 +189,7 @@ import {
   sanitizeHtml,
   termMonths
 } from '@/utils/contractUtil'
+import { buildContractDocVariables } from '@/utils/contractDocVariables'
 import { getDateStr, getDateYYYYMMDD } from '@/utils/dateUtil'
 
 export default {
@@ -298,16 +298,13 @@ export default {
       return this.$t('contractWorkbench.section.planPay')
     },
     docVariables() {
-      return {
-        amount: this.form.amount,
-        amountText: amountToChinese(this.form.amount),
-        startTime: this.form.startTime,
-        endTime: this.form.endTime,
-        partyB: this.form.partyB,
-        houses: this.rooms
-          .map(room => this.roomNameOf(room))
-          .join('、')
-      }
+      return buildContractDocVariables({
+        form: this.form,
+        rooms: this.rooms,
+        targets: this.targets,
+        plans: this.isRent ? [] : this.plans,
+        roomNameOf: this.roomNameOf
+      })
     }
   },
   watch: {

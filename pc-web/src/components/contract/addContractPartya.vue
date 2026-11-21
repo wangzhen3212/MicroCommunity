@@ -72,27 +72,6 @@
           </el-form-item>
         </el-col>
       </el-row>
-      <el-form-item :label="$t('contractPartyaCenter.seal')">
-        <div class="cc-seal-box">
-          <i class="el-icon-picture-outline cc-seal-icon"></i>
-          <span class="cc-seal-text">{{ $t('contractPartyaCenter.form.sealTip') }}</span>
-          <el-switch
-            v-model="formData.sealFlag"
-            active-value="1"
-            inactive-value="0"
-          />
-        </div>
-      </el-form-item>
-      <el-form-item>
-        <label class="cc-default-box">
-          <el-checkbox
-            v-model="formData.defaultFlag"
-            true-label="1"
-            false-label="0"
-          />
-          <span class="cc-default-text">{{ $t('contractPartyaCenter.form.defaultTip') }}</span>
-        </label>
-      </el-form-item>
     </el-form>
     <span slot="footer" class="dialog-footer">
       <el-button @click="visible = false">
@@ -261,51 +240,5 @@ export default {
   content: '*';
   margin-left: 4px;
   color: #f43f5e;
-}
-
-.cc-seal-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-sizing: border-box;
-  padding: 11px 14px;
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
-  background: #f8fafc;
-
-  .cc-seal-icon {
-    font-size: 18px;
-    color: #909399;
-  }
-
-  .cc-seal-text {
-    flex: 1;
-    font-size: 12px;
-    line-height: 18px;
-    color: #909399;
-  }
-}
-
-.cc-default-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 11px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f8fafc;
-  cursor: pointer;
-
-  ::v-deep .el-checkbox {
-    margin-right: 0;
-  }
-
-  .cc-default-text {
-    font-size: 12px;
-    line-height: 18px;
-    color: #606266;
-  }
 }
 </style>

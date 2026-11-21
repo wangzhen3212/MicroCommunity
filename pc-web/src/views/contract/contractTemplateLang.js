@@ -3,16 +3,9 @@ export const messages = {
     contractTemplate: {
       title: 'Contract Template Library',
       subtitle: 'Maintain standard templates and variable placeholders for three contract categories, apply them in one click when creating a contract.',
-      variableTip: 'Variables: {{amount}} contract amount, {{startTime}} effective date, {{endTime}} expiry date, {{partyB}} Party B, {{houses}} house list',
+      variableTip: 'Variables are placeholders in the text and are replaced with actual values when a contract is created; see the variable guide for the full list',
       variableLabel: 'Variables available in text:',
       variableHelp: 'Variable Guide',
-      variables: {
-        amount: 'Contract amount',
-        startTime: 'Effective date',
-        endTime: 'Expiry date',
-        partyB: 'Party B',
-        houses: 'House list'
-      },
       newTemplate: 'New Template',
       searchPlaceholder: 'Template name',
       edit: 'Edit',
@@ -100,8 +93,6 @@ export const messages = {
       tel: 'Phone',
       bankName: 'Bank',
       bankAccount: 'Account',
-      seal: 'Electronic Seal',
-      sealBound: 'Seal bound',
       default: 'Default',
       enabled: 'Enabled',
       disabled: 'Disabled',
@@ -118,8 +109,6 @@ export const messages = {
         fullNamePlaceholder: 'Please enter entity name',
         creditCodePlaceholder: 'Please enter 18-digit credit code',
         bankAccountPlaceholder: 'Please enter bank account',
-        sealTip: 'Mark whether the electronic seal is bound',
-        defaultTip: 'Set as default Party A entity (selected by default when drafting a contract)',
         subtitle: 'Entity info is used for contract generation, sealing and invoicing',
         submit: 'Save Entity'
       },
@@ -147,16 +136,9 @@ export const messages = {
     contractTemplate: {
       title: '合同模板库',
       subtitle: '维护三类合同的标准模板与变量占位符，新建合同时一键套用。',
-      variableTip: '可用变量：{{amount}} 合同金额、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名称、{{houses}} 房屋清单',
+      variableTip: '可用变量为正文中的占位符，新建合同时自动替换为实际内容，完整清单见「变量说明」',
       variableLabel: '正文中可用变量：',
       variableHelp: '变量说明',
-      variables: {
-        amount: '合同金额',
-        startTime: '生效日期',
-        endTime: '到期日期',
-        partyB: '乙方名称',
-        houses: '房屋清单'
-      },
       newTemplate: '新建模板',
       searchPlaceholder: '模板名称',
       edit: '编辑',
@@ -244,8 +226,6 @@ export const messages = {
       tel: '联系电话',
       bankName: '开户银行',
       bankAccount: '银行账号',
-      seal: '电子印章',
-      sealBound: '已绑印章',
       default: '默认',
       enabled: '启用中',
       disabled: '已停用',
@@ -262,8 +242,6 @@ export const messages = {
         fullNamePlaceholder: '请输入主体名称',
         creditCodePlaceholder: '请输入 18 位统一社会信用代码',
         bankAccountPlaceholder: '请输入银行账号',
-        sealTip: '标记是否已绑定电子印章',
-        defaultTip: '设为默认甲方主体（新建合同时默认选中）',
         subtitle: '主体信息将用于合同生成、盖章与开票',
         submit: '保存主体'
       },
@@ -291,16 +269,9 @@ export const messages = {
     contractTemplate: {
       title: '合同模板庫',
       subtitle: '維護三類合同的標準模板與變量佔位符，新建合同時一鍵套用。',
-      variableTip: '可用變量：{{amount}} 合同金額、{{startTime}} 生效日期、{{endTime}} 到期日期、{{partyB}} 乙方名稱、{{houses}} 房屋清單',
+      variableTip: '可用變量為正文中的佔位符，新建合同時自動替換為實際內容，完整清單見「變量說明」',
       variableLabel: '正文中可用變量：',
       variableHelp: '變量說明',
-      variables: {
-        amount: '合同金額',
-        startTime: '生效日期',
-        endTime: '到期日期',
-        partyB: '乙方名稱',
-        houses: '房屋清單'
-      },
       newTemplate: '新建模板',
       searchPlaceholder: '模板名稱',
       edit: '編輯',
@@ -388,8 +359,6 @@ export const messages = {
       tel: '聯繫電話',
       bankName: '開戶銀行',
       bankAccount: '銀行賬號',
-      seal: '電子印章',
-      sealBound: '已綁印章',
       default: '默認',
       enabled: '啟用中',
       disabled: '已停用',
@@ -406,8 +375,6 @@ export const messages = {
         fullNamePlaceholder: '請輸入主體名稱',
         creditCodePlaceholder: '請輸入 18 位統一社會信用代碼',
         bankAccountPlaceholder: '請輸入銀行賬號',
-        sealTip: '標記是否已綁定電子印章',
-        defaultTip: '設為默認甲方主體（新建合同時默認選中）',
         subtitle: '主體資訊將用於合同生成、蓋章與開票',
         submit: '保存主體'
       },

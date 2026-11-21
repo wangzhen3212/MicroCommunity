@@ -27,7 +27,7 @@
             <div class="cc-var-list">
               <span v-for="item in templateVariables" :key="item.token" class="cc-var-item">
                 <code class="cc-var-chip">{{ item.token }}</code>
-                <em class="cc-var-name">{{ $t('contractTemplate.variables.' + item.key) }}</em>
+                <em class="cc-var-name">{{ $t(item.labelKey) }}</em>
               </span>
             </div>
             <span slot="reference" class="cc-tpl-help">
@@ -98,6 +98,7 @@ import {
   queryContractTypeTemplate
 } from '@/api/contract/contractTemplateApi'
 import { guessCategory } from '@/utils/contractUtil'
+import { CONTRACT_DOC_VARIABLES } from '@/utils/contractDocVariables'
 
 export default {
   name: 'ContractTypeManageList',
@@ -123,13 +124,11 @@ export default {
   },
   computed: {
     templateVariables() {
-      return [
-        { token: '{{amount}}', key: 'amount' },
-        { token: '{{startTime}}', key: 'startTime' },
-        { token: '{{endTime}}', key: 'endTime' },
-        { token: '{{partyB}}', key: 'partyB' },
-        { token: '{{houses}}', key: 'houses' }
-      ]
+      return CONTRACT_DOC_VARIABLES.map(item => ({
+        token: '{{' + item.key + '}}',
+        key: item.key,
+        labelKey: item.labelKey
+      }))
     },
     categoryTabs() {
       return [
