@@ -18,6 +18,31 @@
     </template>
 
     <div slot="content">
+      <div class="filter-container">
+        <el-row :gutter="20">
+          <el-col :span="6">
+            <el-input v-model="parkingSpaceCreateFeeInfo.condition.num"
+              :placeholder="$t('parkingSpaceCreateFee.numPlaceholder')" clearable></el-input>
+          </el-col>
+          <el-col :span="6">
+            <el-input v-model="parkingSpaceCreateFeeInfo.condition.carNum"
+              :placeholder="$t('parkingSpaceCreateFee.carNumPlaceholder')" clearable></el-input>
+          </el-col>
+          <el-col :span="6">
+            <el-input v-model="parkingSpaceCreateFeeInfo.condition.ownerName"
+              :placeholder="$t('parkingSpaceCreateFee.ownerNamePlaceholder')" clearable></el-input>
+          </el-col>
+          <el-col :span="6">
+            <el-button type="primary" size="small" :loading="queryLoading" @click="_queryParkingSpaceCreateFeeMethod">
+              {{ $t('common.query') }}
+            </el-button>
+            <el-button size="small" @click="_resetParkingSpaceCreateFeeMethod">
+              {{ $t('common.reset') }}
+            </el-button>
+          </el-col>
+        </el-row>
+      </div>
+
       <el-tabs v-model="parkingSpaceCreateFeeInfo._currentTab"
         @tab-click="changeTab(parkingSpaceCreateFeeInfo._currentTab)">
         <el-tab-pane :label="$t('parkingSpaceCreateFee.parkingSpaceFee')" name="simplifyPayerObjFee">
@@ -64,6 +89,7 @@
 
 <script>
 import { getCommunityId } from '@/api/community/communityApi'
+import { listParkingSpaces } from '@/api/fee/parkingSpaceCreateFeeApi'
 
 import CreateFeeLayout from '@/components/fee/createFeeLayout'
 import ParkingSpaceTreeHasOwner from '@/components/car/parkingSpaceTreeHasOwner'
@@ -105,6 +131,7 @@ export default {
     return {
       communityId: '',
       isTreeEmpty: false,
+      queryLoading: false,
       parkingSpaceCreateFeeInfo: {
         psId: '',
         psName: '',
@@ -119,7 +146,12 @@ export default {
         carNum: '',
         startTime: '',
         endTime: '',
-        _currentTab: 'simplifyPayerObjFee'
+        _currentTab: 'simplifyPayerObjFee',
+        condition: {
+          num: '',
+          carNum: '',
+          ownerName: ''
+        }
       }
     }
   },
@@ -131,6 +163,9 @@ export default {
       this.isTreeEmpty = true
     },
     handleSelectParkingSpace(param) {
+      this._applySelectedParkingSpace(param)
+    },
+    _applySelectedParkingSpace(param) {
       this.parkingSpaceCreateFeeInfo.psId = param.psId
       this.parkingSpaceCreateFeeInfo.psName = param.psName
       this.parkingSpaceCreateFeeInfo.paId = param.paId
@@ -145,6 +180,66 @@ export default {
       this.parkingSpaceCreateFeeInfo.startTime = param.startTime
       this.parkingSpaceCreateFeeInfo.endTime = param.endTime
       this.changeTab(this.parkingSpaceCreateFeeInfo._currentTab)
+    },
+    async listParkingSpaceInCreateFee() {
+      const condition = this.parkingSpaceCreateFeeInfo.condition
+      const num = (condition.num || '').trim()
+      const carNum = (condition.carNum || '').trim()
+      const ownerName = (condition.ownerName || '').trim()
+
+      if (!num && !carNum && !ownerName) {
+        this.$message.warning(this.$t('parkingSpaceCreateFee.queryConditionRequired'))
+        return
+      }
+
+      const params = {
+        page: 0,
+        row: 20
+      }
+      if (num) {
+        params.num = num
+      }
+      if (carNum) {
+        params.carNumLike = carNum
+      }
+      if (ownerName) {
+        params.ownerNameLike = ownerName
+      }
+
+      this.queryLoading = true
+      try {
+        const res = await listParkingSpaces(params)
+        const parkingSpaces = res.parkingSpaces || []
+        const matched = parkingSpaces.filter(item => {
+          return (item.state === 'S' || item.state === 'H') && item.ownerId && item.ownerName
+        })
+
+        if (matched.length === 0) {
+          this.$message.warning(this.$t('parkingSpaceCreateFee.noMatchedParkingSpace'))
+          return
+        }
+
+        if (this.$refs.parkingSpaceTree) {
+          await this.$refs.parkingSpaceTree.selectParkingSpaceByCondition(matched[0])
+        }
+      } catch (error) {
+        this.$message.error(error.message || this.$t('parkingSpaceCreateFee.loadParkingSpaceError'))
+      } finally {
+        this.queryLoading = false
+      }
+    },
+    _queryParkingSpaceCreateFeeMethod() {
+      this.listParkingSpaceInCreateFee()
+    },
+    _resetParkingSpaceCreateFeeMethod() {
+      this.parkingSpaceCreateFeeInfo.condition = {
+        num: '',
+        carNum: '',
+        ownerName: ''
+      }
+      if (this.$refs.parkingSpaceTree) {
+        this.$refs.parkingSpaceTree.selectLastOrFirst()
+      }
     },
     changeTab(tabName) {
       this.parkingSpaceCreateFeeInfo._currentTab = tabName

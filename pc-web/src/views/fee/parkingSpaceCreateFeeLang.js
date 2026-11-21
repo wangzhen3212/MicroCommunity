@@ -21,7 +21,12 @@ export const messages = {
       parkingSpaceEmpty: 'Please add parking spaces first',
       parkingSpaceTreeTip: 'Only rented/sold parking spaces are displayed',
       loadTreeError: 'Failed to load parking area tree',
-      loadParkingSpaceError: 'Failed to load parking spaces'
+      loadParkingSpaceError: 'Failed to load parking spaces',
+      numPlaceholder: 'Parking Space No.',
+      carNumPlaceholder: 'License Plate No.',
+      ownerNamePlaceholder: 'Owner Name',
+      queryConditionRequired: 'Please enter at least one query condition',
+      noMatchedParkingSpace: 'No matched parking space found'
     },
     parkingSpaceCreateFeeAdd: {
       createFee: 'Create Fee',
@@ -124,7 +129,12 @@ export const messages = {
       parkingSpaceEmpty: '请先添加车位',
       parkingSpaceTreeTip: '仅展示已出租/已出售的车位',
       loadTreeError: '获取停车场区域树失败',
-      loadParkingSpaceError: '获取车位失败'
+      loadParkingSpaceError: '获取车位失败',
+      numPlaceholder: '车位编号',
+      carNumPlaceholder: '车牌号',
+      ownerNamePlaceholder: '业主名称',
+      queryConditionRequired: '请至少输入一个查询条件',
+      noMatchedParkingSpace: '未查询到符合条件的车位'
     },
     parkingSpaceCreateFeeAdd: {
       createFee: '创建费用',
@@ -227,7 +237,12 @@ export const messages = {
       parkingSpaceEmpty: '請先添加車位',
       parkingSpaceTreeTip: '僅展示已出租/已出售的車位',
       loadTreeError: '獲取停車場區域樹失敗',
-      loadParkingSpaceError: '獲取車位失敗'
+      loadParkingSpaceError: '獲取車位失敗',
+      numPlaceholder: '車位編號',
+      carNumPlaceholder: '車牌號',
+      ownerNamePlaceholder: '業主名稱',
+      queryConditionRequired: '請至少輸入一個查詢條件',
+      noMatchedParkingSpace: '未查詢到符合條件的車位'
     },
     parkingSpaceCreateFeeAdd: {
       createFee: '創建費用',

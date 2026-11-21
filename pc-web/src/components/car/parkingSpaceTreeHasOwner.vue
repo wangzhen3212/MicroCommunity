@@ -242,6 +242,73 @@ export default {
         endTime: data.endTime
       }
     },
+    async selectParkingSpaceByCondition(ps) {
+      if (!ps) return
+
+      this.isInitialized = true
+
+      const treeRef = this.$refs.tree
+      const paNode = this.treeData.find(item => item.paId === ps.paId)
+
+      if (treeRef && treeRef.store && paNode) {
+        if (treeRef.store.nodesMap[paNode.id]) {
+          treeRef.store.nodesMap[paNode.id].expanded = true
+        }
+
+        let targetNode = paNode
+        if (ps.sectionId && paNode.children && paNode.children.length > 0) {
+          const sectionNode = paNode.children.find(item => item.sectionId === ps.sectionId)
+          if (sectionNode) {
+            targetNode = sectionNode
+            if (treeRef.store.nodesMap[sectionNode.id]) {
+              treeRef.store.nodesMap[sectionNode.id].expanded = true
+            }
+          }
+        }
+
+        await this.loadParkingSpaces(targetNode, { data: targetNode })
+      }
+
+      await this.$nextTick()
+
+      const currentTreeRef = this.$refs.tree
+      const psNodeId = `ps_${ps.psId}`
+      const psTreeNode = currentTreeRef && currentTreeRef.store ? currentTreeRef.store.nodesMap[psNodeId] : null
+
+      if (psTreeNode) {
+        currentTreeRef.setCurrentKey(psNodeId)
+        this.$emit('selectParkingSpace', this.getSelectParkingSpaceData(psTreeNode.data))
+        return
+      }
+
+      const psName = ps.sectionName
+        ? `${ps.areaNum}-${ps.sectionName}-${ps.num}`
+        : `${ps.areaNum}-${ps.num}`
+
+      this.$emit('selectParkingSpace', this.getSelectParkingSpaceData({
+        psId: ps.psId,
+        psName,
+        paId: ps.paId,
+        areaNum: ps.areaNum,
+        sectionId: ps.sectionId,
+        sectionName: ps.sectionName,
+        num: ps.num,
+        ownerId: ps.ownerId,
+        ownerName: ps.ownerName,
+        carId: ps.carId,
+        carNum: ps.carNum,
+        startTime: ps.startTime,
+        endTime: ps.endTime
+      }))
+    },
+    selectLastOrFirst() {
+      this.isInitialized = false
+      if (this.lastSelected && this.lastSelected.psId) {
+        this.expandAndSelectLastParkingSpace()
+      } else {
+        this.expandAndSelectFirstParkingSpace()
+      }
+    },
     async loadParkingSpaces(parentData, node) {
       try {
         const params = {
@@ -281,7 +348,7 @@ export default {
             endTime: item.endTime,
             psName,
             icon: 'el-icon-postcard',
-            text: `${item.num}(${item.ownerName})`
+            text: item.carNum ? `${item.num}(${item.ownerName}-${item.carNum})` : `${item.num}(${item.ownerName})`
           })
         })
 
