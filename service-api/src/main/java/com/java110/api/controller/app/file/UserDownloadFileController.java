@@ -64,6 +64,11 @@ public class UserDownloadFileController {
         if (StringUtil.isEmpty(tempUrl)) {
             throw new IllegalArgumentException("文件不存在");
         }
+        //文件路径只允许来自库中对象路径，禁止带协议与穿越片段
+        if (tempUrl.indexOf("..") > -1 || tempUrl.indexOf("://") > -1) {
+            logger.warn("用户下载文件路径不合法，downloadId={}", downloadId);
+            throw new IllegalArgumentException("文件不存在");
+        }
         String fileName = tempUrl.substring(tempUrl.lastIndexOf("/") + 1);
         String fileTypeName = userDownloadFileDtos.get(0).getFileTypeName();
         if (!StringUtil.isEmpty(fileTypeName)) {

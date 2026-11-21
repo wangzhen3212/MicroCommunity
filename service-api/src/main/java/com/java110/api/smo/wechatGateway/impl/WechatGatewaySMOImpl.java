@@ -68,36 +68,33 @@ public class WechatGatewaySMOImpl extends DefaultAbstractComponentSMO implements
                                           String event,
                                           String eventKey,
                                           String appId) {
+
+        if (StringUtil.isEmpty(fromUserName) || StringUtil.isEmpty(toUserName)) {
+            throw new CmdException("微信报文缺少收发件人");
+        }
+
+        SmallWeChatDto smallWeChatDto = querySmallWeChat(appId);
+
         String responseStr = null;
         if (WechatConstant.MSG_TYPE_TEXT.equals(msgType)) {
             responseStr = textResponseHandler(fromUserName, toUserName, keyword);
-        } else if (WechatConstant.MSG_TYPE_EVENT.equals(msgType)) {
-            responseStr = eventResponseHandler(fromUserName, toUserName, keyword, event, eventKey);
         } else {
             responseStr = eventResponseHandler(fromUserName, toUserName, keyword, event, eventKey);
         }
         //保存到关注表
-        if(!"subscribe".equals(event)){
+        if (!"subscribe".equals(event)) {
             return new ResponseEntity<>(responseStr, HttpStatus.OK);
         }
 
         WechatSubscribeDto wechatSubscribeDto = new WechatSubscribeDto();
         wechatSubscribeDto.setOpenId(fromUserName);
-        wechatSubscribeDto.setOpenId(appId);
+        wechatSubscribeDto.setAppId(appId);
         List<WechatSubscribeDto> wechatSubscribeDtos = wechatSubscribeV1InnerServiceSMOImpl.queryWechatSubscribes(wechatSubscribeDto);
         if (!ListUtil.isNull(wechatSubscribeDtos)) {
             return new ResponseEntity<>(responseStr, HttpStatus.OK);
         }
 
-        SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
-        smallWeChatDto.setAppId(appId);
-        smallWeChatDto.setWeChatType(SmallWeChatDto.WECHAT_TYPE_PUBLIC);
-        List<SmallWeChatDto> smallWeChatDtos = smallWeChatInnerServiceSMOImpl.querySmallWeChats(smallWeChatDto);
-        if (ListUtil.isNull(smallWeChatDtos)) {
-            throw new CmdException("未配置公众号");
-        }
-
-        String accessToken = WechatFactory.getAccessToken(smallWeChatDtos.get(0).getAppId(), smallWeChatDtos.get(0).getAppSecret());
+        String accessToken = WechatFactory.getAccessToken(smallWeChatDto.getAppId(), smallWeChatDto.getAppSecret());
 
         String url = GET_USER_INFO.replace("ACCESS_TOKEN", accessToken).replace("OPENID",fromUserName);
         ResponseEntity<String> paramOut = outRestTemplate.getForEntity(url, String.class);
@@ -119,6 +116,23 @@ public class WechatGatewaySMOImpl extends DefaultAbstractComponentSMO implements
         wechatSubscribeV1InnerServiceSMOImpl.saveWechatSubscribe(wechatSubscribePo);
 
         return new ResponseEntity<>(responseStr, HttpStatus.OK);
+    }
+
+    /**
+     * 校验 appId 是否为系统中已配置的公众号，避免任意 appId 触发下游微信接口调用
+     *
+     * @param appId 公众号 appId
+     * @return 公众号配置
+     */
+    private SmallWeChatDto querySmallWeChat(String appId) {
+        SmallWeChatDto smallWeChatDto = new SmallWeChatDto();
+        smallWeChatDto.setAppId(appId);
+        smallWeChatDto.setWeChatType(SmallWeChatDto.WECHAT_TYPE_PUBLIC);
+        List<SmallWeChatDto> smallWeChatDtos = smallWeChatInnerServiceSMOImpl.querySmallWeChats(smallWeChatDto);
+        if (ListUtil.isNull(smallWeChatDtos)) {
+            throw new CmdException("未配置公众号");
+        }
+        return smallWeChatDtos.get(0);
     }
 
 
@@ -217,11 +231,11 @@ public class WechatGatewaySMOImpl extends DefaultAbstractComponentSMO implements
                                        String eventKey) {
         String resultStr = "";
         //
-        if (event.equals("subscribe")) {
+        if ("subscribe".equals(event)) {
             resultStr = MappingCache.getRemark(WechatConstant.WECHAT_DOMAIN, WechatConstant.WELCOME);
-        } else if (event.equals("unsubscribe")) {
+        } else if ("unsubscribe".equals(event)) {
 
-        } else if (event.equalsIgnoreCase("CLICK")) {
+        } else if ("CLICK".equalsIgnoreCase(event)) {
             resultStr = textResponseHandler(fromUserName, toUserName,
                     eventKey);
         } else {

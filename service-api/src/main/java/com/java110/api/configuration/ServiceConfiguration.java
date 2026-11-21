@@ -1,6 +1,7 @@
 package com.java110.api.configuration;
 
 import com.java110.api.filter.JwtFilter;
+import com.java110.api.filter.PathTraversalFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.MultipartConfigFactory;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,17 @@ public class ServiceConfiguration {
         factory.setMaxRequestSize(DataSize.ofMegabytes(50));
         return factory.createMultipartConfig();
     }
+    @Bean
+    public FilterRegistrationBean pathTraversalFilter() {
+        final FilterRegistrationBean registrationBean = new FilterRegistrationBean();
+        registrationBean.setFilter(new PathTraversalFilter());
+        registrationBean.addUrlPatterns("/app/*");
+        registrationBean.addUrlPatterns("/callComponent/*");
+        registrationBean.addUrlPatterns("/flow/*");
+        registrationBean.setOrder(1);
+        return registrationBean;
+    }
+
     @Bean
     public FilterRegistrationBean jwtFilter() {
         StringBuffer exclusions = new StringBuffer();
@@ -154,6 +166,7 @@ public class ServiceConfiguration {
         registrationBean.addUrlPatterns("/flow/*");
         registrationBean.addUrlPatterns("/app/*");
         registrationBean.addInitParameter("excludedUri",exclusions.toString());
+        registrationBean.setOrder(2);
 
         return registrationBean;
     }

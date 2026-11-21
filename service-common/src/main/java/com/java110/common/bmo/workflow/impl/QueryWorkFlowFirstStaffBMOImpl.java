@@ -29,6 +29,7 @@ import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.StringUtil;
+import com.java110.utils.util.XmlUtil;
 import com.java110.vo.ResultVo;
 import org.flowable.editor.constants.ModelDataJsonConstants;
 import org.flowable.common.engine.api.FlowableException;
@@ -42,8 +43,6 @@ import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.dom4j.Attribute;
-import org.dom4j.Document;
-import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +59,12 @@ import java.util.Map;
 @Service("queryWorkFlowFirstStaffServiceImpl")
 public class QueryWorkFlowFirstStaffBMOImpl implements IQueryWorkFlowFirstStaffBMO {
     private static final Logger logger = LoggerFactory.getLogger(QueryWorkFlowFirstStaffBMOImpl.class);
+
+    /**
+     * 工作流流程图 xml 最大长度 2MB
+     */
+    private static final int MAX_BPMN_XML_LENGTH = 2 * 1024 * 1024;
+
     @Autowired
     private IWorkflowServiceDao workflowServiceDaoImpl;
 
@@ -459,13 +464,12 @@ public class QueryWorkFlowFirstStaffBMOImpl implements IQueryWorkFlowFirstStaffB
      */
     private void dealBpmnXml(WorkflowModelDto workflowModelDto) {
         String bpmnXml = workflowModelDto.getJson_xml();
-        Document doc = null;
+        Element rootElement = null;
         try {
-            doc = DocumentHelper.parseText(bpmnXml);
+            rootElement = XmlUtil.parse(bpmnXml, MAX_BPMN_XML_LENGTH);
         } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }
-        Element rootElement = doc.getRootElement();
         Element process = rootElement.element("process");
         List<Element> userTasks = process.elements("userTask");
         for (Element userTask : userTasks) {
@@ -495,14 +499,12 @@ public class QueryWorkFlowFirstStaffBMOImpl implements IQueryWorkFlowFirstStaffB
 
     public static void main(String[] args) {
         String xml = getXml();
-        Document doc = null;
+        Element rootElement = null;
         try {
-            doc = DocumentHelper.parseText(xml);
+            rootElement = XmlUtil.parse(xml);
         } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }
-
-        Element rootElement = doc.getRootElement();
         Element process = rootElement.element("process");
         List<Element> userTasks = process.elements("userTask");
         for (Element userTask : userTasks) {

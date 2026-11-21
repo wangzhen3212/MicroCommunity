@@ -44,6 +44,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 
 /**
@@ -55,6 +56,7 @@ public class CallComponentController extends DefaultAbstractComponentSMO {
     private final static Logger logger = LoggerFactory.getLogger(CallComponentController.class);
     private static final String VERSION = "version";
     private static final String VERSION_2 = "2.0";
+    private static final Pattern SAFE_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9_]+$");
     @Autowired
     private RestTemplate restTemplate;
 
@@ -298,6 +300,10 @@ public class CallComponentController extends DefaultAbstractComponentSMO {
         try {
             Assert.hasLength(componentCode, "参数错误，未传入组件编码");
             Assert.hasLength(componentMethod, "参数错误，未传入调用组件方法");
+            if (!SAFE_CODE_PATTERN.matcher(componentCode).matches()
+                    || !SAFE_CODE_PATTERN.matcher(componentMethod).matches()) {
+                throw new IllegalArgumentException("参数错误，组件编码不合法");
+            }
             pd = freshPageDate(request);
 
             hasPrivilege(restTemplate, pd, "/callComponent/download/" + componentCode + "/" + componentMethod);

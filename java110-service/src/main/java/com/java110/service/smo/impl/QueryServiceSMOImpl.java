@@ -22,12 +22,12 @@ import com.java110.utils.log.LoggerEngine;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.ExceptionUtil;
 import com.java110.utils.util.StringUtil;
+import com.java110.utils.util.XmlUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.ognl.Ognl;
 import org.apache.ibatis.ognl.OgnlContext;
 import org.apache.ibatis.ognl.OgnlException;
 import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.slf4j.Logger;
 import com.java110.core.log.LoggerFactory;
@@ -484,7 +484,7 @@ public class QueryServiceSMOImpl extends LoggerEngine implements IQueryServiceSM
 
             tmpSql = oSql.substring(oSql.indexOf("<if")) + "</if>";
 
-            Element root = DocumentHelper.parseText(tmpSql).getRootElement();
+            Element root = XmlUtil.parse(tmpSql);
 
             String condition = root.attribute("test").getValue();
 

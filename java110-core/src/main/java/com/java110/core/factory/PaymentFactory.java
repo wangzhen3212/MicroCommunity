@@ -1,26 +1,18 @@
 package com.java110.core.factory;
 
 import com.alibaba.fastjson.JSONObject;
+import com.java110.utils.util.XmlUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.springframework.util.StringUtils;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.net.InetAddress;
@@ -65,12 +57,8 @@ public class PaymentFactory {
      * @throws Exception
      */
     public static String mapToXml(SortedMap<String, String> map) throws Exception {
-        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 //防止XXE攻击
-        documentBuilderFactory.setXIncludeAware(false);
-        documentBuilderFactory.setExpandEntityReferences(false);
-        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-        org.w3c.dom.Document document = documentBuilder.newDocument();
+        org.w3c.dom.Document document = XmlUtil.newDocument();
         org.w3c.dom.Element root = document.createElement("xml");
         document.appendChild(root);
         for (String key : map.keySet()) {
@@ -135,33 +123,13 @@ public class PaymentFactory {
      * @throws Exception
      */
     public static Map<String, Object> getMapFromXML(String strXML) throws Exception {
-        try {
-            Map<String, Object> data = new HashMap<String, Object>();
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-//防止XXE攻击
-            documentBuilderFactory.setXIncludeAware(false);
-            documentBuilderFactory.setExpandEntityReferences(false);
-            DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-            InputStream stream = new ByteArrayInputStream(strXML.getBytes("UTF-8"));
-            org.w3c.dom.Document doc = documentBuilder.parse(stream);
-            doc.getDocumentElement().normalize();
-            NodeList nodeList = doc.getDocumentElement().getChildNodes();
-            for (int idx = 0; idx < nodeList.getLength(); ++idx) {
-                Node node = nodeList.item(idx);
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    org.w3c.dom.Element element = (org.w3c.dom.Element) node;
-                    data.put(element.getNodeName(), element.getTextContent());
-                }
-            }
-            try {
-                stream.close();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            return data;
-        } catch (Exception ex) {
-            throw ex;
+        Map<String, Object> data = new HashMap<String, Object>();
+        Element root = XmlUtil.parse(strXML);
+        List<Element> elements = root.elements();
+        for (Element element : elements) {
+            data.put(element.getName(), element.getText());
         }
+        return data;
     }
 
     /**
@@ -219,19 +187,16 @@ public class PaymentFactory {
      */
     public static Map<String, String> xmlStrToMap(String xmlStr) {
         Map<String, String> map = new HashMap<String, String>();
-        Document doc;
         try {
-            doc = DocumentHelper.parseText(xmlStr);
-            Element root = doc.getRootElement();
-            List children = root.elements();
+            Element root = XmlUtil.parse(xmlStr);
+            List<Element> children = root.elements();
             if (children != null && children.size() > 0) {
-                for (int i = 0; i < children.size(); i++) {
-                    Element child = (Element) children.get(i);
+                for (Element child : children) {
                     map.put(child.getName(), child.getTextTrim());
                 }
             }
-        } catch (DocumentException e) {
-            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            log.warn("xml 解析失败", e);
         }
         return map;
     }
