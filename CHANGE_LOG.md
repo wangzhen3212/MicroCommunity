@@ -918,7 +918,7 @@ GROUP BY a.`audit_id`, a.`biz_id`, a.`current_step`, a.`state`;
 -- 变更单迁移：同一批语句把 audit_type 置 2、biz_id 取 plan_id（源表 contract_change_plan）
 
 -- ⑦ 服务注册（c_service 2131~2155 / c_route 3113~3137）
-INSERT IGNORE INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_cd`,`name`,`seq`,`messageQueueName`,`is_instance`,`url`,`method`,`timeout`,`retry_count`,`provide_app_id`,`create_time`,`status_cd`) VALUES
+INSERT  INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_cd`,`name`,`seq`,`messageQueueName`,`is_instance`,`url`,`method`,`timeout`,`retry_count`,`provide_app_id`,`create_time`,`status_cd`) VALUES
  ('2131','982026111600000001','contract.listContractStatistics','API','合同台账统计','1',NULL,'CMD','http://store-service','GET','60','3','8000418004',NOW(),'0'),
  ('2132','982026111600000002','contract.generateContractCode','API','生成合同编号','1',NULL,'CMD','http://store-service','GET','60','3','8000418004',NOW(),'0'),
  ('2133','982026111600000003','contract.saveContractDraft','API','保存合同草稿','1',NULL,'CMD','http://store-service','POST','60','3','8000418004',NOW(),'0'),
@@ -945,7 +945,7 @@ INSERT IGNORE INTO `c_service` (`id`,`service_id`,`service_code`,`business_type_
  ('2154','982026111600000024','contract.batchStopContract','API','批量终止合同','1',NULL,'CMD','http://store-service','POST','60','3','8000418004',NOW(),'0'),
  ('2155','982026111600000025','contract.queryContractAuditFlow','API','查询单据审批链','1',NULL,'CMD','http://store-service','GET','60','3','8000418004',NOW(),'0');
 
-INSERT IGNORE INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_times`,`invoke_model`,`create_time`,`status_cd`) VALUES
+INSERT  INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_times`,`invoke_model`,`create_time`,`status_cd`) VALUES
  ('3113','8000418004','982026111600000001','Q','1000','S',NOW(),'0'),
  ('3114','8000418004','982026111600000002','Q','1000','S',NOW(),'0'),
  ('3115','8000418004','982026111600000003','Q','1000','S',NOW(),'0'),
@@ -1251,75 +1251,6 @@ INSERT INTO `c_route` (`id`,`app_id`,`service_id`,`order_type_cd`,`invoke_limit_
 --          + DELETE FROM c_route WHERE id='3138'; DELETE FROM c_service WHERE id='2156'
 ```
 
-## 2026-11-20 — 合同费用构成落库（contract_fee）+ 打印正文改读库中正文
-
-背景：起草/编辑页选择的费用项（物业费、租金等）此前只在前端试算、保存时被后端丢弃，详情抽屉「费用构成与收款计划」无数据可展示；合同打印页另用模板 context 自行替换 `#中文名#`，导致 `{{partyB}}` 等标签原样打印且与详情抽屉正文不一致。
-
-本次改动（**仅新增 1 张表，不新增服务码**）：
-
-1. 新增表 `contract_fee`（一行 = 合同的一个费用项，含费用项快照 + 试算结果）。
-2. `contract.saveContract` / `contract.updateContract` 的 `fees` 落库（更新时旧行 `status_cd='1'` 后重建；payload 不带 `fees` 时不动，兼容老客户端）；`contract.deleteContract` 时费用行同步失效。
-3. `contract.listContractCollectionPlans`（`c_service` 已有，无变更）返回体新增 `fees` 与 `feeSummary{feeTotal, includeTotal}`，抽屉/编辑页一次请求拿全。
-4. 打印接口 `/contract/printContractTemplate` 增加 `printContent` / `contentSource`（`content` 库中正文 / `rendered` 正文模板渲染 / `template` 合同模板兜底）/ `contentVersion`；正文主路径改为读 `contract_content.content`，不再打印模板。变更单审批通过回写主表后（`applyChangePlan`）自动重渲染并写回 `content`（`content_version` 自增）。
-5. 前端 `i18n/menuLang.js` 补 `合同待审核` / `合同-法务校对` / `合同-领导审批` 三语，`layout.vue`、`PrivilegeTree.vue` 增加 `menuText` 兜底：**今后修改 `m_menu.name` / `p_privilege.name` 必须同步 `pc-web/src/i18n/menuLang.js` 三语，否则菜单会显示 `menu.xxx`**。
-
-```sql
--- 执行前备份（示例）
--- mysqldump -u<user> -p <db> contract contract_content c_service > contract_fee_bak_20261120.sql
-
--- ① 合同费用构成表（费用项快照 + 试算结果，一行 = 合同的一个费用项）
-CREATE TABLE IF NOT EXISTS `contract_fee` (
-  `cf_id` varchar(30) NOT NULL COMMENT '主键，前缀94',
-  `contract_id` varchar(30) NOT NULL COMMENT '合同ID',
-  `fee_seq` int(6) NOT NULL DEFAULT '1' COMMENT '排序号（保存顺序）',
-  `config_id` varchar(30) DEFAULT NULL COMMENT '费用项ID（pay_fee_config.config_id）',
-  `fee_type_cd` varchar(12) DEFAULT NULL COMMENT '费用类型',
-  `fee_type_name` varchar(50) DEFAULT NULL COMMENT '费用类型名称快照',
-  `fee_name` varchar(100) DEFAULT NULL COMMENT '费用项名称快照',
-  `computing_formula` char(4) DEFAULT NULL COMMENT '计算方式（含租金/面积/固定/手工等）',
-  `computing_formula_name` varchar(50) DEFAULT NULL COMMENT '计算方式名称快照',
-  `unit_price` decimal(10,2) DEFAULT '0.00' COMMENT '单价',
-  `additional_amount` decimal(10,2) DEFAULT '0.00' COMMENT '附加费',
-  `cycle` char(2) DEFAULT NULL COMMENT '付费周期（月）',
-  `months` int(6) DEFAULT '0' COMMENT '期数（月）',
-  `coefficient` decimal(10,4) DEFAULT '1.0000' COMMENT '系数',
-  `manual_amount` decimal(10,2) DEFAULT NULL COMMENT '手工录入金额',
-  `base_amount` decimal(12,2) DEFAULT '0.00' COMMENT '结算基数',
-  `amount` decimal(12,2) DEFAULT '0.00' COMMENT '费用金额',
-  `include_in_amount` char(1) NOT NULL DEFAULT '1' COMMENT '是否计入合同金额 1是 0否',
-  `compute_remark` varchar(500) DEFAULT NULL COMMENT '计算说明',
-  `remark` varchar(200) DEFAULT NULL COMMENT '备注',
-  `store_id` varchar(30) DEFAULT NULL COMMENT '商户ID',
-  `status_cd` char(1) NOT NULL DEFAULT '0' COMMENT '数据状态 0有效 1失效',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`cf_id`),
-  KEY `idx_cf_contract` (`contract_id`,`status_cd`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='合同费用构成（费用项快照 + 试算结果）';
-
--- ② 服务码：无新增。抽屉/编辑页复用 contract.listContractCollectionPlans（c_service 2148），返回体增加 fees / feeSummary
-
--- ③ 正文数据源体检（只查不改；打印已改为读 contract_content.content，需先摸清存量）
--- 3.1 有正文记录的合同：打印直接打 content
-SELECT c.contract_id, c.contract_code, cc.content_id, cc.content_version,
-       CHAR_LENGTH(IFNULL(cc.content,'')) AS content_len
-FROM contract c
-JOIN contract_content cc ON cc.contract_id = c.contract_id AND cc.status_cd = '0'
-WHERE c.status_cd = '0' AND IFNULL(cc.content,'') <> ''
-ORDER BY c.create_time DESC;
-
--- 3.2 正文为空 / 无正文记录的合同：打印走兜底渲染（render(template_content) → 模板 context），
---     建议业务逐条打开编辑页重存一次（重存即刷新 content，content_version 自增）
-SELECT c.contract_id, c.contract_code, c.template_id, cc.content_id, cc.content_version
-FROM contract c
-LEFT JOIN contract_content cc ON cc.contract_id = c.contract_id AND cc.status_cd = '0'
-WHERE c.status_cd = '0'
-  AND (cc.content_id IS NULL OR IFNULL(cc.content,'') = '');
-
--- ④ 执行后：重启 store-service（未改 c_service/c_route，无需 flushCache）
--- ⑤ 回滚：DROP TABLE IF EXISTS `contract_fee`;  （代码回滚 + 重启 store-service；contract_content 未被改表结构，无需回滚）
-```
-
-## 2026-11-20 — 合同模块小区隔离（community_id 落地）
 
 
 ```sql
@@ -1333,7 +1264,6 @@ ALTER TABLE contract_remind_log     ADD COLUMN community_id varchar(30) NOT NULL
 
 -- B. 子表加列
 ALTER TABLE contract_room                    ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
-ALTER TABLE contract_fee                     ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
 ALTER TABLE contract_file                    ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER contract_id;
 ALTER TABLE contract_attr                    ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER store_id;
 ALTER TABLE contract_content                 ADD COLUMN community_id varchar(30) NOT NULL DEFAULT '-1' COMMENT '小区ID' AFTER contract_id;
@@ -1350,7 +1280,6 @@ CREATE INDEX idx_contract_plan_community_id         ON contract_collection_plan(
 CREATE INDEX idx_contract_audit_community_id        ON contract_audit_log(community_id, biz_id);
 CREATE INDEX idx_contract_remind_community_id       ON contract_remind_log(community_id, contract_id);
 CREATE INDEX idx_contract_room_community_id         ON contract_room(community_id, contract_id);
-CREATE INDEX idx_contract_fee_community_id          ON contract_fee(community_id, contract_id);
 CREATE INDEX idx_contract_file_community_id         ON contract_file(community_id, contract_id);
 CREATE INDEX idx_contract_attr_community_id         ON contract_attr(community_id, contract_id);
 CREATE INDEX idx_contract_content_community_id      ON contract_content(community_id, contract_id);
