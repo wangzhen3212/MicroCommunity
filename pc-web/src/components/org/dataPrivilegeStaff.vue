@@ -35,7 +35,7 @@
       </el-table-column>
       <el-table-column :label="$t('dataPrivilege.gender')" align="center">
         <template slot-scope="scope">
-          {{ scope.row.sex === 0 ? $t('dataPrivilege.male') : $t('dataPrivilege.female') }}
+          {{ formatOwnerSex(scope.row.sex) }}
         </template>
       </el-table-column>
       <el-table-column :label="$t('common.operation')" align="center" width="200">
@@ -64,6 +64,7 @@
 import { listDataPrivilegeStaff } from '@/api/org/dataPrivilegeManageApi'
 import AddDataPrivilegeStaff from '@/components/org/addDataPrivilegeStaff'
 import DeleteDataPrivilegeStaff from '@/components/org/deleteDataPrivilegeStaff'
+import { formatOwnerSex as buildOwnerSexText } from '@/utils/ownerSexUtil'
 
 export default {
   name: 'DataPrivilegeStaff',
@@ -90,6 +91,9 @@ export default {
   created() {
   },
   methods: {
+    formatOwnerSex(sex) {
+      return buildOwnerSexText(sex, this.$t.bind(this))
+    },
     open(dpId) {
       this.dpId = dpId
       this.loadData()

@@ -75,7 +75,7 @@
             <el-table-column prop="personRoleName" :label="$t('adminOwner.personRole')" align="center"></el-table-column>
             <el-table-column prop="sex" :label="$t('adminOwner.gender')" align="center">
               <template slot-scope="scope">
-                {{ scope.row.sex === 0 ? $t('adminOwner.male') : $t('adminOwner.female') }}
+                {{ formatOwnerSex(scope.row.sex) }}
               </template>
             </el-table-column>
             <el-table-column prop="idCard" :label="$t('adminOwner.idCard')" align="center">
@@ -140,6 +140,7 @@ import { queryAdminOwners } from '@/api/owner/adminOwnerApi'
 import SelectAdminCommunity from '@/components/community/selectAdminCommunity'
 import ViewImage from '@/components/owner/viewImage'
 import { getDict } from '@/api/community/communityApi'
+import { formatOwnerSex as buildOwnerSexText } from '@/utils/ownerSexUtil'
 
 export default {
   name: 'AdminOwnerList',
@@ -172,6 +173,9 @@ export default {
     this.queryOwner()
   },
   methods: {
+    formatOwnerSex(sex) {
+      return buildOwnerSexText(sex, this.$t.bind(this))
+    },
     async loadPersonRoles() {
       const data = await getDict('building_owner', 'person_role')
       this.personRoles = [...data]

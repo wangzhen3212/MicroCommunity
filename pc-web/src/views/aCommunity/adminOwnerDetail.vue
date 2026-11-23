@@ -28,11 +28,10 @@
                   <label>{{ adminOwnerDetailInfo.name }}</label>
                 </div>
               </el-col>
-              <el-col :span="6" v-if="adminOwnerDetailInfo.personType == 'P'">
+              <el-col :span="6" v-if="adminOwnerDetailInfo.personType !== 'C'">
                 <div class="form-group">
                   <label class="col-form-label">{{ $t('adminOwnerDetail.sex') }}：</label>
-                  <label>{{ adminOwnerDetailInfo.sex == '0' ? $t('common.male') : (adminOwnerDetailInfo.sex == '1' ?
-                    $t('common.female') : '') }}</label>
+                  <label>{{ formatOwnerSex(adminOwnerDetailInfo.sex) }}</label>
                 </div>
               </el-col>
               <el-col :span="6">
@@ -156,6 +155,7 @@
 <script>
 import { getOwnerDetail } from '@/api/aCommunity/adminOwnerDetailApi'
 import { getCommunityId } from '@/api/community/communityApi'
+import { formatOwnerSex as buildOwnerSexText } from '@/utils/ownerSexUtil'
 //import { getDict } from '@/api/community/communityApi'
 
 // 导入所有子组件
@@ -244,6 +244,9 @@ export default {
     this.loadAdminOwnerInfo()
   },
   methods: {
+    formatOwnerSex(sex) {
+      return buildOwnerSexText(sex, this.$t.bind(this))
+    },
     async loadAdminOwnerInfo() {
       try {
         const params = {

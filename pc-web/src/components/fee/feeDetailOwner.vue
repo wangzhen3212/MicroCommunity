@@ -16,7 +16,7 @@
         </el-table-column>
         <el-table-column prop="sex" :label="$t('feeDetailOwner.gender')" align="center">
           <template #default="{ row }">
-            {{ row.sex === 0 ? $t('feeDetailOwner.male') : $t('feeDetailOwner.female') }}
+            {{ formatOwnerSex(row.sex) }}
           </template>
         </el-table-column>
         <el-table-column prop="idCard" :label="$t('feeDetailOwner.idCard')" align="center"></el-table-column>
@@ -87,6 +87,7 @@ import OwnerRepairs from '@/components/owner/ownerRepairs'
 import OwnerOweFees from '@/components/owner/ownerOweFees'
 import RoomContracts from '@/components/room/roomContracts'
 import { getCommunityId } from '@/api/community/communityApi'
+import { formatOwnerSex as buildOwnerSexText } from '@/utils/ownerSexUtil'
 
 export default {
   name: 'FeeDetailOwner',
@@ -111,6 +112,9 @@ export default {
     }
   },
   methods: {
+    formatOwnerSex(sex) {
+      return buildOwnerSexText(sex, this.$t.bind(this))
+    },
     open(params) {
       if (!params.ownerId) return
       this.feeDetailOwnerInfo.ownerId = params.ownerId
