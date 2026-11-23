@@ -91,7 +91,7 @@
     <delete-fee-rule ref="deleteFeeRule" @success="handleSuccess" />
     <edit-fee-rule ref="editFeeRule" @success="handleSuccess" />
     <finish-fee-rule ref="finishFeeRule" @success="handleSuccess" />
-    <temp-import-room-fee ref="tempImportRoomFee" @success="handleSuccess" />
+    <temp-import-shop-fee ref="tempImportShopFee" @success="handleSuccess" />
     <shop-create-fee-add ref="shopCreateFeeAdd" @success="handleSuccess" />
     <pre-generate-fee ref="preGenerateFee" @success="handleSuccess" />
 
@@ -105,7 +105,7 @@ import { queryPreGenerateFeePeriods, preGenerateFee as preGenerateFeeApi } from 
 import DeleteFeeRule from './deleteFeeRule.vue'
 import EditFeeRule from './editFeeRule.vue'
 import FinishFeeRule from './finishFeeRule.vue'
-import TempImportRoomFee from './tempImportRoomFee.vue'
+import TempImportShopFee from './tempImportShopFee.vue'
 import ShopCreateFeeAdd from '@/components/fee/shopCreateFeeAdd'
 import PreGenerateFee from './preGenerateFee'
 
@@ -116,7 +116,7 @@ export default {
     EditFeeRule,
     FinishFeeRule,
     ShopCreateFeeAdd,
-    TempImportRoomFee,
+    TempImportShopFee,
     PreGenerateFee
   },
 
@@ -257,12 +257,13 @@ export default {
     },
 
     _openTempImportRoomFeeModal() {
-      this.$refs.tempImportRoomFee.open({
-        roomId: this.feeDetailShopFeeRuleInfo.shopId,
-        roomName: this.feeDetailShopFeeRuleInfo.shopNum,
-        ownerName: this.feeDetailShopFeeRuleInfo.ownerName,
-        objType: '4444'
-      })
+      if (this.$refs.tempImportShopFee) {
+        this.$refs.tempImportShopFee.open({
+          shopId: this.feeDetailShopFeeRuleInfo.shopId,
+          shopName: this.feeDetailShopFeeRuleInfo.shopNum || this.feeDetailShopFeeRuleInfo.shopName,
+          ownerName: this.feeDetailShopFeeRuleInfo.ownerName
+        })
+      }
     },
 
     _openShopCreateFeeAddModal() {

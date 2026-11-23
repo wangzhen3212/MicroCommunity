@@ -227,7 +227,7 @@
     <finish-fee-rule ref="finishFeeRule" @success="handleBillChanged"></finish-fee-rule>
     <delete-fee-rule ref="deleteFeeRule" @success="handleBillChanged"></delete-fee-rule>
     <parking-space-create-fee-add ref="parkingSpaceCreateFeeAdd" @success="handleBillChanged"></parking-space-create-fee-add>
-    <temp-import-room-fee ref="tempImportRoomFee" @success="handleBillChanged"></temp-import-room-fee>
+    <temp-import-parking-space-fee ref="tempImportParkingSpaceFee" @success="handleBillChanged"></temp-import-parking-space-fee>
     <edit-fee-rule ref="editFeeRule" @success="handleBillChanged"></edit-fee-rule>
     <edit-fee ref="editFee" @success="handleBillChanged"></edit-fee>
     <split-fee ref="splitFee" @success="handleBillChanged"></split-fee>
@@ -239,7 +239,7 @@
 import feeRuleBillMixin from '@/mixins/feeRuleBillMixin'
 import DeleteFee from '@/components/fee/deleteFee'
 import ParkingSpaceCreateFeeAdd from '@/components/fee/parkingSpaceCreateFeeAdd'
-import TempImportRoomFee from '@/components/fee/tempImportRoomFee'
+import TempImportParkingSpaceFee from '@/components/fee/tempImportParkingSpaceFee'
 import EditFeeRule from '@/components/fee/editFeeRule'
 import FinishFeeRule from '@/components/fee/finishFeeRule'
 import DeleteFeeRule from '@/components/fee/deleteFeeRule'
@@ -252,7 +252,7 @@ export default {
   components: {
     DeleteFee,
     ParkingSpaceCreateFeeAdd,
-    TempImportRoomFee,
+    TempImportParkingSpaceFee,
     EditFeeRule,
     FinishFeeRule,
     DeleteFeeRule,
@@ -301,12 +301,11 @@ export default {
       if (!this._checkPayerObj()) {
         return
       }
-      if (this.$refs.tempImportRoomFee) {
-        this.$refs.tempImportRoomFee.open({
-          roomId: this.ruleBillInfo.roomInfo.roomId,
-          roomName: this.ruleBillInfo.roomInfo.roomName,
-          ownerName: this.ruleBillInfo.roomInfo.ownerName,
-          objType: this.ruleBillInfo.payerObjType
+      if (this.$refs.tempImportParkingSpaceFee) {
+        this.$refs.tempImportParkingSpaceFee.open({
+          psId: this.ruleBillInfo.roomInfo.roomId,
+          psName: this.ruleBillInfo.roomInfo.roomName,
+          ownerName: this.ruleBillInfo.roomInfo.ownerName
         })
       }
     }

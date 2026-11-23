@@ -227,7 +227,7 @@
     <finish-fee-rule ref="finishFeeRule" @success="handleBillChanged"></finish-fee-rule>
     <delete-fee-rule ref="deleteFeeRule" @success="handleBillChanged"></delete-fee-rule>
     <shop-create-fee-add ref="shopCreateFeeAdd" @success="handleBillChanged"></shop-create-fee-add>
-    <temp-import-room-fee ref="tempImportRoomFee" @success="handleBillChanged"></temp-import-room-fee>
+    <temp-import-shop-fee ref="tempImportShopFee" @success="handleBillChanged"></temp-import-shop-fee>
     <edit-fee-rule ref="editFeeRule" @success="handleBillChanged"></edit-fee-rule>
     <edit-fee ref="editFee" @success="handleBillChanged"></edit-fee>
     <split-fee ref="splitFee" @success="handleBillChanged"></split-fee>
@@ -239,7 +239,7 @@
 import feeRuleBillMixin from '@/mixins/feeRuleBillMixin'
 import DeleteFee from '@/components/fee/deleteFee'
 import ShopCreateFeeAdd from '@/components/fee/shopCreateFeeAdd'
-import TempImportRoomFee from '@/components/fee/tempImportRoomFee'
+import TempImportShopFee from '@/components/fee/tempImportShopFee'
 import EditFeeRule from '@/components/fee/editFeeRule'
 import FinishFeeRule from '@/components/fee/finishFeeRule'
 import DeleteFeeRule from '@/components/fee/deleteFeeRule'
@@ -252,7 +252,7 @@ export default {
   components: {
     DeleteFee,
     ShopCreateFeeAdd,
-    TempImportRoomFee,
+    TempImportShopFee,
     EditFeeRule,
     FinishFeeRule,
     DeleteFeeRule,
@@ -301,12 +301,11 @@ export default {
       if (!this._checkPayerObj()) {
         return
       }
-      if (this.$refs.tempImportRoomFee) {
-        this.$refs.tempImportRoomFee.open({
-          roomId: this.ruleBillInfo.roomInfo.roomId,
-          roomName: this.ruleBillInfo.roomInfo.roomName,
-          ownerName: this.ruleBillInfo.roomInfo.ownerName,
-          objType: this.ruleBillInfo.payerObjType
+      if (this.$refs.tempImportShopFee) {
+        this.$refs.tempImportShopFee.open({
+          shopId: this.ruleBillInfo.roomInfo.roomId,
+          shopName: this.ruleBillInfo.roomInfo.roomName,
+          ownerName: this.ruleBillInfo.roomInfo.ownerName
         })
       }
     }

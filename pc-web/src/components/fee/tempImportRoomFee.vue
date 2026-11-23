@@ -55,7 +55,6 @@ export default {
       form: {
         communityId: '',
         feeTypeCd: '',
-        objType: '',
         feeTypeCds: [],
         configId: '',
         objName: '',
@@ -77,9 +76,9 @@ export default {
   methods: {
     open(room) {
       this.clearTempImportRoomFeeInfo()
-      this.form.objId = room.roomId
-      this.form.objName = room.roomName
-      this.form.objType = room.objType
+      const data = room || {}
+      this.form.objId = data.roomId
+      this.form.objName = data.roomName
       this.dialogVisible = true
     },
     async loadDictData() {
@@ -161,7 +160,7 @@ export default {
         this.$message.success(this.$t('common.operationSuccess'))
       } catch (error) {
         console.error('请求失败:', error)
-        this.$message.error(this.$t('tempImportRoomFee.createFailed'))
+        this.$message.error((error && error.message) || this.$t('tempImportRoomFee.createFailed'))
       }
     },
     clearTempImportRoomFeeInfo() {

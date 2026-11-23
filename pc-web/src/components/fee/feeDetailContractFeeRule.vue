@@ -92,7 +92,7 @@
     <delete-fee-rule ref="deleteFeeRule" @success="handleSuccess" />
     <edit-fee-rule ref="editFeeRule" @success="handleSuccess" />
     <finish-fee-rule ref="finishFeeRule" @success="handleSuccess" />
-    <temp-import-room-fee ref="tempImportRoomFee" @success="handleSuccess" />
+    <temp-import-contract-fee ref="tempImportContractFee" @success="handleSuccess" />
     <contract-create-fee-add ref="contractCreateFeeAdd" @success="handleSuccess" />
     <pre-generate-fee ref="preGenerateFee" @success="handleSuccess" />
 
@@ -106,7 +106,7 @@ import { queryPreGenerateFeePeriods, preGenerateFee as preGenerateFeeApi } from 
 import DeleteFeeRule from './deleteFeeRule.vue'
 import EditFeeRule from './editFeeRule.vue'
 import FinishFeeRule from './finishFeeRule.vue'
-import TempImportRoomFee from './tempImportRoomFee.vue'
+import TempImportContractFee from './tempImportContractFee.vue'
 import ContractCreateFeeAdd from '@/components/fee/contractCreateFeeAdd'
 import PreGenerateFee from './preGenerateFee'
 
@@ -117,7 +117,7 @@ export default {
     EditFeeRule,
     FinishFeeRule,
     ContractCreateFeeAdd,
-    TempImportRoomFee,
+    TempImportContractFee,
     PreGenerateFee
   },
 
@@ -258,12 +258,14 @@ export default {
     },
 
     _openTempImportContractFeeModal() {
-      this.$refs.tempImportRoomFee.open({
-        roomId: this.feeDetailContractFeeRuleInfo.contractId,
-        roomName: this.feeDetailContractFeeRuleInfo.contractCode,
-        ownerName: this.feeDetailContractFeeRuleInfo.ownerName,
-        objType: '7777'
-      })
+      if (this.$refs.tempImportContractFee) {
+        this.$refs.tempImportContractFee.open({
+          contractId: this.feeDetailContractFeeRuleInfo.contractId,
+          contractName: this.feeDetailContractFeeRuleInfo.contractCode ||
+            this.feeDetailContractFeeRuleInfo.contractName,
+          ownerName: this.feeDetailContractFeeRuleInfo.ownerName
+        })
+      }
     },
 
     _openContractCreateFeeAddModal() {

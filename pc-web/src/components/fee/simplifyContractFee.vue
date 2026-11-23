@@ -227,7 +227,7 @@
     <finish-fee-rule ref="finishFeeRule" @success="handleBillChanged"></finish-fee-rule>
     <delete-fee-rule ref="deleteFeeRule" @success="handleBillChanged"></delete-fee-rule>
     <contract-create-fee-add ref="contractCreateFeeAdd" @success="handleBillChanged"></contract-create-fee-add>
-    <temp-import-room-fee ref="tempImportRoomFee" @success="handleBillChanged"></temp-import-room-fee>
+    <temp-import-contract-fee ref="tempImportContractFee" @success="handleBillChanged"></temp-import-contract-fee>
     <edit-fee-rule ref="editFeeRule" @success="handleBillChanged"></edit-fee-rule>
     <edit-fee ref="editFee" @success="handleBillChanged"></edit-fee>
     <split-fee ref="splitFee" @success="handleBillChanged"></split-fee>
@@ -239,7 +239,7 @@
 import feeRuleBillMixin from '@/mixins/feeRuleBillMixin'
 import DeleteFee from '@/components/fee/deleteFee'
 import ContractCreateFeeAdd from '@/components/fee/contractCreateFeeAdd'
-import TempImportRoomFee from '@/components/fee/tempImportRoomFee'
+import TempImportContractFee from '@/components/fee/tempImportContractFee'
 import EditFeeRule from '@/components/fee/editFeeRule'
 import FinishFeeRule from '@/components/fee/finishFeeRule'
 import DeleteFeeRule from '@/components/fee/deleteFeeRule'
@@ -252,7 +252,7 @@ export default {
   components: {
     DeleteFee,
     ContractCreateFeeAdd,
-    TempImportRoomFee,
+    TempImportContractFee,
     EditFeeRule,
     FinishFeeRule,
     DeleteFeeRule,
@@ -299,12 +299,11 @@ export default {
       if (!this._checkPayerObj()) {
         return
       }
-      if (this.$refs.tempImportRoomFee) {
-        this.$refs.tempImportRoomFee.open({
-          roomId: this.ruleBillInfo.roomInfo.roomId,
-          roomName: this.ruleBillInfo.roomInfo.roomName,
-          ownerName: this.ruleBillInfo.roomInfo.ownerName,
-          objType: this.ruleBillInfo.payerObjType
+      if (this.$refs.tempImportContractFee) {
+        this.$refs.tempImportContractFee.open({
+          contractId: this.ruleBillInfo.roomInfo.roomId,
+          contractName: this.ruleBillInfo.roomInfo.roomName,
+          ownerName: this.ruleBillInfo.roomInfo.ownerName
         })
       }
     }

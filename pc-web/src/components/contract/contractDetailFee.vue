@@ -101,14 +101,6 @@ export default {
         console.error('请求失败:', error)
       })
     },
-    _openTempImportContractFeeModal() {
-      this.$refs.tempImportRoomFee.open({
-        roomId: this.contractDetailFeeInfo.contractId,
-        objType: '7777',
-        roomName: this.contractDetailFeeInfo.contractName,
-        ownerName: this.contractDetailFeeInfo.ownerName
-      })
-    },
     _payContractFee(fee) {
       this.$router.push(`/property/payFeeOrder?feeId=${fee.feeId}`)
     },
