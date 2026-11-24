@@ -69,12 +69,6 @@
       <el-form-item :label="$t('meterWater.remark')" prop="remark">
         <el-input v-model="form.remark" type="textarea" :placeholder="$t('meterWater.inputRemark')" :rows="2" />
       </el-form-item>
-
-      <el-form-item>
-        <div class="form-tip">
-          {{ $t('meterWater.unitTip') }}
-        </div>
-      </el-form-item>
     </el-form>
 
     <span slot="footer" class="dialog-footer">
