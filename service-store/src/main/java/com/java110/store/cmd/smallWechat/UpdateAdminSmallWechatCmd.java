@@ -69,6 +69,8 @@ public class UpdateAdminSmallWechatCmd extends Cmd {
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
        SmallWechatPo smallWechatPo = BeanConvertUtil.covertBean(reqJson, SmallWechatPo.class);
+       smallWechatPo.setStoreId(null);
+       smallWechatPo.setStatusCd("0");
        smallWechatPo.setWechatType(reqJson.getString("weChatType"));
         int flag = smallWechatV1InnerServiceSMOImpl.updateSmallWechat(smallWechatPo);
 

@@ -17,7 +17,8 @@
             </div>
           </div>
 
-          <el-table :data="smallWeChats" border style="width: 100%">
+          <el-table v-loading="loading" :data="smallWeChats" border style="width: 100%" :empty-text="emptyText">
+
             <el-table-column prop="name" :label="$t('communityMini.name')" align="center" />
             <el-table-column prop="communityName" :label="$t('communityMini.communityName')" align="center" />
             <el-table-column prop="appId" label="APPID" align="center" />
@@ -69,21 +70,32 @@ export default {
       loading: false
     }
   },
-  mounted() {
-    this.loadSmallWeChats()
+  computed: {
+    emptyText() {
+      if (!this.conditions.communityId) {
+        return this.$t('communityMini.selectCommunityTip')
+      }
+      return this.$t('communityMini.emptyTip')
+    }
   },
   methods: {
     async loadSmallWeChats() {
+      if (!this.conditions.communityId) {
+        this.smallWeChats = []
+        return
+      }
       this.loading = true
       try {
         const res = await listAdminSmallWeChats(this.conditions)
-        if (res.code === 0) {
-          this.smallWeChats = res.data || []
-        } else {
-          this.$message.error(res.msg || '加载小程序列表失败')
+        if (res.code !== 0) {
+          this.smallWeChats = []
+          this.$message.error(res.msg || this.$t('communityMini.loadFailed'))
+          return
         }
+        this.smallWeChats = res.data || []
       } catch (error) {
-        console.error('加载小程序列表失败:', error)
+        this.smallWeChats = []
+        this.$message.error(error.message || this.$t('communityMini.loadFailed'))
       } finally {
         this.loading = false
       }

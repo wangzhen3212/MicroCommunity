@@ -46,6 +46,7 @@ export default {
         appId: '',
         appSecret: '',
         remarks: '',
+        weChatType: '',
         payPassword: '1',
         objType: '1000',
         mchId: '1',
@@ -87,6 +88,7 @@ export default {
         appId: '',
         appSecret: '',
         remarks: '',
+        weChatType: '',
         payPassword: '1',
         objType: '1000',
         mchId: '1',
@@ -96,20 +98,22 @@ export default {
     },
     handleSubmit() {
       this.$refs.form.validate(async valid => {
-        if (valid) {
-          try {
-            const res = await updateAdminSmallWeChat(this.form)
-            if (res.code == 0) {
-              this.$message.success(res.msg)
-              this.visible = false
-              this.$emit('success')
-            } else {
-              this.$message.error(res.msg || this.$t('communityWechat.editFailed'))
-            }
-          } catch (error) {
-            console.error('更新公众号失败:', error)
-            this.$message.error(error)
+        if (!valid) {
+          return
+        }
+        try {
+          const params = {
+            ...this.form,
+            wechatId: this.form.wechatId || this.form.weChatId,
+            weChatType: this.form.weChatType,
+            objType: '1000'
           }
+          await updateAdminSmallWeChat(params)
+          this.$message.success(this.$t('communityWechat.editSuccess'))
+          this.visible = false
+          this.$emit('success')
+        } catch (error) {
+          this.$message.error(error.message || this.$t('communityWechat.editFailed'))
         }
       })
     }

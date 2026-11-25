@@ -17,6 +17,7 @@ package com.java110.store.cmd.smallWechat;
 
 import com.alibaba.fastjson.JSONObject;
 import com.java110.core.annotation.Java110Cmd;
+import com.java110.core.context.CmdContextUtils;
 import com.java110.core.context.ICmdDataFlowContext;
 import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
@@ -25,7 +26,9 @@ import com.java110.dto.repair.RepairDto;
 import com.java110.dto.wechat.SmallWeChatDto;
 import com.java110.intf.community.ICommunityV1InnerServiceSMO;
 import com.java110.intf.store.ISmallWechatV1InnerServiceSMO;
+import com.java110.intf.user.IStaffCommunityV1InnerServiceSMO;
 import com.java110.utils.exception.CmdException;
+import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
 import com.java110.utils.util.ListUtil;
 import com.java110.utils.util.StringUtil;
@@ -62,6 +65,9 @@ public class ListAdminSmallWeChatsCmd extends Cmd {
     @Autowired
     private ICommunityV1InnerServiceSMO communityV1InnerServiceSMOImpl;
 
+    @Autowired
+    private IStaffCommunityV1InnerServiceSMO staffCommunityV1InnerServiceSMOImpl;
+
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
         super.validatePageInfo(reqJson);
@@ -72,11 +78,15 @@ public class ListAdminSmallWeChatsCmd extends Cmd {
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
         SmallWeChatDto smallWeChatDto = BeanConvertUtil.covertBean(reqJson, SmallWeChatDto.class);
+        smallWeChatDto.setStoreId(null);
         smallWeChatDto.setObjType(SmallWeChatDto.OBJ_TYPE_COMMUNITY);
+        smallWeChatDto.setWechatType(null);
+        smallWeChatDto.setWeChatType(reqJson.getString("weChatType"));
         if (StringUtil.jsonHasKayAndValue(reqJson, "communityId")) {
+            Assert.hasKeyAndValue(reqJson, "communityId", "未包含小区ID");
+            checkStaffCommunity(cmdDataFlowContext, reqJson.getString("communityId"));
             smallWeChatDto.setObjId(reqJson.getString("communityId"));
         }
-        //smallWeChatDto.setWeChatType(reqJson.getString("wechatType"));
         int count = smallWechatV1InnerServiceSMOImpl.querySmallWechatsCount(smallWeChatDto);
         List<SmallWeChatDto> smallWeChats = null;
         if (count > 0) {
@@ -93,6 +103,17 @@ public class ListAdminSmallWeChatsCmd extends Cmd {
         ResponseEntity<String> responseEntity = new ResponseEntity<String>(resultVo.toString(), HttpStatus.OK);
 
         cmdDataFlowContext.setResponseEntity(responseEntity);
+    }
+
+    private void checkStaffCommunity(ICmdDataFlowContext context, String communityId) {
+        String staffId = CmdContextUtils.getUserId(context);
+        List<String> communityIds = staffCommunityV1InnerServiceSMOImpl.queryStaffCommunityIds(staffId);
+        if (ListUtil.isNull(communityIds)) {
+            return;
+        }
+        if (!communityIds.contains(communityId)) {
+            throw new CmdException("当前运营账号无权查看该小区数据");
+        }
     }
 
     private void refreshCommunityName(List<SmallWeChatDto> smallWeChats) {

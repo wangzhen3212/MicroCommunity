@@ -23,8 +23,10 @@ import com.java110.core.event.cmd.Cmd;
 import com.java110.core.event.cmd.CmdEvent;
 import com.java110.core.factory.GenerateCodeFactory;
 import com.java110.dto.app.AppDto;
+import com.java110.dto.community.CommunityMemberDto;
 import com.java110.dto.wechat.SmallWeChatDto;
 import com.java110.dto.wechat.SmallWechatAttrDto;
+import com.java110.intf.community.ICommunityMemberV1InnerServiceSMO;
 import com.java110.intf.store.ISmallWechatAttrV1InnerServiceSMO;
 import com.java110.intf.store.ISmallWechatV1InnerServiceSMO;
 import com.java110.po.wechat.SmallWechatAttrPo;
@@ -32,11 +34,14 @@ import com.java110.po.wechat.SmallWechatPo;
 import com.java110.utils.exception.CmdException;
 import com.java110.utils.util.Assert;
 import com.java110.utils.util.BeanConvertUtil;
+import com.java110.utils.util.ListUtil;
 import com.java110.utils.util.StringUtil;
 import com.java110.vo.ResultVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.List;
 
 /**
  * 类表述：保存
@@ -61,6 +66,9 @@ public class SaveAdminSmallWechatCmd extends Cmd {
     @Autowired
     private ISmallWechatAttrV1InnerServiceSMO smallWechatAttrV1InnerServiceSMOImpl;
 
+    @Autowired
+    private ICommunityMemberV1InnerServiceSMO communityMemberV1InnerServiceSMOImpl;
+
     @Override
     public void validate(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) {
         super.validateAdmin(cmdDataFlowContext);
@@ -70,15 +78,35 @@ public class SaveAdminSmallWechatCmd extends Cmd {
         Assert.hasKeyAndValue(reqJson, "objId", "请求报文中未包含objId(小区id)");
         Assert.hasKeyAndValue(reqJson, "weChatType", "请求报文中未包含类型");
 
+        if (StringUtil.isEmpty(queryCommunityPropertyStoreId(reqJson.getString("objId")))) {
+            throw new CmdException("小区未入驻物业，不允许配置公众号/小程序");
+        }
     }
 
     @Override
     @Java110Transactional
     public void doCmd(CmdEvent event, ICmdDataFlowContext cmdDataFlowContext, JSONObject reqJson) throws CmdException {
 
+        String communityId = reqJson.getString("objId");
+        String storeId = queryCommunityPropertyStoreId(communityId);
+        if (StringUtil.isEmpty(storeId)) {
+            throw new CmdException("小区未入驻物业，不允许配置公众号/小程序");
+        }
+
+        SmallWeChatDto checkDto = new SmallWeChatDto();
+        checkDto.setObjId(communityId);
+        checkDto.setObjType(SmallWeChatDto.OBJ_TYPE_COMMUNITY);
+        checkDto.setWeChatType(reqJson.getString("weChatType"));
+        checkDto.setPage(1);
+        checkDto.setRow(1);
+        if (smallWechatV1InnerServiceSMOImpl.querySmallWechatsCount(checkDto) > 0) {
+            throw new CmdException("该小区已配置该类型公众号/小程序，请勿重复添加");
+        }
+
         String wechatId = GenerateCodeFactory.getGeneratorId(GenerateCodeFactory.CODE_PREFIX_weChatId);
         SmallWechatPo smallWechatPo = BeanConvertUtil.covertBean(reqJson, SmallWechatPo.class);
         smallWechatPo.setWechatId(wechatId);
+        smallWechatPo.setStoreId(storeId);
         smallWechatPo.setObjType(SmallWeChatDto.OBJ_TYPE_COMMUNITY);
         smallWechatPo.setMchId("1");
         smallWechatPo.setMchName("1");
@@ -91,5 +119,17 @@ public class SaveAdminSmallWechatCmd extends Cmd {
         }
 
         cmdDataFlowContext.setResponseEntity(ResultVo.success());
+    }
+
+    private String queryCommunityPropertyStoreId(String communityId) {
+        CommunityMemberDto communityMemberDto = new CommunityMemberDto();
+        communityMemberDto.setCommunityId(communityId);
+        communityMemberDto.setMemberTypeCd(CommunityMemberDto.MEMBER_TYPE_PROPERTY);
+        communityMemberDto.setAuditStatusCd(CommunityMemberDto.AUDIT_STATUS_NORMAL);
+        List<CommunityMemberDto> communityMembers = communityMemberV1InnerServiceSMOImpl.queryCommunityMembers(communityMemberDto);
+        if (ListUtil.isNull(communityMembers)) {
+            return null;
+        }
+        return communityMembers.get(0).getMemberId();
     }
 }

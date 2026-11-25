@@ -16,7 +16,12 @@ export const messages = {
       maxLength100: 'Cannot exceed 100 characters',
       maxLength200: 'Cannot exceed 200 characters',
       addSuccess: 'Add successful',
-      editSuccess: 'Update successful'
+      editSuccess: 'Update successful',
+      loadFailed: 'Failed to load WeChat configuration',
+      addFailed: 'Failed to add',
+      editFailed: 'Failed to update',
+      emptyTip: 'No WeChat configuration for this community',
+      selectCommunityTip: 'Please select a community on the left'
     },
     addCommunityWechat: {
       title: 'Add WeChat',
@@ -64,7 +69,12 @@ export const messages = {
       maxLength100: '不能超过100个字符',
       maxLength200: '不能超过200个字符',
       addSuccess: '添加成功',
-      editSuccess: '修改成功'
+      editSuccess: '修改成功',
+      loadFailed: '获取公众号配置失败',
+      addFailed: '添加失败',
+      editFailed: '修改失败',
+      emptyTip: '该小区暂无公众号配置',
+      selectCommunityTip: '请先在左侧选择小区'
     },
     addCommunityWechat: {
       title: '添加',
@@ -112,7 +122,12 @@ remarks: '选填，请填写描述信息'
       maxLength100: '不能超過100個字符',
       maxLength200: '不能超過200個字符',
       addSuccess: '添加成功',
-      editSuccess: '修改成功'
+      editSuccess: '修改成功',
+      loadFailed: '獲取公眾號配置失敗',
+      addFailed: '添加失敗',
+      editFailed: '修改失敗',
+      emptyTip: '該小區暫無公眾號配置',
+      selectCommunityTip: '請先在左側選擇小區'
     },
     addCommunityWechat: {
       title: '添加',

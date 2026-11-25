@@ -98,20 +98,23 @@ export default {
     },
     handleSubmit() {
       this.$refs.form.validate(async valid => {
-        if (valid) {
-          try {
-            const res = await saveAdminSmallWeChat(this.form)
-            if (res.code === 0) {
-              this.$message.success(this.$t('common.operationSuccess'))
-              this.visible = false
-              this.$emit('success')
-            } else {
-              this.$message.error(res.msg || this.$t('communityWechat.addFailed'))
-            }
-          } catch (error) {
-            console.error('添加公众号失败:', error)
-            this.$message.error(this.$t('communityWechat.addFailed'))
+        if (!valid) {
+          return
+        }
+        try {
+          const params = {
+            ...this.form,
+            objId: this.form.communityId,
+            objType: '1000',
+            communityId: this.form.communityId,
+            weChatType: this.form.weChatType || '1100'
           }
+          await saveAdminSmallWeChat(params)
+          this.$message.success(this.$t('communityWechat.addSuccess'))
+          this.visible = false
+          this.$emit('success')
+        } catch (error) {
+          this.$message.error(error.message || this.$t('communityWechat.addFailed'))
         }
       })
     }

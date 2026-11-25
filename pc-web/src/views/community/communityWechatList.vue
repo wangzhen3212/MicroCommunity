@@ -16,7 +16,8 @@
             </el-button>
           </div>
 
-          <el-table :data="tableData" border style="width: 100%" v-loading="loading">
+          <el-table v-loading="loading" :data="tableData" border style="width: 100%" :empty-text="emptyText">
+
             <el-table-column :label="$t('communityWechat.name')" prop="name" align="center" />
 
             <el-table-column :label="$t('communityWechat.communityName')" prop="communityName" align="center" />
@@ -79,6 +80,14 @@ export default {
       this.loadData()
     }
   },
+  computed: {
+    emptyText() {
+      if (!this.communityId) {
+        return this.$t('communityWechat.selectCommunityTip')
+      }
+      return this.$t('communityWechat.emptyTip')
+    }
+  },
   methods: {
     handleCommunityChange(community) {
       this.communityId = community.communityId
@@ -86,6 +95,7 @@ export default {
     async loadData() {
       if (!this.communityId) {
         this.tableData = []
+        this.page.total = 0
         return
       }
 
@@ -99,15 +109,18 @@ export default {
         }
 
         const res = await listAdminSmallWeChats(params)
-        if (res.code === 0) {
-          this.tableData = res.data || []
-          this.page.total = res.total || 0
-        } else {
+        if (res.code !== 0) {
+          this.tableData = []
+          this.page.total = 0
           this.$message.error(res.msg || this.$t('communityWechat.loadFailed'))
+          return
         }
+        this.tableData = res.data || []
+        this.page.total = res.total || 0
       } catch (error) {
-        console.error('获取公众号列表失败:', error)
-        this.$message.error(this.$t('communityWechat.loadFailed'))
+        this.tableData = []
+        this.page.total = 0
+        this.$message.error(error.message || this.$t('communityWechat.loadFailed'))
       } finally {
         this.loading = false
       }

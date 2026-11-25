@@ -14,7 +14,12 @@ export const messages = {
       requiredName: 'Required, please fill in the name',
       requiredAppId: 'Required, please fill in APPID',
       requiredSecret: 'Required, please fill in App Secret',
-      optionalDescription: 'Optional, please fill in description'
+      optionalDescription: 'Optional, please fill in description',
+      loadFailed: 'Failed to load mini program configuration',
+      addFailed: 'Failed to add',
+      editFailed: 'Failed to update',
+      emptyTip: 'No mini program configuration for this community',
+      selectCommunityTip: 'Please select a community on the left'
     }
   },
   zh: {
@@ -32,7 +37,12 @@ export const messages = {
       requiredName: '必填，请填写名称',
       requiredAppId: '必填，请填写APPID',
       requiredSecret: '必填，请填写应用密钥',
-optionalDescription: '选填，请填写描述信息'
+      optionalDescription: '选填，请填写描述信息',
+      loadFailed: '获取小程序配置失败',
+      addFailed: '添加失败',
+      editFailed: '修改失败',
+      emptyTip: '该小区暂无小程序配置',
+      selectCommunityTip: '请先在左侧选择小区'
     }
   },
   'zh-TW': {
@@ -50,7 +60,12 @@ optionalDescription: '选填，请填写描述信息'
       requiredName: '必填，請填寫名稱',
       requiredAppId: '必填，請填寫APPID',
       requiredSecret: '必填，請填寫應用密鑰',
-      optionalDescription: '選填，請填寫描述信息'
+      optionalDescription: '選填，請填寫描述信息',
+      loadFailed: '獲取小程式配置失敗',
+      addFailed: '添加失敗',
+      editFailed: '修改失敗',
+      emptyTip: '該小區暫無小程式配置',
+      selectCommunityTip: '請先在左側選擇小區'
     }
   }
 }
