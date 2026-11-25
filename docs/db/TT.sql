@@ -4968,11 +4968,12 @@ CREATE TABLE `business_pay_fee_config` (
   `pay_online` varchar(12) NOT NULL DEFAULT 'Y' COMMENT '是否线上缴费 Y 是 N 否',
   `prepayment_period` varchar(40) DEFAULT NULL COMMENT '预付期，单位为天',
   `ft_id` varchar(30) NOT NULL COMMENT '费用类型',
+  `state` varchar(12) NOT NULL DEFAULT 'Y' COMMENT '状态，Y启用 N 停用',
   KEY `idx_bpfc_config_id` (`config_id`) USING BTREE,
   KEY `idx_bpfc_b_id` (`b_id`) USING BTREE,
   KEY `idx_pfc_config_id` (`config_id`) USING BTREE,
   KEY `idx_pfc_b_id` (`b_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 -- ----------------------------
 -- Records of business_pay_fee_config
