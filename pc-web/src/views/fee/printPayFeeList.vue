@@ -63,7 +63,7 @@
           <td class="text-center">{{item.amount}}{{$t('printPayFee.yuan')}}
             <span v-if="item.amount < 0">({{ $t('printPayFee.refund') }})</span>
           </td>
-          <td class="text-center">{{item.discountPrice || item.deductionAmount || 0}}</td>
+          <td class="text-center">{{getDiscountAmount(item)}}</td>
           <td class="text-center" width="200px">{{item.remark}}</td>
         </tr>
         <tr>
@@ -242,6 +242,17 @@ export default {
     dateFormat(date) {
       if (!date) return ''
       return dateFormat(date)
+    },
+    getDiscountAmount(item) {
+      const discountPrice = parseFloat(item.discountPrice)
+      if (!isNaN(discountPrice) && discountPrice !== 0) {
+        return discountPrice.toFixed(2)
+      }
+      const deductionAmount = parseFloat(item.deductionAmount)
+      if (!isNaN(deductionAmount)) {
+        return deductionAmount.toFixed(2)
+      }
+      return '0.00'
     },
     getObjNameText(item) {
       if (item.objType === '6666' && item.psNum && item.psNum !== '-') {
