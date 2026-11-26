@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 @Service("getFeeReceiptDetailBMOImpl")
@@ -214,10 +215,28 @@ public class GetFeeReceiptDetailBMOImpl implements IGetFeeReceiptDetailBMO {
         }
 
         nOnceFeeReceiptDetailDto.setEndTime(feeReceiptDetailDto.getEndTime());
-        BigDecimal amount = new BigDecimal(nOnceFeeReceiptDetailDto.getAmount());
-        amount = amount.add(new BigDecimal(feeReceiptDetailDto.getAmount()));
-        nOnceFeeReceiptDetailDto.setAmount(amount.doubleValue() + "");
+        nOnceFeeReceiptDetailDto.setAmount(sumStringAmount(nOnceFeeReceiptDetailDto.getAmount(), feeReceiptDetailDto.getAmount()));
+        nOnceFeeReceiptDetailDto.setDiscountPrice(sumStringAmount(nOnceFeeReceiptDetailDto.getDiscountPrice(), feeReceiptDetailDto.getDiscountPrice()));
+        nOnceFeeReceiptDetailDto.setDeductionAmount(sumStringAmount(nOnceFeeReceiptDetailDto.getDeductionAmount(), feeReceiptDetailDto.getDeductionAmount()));
+        nOnceFeeReceiptDetailDto.setAcctAmount(sumStringAmount(nOnceFeeReceiptDetailDto.getAcctAmount(), feeReceiptDetailDto.getAcctAmount()));
+        nOnceFeeReceiptDetailDto.setLateAmount(sumStringAmount(nOnceFeeReceiptDetailDto.getLateAmount(), feeReceiptDetailDto.getLateAmount()));
         nOnceFeeReceiptDetailDto.setCurDegrees(feeReceiptDetailDto.getCurDegrees());
+    }
+
+    private static String sumStringAmount(String amount1, String amount2) {
+        BigDecimal total = parseAmount(amount1).add(parseAmount(amount2));
+        return total.setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private static BigDecimal parseAmount(String amount) {
+        if (StringUtil.isEmpty(amount)) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            return new BigDecimal(amount.trim());
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
     }
 
 }

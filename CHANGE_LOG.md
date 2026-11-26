@@ -1401,3 +1401,23 @@ DROP TABLE IF EXISTS `contract_fee`;
 -- 回滚：代码回滚 + 重启 store-service + 前端发布回滚；本次未改表结构与存量数据，无需数据回滚
 ```
 
+## 2026-11-26 — 修复:合并缴费收据优惠金额未合并
+
+背景：合并缴费打印收据（`printPayFee?merge=ON`）时，实收金额按合并区间累加，但优惠金额只取被合并的第一条明细值，导致「实收 780.00 / 优惠 130.00」与不合并明细合计（优惠 780.00）不一致。
+
+本次改动（**纯代码修复，无 DDL、无新接口、无 c_service/c_route/权限变更**）：
+
+1. 后端 `service-fee` `GetFeeReceiptDetailBMOImpl#doMergeOnceFee`：合并命中后除 `amount` 外，同步累加 `discountPrice`、`deductionAmount`、`acctAmount`、`lateAmount`；`endTime`、`curDegrees` 仍覆盖为较后一条。
+2. 后端同文件新增私有静态方法 `sumStringAmount(String, String)` + `parseAmount(String)`：`null`/空串/非数字按 0 处理，结果统一 `setScale(2, RoundingMode.HALF_UP).toPlainString()` 输出，避免 `NumberFormatException` 与 `130.0` 尾数。
+3. 前端 `pc-web/src/views/fee/printPayFeeList.vue`：新增 `formatMoney(value)`（`parseFloat` + `toFixed(2)`，非法值返回 `0.00`），优惠金额单元格改为 `formatMoney(item.discountPrice || item.deductionAmount)`；页脚 `acctAmount` 沿用后端累加值 `toFixed(2)`。
+4. `computeDiscountFee()` 仍在 `mergeOnceFee()` 之前执行（顺序未调整），保证合并时能取到 `discountPrice`。
+
+```sql
+-- 本次无 SQL / 无 DDL / 无 c_service、c_route 变更、无权限码变更
+
+-- 执行后：重启 fee-service（Cloud）或重启 MicroCommunityBoot（Boot），前端重新发布即可
+-- 回滚：代码回滚 + 重启对应服务 + 前端发布回滚；未改表结构与存量数据，无需数据回滚
+-- 验证：GET /app/feeReceipt/queryFeeReceiptDetail?communityId=xxx&receiptIds=xxx&mergeFee=ON&page=1&row=100
+--       合并行 amount=780.00、discountPrice=780.00、acctAmount 与不合并明细之和一致；mergeFee 非 ON 时返回结构不变
+```
+
